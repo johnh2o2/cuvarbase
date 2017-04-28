@@ -16,7 +16,7 @@ __device__ int mod (int a, int b)
    return (ret < 0) ? ret + b : ret;
 }
 
-__device__ float moddiff(float a, float b, float M) {
+__device__ float diffmod(float a, float b, float M) {
 	float ret = a - b;
 	if (fabsf(ret) > M/2){
 		if (ret > 0)
@@ -33,7 +33,6 @@ __global__ void resize_for_batch_fft(float *in, pycuda::complex<float> *out, int
 	int grid_offset = 0;
 	while (batch < nbatch){
 		if(i >= grid_offset + n[batch]){
-			
 			grid_offset += n[batch];
 			batch ++;
 		} else { break; }
@@ -43,7 +42,7 @@ __global__ void resize_for_batch_fft(float *in, pycuda::complex<float> *out, int
 		int k = i - grid_offset;
 		int fft_index = batch * fftsize + k;
 
-		// this shifts fft 0 point to center
+		// this centers the fft ( * e^(-i pi n))
 		float shift = (k % 2 == 0) ? 1 : -1;
 
 		out[fft_index] = ( pycuda::complex<float> ) (shift * in[i]);
@@ -81,11 +80,9 @@ __global__ void fast_gaussian_grid(float *g, float *f, float *x, int *n, int *n0
 	
 	int batch = 0;
 	int grid_offset = 0;
-	int data_offset = 0;
 	while (batch < nbatch){
 		if(i >= grid_offset + n[batch]){
 			grid_offset += n[batch];
-			data_offset += n0[batch];
 			batch ++;
 		} else { break; }
 	}
@@ -97,11 +94,6 @@ __global__ void fast_gaussian_grid(float *g, float *f, float *x, int *n, int *n0
 		float Q = q1[i];
 		float F = f[i];
 		int gcoord;
-
-		//int start = (k0 < grid_offset)     ? grid_offset : k0;
-		//int end   = (k0 + 2 * m + 1 > grid_offset + n[batch] ) 
-		//					? grid_offset + n[batch] 
-		//					: k0 + 2 * m + 1;
 
 		for(int k = u; k < u + 2 * m + 1; k++){
 			gcoord = mod(k, n[batch]);
@@ -151,7 +143,7 @@ __global__ void slow_gaussian_grid(float *g, float *f, float *x, int *n, int *n0
 
 			dgi = ng * (x[data_coord] + 0.5f);
 
-			dx = moddiff(dgi, grid_index, ng);
+			dx = diffmod(dgi, grid_index, ng);
 
 			if ( dx > m )
 				break;
