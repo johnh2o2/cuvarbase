@@ -27,5 +27,4 @@ class GPUAsyncProcess(object):
 
 	def finish(self):
 		for i, stream in enumerate(self.streams):
-			if i < len(data):
-				stream.synchronize()
+			stream.synchronize()

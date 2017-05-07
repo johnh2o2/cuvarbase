@@ -46,7 +46,7 @@ __device__ float var_smooth_gauss(float *t, float *y, float *w, float freq, int 
         }
         return var;
 }
-__global__ void pdm(float *t, float *y, float *w, float *freqs, float *power, int ndata, int nfreqs, float dphi, float var){
+__global__ void pdm_tophat(float *t, float *y, float *w, float *freqs, float *power, int ndata, int nfreqs, float dphi, float var){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i < nfreqs){
 		power[i] = var/var_smooth_tophat(t, y, w, freqs[i], ndata, dphi);
