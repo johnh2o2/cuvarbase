@@ -80,13 +80,6 @@ def test_nfft_adjoint_async(t, y, N, sigma=2, m=8, block_size=160):
 
     n = int(sigma * N)
     n0 = len(t)
-    stream = cuda.Stream()
-
-    t_g, y_g, q1, q2 = tuple([ gpuarray.zeros(n0, dtype=np.float32) for i in range(4) ])
-    q3 = gpuarray.zeros(2 * m + 1, dtype=np.float32)
-    grid_g = gpuarray.zeros(n, dtype=np.float32)
-    ghat_g = gpuarray.zeros(n, dtype=np.complex64)
-
     
     ghat_cpu = cuda.aligned_zeros(shape=(N,), dtype=np.complex64, 
                         alignment=resource.getpagesize())
@@ -264,7 +257,6 @@ def nfft_adjoint_accelerated(x, y, N, m=8, fast=True, sigma=2, batch_size=5,
 
     #for i in range(len(streams)):
     #    gh.extend(gh_temps[i].tolist())
-    #gh = np.array(gh)
     results = []
     for i in range(ndata):
         
@@ -372,7 +364,7 @@ if __name__ == '__main__':
 
 
     #fhats = nfft_adjoint_accelerated(x, y, n, fast=fast, sigma=sigma, batch_size=batch_size,
-    #                                m=m, block_size=block_size)
+    #                               m=m, block_size=block_size)
     
     #dt_batch = time() - t0
 
