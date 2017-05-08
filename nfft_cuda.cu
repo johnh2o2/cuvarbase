@@ -165,19 +165,20 @@ __global__ void slow_gaussian_grid(
 __global__ void divide_phi_hat(
 	pycuda::complex<float> *g, 
 	CONSTANT int n, 
+	CONSTANT int N,
 	CONSTANT int nbatch, 
 	CONSTANT float b)
 {
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
-	int batch = i / n;
+	int batch = i / N;
 
 	if (batch < nbatch){
-		int grid_index = i - batch * n;
 
-		int k          = (int) floorf(grid_index - n / 2);
-		float K        = PI * k / n;
-		g[i]          *= n * exp(b * K * K);
+		int j         = batch * (n - N) + n/2 - N/2 + i;
+		int k         = (int) floorf(j - n * batch - n / 2);
+		float K       = PI * k / n;
+		g[i]          = g[j] * exp(b * K * K);
 	} 
 	
 }
