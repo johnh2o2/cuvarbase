@@ -3,7 +3,7 @@
 import numpy as np 
 import sys
 import pycuda.driver as cuda
-#import pycuda.autoinit
+import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 from scipy import fftpack
@@ -15,53 +15,96 @@ import matplotlib.pyplot as plt
 from time import time
 import resource
 import threading
-
+import matplotlib.pyplot as plt
 #cuda.init()
 
-
-
-
-
-def pdm_accelerated(x, y, err, freqs, batch_size=1, dphi=0.05, block_size=128):
-
-        nlcs = np.int32( len(y) if hasattr(y[0], '__iter__') else 1)
-	
-	weights = [ np.power(s, -2).astype(np.float32) for s in err ]
-	weights = [ wgt / np.sum(wgt) for wgt in weights ]
-
-	streams = [ cuda.Stream() for i in range(nlcs) ]
-
-	w_gs = [ gpuarray.zeros(len(x), np.float32) for i in range(nlcs) ]
-	y_gs = [ gpuarray.zeros(len(x), np.float32) for i in range(nlcs) ]
-	power_gs = [ gpuarray.zeros( len(freqs), np.float32) for i in range(nlcs) ]
-
-	x_g = gpuarray.to_gpu(x.astype(np.float32))
-	freqs_g = gpuarray.to_gpu(freqs.astype(np.float32))
-	
-	power_cpu = [ np.zeros(len(freqs), dtype=np.float32) for i in range(nlcs) ]
-
-	ndata = np.int32(len(x))
-	nfreqs = np.int32(len(freqs))
-	dphi  = np.float32(dphi)	
-	
+def nfft_adjoint_async(stream, data, gpu_data, result, functions, m=8, sigma=2, block_size=160):
+	t, y, N = data
+	t_g, y_g, q1, q2, q3, grid_g, ghat_g, cu_plan = gpu_data
+	ghat_cpu = result
+	precompute_psi, fast_gaussian_grid, center_fft, divide_phi_hat = functions
 	block = (block_size, 1, 1)
-	grid_size = int(np.ceil(float(nfreqs) / block_size))
-	grid = (grid_size, 1)
-	for i in range(nlcs):
-		w_gs[i].set_async(weights[i], stream=streams[i])
-		y_gs[i].set_async(y[i].astype(np.float32), stream=streams[i])
-	
-	for i in range(nlcs):
-		gpu_pdm.prepared_async_call(grid, block, streams[i],
-				x_g.ptr, y_gs[i].ptr, w_gs[i].ptr, freqs_g.ptr, power_gs[i].ptr, 
-				ndata, nfreqs, dphi)
-	for i in range(nlcs):
-	#for i in range(nlcs):
-		#power_gs[i].get_async(stream=streams[i], ary=power_cpu[i])
-		power_gs[i].get(ary=power_cpu[i])
 
-	return power_cpu
+	batch_size = np.int32(1)
+
+	grid_size = lambda nthreads : int(np.ceil(float(nthreads) / block_size))
+
+	n0 = np.int32(len(t))
+	n = np.int32(sigma * N)
+	m = np.int32(m)
+	b = np.float32(float(2 * sigma * m) / ((2 * sigma - 1) * np.pi))
+
+
+	t_g.set_async(np.asarray(t).astype(np.float32), stream=stream)
+	y_g.set_async(np.asarray(y).astype(np.float32), stream=stream)
 	
+	grid = ( grid_size(n0 + 2 * m + 1), 1 )
+	precompute_psi.prepared_async_call(grid, block, stream,
+						x_g.ptr, q1.ptr, q2.ptr, q3.ptr, n0, n, m, b)
+
+	grid = ( grid_size(n0), 1 )
+	fast_gaussian_grid.prepared_async_call(grid, block, stream,
+											x_g.ptr, y_g.ptr, grid_g.ptr, 
+											q1.ptr, q2.ptr, q3.ptr, 
+											n0, n, batch_size, m)
+
+	grid = ( grid_size(n), 1 )
+	gpu_center_fft.prepared_async_call(grid, block, stream,
+							grid_g.ptr, ghat_g, n, batch_size)
+
+	cufft.ifft(ghat_g, ghat_g, cu_plan)
+
+	gpu_divide_phi_hat.prepared_async_call(grid, block, stream,
+											ghat_g, n, batch_size, b)
+
+	cuda.memcpy_dtoh_async(ghat_cpu, ghat_g, stream)
+
+def test_nfft_adjoint_async(t, y, N, sigma=2, m=8, block_size=160):
+	nfft_utils = SourceModule(open('nfft_cuda.cu', 'r').read(), options=[ '--use_fast_math'])
+
+	precompute_psi = gpu_nfft_utils.get_function("precompute_psi").prepare([ np.intp, 
+					np.intp, np.intp, np.intp, np.int32, np.int32, np.int32, np.float32 ])
+	fast_gaussian_grid = gpu_nfft_utils.get_function("fast_gaussian_grid").prepare([ np.intp,
+					np.intp, np.intp, np.intp, np.intp, np.intp, np.int32, 
+					np.int32, np.int32, np.int32])
+	slow_gaussian_grid = gpu_nfft_utils.get_function("slow_gaussian_grid").prepare([ np.intp, 
+					np.intp, np.intp, np.int32, np.int32, np.int32, np.int32, np.float32 ])
+	divide_phi_hat = gpu_nfft_utils.get_function("divide_phi_hat").prepare([ np.intp, 
+					np.int32, np.int32, np.float32 ])
+	center_fft     = gpu_nfft_utils.get_function('center_fft').prepare([ np.intp, np.intp, 
+					np.int32, np.int32 ])
+
+	functions = (precompute_psi, fast_gaussian_grid, center_fft, divide_phi_hat)
+
+	n = int(sigma * N)
+	stream = cuda.Stream()
+
+	t_g, y_g, q1, q2 = tuple([ gpuarray.zeros(n0, dtype=np.float32) for i in range(4) ])
+	q3 = gpuarray.zeros(2 * m + 1, dtype=np.float32)
+	grid_g = gpuarray.zeros(n, dtype=np.float32)
+	ghat_g = gpuarray.zeros(n, dtype=np.complex64)
+
+	
+	ghat_cpu = cuda.aligned_zeros(shape=(n,), dtype=np.complex64, 
+						alignment=resource.getpagesize())
+	ghat_cpu = cuda.register_host_memory(pow_cpu)
+	
+	cu_plan = cufft.Plan(n, np.complex64, np.complex64, batch=1, 
+				   stream=stream, istride=1, ostride=1, idist=n, odist=n)	
+		
+
+	gpu_data = (t_g, y_g, q1, q2, q3, grid_g, ghat_g, cu_plan)
+	data = (t, y, N)
+	result = ghat_cpu
+
+	nfft_adjoint_sync(stream, data, gpu_data, result, functions, m=m, 
+						sigma=sigma, block_size=block_size)
+
+	stream.synchronize()
+	plt.plot(result)
+	plt.show()
+	sys.exit()
+
 def nfft_adjoint_accelerated(x, y, N, m=8, fast=True, sigma=2, batch_size=5, 
 							just_return_gridded_data=False, block_size=160, prepared=True,
 							run_async=True):	
@@ -281,23 +324,18 @@ def shifted(x):
     return -0.5 + (x + 0.5) % 1
 
 if __name__ == '__main__':
-
-
-	from multiprocessing import Pool
-	import matplotlib.pyplot as plt
 	
-	ndata = 500
-	p_min = 0.1 * 24 * 60. # minimum period (minutes)
-	T = 10.    # baseline (years)
-	H = 1 	   # number of harmonics
+	ndata = 5000
+	year = 365.
+	p_min = 0.1  # minimum period (minutes)
+	T = 1. * year   # baseline (years)
 	oversampling = 5 # df = 1 / (o * T)
-	fast = True
 	batch_size = 10
-	nlcs = 4 * batch_size
+	nlcs = 1 * batch_size
 	block_size = 160
 
 	# nominal number of frequencies needed
-	Nf = int(oversampling * H * T * 60 * 24 * 365. / p_min)
+	Nf = int(oversampling * T / p_min)
 	#print(Nf)
 	#Nf = 10
 	sigma = 2
@@ -306,90 +344,24 @@ if __name__ == '__main__':
 
 	# nearest power of 2
 	n = 2 ** int(np.ceil(np.log2(Nf)))
-	print(n, Nf, float(n) / float(Nf))
 
 	rand = np.random.RandomState(100)
 	signal_freqs = np.linspace(0.1, 0.4, nlcs)
-
 
 	random_times = lambda N : shifted(np.sort(rand.rand(N) - 0.5))
 	noise = lambda : noise_sigma * rand.randn(len(x))
 	omega = lambda freq : 2 * np.pi * freq * len(x) 
 	phase = lambda : 2 * np.pi * rand.rand()
 
-	
 	random_signal = lambda X, frq : np.cos(omega(frq) * X - phase()) + noise()
 
 	x = random_times(ndata)
-	x_pdm = (x + 0.5) * T * 365
 	y = [ random_signal(x, freq) for freq in signal_freqs ]
 	err = [ noise_sigma * np.ones_like(Y) for Y in y ]
-	df = 1./(T * oversampling)
-	
-	freqs_pdm = df * (0.5 +  np.arange(Nf))
-#	cuda.start_profiler()
-#	ref = cuda.Event()
-#	ref.record()
-	
-	nbatches = int(np.ceil(float(len(y)) / batch_size))
 
-	def gthread(args):
-		n, batches = args
-		print(n)
-		proc = GPUBatchProcess(pdm_batch_function, device=n, function_kwargs=dict(freqs=freqs_pdm))
-		print(proc)
-		results = []
-		for batch in batches:
-			results.append(proc.run(batch))
-		
-		proc.finish()
-		return results
-	#ngpus = cuda.Device.count()
-	#dev = cuda.Device(0)
-	#ctx = dev.make_context()
-	ngpus=1
-	#cuda.start_profiler()
-	pool = Pool(processes=ngpus)
-	nbatches_per_gpu = int(np.ceil(float(nbatches) / ngpus))
-	batches = [[]]
-	for i, (ydat, errdat) in enumerate(zip(y, err)):
-		data = [ (T, Y, E) for T, Y, E in zip(x_pdm, ydat, errdat) ]
-		if len(batches[-1]) >= batch_size:
-			batches.append([ data ])
-		else:
-			batches[-1].append(data)
-	
-	gpu_batches = [ (i, [ batches[i * nbatches_per_gpu + j] for j in range(nbatches_per_gpu) ]) for i in range(ngpus) ]
+	test_nfft_adjoint_async(x, y[0], n)
 
-	
-	results = pool.map(gthread, gpu_batches)
-	
 
-#	f, ax = plt.subplots()
-#	ax.plot(frqs, pows[0])
-#	plt.show()
-#	sys.exit()
-	
-	#del ctx
-	#cuda.stop_profiler()
-	sys.exit()
-	
-	t0 = time()
-	pows_pdm = pdm_accelerated(x_pdm, y, err, freqs_pdm, dphi=0.1, block_size=128)
-	dt_async = time() - t0
-	
-	t0 = time()
-	for Y, ERR in zip(y, err):
-		pows_pdm = pdm_accelerated(x_pdm, Y, ERR, freqs_pdm, dphi=0.1, block_size=128)
-	dt_serial = time() - t0
-	print(dt_batched / len(y), dt_serial / len(y))
-	#f, ax = plt.subplots()
-	
-	#j = 0
-	#ax.plot(freqs_pdm, pows_pdm[j])
-	#ax.axvline(signal_freqs[j] * len(x), ls=':', color='k')
-	#plt.show()
-	#t0 = time()
 	#fhats = nfft_adjoint_accelerated(x, y, n, fast=fast, sigma=sigma, batch_size=batch_size,
 	#								m=m, block_size=block_size)
 	

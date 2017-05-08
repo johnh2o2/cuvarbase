@@ -125,9 +125,11 @@ class PDMAsyncProcess(GPUAsyncProcess):
 	def _compile_and_prepare_functions(self):
 		self.module = SourceModule(open('pdm2.cu', 'r').read(), options=['--use_fast_math'])
 
-		self.dtypes = [ np.intp, np.intp, np.intp, np.intp, np.intp, np.int32, np.int32, np.float32, np.float32 ]
+		self.dtypes = [ np.intp, np.intp, np.intp, np.intp, np.intp, 
+		              np.int32, np.int32, np.float32, np.float32 ]
 		for function in [ 'pdm_tophat', 'pdm_gauss']:
-			self.prepared_functions[function] = self.module.get_function(function).prepare(self.dtypes)
+			self.prepared_functions[function] = \
+			    self.module.get_function(function).prepare(self.dtypes)
 
 	def allocate(self, data):
 		if len(data) > len(self.streams):
