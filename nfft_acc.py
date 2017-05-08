@@ -62,16 +62,16 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions, m=8, sigma=2, 
 def test_nfft_adjoint_async(t, y, N, sigma=2, m=8, block_size=160):
 	nfft_utils = SourceModule(open('nfft_cuda.cu', 'r').read(), options=[ '--use_fast_math'])
 
-	precompute_psi = gpu_nfft_utils.get_function("precompute_psi").prepare([ np.intp, 
+	precompute_psi = nfft_utils.get_function("precompute_psi").prepare([ np.intp, 
 					np.intp, np.intp, np.intp, np.int32, np.int32, np.int32, np.float32 ])
-	fast_gaussian_grid = gpu_nfft_utils.get_function("fast_gaussian_grid").prepare([ np.intp,
+	fast_gaussian_grid = nfft_utils.get_function("fast_gaussian_grid").prepare([ np.intp,
 					np.intp, np.intp, np.intp, np.intp, np.intp, np.int32, 
 					np.int32, np.int32, np.int32])
-	slow_gaussian_grid = gpu_nfft_utils.get_function("slow_gaussian_grid").prepare([ np.intp, 
+	slow_gaussian_grid = nfft_utils.get_function("slow_gaussian_grid").prepare([ np.intp, 
 					np.intp, np.intp, np.int32, np.int32, np.int32, np.int32, np.float32 ])
-	divide_phi_hat = gpu_nfft_utils.get_function("divide_phi_hat").prepare([ np.intp, 
+	divide_phi_hat = nfft_utils.get_function("divide_phi_hat").prepare([ np.intp, 
 					np.int32, np.int32, np.float32 ])
-	center_fft     = gpu_nfft_utils.get_function('center_fft').prepare([ np.intp, np.intp, 
+	center_fft     = nfft_utils.get_function('center_fft').prepare([ np.intp, np.intp, 
 					np.int32, np.int32 ])
 
 	functions = (precompute_psi, fast_gaussian_grid, center_fft, divide_phi_hat)
