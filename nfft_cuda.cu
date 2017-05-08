@@ -1,22 +1,25 @@
 #include <pycuda-complex.hpp>
 #include <stdio.h>
 #define PI 3.14159265358979323846264338327950288f
+#define RESTRICT __restrict__
+#define CONSTANT const
+//#define RESTRICT
+//#define CONSTANT
 
-
-__device__ float gauss_filter(float x, int n, float b){
-	return exp(-(n*n*x*x) / b) / sqrt(PI * b);
+__device__ float gauss_filter(CONSTANT float x, CONSTANT int n, CONSTANT float b){
+	return expf(-(n*n*x*x) / b) / sqrt(PI * b);
 }
 
-__device__ float gauss_filter_i(float x, float b){
-	return exp(-(x*x) / b) / sqrt(PI * b);
+__device__ float gauss_filter_i(CONSTANT float x, CONSTANT float b){
+	return expf(-(x*x) / b) / sqrt(PI * b);
 }
-__device__ int mod (int a, int b)
+__device__ int mod (CONSTANT int a, CONSTANT int b)
 {
    int ret = a % b;
    return (ret < 0) ? ret + b : ret;
 }
 
-__device__ float moddiff(float a, float b, float M) {
+__device__ float diffmod(CONSTANT float a, CONSTANT float b, CONSTANT float M) {
 	float ret = a - b;
 	if (fabsf(ret) > M/2){
 		if (ret > 0)
@@ -26,155 +29,156 @@ __device__ float moddiff(float a, float b, float M) {
 	return ret;
 }
 
-__global__ void resize_for_batch_fft(float *in, pycuda::complex<float> *out, int *n, int nbatch, int fftsize){
+__global__ void center_fft(
+	float * RESTRICT in, 
+	pycuda::complex<float> *out, 
+	CONSTANT int n, 
+	CONSTANT int nbatch)
+{
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
-	int batch = 0;
-	int grid_offset = 0;
-	while (batch < nbatch){
-		if(i >= grid_offset + n[batch]){
-			
-			grid_offset += n[batch];
-			batch ++;
-		} else { break; }
-	}
+	int batch = i / n;
 
 	if (batch < nbatch) {
-		int k = i - grid_offset;
-		int fft_index = batch * fftsize + k;
+		int k = mod(i, n);
 
-		// this shifts fft 0 point to center
+		// this centers the fft ( * e^(-i pi n))
 		float shift = (k % 2 == 0) ? 1 : -1;
 
-		out[fft_index] = ( pycuda::complex<float> ) (shift * in[i]);
+		out[i] = ( pycuda::complex<float> ) (shift * in[i]);
 	}
 }
 
-__global__ void precompute_psi(float *x, float *q1, float *q2, float *q3, int *n0, int *n, int nbatch, int m, float b){
+__global__ void precompute_psi(
+	float *RESTRICT x, 
+	float *RESTRICT q1, 
+	float *RESTRICT q2, 
+	float *RESTRICT q3, 
+	CONSTANT int n0, 
+	CONSTANT int n, 
+	CONSTANT int m, 
+	CONSTANT float b){
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
-	int batch = 0;
-	int data_offset = 0;
-	while (batch < nbatch){
-		if(i >= data_offset + n0[batch]){
-			data_offset += n0[batch];
-			batch ++;
-		} else { break; }
-	}
 
-	if (batch < nbatch){
+	float binv = 1.f/b;	
+	if (i < n0){
+		//int u = (int) floorf(n * x[i] - m);
+
+		float xg = m + (n * x[i] - floorf(n * x[i])) - 0.5;
 		
-		int u = (int) floor(n[batch] * x[i] - m);
+		q1[i] = expf(-xg * xg * binv)/ sqrtf(PI * b);
+		q2[i] = expf( 2 * xg * binv);
 
-		float y = n[batch] * x[i] - ((float) u);
-
-		q1[i] = exp(-y * y / b)/ sqrt(PI * b);
-		q2[i] = exp( 2 * y / b);
-
-	} else if (i - data_offset < 2 * m + 1) {
-		int l = i - data_offset; 
-		q3[l] = exp(-0.5 * l * l);	
+	} else if (i - n0 < 2 * m + 1) {
+		int l = i - n0; 
+		q3[l] = expf(-l * l * binv);	
 	}
 
 }
-__global__ void fast_gaussian_grid(float *g, float *f, float *x, int *n, int *n0, int nbatch, int m, float *q1, float *q2, float *q3){
+
+//TODO: precompute filter values (NOT fast gaussian gridding), and inverse filter values
+//      and use these in place of the gaussian gridding
+
+
+//__global__ void precompute_filter(float *x, float *inv_filter, float *filter)
+//TODO: debug fast gaussian gridding...
+
+__global__ void fast_gaussian_grid( 
+	float *RESTRICT x, 
+	float *RESTRICT y, 
+	float *RESTRICT g, 
+	float *RESTRICT q1, 
+	float *RESTRICT q2, 
+	float *RESTRICT q3, 
+	CONSTANT int n0, 
+	CONSTANT int n, 
+	CONSTANT int nbatch, 
+	CONSTANT int m)
+{
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	
-	int batch = 0;
-	int grid_offset = 0;
-	int data_offset = 0;
-	while (batch < nbatch){
-		if(i >= grid_offset + n[batch]){
-			grid_offset += n[batch];
-			data_offset += n0[batch];
-			batch ++;
-		} else { break; }
-	}
+	int batch = i / n0;
 
 	if (batch < nbatch){
+		int i0 = i % n0;
+		int u = (int) floorf(n * (x[i0] + 0.5f) - m);
 		
-		int u = (int) floor(n[batch] * (x[i] + 0.5) - m);
-		
-		float Q = q1[i];
-		float F = f[i];
-		int gcoord;
-
-		//int start = (k0 < grid_offset)     ? grid_offset : k0;
-		//int end   = (k0 + 2 * m + 1 > grid_offset + n[batch] ) 
-		//					? grid_offset + n[batch] 
-		//					: k0 + 2 * m + 1;
+		float Q = q1[i0];
+		float Q2 = q2[i0];
+		float Y  = y[i];
 
 		for(int k = u; k < u + 2 * m + 1; k++){
-			gcoord = mod(k, n[batch]);
-			atomicAdd(g + gcoord + grid_offset,  Q * q3[k - u] * F);
-			Q *=  q2[i];
+			atomicAdd(g + mod(k, n) + batch * n, Q * q3[k - u] * Y);// Q * q3[k - u] * Y);
+			Q *= Q2;
 		}
 	}
 }
 
 
-__global__ void slow_gaussian_grid(float *g, float *f, float *x, int *n, int *n0, int nbatch, int m, float b){
+__global__ void slow_gaussian_grid( 
+	float *RESTRICT x, 
+	float *RESTRICT y, 
+	float *RESTRICT g, 
+	CONSTANT int n0, 
+	CONSTANT int n, 
+	CONSTANT int nbatch, 
+	CONSTANT int m, 
+	CONSTANT float b)
+{
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	
-	int batch       = 0;
-	int grid_offset = 0;
-	int data_offset = 0;
-	while (batch < nbatch){
-		if(i >= grid_offset + n[batch]){
-			
-			grid_offset += n[batch];
-			data_offset += n0[batch];
-			batch ++;
-		} else { break; }
-	}
+	int batch = i / n;
 
 	if (batch < nbatch){
-
+			
 		float dx, dgi;
 		int data_index, data_coord;
 
-		int grid_index = i - grid_offset;
-
-		int nd = n0[batch];
-		int ng = n[batch];
-
-		int grid_min = mod(grid_index - m, ng);
+		int grid_index = i - n * batch;
+		int grid_min = mod(grid_index - m, n);
 	
 		for ( data_index = 0; 
-					data_index < nd 
-			     && (ng * (x[data_index + data_offset] + 0.5f)) 
+					data_index < n0
+			     && (n * (x[data_index] + 0.5f)) 
 			               < grid_min; 
 			  data_index++);
-
-		int d_max = data_index + nd;
+		
+		int d_max = data_index + n0;
 		while(data_index < d_max){
-			data_coord = mod(data_index, nd) + data_offset;
+			data_coord = mod(data_index, n0);
+			
+			dgi = n * (x[data_coord] + 0.5f);
 
-			dgi = ng * (x[data_coord] + 0.5f);
-
-			dx = moddiff(dgi, grid_index, ng);
+			dx = diffmod(dgi, grid_index, n);
 
 			if ( dx > m )
 				break;
 
-			g[i] += gauss_filter_i(dx, b) * f[data_coord];
-
+			g[i] += gauss_filter_i(dx, b) * y[data_coord + n0 * batch];
 			data_index ++;
 		}
+		
 	}
 }
 
 
-__global__ void divide_phi_hat(pycuda::complex<float> *g, int *n, int m, int nbatch, int fftsize, float b){
+__global__ void divide_phi_hat(
+	pycuda::complex<float> *g, 
+	CONSTANT int n, 
+	CONSTANT int nbatch, 
+	CONSTANT float b)
+{
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
-	int batch = i / fftsize;
+	int batch = i / n;
 
 	if (batch < nbatch){
-		int grid_index = i - batch * fftsize;
+		int grid_index = i - batch * n;
 
-		int k          = (int) floorf(grid_index - fftsize / 2);
-		float K        = PI * k / fftsize;
-		g[grid_index] *= n[batch] * exp(b * K * K);
+		int k          = (int) floorf(grid_index - n / 2);
+		float K        = PI * k / n;
+		g[i]          *= n * exp(b * K * K);
 	} 
 	
 }
+
