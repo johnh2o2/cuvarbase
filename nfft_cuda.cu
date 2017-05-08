@@ -43,8 +43,8 @@ __global__ void center_fft(
 		int k = mod(i, n);
 
 		// this centers the fft ( * e^(-i pi n))
-		float shift = (k % 2 == 0) ? 1 : -1;
-
+		//float shift = (k % 2 == 0) ? 1 : -1;
+		float shift = 1.f;
 		out[i] = ( pycuda::complex<float> ) (shift * in[i]);
 	}
 }

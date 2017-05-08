@@ -101,7 +101,10 @@ def test_nfft_adjoint_async(t, y, N, sigma=2, m=8, block_size=160):
 						sigma=sigma, block_size=block_size)
 
 	stream.synchronize()
-	plt.plot(result)
+
+	cpu_result = nfft_adjoint_cpu(t, y, N, sigma=sigma, m=m, use_fft=True, truncated=True) 
+	plt.plot(result, alpha=0.5)
+	plt.plot(cpu_result)
 	plt.show()
 	sys.exit()
 
