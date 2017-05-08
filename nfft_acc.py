@@ -19,7 +19,8 @@ import threading
 import matplotlib.pyplot as plt
 #cuda.init()
 
-def nfft_adjoint_async(stream, data, gpu_data, result, functions, m=8, sigma=2, block_size=160):
+def nfft_adjoint_async(stream, data, gpu_data, result, functions, 
+                        m=8, sigma=2, block_size=160, just_return_gridded_data=False):
     t, y, N = data
     t_g, y_g, q1, q2, q3, grid_g, ghat_g, cu_plan = gpu_data
     ghat_cpu = result
@@ -49,6 +50,10 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions, m=8, sigma=2, 
                                             q1.ptr, q2.ptr, q3.ptr, 
                                             n0, n, batch_size, m)
 
+    if just_return_gridded_data:
+        stream.synchronize()
+        return grid_g.get()
+
     grid = ( grid_size(n), 1 )
     center_fft.prepared_async_call(grid, block, stream,
                             grid_g.ptr, ghat_g.ptr, n, batch_size)
@@ -61,7 +66,8 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions, m=8, sigma=2, 
 
     cuda.memcpy_dtoh_async(ghat_cpu, ghat_g.ptr, stream)
 
-def test_nfft_adjoint_async(t, y, N, sigma=2, m=8, block_size=160):
+
+def prep_nfft_adjoint_async(stream, t, y, N, sigma=2):
     nfft_utils = SourceModule(open('nfft_cuda.cu', 'r').read(), options=[ '--use_fast_math'])
 
     precompute_psi = nfft_utils.get_function("precompute_psi").prepare([ np.intp, 
@@ -93,6 +99,14 @@ def test_nfft_adjoint_async(t, y, N, sigma=2, m=8, block_size=160):
     data = (t, y, N)
     result = ghat_cpu
 
+    return data, gpu_data, result, functions
+
+
+def test_nfft_adjoint_async(t, y, N, sigma=2, m=8, block_size=160):
+    stream = cuda.Stream()
+
+    data, gpu_data, result, functions = prep_nfft_adjoint_async(stream, t, y, N, sigma=sigma)
+
     nfft_adjoint_async(stream, data, gpu_data, result, functions, m=m, 
                         sigma=sigma, block_size=block_size)
 
@@ -106,6 +120,24 @@ def test_nfft_adjoint_async(t, y, N, sigma=2, m=8, block_size=160):
     sys.exit()
     assert_allclose(cpu_result.real, result.real)
     assert_allclose(cpu_result.imag, result.imag)
+
+def test_fast_gridding(t, y, N, sigma=2, m=8, block_size=160):
+    stream = cuda.Stream()
+
+    data, gpu_data, result, functions = prep_nfft_adjoint_async(stream, t, y, N, sigma=sigma)
+
+    grid = nfft_adjoint_async(stream, data, gpu_data, result, functions, m=m, 
+                        sigma=sigma, block_size=block_size, just_return_gridded_data=True)
+
+
+    kernel = KERNELS.get('gaussian', 'gaussian')
+    mat = nfft_matrix(x, int(N * sigma), m, sigma, kernel, truncated=True)
+    grid_cpu = mat.T.dot(y)
+
+    plt.plot(grid, alpha=0.5)
+    plt.plot(grid_cpu, color='k', alpha=0.5)
+    plt.show()
+    sys.exit()
 
 def nfft_adjoint_accelerated(x, y, N, m=8, fast=True, sigma=2, batch_size=5, 
                             just_return_gridded_data=False, block_size=160, prepared=True,
@@ -360,7 +392,7 @@ if __name__ == '__main__':
     y = [ random_signal(x, freq) for freq in signal_freqs ]
     err = [ noise_sigma * np.ones_like(Y) for Y in y ]
 
-    test_nfft_adjoint_async(x, y[0], n)
+    test_fast_gridding(x, y[0], n)
 
 
     #fhats = nfft_adjoint_accelerated(x, y, n, fast=fast, sigma=sigma, batch_size=batch_size,
