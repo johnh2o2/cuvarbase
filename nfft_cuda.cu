@@ -43,8 +43,8 @@ __global__ void center_fft(
 		int k = mod(i, n);
 
 		// this centers the fft ( * e^(-i pi n))
-		//float shift = (k % 2 == 0) ? 1 : -1;
-		float shift = 1.f;
+		float shift = (k % 2 == 0) ? 1.f : -1.f;
+		//float shift = 1.f;
 		out[i] = ( pycuda::complex<float> ) (shift * in[i]);
 	}
 }
@@ -64,7 +64,7 @@ __global__ void precompute_psi(
 	if (i < n0){
 		//int u = (int) floorf(n * x[i] - m);
 
-		float xg = m + (n * x[i] - floorf(n * x[i])) - 0.5;
+		float xg = m + (n * x[i] - floorf(n * x[i]));
 		
 		q1[i] = expf(-xg * xg * binv)/ sqrtf(PI * b);
 		q2[i] = expf( 2 * xg * binv);
@@ -177,8 +177,9 @@ __global__ void divide_phi_hat(
 
 		int j         = batch * (n - N) + n/2 - N/2 + i;
 		int k         = (int) floorf(j - n * batch - n / 2);
-		float K       = PI * k / n;
-		g[i]          = g[j] * exp(b * K * K);
+		float K       = (PI * k) / n;
+        float shift   = (j - batch * n) % 2 == 0 ? 1.f : -1.f;
+		g[i]          = g[j] * expf(b * K * K) * shift;
 	} 
 	
 }
