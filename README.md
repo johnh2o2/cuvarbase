@@ -1,3 +1,10 @@
+#cuvarbase
+
+John Hoffman -- 2017
+
+* Very rough at the moment, many things need to be tested/documented!
+
+
 May 14, 2017
 ------------
 
@@ -9,6 +16,6 @@ Includes implementations of
 * Lomb-Scargle (and variants)
 * Phase-dispersion minimization (binless, binned, etc.)
 * Other variability indices:
-    * Stetson J, K, L
+    * [TODO] Stetson J, K, L
     * ...
 
