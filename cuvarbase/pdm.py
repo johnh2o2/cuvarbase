@@ -183,4 +183,3 @@ class PDMSpectrogram(BaseSpectrogram):
 
         return binned_pdm_model(t, y, w, freq, self.proc_kwargs['nbins'], 
                             linterp=(self.proc_kwargs['kind'] =='binned_linterp'))
-

@@ -8,22 +8,34 @@ import skcuda.fft as cufft
 from .core import GPUAsyncProcess
 from .utils import find_kernel
 import resource
-
+import numpy as np
 
 def shifted(x):
     """Shift x values to the range [-0.5, 0.5)"""
     return -0.5 + (x + 0.5) % 1
 
+
+def time_shift(t, samples_per_peak=5):
+    t = np.asarray(t)
+
+    T = max(t) - min(t)
+    tshift = (t - min(t)) / (T * samples_per_peak) - 0.5
+
+    phi0 = min(t) / (T * samples_per_peak)
+
+    return tshift, phi0
+
 def nfft_adjoint_async(stream, data, gpu_data, result, functions, 
                         m=8, sigma=2, block_size=160, 
                         just_return_gridded_data=False, use_grid=None,
-                        fast_grid=True, transfer_to_device=True, 
-                        transfer_to_host=True):
+                        fast_grid=True, phi0=0, transfer_to_device=True, 
+                        transfer_to_host=True, precomp_psi=True, **kwargs):
+
     t, y, N = data
     t_g, y_g, q1, q2, q3, grid_g, ghat_g, cu_plan = gpu_data
     ghat_cpu = result
     precompute_psi, fast_gaussian_grid, slow_gaussian_grid, \
-                                 center_fft, divide_phi_hat = functions
+       center_fft, divide_phi_hat = functions
     block = (block_size, 1, 1)
 
     batch_size = np.int32(1)
@@ -34,14 +46,17 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
     n = np.int32(sigma * N)
     m = np.int32(m)
     b = np.float32(float(2 * sigma * m) / ((2 * sigma - 1) * np.pi))
+    phi0 = np.float32(phi0)
 
     if transfer_to_device:
         t_g.set_async(np.asarray(t).astype(np.float32), stream=stream)
         y_g.set_async(np.asarray(y).astype(np.float32), stream=stream)
     
     if fast_grid:
-        grid = ( grid_size(n0 + 2 * m + 1), 1 )
-        precompute_psi.prepared_async_call(grid, block, stream,
+        
+        if precomp_psi:
+            grid = ( grid_size(n0 + 2 * m + 1), 1 )
+            precompute_psi.prepared_async_call(grid, block, stream,
                         t_g.ptr, q1.ptr, q2.ptr, q3.ptr, n0, n, m, b)
 
         grid = ( grid_size(n0), 1 )
@@ -65,7 +80,7 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
 
     grid = ( grid_size(n), 1 )
     center_fft.prepared_async_call(grid, block, stream,
-                            grid_g.ptr, ghat_g.ptr, n, batch_size)
+                            grid_g.ptr, ghat_g.ptr, n, batch_size, phi0)
 
     cufft.ifft(ghat_g, ghat_g, cu_plan)
 
@@ -91,11 +106,29 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             slow_gaussian_grid = [ np.intp,
                                 np.intp, np.intp, np.int32, np.int32, np.int32, np.int32, np.float32 ],
             divide_phi_hat = [ np.intp, np.int32, np.int32, np.int32, np.float32 ],
-            center_fft = [ np.intp, np.intp, np.int32, np.int32 ]
+            center_fft = [ np.intp, np.intp, np.int32, np.int32, np.float32 ]
         )
 
         for function, dtype in self.dtypes.iteritems():
             self.prepared_functions[function] = self.module.get_function(function).prepare(dtype)
+
+
+        self.function_tuple = tuple([self.prepared_functions[f] for f in [ 'precompute_psi', 'fast_gaussian_grid', 
+                        'slow_gaussian_grid', 'center_fft', 'divide_phi_hat']])  
+    def allocate_grid(self, N, sigma):
+        if not N%2 == 0:
+            raise Exception("N = %d is not even."%(N))
+        n = int(sigma * N)
+
+        grid_g = gpuarray.zeros(n, dtype=np.float32)
+        ghat_g = gpuarray.zeros(n, dtype=np.complex64)
+
+
+        ghat_cpu = cuda.aligned_zeros(shape=(N,), dtype=np.complex64, 
+                            alignment=resource.getpagesize())
+        ghat_cpu = cuda.register_host_memory(ghat_cpu)
+
+        return grid_g, ghat_g, ghat_cpu
 
     def allocate(self, data, sigma=2, m=8, **kwargs):
         if len(data) > len(self.streams):
@@ -108,16 +141,11 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             n = int(sigma * N)
             n0 = len(t)
 
-            t_g, y_g, q1, q2 = tuple([ gpuarray.zeros(n0, dtype=np.float32) for i in range(4) ])
+            t_g, y_g, q1, q2 = tuple([ gpuarray.zeros(n0, dtype=np.float32) for j in range(4) ])
             q3 = gpuarray.zeros(2 * m + 1, dtype=np.float32)
-            grid_g = gpuarray.zeros(n, dtype=np.float32)
-            ghat_g = gpuarray.zeros(n, dtype=np.complex64)
-
-            ghat_cpu = cuda.aligned_zeros(shape=(N,), dtype=np.complex64, 
-                                alignment=resource.getpagesize())
-            ghat_cpu = cuda.register_host_memory(ghat_cpu)
+            grid_g, ghat_g, ghat_cpu = self.allocate_grid(N, sigma)
             
-            cu_plan = cufft.Plan(n, np.complex64, np.complex64, batch=1, 
+            cu_plan = cufft.Plan(int(n), np.complex64, np.complex64, batch=1, 
                            stream=self.streams[i], istride=1, ostride=1, idist=n, odist=n)    
 
 
@@ -138,10 +166,17 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             gpu_data, pow_cpus = self.allocate(data, **kwargs)
 
         streams = [ s for i, s in enumerate(self.streams) if i < len(data) ]
-        results = [ nfft_adjoint_async(stream, cdat, gdat, pcpu, self.prepared_functions, **kwargs)\
+        results = [ nfft_adjoint_async(stream, cdat, gdat, pcpu, self.function_tuple, **kwargs)\
                           for stream, cdat, gdat, pcpu in \
                                   zip(streams, data, gpu_data, pow_cpus)]
-        
+        [s.synchronize() for s in self.streams]
+
+        #for i, (t, y, w, freqs) in enumerate(data):
+        #   df = (freqs[1] - freqs[0])
+        #   nf = int(max(freqs) / df)
+        #   n0 = int(min(freqs) / df)
+        #   results[i] = results[i][n0:nf]
+
         return results
 
 

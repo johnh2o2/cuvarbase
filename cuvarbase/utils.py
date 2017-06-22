@@ -77,7 +77,7 @@ def dphase(dt, freq):
     return dph_final
 
 def get_autofreqs(t, **kwargs):
-    autopower_kwargs = { var : value for var, value in kwargs.iteritems() \
+    autofreqs_kwargs = { var : value for var, value in kwargs.iteritems() \
                                if var in [ 'minimum_frequency', 'maximum_frequency', 
                                            'nyquist_factor', 'samples_per_peak' ] }
-    return autopower(t, **autopower_kwargs)
+    return autofrequency(t, **autofreqs_kwargs)

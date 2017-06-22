@@ -93,3 +93,15 @@ def test_ffts(data):
 
         assert_allclose(yhat, yghat.get())
     return mark_cuda_test(test)
+
+def test_nfft_against_existing_impl(data, sigma=2, m=m):
+
+    def test():
+        t, y = data
+
+        gpu_nfft = simple_gpu_nfft(t, y, N, sigma=sigma, m=m)
+
+        cpu_nfft = nfft_adjoint(t, y, N, sigma=sigma, m=m)
+        assert_allclose(np.real(cpu_nfft), np.real(gpu_nfft))
+        assert_allclose(np.imag(cpu_nfft), np.imag(gpu_nfft))
+    return mark_cuda_test(test)
