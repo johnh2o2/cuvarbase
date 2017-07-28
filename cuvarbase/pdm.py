@@ -1,8 +1,8 @@
-import numpy as np 
+import numpy as np
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import resource 
+import resource
 from .core import GPUAsyncProcess, BaseSpectrogram
 from .utils import weights, find_kernel
 
@@ -16,9 +16,9 @@ def var_tophat(t, y, w, freq, dphi):
             if dph < dphi:
                 mbar += W2 * Y2
                 wtot += W2
-        
+
         var += W * (Y - mbar / wtot)**2
-        
+
     return var
 
 
@@ -35,7 +35,7 @@ def binned_pdm_model(t, y, w, freq, nbins, linterp=True):
         wtot = max([ sum([ W for j, W in enumerate(w) if bins[j] == i ]), 1E-10 ])
         bin_means[i] = sum([ W * Y for j, (Y, W) in enumerate(zip(y, w)) if bins[j] == i ]) / wtot
 
-    
+
     def pred_y(p, nbins=nbins, linterp=linterp, bin_means=bin_means):
         bs = np.array([ int(P * nbins)%nbins for P in p ])
         if not linterp:
@@ -44,11 +44,11 @@ def binned_pdm_model(t, y, w, freq, nbins, linterp=True):
         di = np.floor(alphas).astype(np.int32)
         bins0 = bs + di
         bins1 = bins0 + 1
-        
+
         alphas[alphas < 0] += 1
         bins0[bins0 < 0] += nbins
         bins1[bins1 >= nbins] -= nbins
-    
+
         return (1 - alphas) * bin_means[bins0] + alphas * bin_means[bins1]
 
     return pred_y
@@ -101,21 +101,21 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function, dphi=0.05, block_si
     function.prepared_async_call(grid, block, stream,
                 t_g.ptr, y_g.ptr, w_g.ptr, freqs_g.ptr, pow_g,
                 ndata, nfreqs, dphi, var)
-    
+
     cuda.memcpy_dtoh_async(pow_cpu, pow_g, stream)
 
     return pow_cpu
 
 class PDMAsyncProcess(GPUAsyncProcess):
-    def _compile_and_prepare_functions(self, nbins=30):
+    def _compile_and_prepare_functions(self, nbins=10):
         pdm2_txt = open(find_kernel('pdm'), 'r').read()
         pdm2_txt = pdm2_txt.replace('//INSERT_NBINS_HERE', '#define NBINS %d'%(nbins))
 
         self.module = SourceModule(pdm2_txt, options=['--use_fast_math'])
 
-        self.dtypes = [ np.intp, np.intp, np.intp, np.intp, np.intp, 
+        self.dtypes = [ np.intp, np.intp, np.intp, np.intp, np.intp,
                       np.int32, np.int32, np.float32, np.float32 ]
-        for function in [ 'pdm_binless_tophat', 'pdm_binless_gauss', 
+        for function in [ 'pdm_binless_tophat', 'pdm_binless_gauss',
                                 'pdm_binned_linterp_%dbins'%(nbins), 'pdm_binned_step_%dbins'%(nbins) ]:
             self.prepared_functions[function] = \
                 self.module.get_function(function.replace('_%dbins'%(nbins), '')).prepare(self.dtypes)
@@ -128,15 +128,16 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
         for t, y, w, freqs in data:
 
-            pow_cpu = cuda.aligned_zeros(shape=(len(freqs),), 
-                                             dtype=np.float32, 
-                                             alignment=resource.getpagesize()) 
+            pow_cpu = cuda.aligned_zeros(shape=(len(freqs),),
+                                             dtype=np.float32,
+                                             alignment=resource.getpagesize())
 
             pow_cpu = cuda.register_host_memory(pow_cpu)
 
             t_g, y_g, w_g = None, None, None
             if len(t) > 0:
-                t_g, y_g, w_g = tuple([gpuarray.zeros(len(t), dtype=np.float32) for i in range(3)])
+                t_g, y_g, w_g = tuple([gpuarray.zeros(len(t), dtype=np.float32)
+                                       for i in range(3)])
 
             pow_g = cuda.mem_alloc(pow_cpu.nbytes)
             freqs_g = gpuarray.to_gpu(np.asarray(freqs).astype(np.float32))
@@ -145,7 +146,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
             pow_cpus.append(pow_cpu)
         return gpu_data, pow_cpus
 
-    def run(self, data, gpu_data=None, pow_cpus=None,  
+    def run(self, data, gpu_data=None, pow_cpus=None,
                     kind='binned_linterp', nbins=30, **pdm_kwargs):
         function = 'pdm_%s_%dbins'%(kind, nbins)
         if not function in self.prepared_functions:
@@ -158,7 +159,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
         results = [ pdm_async(stream, cdat, gdat, pcpu, func, **pdm_kwargs) \
                           for stream, cdat, gdat, pcpu in \
                                   zip(streams, data, gpu_data, pow_cpus)]
-        
+
         return results
 
 
@@ -166,7 +167,7 @@ class PDMSpectrogram(BaseSpectrogram):
     def __init__(self, t, y, w, dphi = 0.05, nbins=25,
                     block_size=256, kind='binned_linterp', **kwargs):
 
-        pdm_kwargs = dict( dphi = dphi, block_size = block_size, 
+        pdm_kwargs = dict( dphi = dphi, block_size = block_size,
                                 kind=kind, nbins=nbins )
 
         super(PDMSpectrogram, self).__init__(t, y, w, **kwargs)
@@ -181,5 +182,5 @@ class PDMSpectrogram(BaseSpectrogram):
         if not time is None:
             t, y, w = self.weighted_local_data(time)
 
-        return binned_pdm_model(t, y, w, freq, self.proc_kwargs['nbins'], 
+        return binned_pdm_model(t, y, w, freq, self.proc_kwargs['nbins'],
                             linterp=(self.proc_kwargs['kind'] =='binned_linterp'))

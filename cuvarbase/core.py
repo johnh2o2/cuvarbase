@@ -3,17 +3,20 @@ from .utils import gaussian_window, tophat_window, get_autofreqs
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
+
 class GPUAsyncProcess(object):
-    def __init__(self, device=0, reader=None, nstreams=None, function_kwargs=None):
-        self.reader = reader
-        self.function_kwargs = {} if function_kwargs is None else function_kwargs
+    def __init__(self, *args, **kwargs):
+        self.reader = kwargs.get('reader', None)
+        self.nstreams = kwargs.get('nstreams', None)
+        self.function_kwargs = kwargs.get('function_kwargs', {})
+        self.device = kwargs.get('device', 0)
         self.streams = []
         self.gpu_data = []
         self.results = []
-        self._adjust_nstreams = nstreams is None
-        if not nstreams is None:
-                self._create_streams(nstreams)
-        self.prepared_functions = {}    
+        self._adjust_nstreams = self.nstreams is None
+        if self.nstreams is not None:
+                self._create_streams(self.nstreams)
+        self.prepared_functions = {}
 
     def _create_streams(self, n):
         for i in range(n):
@@ -46,9 +49,10 @@ class GPUAsyncProcess(object):
 
 
 class BaseSpectrogram(object):
-    def __init__(self, t, y, w, times=None, freqs=None, window='gaussian', window_length=None,
-                    batch_size=10, block_size=128, truncate=True, truncate_limit=1E-3, proc=None,
-                    proc_kwargs=None, **kwargs):
+    def __init__(self, t, y, w, times=None, freqs=None, window='gaussian',
+                 window_length=None, batch_size=10, block_size=128,
+                 truncate=True, truncate_limit=1E-3, proc=None,
+                 proc_kwargs=None, **kwargs):
         self.t = np.array(t)
         self.y = np.array(y)
         self.w = np.array(w)
@@ -65,7 +69,7 @@ class BaseSpectrogram(object):
             self.window = tophat_window
         else:
             raise ValueError("Don't understand window %s"%(self.window_name))
-        
+
         self.times = times
         self.window_length = window_length
 
@@ -83,7 +87,7 @@ class BaseSpectrogram(object):
         self.proc = proc
 
     def auto_time_split(self, nsplits=100):
-        
+
         if self.window_length is None:
             self.window_length = self.baseline / nsplits
 
@@ -95,11 +99,11 @@ class BaseSpectrogram(object):
 
     def weighted_local_data(self, time):
         w_window = self.window(self.t, time, self.window_length)
-        
+
         inds = np.arange(len(self.t))
         if self.truncate:
             inds = inds[w_window > self.truncate_limit]
-        
+
         if len(inds) == 0:
             return self.t[inds], self.y[inds], self.w[inds]
 
@@ -109,11 +113,11 @@ class BaseSpectrogram(object):
         t, y, w = self.t, self.y, self.w
         if not time is None:
             t, y, w = self.weighted_local_data(time)
-       
+
         freqs = self.freqs if freqs is None else freqs
-       
+
         p = self.proc.run([ (t, y, w, freqs) ], **self.proc_kwargs)
-       
+
         self.proc.finish()
 
         return p[0]
@@ -121,7 +125,7 @@ class BaseSpectrogram(object):
     def split_data(self, times):
         return  [ self.weighted_local_data(time) for time in times ]
 
-    
+
     def spectrogram(self, times=None, freqs=None, nsplits=100):
         if times is None:
             times = self.times
@@ -130,12 +134,12 @@ class BaseSpectrogram(object):
 
         if freqs is None:
             freqs = self.freqs
-        
+
         specgram   = np.zeros((len(times), len(freqs)))
         split_data = self.split_data(times)
         split_data = [ tuple(split) + (freqs,) for split in split_data ]
 
-        powers = self.proc.batched_run(split_data, batch_size=self.batch_size, 
+        powers = self.proc.batched_run(split_data, batch_size=self.batch_size,
                                                 **self.proc_kwargs)
 
         for i, power in enumerate(powers):

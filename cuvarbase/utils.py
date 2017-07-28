@@ -4,10 +4,25 @@ import pkg_resources
 def find_kernel(name):
     return pkg_resources.resource_filename('cuvarbase', 'kernels/%s.cu'%(name))
 
+def _module_reader(fname, cpp_defs=None):
+    txt = open(fname, 'r').read()
+
+    if cpp_defs is None:
+        return txt
+
+
+    preamble = ['#define {key} {value}'.format(key=key,
+                                               value=('' if value is None
+                                                      else value))
+                for key, value in cpp_defs.iteritems()]
+    txt = txt.replace('//{CPP_DEFS}', '\n'.join(preamble))
+
+    return txt
+
 def weights(err):
     w = np.power(err, -2)
     return w / sum(w)
-        
+
 def tophat_window(t, t0, d):
     w_window = np.zeros_like(t)
     w_window[np.absolute(t - t0) < d] += 1.
@@ -77,7 +92,7 @@ def dphase(dt, freq):
     return dph_final
 
 def get_autofreqs(t, **kwargs):
-    autofreqs_kwargs = { var : value for var, value in kwargs.iteritems() \
-                               if var in [ 'minimum_frequency', 'maximum_frequency', 
-                                           'nyquist_factor', 'samples_per_peak' ] }
+    autofreqs_kwargs = {var : value for var, value in kwargs.iteritems() \
+                        if var in ['minimum_frequency', 'maximum_frequency',
+                                   'nyquist_factor', 'samples_per_peak']}
     return autofrequency(t, **autofreqs_kwargs)

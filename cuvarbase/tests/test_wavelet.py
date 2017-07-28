@@ -1,4 +1,4 @@
-
+import pytest
 from ..wavelet import Wavelet
 import numpy as np
 import matplotlib.mlab as mlab
@@ -12,6 +12,7 @@ def data(T=10, N=3000, y0=10., sigma=0.01, dtau=20., tau=0.5, period=5.):
 
 	return t, y, dy
 
+@pytest.mark.skip(reason='wavelets are not yet fully supported')
 def test_wavelet():
 	
 	t, y, dy = data()

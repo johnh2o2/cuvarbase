@@ -11,17 +11,17 @@
 
 
 __device__ float phase_diff(
-        CONSTANT float dt, 
+        CONSTANT float dt,
         CONSTANT float freq){
 	float dphi = dt * freq - floorf(dt * freq);
 	return ((dphi > 0.5f) ? 1.0f - dphi : dphi);
 }
 
 __device__ float var_step_function(
-        float *RESTRICT t, 
-        float *RESTRICT y, 
-        float *RESTRICT w, 
-        CONSTANT float freq, 
+        float *RESTRICT t,
+        float *RESTRICT y,
+        float *RESTRICT w,
+        CONSTANT float freq,
         CONSTANT int ndata){
     float bin_means[NBINS];
     float bin_wtots[NBINS];
@@ -48,21 +48,22 @@ __device__ float var_step_function(
         bin = (int) (PHASE(t[i], freq) * NBINS);
         var_tot += w[i] * (y[i] - bin_means[bin]) * (y[i] - bin_means[bin]);
     }
-    
+
     return var_tot;
 }
 
 __device__ float var_linear_interp(
-        float *RESTRICT t, 
-        float *RESTRICT y, 
-        float *RESTRICT w, 
-        CONSTANT float freq, 
+        float *RESTRICT t,
+        float *RESTRICT y,
+        float *RESTRICT w,
+        CONSTANT float freq,
         CONSTANT int ndata){
+
     float bin_means[NBINS];
     float bin_wtots[NBINS];
     int bin, bin0, bin1;
     float var_tot = 0.f;
-    float phase, yprior, alpha;
+    float phase, y0, alpha;
     for(int i = 0; i < NBINS; i++){
         bin_wtots[i] = 0.f;
         bin_means[i] = 0.f;
@@ -74,7 +75,7 @@ __device__ float var_linear_interp(
         bin_wtots[bin] += w[i];
         bin_means[bin] += w[i] * y[i];
     }
-    
+
     for (int i = 0; i < NBINS; i++){
         if (bin_wtots[i] == 0.f)
             continue;
@@ -86,7 +87,7 @@ __device__ float var_linear_interp(
         phase = PHASE(t[i], freq);
         bin = (int) (phase * NBINS);
         bin = bin % NBINS;
-        
+
         alpha = phase * NBINS - floorf(phase * NBINS) - 0.5f;
         bin0 = (alpha < 0) ? bin - 1 : bin;
         bin1 = (alpha < 0) ? bin : bin + 1;
@@ -97,8 +98,8 @@ __device__ float var_linear_interp(
             bin1 -= NBINS;
 
         alpha += (alpha < 0) ? 1.f : 0.f;
-        yprior = (1.f - alpha) * bin_means[bin0] + alpha * bin_means[bin1];
-        var_tot += w[i] * (y[i] - yprior) * (y[i] - yprior);
+        y0 = (1.f - alpha) * bin_means[bin0] + alpha * bin_means[bin1];
+        var_tot += w[i] * (y[i] - y0) * (y[i] - y0);
     }
 
     return var_tot;
@@ -106,10 +107,10 @@ __device__ float var_linear_interp(
 
 
 __device__ float var_binless_tophat(
-        float *RESTRICT t, 
-        float *RESTRICT y, 
-        float *RESTRICT w, 
-        CONSTANT float freq, 
+        float *RESTRICT t,
+        float *RESTRICT y,
+        float *RESTRICT w,
+        CONSTANT float freq,
         CONSTANT int ndata,
         CONSTANT float dphi){
 	float mbar, tj, wtot, var, dphase;
@@ -130,10 +131,10 @@ __device__ float var_binless_tophat(
 	return var;
 }
 __device__ float var_binless_gauss(
-        float *RESTRICT t, 
-        float *RESTRICT y, 
-        float *RESTRICT w, 
-        CONSTANT float freq, 
+        float *RESTRICT t,
+        float *RESTRICT y,
+        float *RESTRICT w,
+        CONSTANT float freq,
         CONSTANT int ndata,
         CONSTANT float dphi){
     float mbar, tj, wtot, var, wgt, dphase;
@@ -154,9 +155,9 @@ __device__ float var_binless_gauss(
     return var;
 }
 __global__ void pdm_binless_tophat(
-        float *RESTRICT t, 
-        float *RESTRICT y, 
-        float *RESTRICT w, 
+        float *RESTRICT t,
+        float *RESTRICT y,
+        float *RESTRICT w,
         float *RESTRICT freqs,
         float *power,
         CONSTANT int ndata,
@@ -170,9 +171,9 @@ __global__ void pdm_binless_tophat(
 }
 
 __global__ void pdm_binless_gauss(
-        float *RESTRICT t, 
-        float *RESTRICT y, 
-        float *RESTRICT w, 
+        float *RESTRICT t,
+        float *RESTRICT y,
+        float *RESTRICT w,
         float *RESTRICT freqs,
         float *power,
         CONSTANT int ndata,
@@ -186,25 +187,25 @@ __global__ void pdm_binless_gauss(
 }
 
 __global__ void pdm_binned_linterp(
-        float *RESTRICT t, 
-        float *RESTRICT y, 
-        float *RESTRICT w, 
+        float *RESTRICT t,
+        float *RESTRICT y,
+        float *RESTRICT w,
         float *RESTRICT freqs,
         float *power,
         CONSTANT int ndata,
         CONSTANT int nfreqs,
         CONSTANT float dphi,
         CONSTANT float var){
-    
+
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i < nfreqs){
 		power[i] = 1.f - var_linear_interp(t, y, w, freqs[i], ndata) / var;
 	}
 }
 __global__ void pdm_binned_step(
-        float *RESTRICT t, 
-        float *RESTRICT y, 
-        float *RESTRICT w, 
+        float *RESTRICT t,
+        float *RESTRICT y,
+        float *RESTRICT w,
         float *RESTRICT freqs,
         float *power,
         CONSTANT int ndata,

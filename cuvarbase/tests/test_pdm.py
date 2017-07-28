@@ -6,12 +6,12 @@ from ..pdm import pdm2_cpu, PDMAsyncProcess
 from pycuda.tools import mark_cuda_test
 
 @pytest.fixture
-def data(seed=100, sigma=0.1, ndata=100):
+def data(seed=100, sigma=0.1, ndata=250):
 
     rand = np.random.RandomState(seed)
 
     t = np.sort(rand.rand(ndata))
-    y = np.cos(2 * np.pi * (3./(max(t) - min(t))) * t)
+    y = np.cos(2 * np.pi * (10./(max(t) - min(t))) * t)
 
     y += sigma * rand.randn(len(t))
 
@@ -19,22 +19,28 @@ def data(seed=100, sigma=0.1, ndata=100):
 
     return t, y, err
 
+@mark_cuda_test
+def test_cuda_pdm():
 
-def test_cuda_pdm(data, kind='binned_linterp', nbins=30, seed=100, nfreqs=100): 
-    def test():
-        t, y, err = data
-        w = weights(err)
-        freqs = np.linspace(0, 1./(max(t) - min(t)), nfreqs)
-        freqs += 0.5 * (freqs[1] - freqs[0])
+    kind = 'binned_linterp'
+    nbins = 10
+    seed = 100
+    nfreqs = 1000
+    ndata = 250
 
-        pow_cpu = pdm2_cpu(t, y, w, freqs, linterp=(kind == 'binned_linterp'), nbins=nbins)
-        
-        pdm_proc = PDMAsyncProcess()
-        results = pdm_proc.run([(t, y, w, freqs)], kind=kind, nbins=nbins)
-        pdm_proc.finish()
+    t, y, err = data(seed=seed, ndata=ndata)
 
-        pow_gpu = results[0]
 
-        assert_allclose(pow_cpu, pow_gpu, atol=1E-5, rtol=1E-3)
+    w = weights(err)
+    freqs = np.linspace(0, 100./(max(t) - min(t)), nfreqs)
+    freqs += 0.5 * (freqs[1] - freqs[0])
 
-    return mark_cuda_test(test)
+    pow_cpu = pdm2_cpu(t, y, w, freqs, linterp=(kind == 'binned_linterp'), nbins=nbins)
+
+    pdm_proc = PDMAsyncProcess()
+    results = pdm_proc.run([(t, y, w, freqs)], kind=kind, nbins=nbins)
+    pdm_proc.finish()
+
+    pow_gpu = results[0]
+
+    assert_allclose(pow_cpu, pow_gpu, atol=1E-2, rtol=0)
