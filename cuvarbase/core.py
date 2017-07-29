@@ -29,10 +29,12 @@ class GPUAsyncProcess(object):
         raise NotImplementedError()
 
     def finish(self):
+        """ synchronize all active streams """
         for i, stream in enumerate(self.streams):
             stream.synchronize()
 
     def batched_run(self, data, batch_size=10, **kwargs):
+        """ Run your data in batches (avoids memory problems) """
         nsubmit = 0
         results = []
         while nsubmit < len(data):

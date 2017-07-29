@@ -33,7 +33,9 @@ def time_shift(t, samples_per_peak=5):
     -------
     tshift : np.array
         Shifted observation times
-    phi0 :
+    phi0 : float
+        min(t) / (T * samples_per_peak), used to correct
+        phase in the NFFT (which is altered by scaling ``t``)
     """
 
     t = np.asarray(t)
@@ -122,7 +124,7 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
     precompute_psi, fast_gaussian_grid, slow_gaussian_grid, \
        center_fft, divide_phi_hat = functions
 
-     # types
+    # types
     real_type = np.float64 if use_double else np.float32
     complex_type = np.complex128 if use_double else np.complex64
 
@@ -148,23 +150,11 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
             precompute_psi.prepared_async_call(grid, block, stream,
                         t_g.ptr, q1.ptr, q2.ptr, q3.ptr, n0, n, m, b)
 
-        """
-        assert(not any(np.isnan(q1.get())))
-        assert(not any(np.isnan(q2.get())))
-        assert(not any(np.isnan(q3.get())))
-        print(q1.get(), q2.get(), q3.get())
-        import sys
-        sys.exit()
-        """
-
         grid = ( grid_size(n0), 1 )
         fast_gaussian_grid.prepared_async_call(grid, block, stream,
                                             t_g.ptr, y_g.ptr, grid_g.ptr,
                                             q1.ptr, q2.ptr, q3.ptr,
                                             n0, n, batch_size, m)
-        #assert(not any(np.isnan(grid_g.get())))
-        #print("grid? ", any(np.isnan(grid_g.get())))
-        #print("grid: ", grid_g.get())
     else:
         grid = (grid_size(n), 1)
         slow_gaussian_grid.prepared_async_call(grid, block, stream,
@@ -179,27 +169,22 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
         grid_g.set(use_grid)
 
 
+    # Center the grid in Fourier space
     grid = ( grid_size(n), 1 )
     center_fft.prepared_async_call(grid, block, stream,
                                    grid_g.ptr, ghat_g.ptr, n,
                                    batch_size, phi0)
 
-
-    #print("ghat (after center)? ", any(np.isnan(ghat_g.get())))
-    #print("ghat: ", ghat_g.get())
-
+    # Run IFFT on centered grid
     cufft.ifft(ghat_g, ghat_g, cu_plan)
 
-    #print("ghat (after ifft)? ", any(np.isnan(ghat_g.get())))
-    #print("ghat: ", ghat_g.get())
-
+    # Normalize
     grid = ( grid_size(N), 1 )
     divide_phi_hat.prepared_async_call(grid, block, stream,
                                        ghat_g.ptr, ghat_g_final.ptr, n, N,
                                        batch_size, b)
 
-    #print("ghat (after normalization)? ", any(np.isnan(ghat_g.get())))
-    #print("ghat: ", ghat_g.get())
+    # Transfer result!
     if transfer_to_host:
         cuda.memcpy_dtoh_async(ghat_cpu, ghat_g_final.ptr, stream)
 
@@ -209,6 +194,28 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
 class NFFTAsyncProcess(GPUAsyncProcess):
     """
     `GPUAsyncProcess` for the adjoint NFFT.
+
+    Parameters
+    ----------
+    sigma: float, optional (default: 2)
+        Size of NFFT grid will be NFFT_SIZE * sigma
+    m: int, optional (default: 8)
+        Maximum radius for grid contributions (by default,
+        this value will automatically be set based on a specified
+        error tolerance)
+    autoset_m: bool, optional (default: True)
+        Automatically set the ``m`` parameter based on the
+        error tolerance given by the ``m_tol`` parameter
+    m_tol: float, optional (default: 1E-8)
+        Error tolerance for the NFFT (used to auto set ``m``)
+    block_size: int, optional (default: 256)
+        CUDA block size.
+    use_double: bool, optional (default: False)
+        Use double precision. On non-Tesla cards this will
+        make things ~24 times slower.
+    use_fast_math: bool, optional (default: True)
+        Compile kernel with the ``--use_fast_math`` option
+        supplied to ``nvcc``.
 
     Example
     -------
@@ -232,7 +239,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         self.use_double = kwargs.get('use_double', False)
         self.m_tol = kwargs.get('tol', 1E-8)
         self.module_options = []
-        if kwargs.get('use_fast_math', False):
+        if kwargs.get('use_fast_math', True):
             self.module_options.append('--use_fast_math')
 
 
@@ -250,6 +257,30 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         return int(np.ceil(-np.log(0.25 * C) / (np.pi * (1. - 1. / (2. * sigma - 1.)))))
 
     def estimate_m(self, tol, N, sigma):
+        """
+        Automatically set ``m`` based on an error tolerance of ``tol``.
+
+
+        Parameters
+        ----------
+        tol: float
+            Error tolerance
+        N: int
+            size of NFFT
+        sigma: float
+            Grid size is ``sigma * N``
+
+        Returns
+        -------
+        m: int
+            Maximum grid radius
+
+        Notes
+        -----
+        Pulled from <https://github.com/jakevdp/nfft>_.
+
+        """
+
         # TODO: this should be computed in terms of the L1-norm of the true
         #   Fourier coefficients... see p. 11 of
         #   https://www-user.tu-chemnitz.de/~potts/nfft/guide/nfft3.pdf
@@ -292,6 +323,31 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
 
     def allocate_grid(self, N):
+        """
+        Allocate GPU memory for NFFT grid & final FFT.
+
+        Allocates a total of (2 * sigma * n + N) * sizeof(float)
+        bytes of memory on the GPU.
+
+        Parameters
+        ----------
+        N: int
+            Size of grid.
+
+        Returns
+        -------
+        grid_g: GPUArray, real
+            Grid (GPU)
+        ghat_g: GPUArray, complex
+            Temporary array (GPU)
+        ghat_g_final:
+
+        ghat_cpu: ``np.ndarray`` (aligned)
+            Grid (CPU) ``np.ndarray``, aligned with page size to
+            allow asynchronous data transfer
+
+        """
+
         if not N%2 == 0:
             raise Exception("N = %d is not even."%(N))
         n = int(self.sigma * N)
@@ -307,6 +363,37 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         return grid_g, ghat_g, ghat_g_final, ghat_cpu
 
     def allocate(self, data, **kwargs):
+        """
+        Allocate GPU memory for NFFT-related computations
+
+        Parameters
+        ----------
+        data: list of (t, y, N) tuples
+            List of data, ``[(t_1, y_1, N_1), ...]``
+            * ``t``: Observation times.
+            * ``y``: Observations.
+            * ``N``: int, FFT size
+        **kwargs
+
+        Returns
+        -------
+        gpu_data: list of tuples
+            List of tuples containing GPU-allocated objects for each
+            dataset
+            * ``t_g``: ``GPUArray``, real, length = length of data
+            * ``y_g``
+            * ``q1``
+            * ``q2``
+            * ``q3``
+            * ``grid_g``
+            * ``ghat_g``
+            * ``ghat_g_final``
+            * ``cu_plan``
+        pow_cpus: list of ``np.ndarray``s
+            List of registered ndarrays for transferring final NFFTs
+
+        """
+
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
@@ -328,13 +415,37 @@ class NFFTAsyncProcess(GPUAsyncProcess):
                                  batch=1, stream=self.streams[i],
                                  istride=1, ostride=1, idist=n, odist=n)
 
-            gpu_data.append((t_g, y_g, q1, q2, q3, grid_g, ghat_g, ghat_g_final, cu_plan))
+            gpu_data.append((t_g, y_g, q1, q2, q3, grid_g, ghat_g,
+                             ghat_g_final, cu_plan))
+
             pow_cpus.append(ghat_cpu)
 
         return gpu_data, pow_cpus
 
     def run(self, data, gpu_data=None, pow_cpus=None, **kwargs):
+        """
+        Run the adjoint NFFT on a batch of data
 
+        Parameters
+        ----------
+        data: list of tuples
+            list of [(t, y, w), ...] containing
+            * ``t``: observation times
+            * ``y``: observations
+            * ``N``: size of NFFT
+        gpu_data: optional, list of tuples
+            List of tuples containing allocated GPU objects for each dataset
+        pow_cpus: optional, list of ``np.ndarray``
+            List of page-locked (registered) np.ndarrays for asynchronous
+            transfers of NFFT to CPU
+        **kwargs
+
+        Returns
+        -------
+        powers: list of np.ndarrays
+            List of adjoint NFFTs
+
+        """
         if self.autoset_m:
             N = max([d[2] for d in data])
             self.m = self.estimate_m(self.m_tol, N, self.sigma)
@@ -367,118 +478,3 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         [s.synchronize() for s in self.streams]
 
         return results
-
-
-"""
-if __name__ == '__main__':
-
-    ndata = 5000
-    year = 365.
-    p_min = 0.1  # minimum period (minutes)
-    T = 1. * year   # baseline (years)
-    oversampling = 5 # df = 1 / (o * T)
-    batch_size = 10
-    nlcs = 1 * batch_size
-    block_size = 160
-
-    # nominal number of frequencies needed
-    Nf = int(oversampling * T / p_min)
-    #print(Nf)
-    #Nf = 10
-    sigma = 2
-    noise_sigma = 0.1
-    m=8
-
-    # nearest power of 2
-    n = 2 ** int(np.ceil(np.log2(Nf)))
-
-    rand = np.random.RandomState(100)
-    signal_freqs = np.linspace(0.1, 0.4, nlcs)
-
-    random_times = lambda N : shifted(np.sort(rand.rand(N) - 0.5))
-    noise = lambda : noise_sigma * rand.randn(len(x))
-    omega = lambda freq : 2 * np.pi * freq * len(x)
-    phase = lambda : 2 * np.pi * rand.rand()
-
-    random_signal = lambda X, frq : np.cos(omega(frq) * X - phase()) + noise()
-
-    x = random_times(ndata)
-    y = [ random_signal(x, freq) for freq in signal_freqs ]
-    err = [ noise_sigma * np.ones_like(Y) for Y in y ]
-
-
-    #test_fast_gridding(x, y[0], n)
-    #print("FAST GRIDDING OK!")
-
-    #test_nfft_adjoint_async(x, y[0], n)
-   # print("NFFT OK!")
-    test_fast_gridding(x, y[0], n)
-    test_slow_gridding(x, y[0], n)
-    test_post_gridding(x, y[0], n)
-    test_nfft_adjoint_async(x, y[0], n)
-    #fhats = nfft_adjoint_accelerated(x, y, n, fast=fast, sigma=sigma, batch_size=batch_size,
-    #                               m=m, block_size=block_size)
-
-    #dt_batch = time() - t0
-
-    #fhats_nb = []
-    #t0 = time()
-    #for Y in y:
-    #    fhats_nb.extend(nfft_adjoint_accelerated(x, Y, n, fast=fast, sigma=sigma,
-            #                m=m, block_size=block_size))
-    #dt_nonbatch = time() - t0
-
-
-    #warp_size = 32
-    #timing_info = []
-    #for warp_multiple in 1 + np.arange(32):
-    #    block_size = warp_multiple * warp_size
-    #    t0 = time()
-    #    fhats = nfft_adjoint_accelerated(x, y, n, fast=True, sigma=sigma,
-    #                                            m=m, block_size=block_size)
-    #    dt_fast = time() - t0
-    #    timing_info.append((block_size, dt_fast))
-
-    #for b, dt in timing_info:
-    #    print(b, dt)
-
-    ncpu = len(signal_freqs)
-    t0 = time()
-    fhat_cpus = [ nfft_adjoint_cpu(x, Y, n,
-                                    sigma=sigma, m=m,
-                                    use_fft=True,
-                                    truncated=True) \
-                    for i, Y in enumerate(y) if i < ncpu ]
-
-    dt_cpu = time() - t0
-
-    print(dt_batch / len(signal_freqs), dt_nonbatch / len(signal_freqs), dt_cpu / ncpu)
-
-    #sys.exit()
-    #fhat_cpus = nfft_adjoint_accelerated(x, y, n, m, fast=False)
-
-
-    for i, (fhat, fhat_cpu) in enumerate(zip(fhats, fhat_cpus)):
-        freqs = np.arange(len(fhat)) - len(fhat) / 2
-        f, ax = plt.subplots()
-        X = np.absolute(fhat_cpu)
-        Y = np.absolute(fhat)
-        #ax.scatter(freqs, 2 * (Y - X) / np.median(Y + X), marker='.', s=1, alpha=0.5)
-
-        ax.scatter(X, Y, s=1, alpha=0.05)
-        #ax.plot(X, color='k')
-        #ax.plot(Y, color='r', alpha=0.5)
-        #ax.set_xscale('log')
-        #ax.set_yscale('log')
-        #ax.set_xlim(1E-1, 1.1 * max([ max(X), max(Y) ]))
-        #ax.set_ylim(1E-1, 1.1 * max([ max(X), max(Y) ]))
-        #ax.plot(freqs, np.absolute(fhat_cpu), color='b', alpha=0.6 / (i + 1))
-        #ax.plot(freqs, np.absolute(fhat) , color='r', alpha=0.6 / (i + 1))
-        #ax.axvline( freq * ndata)
-
-        #xmin, xmax = ax.get_xlim()
-        #xline = np.logspace(np.log10(xmin), np.log10(xmax), 1000)
-        #ax.plot(xline, xline, ls=':', color='k')
-        plt.show()
-        plt.close(f)
-"""

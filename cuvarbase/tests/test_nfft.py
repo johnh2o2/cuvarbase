@@ -60,8 +60,6 @@ def gpu_grid_scalar(t, y, sigma, m, N):
 
     return grid
 
-
-
 def simple_gpu_nfft(t, y, N, sigma=nfft_sigma, m=nfft_m, **kwargs):
     proc = NFFTAsyncProcess(sigma=sigma, m=m, use_double=True)
     results = proc.run([(t, y, N)], **kwargs)

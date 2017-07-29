@@ -54,8 +54,8 @@ __device__ FLT lpow(FLT C, FLT S, FLT C2, FLT S2, FLT Ch, FLT Sh, FLT YY){
 
     FLT P = ((YC * YC) / CC + (YS * YS) / SS)/YY;
 
-    if (isnan(P) || isinf(P))
-    	P = 0.;
+    if (isnan(P) || isinf(P) || P < 0 || P > 1)
+    	P = -1.;
 
     return P;
 }
@@ -90,7 +90,7 @@ __global__ void lomb(pycuda::complex<FLT>  *sw,
 
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	// reg = (lambda_a, lambda_b, lambda_c)
-	if (i <= nfreq && i > 0){
+	if (i < nfreq && i > 0){
 		pycuda::complex<FLT> SW, SW2, SYW;
 		SW = sw[2 * nfreq + i];
 		SW2 = sw[2 * nfreq + 2 * i];

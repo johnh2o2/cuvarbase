@@ -1,6 +1,11 @@
 import numpy as np
 import pkg_resources
 
+def weights(err):
+    """ generate observation weights from uncertainties """
+    w = np.power(err, -2)
+    return w/sum(w)
+
 def find_kernel(name):
     return pkg_resources.resource_filename('cuvarbase', 'kernels/%s.cu'%(name))
 
@@ -19,9 +24,6 @@ def _module_reader(fname, cpp_defs=None):
 
     return txt
 
-def weights(err):
-    w = np.power(err, -2)
-    return w / sum(w)
 
 def tophat_window(t, t0, d):
     w_window = np.zeros_like(t)

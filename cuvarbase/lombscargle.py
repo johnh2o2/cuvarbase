@@ -9,6 +9,10 @@ from .utils import weights, find_kernel, _module_reader
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async, time_shift
 
 def lomb_scargle_direct_sums(t, w, yw, freqs, YY):
+    """
+    Super slow lomb scargle (for debugging), uses
+    direct summations to compute C, S, ...
+    """
     lsp = np.zeros(len(freqs))
     for i, freq in enumerate(freqs):
         phase = 2 * np.pi * (((t + 0.5) * freq) % 1.0).astype(np.float64)
@@ -50,17 +54,19 @@ def lomb_scargle_direct_sums(t, w, yw, freqs, YY):
 
         P = (YC * YC / CC + YS * YS / SS) / YY;
 
-        print(P, YC, YS, CC, SS, YY)
-        lsp[i] = 0 if (np.isinf(P) or np.isnan(P)) else P
+        if (np.isinf(P) or np.isnan(P) or P < 0 or P > 1):
+            print(P, YC, YS, CC, SS, YY)
+            P = 0.
+        lsp[i] = P
 
     return lsp
 
 def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, block_size=256,
-            sigma=2, m=8, use_cpu_nfft=False, use_double=False,
+            sigma=2, m=8, use_cpu_nfft=False, use_double=False, phi0=0.,
             use_fft=True, freqs=None, python_dir_sums=False, **kwargs):
 
 
-    t, y, w, phi0, nf = data_cpu
+    t, y, w, nf = data_cpu
 
     # types
     real_type = np.float64 if use_double else np.float32
@@ -91,9 +97,8 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, block_size=25
     block = (block_size, 1, 1)
     grid = (int(np.ceil(nf / float(block_size))), 1)
 
+    # Use direct sums (on GPU)
     if not use_fft:
-
-        print("USING DIRECT SUMS")
         if freqs is None:
             raise Exception("If use_fft is False, freqs must be specified"
                             "and must be a GPUArray instance.")
@@ -108,6 +113,9 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, block_size=25
                                         freqs.ptr, g_lsp.ptr, np.int32(nf),
                                         np.int32(len(t)), real_type(YY))
         cuda.memcpy_dtoh_async(lsp, g_lsp.ptr, stream)
+        stream.synchronize()
+        #print(zip(freqs.get()[:10], g_lsp.get()[:10]))
+
         return lsp
 
     # NFFT
@@ -161,6 +169,26 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, block_size=25
 
 
 class LombScargleAsyncProcess(GPUAsyncProcess):
+    """
+    GPUAsyncProcess for the Lomb Scargle periodogram
+
+    Parameters
+    ----------
+    **kwargs: passed to ``NFFTAsyncProcess``
+
+    Example
+    -------
+    >>> proc = LombScargleAsyncProcess()
+    >>> Ndata = 1000
+    >>> t = np.sort(365 * np.random.rand(N))
+    >>> y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)
+    >>> y += 0.01 * np.random.randn(len(t))
+    >>> dy = 0.01 * np.ones_like(y)
+    >>> freqs, powers = proc.run([(t, y, dy)])
+    >>> proc.finish()
+    >>> ls_freqs, ls_powers = freqs[0], powers[0]
+
+    """
     def __init__(self, *args, **kwargs):
         super(LombScargleAsyncProcess, self).__init__(*args, **kwargs)
 
@@ -195,13 +223,15 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
 
     @classmethod
-    def scale_data(cls, data, samples_per_peak=5, maximum_frequency=None,
-                        nyquist_factor=5, **kwargs):
+    def scale_data(cls, data, convert_to_weights=True,
+                   samples_per_peak=5, maximum_frequency=None,
+                   nyquist_factor=5, **kwargs):
 
         scaled_data = []
         scaled_freqs = []
         freqs = []
-        for (t, y, w) in data:
+        phi0s = []
+        for (t, y, err) in data:
             T = max(t) - min(t)
             tshift, phi0 = time_shift(t, samples_per_peak=samples_per_peak)
 
@@ -210,25 +240,74 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
             nf = int(np.ceil(maximum_frequency * T * samples_per_peak))
 
-            scaled_data.append((tshift, y, w, phi0, nf))
+            w = err if not convert_to_weights else weights(err)
+            scaled_data.append((tshift, y, w, nf))
+            phi0s.append(phi0)
 
             df = 1./(samples_per_peak * T)
             freqs.append(df * (1 + np.arange(nf)))
             scaled_freqs.append(1 + np.arange(nf))
-        return scaled_data, freqs, scaled_freqs
+        return scaled_data, freqs, scaled_freqs, phi0s
 
 
     def move_freqs_to_gpu(self, freqs, **kwargs):
         return [gpuarray.to_gpu(frq.astype(self.real_type))
                 for frq in freqs]
 
-    def allocate(self, data, regularize=None, **kwargs):
+    def memory_requirement(self, data, **kwargs):
+        """ return an approximate GPU memory requirement """
+        tot_npts = sum([ len(t) for t, y, err in data ])
+
+        nflts = 5 * tot_npts + 4 * len(data) * (4 * sigma + 3) * nf
+
+        return nflts * (32 if self.real_type == np.float32 else 64)
+
+    def allocate(self, data, **kwargs):
+
+        """
+        Allocate GPU memory for Lomb Scargle computations
+
+        Parameters
+        ----------
+        data: list of (t, y, N) tuples
+            List of data, ``[(t_1, y_1, w_1), ...]``
+            * ``t``: Observation times
+            * ``y``: Observations
+            * ``w``: Observation **weights** (sum(w) = 1)
+        **kwargs
+
+        Returns
+        -------
+        gpu_data: list of tuples
+            List of tuples containing GPU-allocated objects for each
+            dataset
+            * ``t_g``: ``GPUArray``, real, length = length of data
+            * ``y_g``: ``GPUArray``, real, length = length of data
+            * ``w_g``: ``GPUArray``, real, length = length of data
+            * ``q1``: ``GPUArray``, real, length = length of data
+            * ``q2``: ``GPUArray``, real, length = length of data
+            * ``q3``: ``GPUArray``, real, length = 2 * m + 1
+            * ``grid_g_w``: ``GPUArray``, real, length = 4 * sigma * nf
+            * ``grid_g_yw``: ``GPUArray``, real, length = 4 * sigma * nf
+            * ``ghat_g_w``: ``GPUArray``, complex, length = 2 * sigma * nf
+            * ``ghat_g_yw``: ``GPUArray``, complex, length = 2 * sigma * nf
+            * ``ghat_g_w_f``: ``GPUArray``, complex, length = 4 * nf
+            * ``ghat_g_yw_f``: ``GPUArray``, complex, length = 2 * nf
+            * ``cu_plan_w``: ``cufft.Plan`` for C2C transform (4*sigma*nf)
+            * ``cu_plan_yw``: ``cufft.Plan`` for C2C transform (2*sigma*nf)
+
+        lsps: list of ``np.ndarray``s
+            List of registered ndarrays for transferring periodograms to CPU
+
+        """
+
+
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
         gpu_data, lsps =  [], []
 
-        for i, (t, y, w, phi0, nf) in enumerate(data):
+        for i, (t, y, w, nf) in enumerate(data):
             n = int(nf * self.nfft_proc.sigma)
             n0 = len(t)
 
@@ -267,11 +346,56 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         return gpu_data, lsps
 
     def run(self, data, freqs=None, gpu_data=None, lsps=None,
-            scale=True, use_fft=True, **kwargs):
+            phi0s=None, scale=True, use_fft=True,
+            convert_to_weights=True, **kwargs):
 
+        """
+        Run Lomb Scargle on a batch of data.
+
+        Parameters
+        ----------
+        data: list of tuples
+            list of [(t, y, w), ...] containing
+            * ``t``: observation times
+            * ``y``: observations
+            * ``y_err``: observation uncertainties
+        convert_to_weights: optional, bool, (default: True)
+            If False, it assumes ``y_err`` are weights (i.e. sum(y_err) = 1)
+        freqs: optional, list of ``np.ndarray`` [**DO NOT USE**]
+            List of custom frequencies (don't use this!! Not working)
+        gpu_data: optional, list of tuples
+            List of tuples containing allocated GPU objects for each dataset
+        lsps: optional, list of ``np.ndarray``
+            List of page-locked (registered) np.ndarrays for asynchronously
+            transferring results to CPU
+        scale: optional, bool (default: True)
+            Scale the incoming data and frequencies to [-0.5, 0.5].
+            If you're passing regular data (times, mags, mag_errs),
+            you want this to be true!
+        use_fft: optional, bool (default: True)
+            Uses the NFFT, otherwise just does direct summations (which
+            are quite slow...)
+        phi0s: optional, array_like, (default: None)
+            The phase shifts for the scaled observation times
+        **kwargs
+
+        Returns
+        -------
+        results: list of lists
+            list of zip(freqs, pows) for each LS periodogram
+        powers: list of np.ndarrays
+            List of periodogram powers
+
+        """
         scaled_data, freqs = data, freqs
+
         if scale:
-            scaled_data, freqs, scaled_freqs = self.scale_data(data, **kwargs)
+            scaled_data, freqs, scaled_freqs, phi0s \
+                = self.scale_data(data, convert_to_weights=convert_to_weights,
+                                    **kwargs)
+
+        if phi0s is None:
+            phi0s = np.zeros(len(data))
         if not hasattr(self, 'prepared_functions') or \
             not all([func in self.prepared_functions for func in \
                      ['lomb', 'lomb_dirsum']]):
@@ -294,16 +418,23 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
-        results = [lomb_scargle_async(stream, cdat, gdat, lsp, funcs, freqs=fgpu,
+        results = [lomb_scargle_async(stream, cdat, gdat, lsp, funcs,
+                                      freqs=fgpu, phi0=phi0,
                                       **ls_kwargs)
-                   for stream, cdat, gdat, lsp, fgpu in \
+                   for stream, cdat, gdat, lsp, fgpu, phi0 in \
                                   zip(streams, scaled_data, gpu_data,
-                                      lsps, freqs_gpu)]
+                                      lsps, freqs_gpu, phi0s)]
+        results = [zip(f, r) for f, r in zip(freqs, results)]
+        return results
 
-        return freqs, results
 
-
-def lomb_scargle(t, y, dy, **kwargs):
+def lomb_scargle_simple(t, y, dy, **kwargs):
+    """
+    Simple lomb-scargle interface for testing that
+    things work on the GPU. Note: This will be
+    substantially slower than working with the
+    ``LombScargleAsyncProcess`` interface.
+    """
 
     w = np.power(dy, -2)
     w /= sum(w)
@@ -314,15 +445,11 @@ def lomb_scargle(t, y, dy, **kwargs):
     return freqs[0], results[0]
 
 
-
+"""
 class LombScargleSpectrogram(BaseSpectrogram):
     def __init__(self, t, y, w, **kwargs):
 
         super(LombScargleSpectrogram, self).__init__(t, y, w, **kwargs)
         if self.proc is None:
             self.proc = LombScargleAsyncProcess()
-
-
-
-
-
+"""
