@@ -31,8 +31,9 @@ __device__ double atomicAddDouble(double* address, double val)
     return __longlong_as_double(old);
 }
 
+
 __device__ FLT gauss_filter(CONSTANT FLT x, CONSTANT FLT b) {
-	return expf(-(x*x) / b) / sqrtf(PI * b);
+	return exp(-(x*x) / b) / sqrt(PI * b);
 }
 
 __device__ int mod(CONSTANT int a, CONSTANT int b) {
@@ -41,7 +42,7 @@ __device__ int mod(CONSTANT int a, CONSTANT int b) {
 }
 
 __device__ float modflt(CONSTANT FLT a, CONSTANT FLT b){
-	return a - floorf(a / b) * b;
+	return a - floor(a / b) * b;
 }
 
 __device__ FLT diffmod(CONSTANT FLT a, CONSTANT FLT b, CONSTANT FLT M) {
@@ -71,7 +72,7 @@ __global__ void nfft_shift(
 	if (batch < nbatch) {
 		FLT phi0 = f0 * (xf - x0) * spp / n;
 		FLT phi = 2 * PI * mod(i, n) * phi0;
-		CMPLX shift = CMPLX(cosf(phi), sinf(phi))
+		CMPLX shift = CMPLX(cos(phi), sin(phi))
 
 		out[i] = shift * CMPLX(in[batch * n + k], 0.0f);
 	}
@@ -94,12 +95,12 @@ __global__ void precompute_psi(
 
 		FLT xg = m + modflt(n * x[i], 1.f);
 
-		q1[i] = expf(-xg * (xg * binv)) / sqrtf(b * PI);
-		q2[i] = expf( 2.f * xg * binv);
+		q1[i] = exp(-xg * (xg * binv)) / sqrt(b * PI);
+		q2[i] = exp( 2.f * xg * binv);
 
 	} else if (i - n0 < 2 * m + 1) {
 		int l = i - n0;
-		q3[l] = expf(-l * l * binv);
+		q3[l] = exp(-l * l * binv);
 	}
 }
 
@@ -124,12 +125,12 @@ __global__ void precompute_psi_noscale(
 
 		xg = m + modflt(n * xg, 1.f);
 
-		q1[i] = expf(-xg * (xg * binv)) / sqrtf(b * PI);
-		q2[i] = expf( 2.f * xg * binv);
+		q1[i] = exp(-xg * (xg * binv)) / sqrt(b * PI);
+		q2[i] = exp( 2.f * xg * binv);
 
 	} else if (i - n0 < 2 * m + 1) {
 		int l = i - n0;
-		q3[l] = expf(-l * l * binv);
+		q3[l] = exp(-l * l * binv);
 	}
 
 }
@@ -167,7 +168,8 @@ __global__ void fast_gaussian_grid(
 
 		// add datapoint to grid
 		for(int k = u; k < u + 2 * m + 1; k++){
-			ATOMIC_ADD(grid + mod(k, n) + batch * n, Q * q3[k - u] * yi);
+			&(grid[mod(k, n) + batch * n]._M_re)
+			ATOMIC_ADD(&(grid[mod(k, n) + batch * n]._M_re), Q * q3[k - u] * yi);
 			Q *= Q2;
 		}
 	}
@@ -212,7 +214,7 @@ __global__ void fast_gaussian_grid_noscale(
 
 		// add datapoint to grid
 		for(int k = u; k < u + 2 * m + 1; k++){
-			ATOMIC_ADD(grid + mod(k, n) + batch * n, Q * q3[k - u] * yi);
+			ATOMIC_ADD(&(grid[mod(k, n) + batch * n]._M_re), Q * q3[k - u] * yi);
 			Q *= Q2;
 		}
 	}
@@ -330,7 +332,7 @@ __global__ void divide_phi_hat(
 
 		// *= exp(i * (2 * pi * phi0) * (k - n / 2)) for t[0] != 0
 		FLT theta_k = 2.f * PI * phi0 * kprime;
-		G *= CMPLX(cosf(theta_k), sinf(theta_k));
+		G *= CMPLX(cos(theta_k), sin(theta_k));
 
 		// Not sure why this is needed but necessary to be consistent
 		// with jake vanderplas' NFFT (and I assume any other implementation)
@@ -371,7 +373,7 @@ __global__ void divide_phi_hat_noscale(
 
 		FLT theta_k = 2.f * PI * phi0 * (k0 + k);
 
-		G *= CMPLX(cosf(theta_k), sinf(theta_k));
+		G *= CMPLX(cos(theta_k), sin(theta_k));
 
 		// Not sure why this is needed but necessary to be consistent
 		// with jake vanderplas' NFFT (and I assume any other implementation)
