@@ -62,11 +62,12 @@ def lomb_scargle_direct_sums(t, w, yw, freqs, YY):
 
     return lsp
 
-def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf, block_size=256,
-            sigma=2, m=8, use_cpu_nfft=False, use_double=False, n0=None,
-            use_fft=True, use_dy_as_weights=False,
-            python_dir_sums=False, samples_per_peak=10, **kwargs):
 
+def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf,
+                       block_size=256, sigma=2, m=8, use_cpu_nfft=False,
+                       use_double=False, n0=None, use_fft=True,
+                       minimum_frequency=0., use_dy_as_weights=False,
+                       python_dir_sums=False, samples_per_peak=10, **kwargs):
 
     t, y, dy = data_cpu
     nf = np.int32(nf)
@@ -92,8 +93,8 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf, block_siz
     yw = np.multiply(w, y - ybar)
     YY = np.dot(w, np.power(y-ybar, 2))
 
-    data_w  = (t, w, 4 * nf)
-    data_yw = (t, yw, 2 * nf)
+    data_w = (t, w, 2 * nf)
+    data_yw = (t, yw, nf)
 
     t_g.set_async(np.asarray(t).astype(real_type), stream)
     w_g.set_async(np.asarray(w).astype(real_type), stream)
@@ -123,17 +124,18 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf, block_siz
         lomb_dirsum.prepared_async_call(grid, block, stream,
                                         t_g.ptr, w_g.ptr, yw_g.ptr,
                                         freqs.ptr, g_lsp.ptr, np.int32(nf),
-                                        np.int32(len(t)), real_type(YY), df, df)
+                                        np.int32(len(t)), real_type(YY),
+                                        df, df)
         cuda.memcpy_dtoh_async(lsp, g_lsp.ptr, stream)
         stream.synchronize()
-        #print(zip(freqs.get()[:10], g_lsp.get()[:10]))
+        # print(zip(freqs.get()[:10], g_lsp.get()[:10]))
 
         return lsp
 
     # NFFT
     nfft_kwargs = dict(sigma=sigma, m=m, block_size=block_size,
                        transfer_to_host=False,
-                       transfer_to_device=False,
+                       transfer_to_device=False, min_freq=minimum_frequency,
                        use_double=use_double, n0=n0,
                        samples_per_peak=samples_per_peak)
 
@@ -145,7 +147,6 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf, block_siz
 
         gh_yw = np.zeros(len(ghat_g_yw_f), dtype=complex_type)
         gh_w = np.zeros(len(ghat_g_w_f), dtype=complex_type)
-
 
         gh_yw = nfft_adjoint_cpu(*data_yw, sigma=sigma,
                                  m=m).astype(complex_type)
@@ -170,15 +171,12 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf, block_siz
                            nfft_funcs, precomp_psi=False,
                            **nfft_kwargs)
 
-
     lomb.prepared_async_call(grid, block, stream,
                              ghat_g_w_f.ptr, ghat_g_yw_f.ptr, g_lsp.ptr,
                              np.int32(nf), real_type(YY))
     cuda.memcpy_dtoh_async(lsp, g_lsp.ptr, stream)
 
     return lsp
-
-
 
 
 class LombScargleAsyncProcess(GPUAsyncProcess):
@@ -241,6 +239,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def memory_requirement(self, data, **kwargs):
         """ return an approximate GPU memory requirement in bytes """
+        raise NotImplementedError()
+
         tot_npts = sum([ len(t) for t, y, err in data ])
 
         nflts = 5 * tot_npts + 4 * len(data) * (4 * sigma + 3) * nf
@@ -259,19 +259,21 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         # Need NFFT that's 2 * length needed, since it's *centered*
         # -N/2, -N/2 + 1, ..., 0, 1, ..., (N-1)/2
-        grid_g_w = gpuarray.zeros(4 * n, dtype=self.real_type)
-        ghat_g_w = gpuarray.zeros(4 * n, dtype=self.complex_type)
-        ghat_g_w_f = gpuarray.zeros(4 * nf, dtype=self.complex_type)
+        # grid_g_w = gpuarray.zeros(4 * n, dtype=self.real_type)
+        ghat_g_w = gpuarray.zeros(2 * n, dtype=self.complex_type)
+        ghat_g_w_f = ghat_g_w
+        grid_g_w = ghat_g_w
 
-        grid_g_yw = gpuarray.zeros(2 * n, dtype=self.real_type)
-        ghat_g_yw = gpuarray.zeros(2 * n, dtype=self.complex_type)
-        ghat_g_yw_f = gpuarray.zeros(2 * nf, dtype=self.complex_type)
+        # grid_g_yw = gpuarray.zeros(2 * n, dtype=self.real_type)
+        ghat_g_yw = gpuarray.zeros(n, dtype=self.complex_type)
+        ghat_g_yw_f = ghat_g_yw
+        grid_g_yw = ghat_g_yw
 
         if cu_plan_w is None:
-            cu_plan_w = cufft.Plan(4 * n, self.complex_type, self.complex_type,
+            cu_plan_w = cufft.Plan(2 * n, self.complex_type, self.complex_type,
                                    stream=stream)
         if cu_plan_yw is None:
-            cu_plan_yw = cufft.Plan(2 * n, self.complex_type, self.complex_type,
+            cu_plan_yw = cufft.Plan(n, self.complex_type, self.complex_type,
                                     stream=stream)
 
         lsp = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,

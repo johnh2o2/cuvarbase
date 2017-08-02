@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt 
 import imageio
 import numpy as np
-import pdm
-from utils import weights
+from . import pdm
+from .utils import weights
 
 def plot_spectrogram(ax, times, freqs, sgram):
     T, F = np.meshgrid(times, freqs)
