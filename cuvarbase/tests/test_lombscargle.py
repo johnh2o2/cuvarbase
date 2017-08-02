@@ -6,8 +6,8 @@ from astropy.stats.lombscargle import LombScargle
 
 from ..lombscargle import LombScargleAsyncProcess
 from pycuda.tools import mark_cuda_test
-spp = 10
-nfac = 10
+spp = 1
+nfac = 1
 lsrtol = 1E-2
 lsatol = 1E-5
 nfft_sigma = 2
@@ -46,7 +46,7 @@ def test_against_astropy_double():
                                              samples_per_peak=spp)
     ls_proc.finish()
 
-    fgpu, pgpu = zip(*(results[0]))
+    fgpu, pgpu = results[0]
 
     power = LombScargle(t, y, err).power(fgpu)
 
@@ -60,7 +60,7 @@ def test_against_astropy_single():
     results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                                              samples_per_peak=spp)
     ls_proc.finish()
-    fgpu, pgpu = zip(*(results[0]))
+    fgpu, pgpu = results[0]
 
     power = LombScargle(t, y, err).power(fgpu)
 
@@ -76,7 +76,7 @@ def test_ls_kernel():
     results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                                              samples_per_peak=spp, use_cpu_nfft=True)
     ls_proc.finish()
-    fgpu, pgpu = zip(*(results[0]))
+    fgpu, pgpu = results[0]
 
     power = LombScargle(t, y, err, fit_mean=True, center_data=False).power(fgpu)
 
@@ -90,7 +90,7 @@ def test_ls_kernel_direct_sums():
     results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                               samples_per_peak=spp, use_fft=False)
     ls_proc.finish()
-    fgpu, pgpu = zip(*(results[0]))
+    fgpu, pgpu = results[0]
 
     power = LombScargle(t, y, err, fit_mean=True, center_data=True).power(fgpu)
 
@@ -106,13 +106,13 @@ def test_ls_kernel_direct_sums_is_consistent():
                                              samples_per_peak=spp, use_fft=False)
     ls_proc.finish()
 
-    fgpu_ds, pgpu_ds = zip(*(results_ds[0]))
+    fgpu_ds, pgpu_ds = results_ds[0]
 
     results_reg = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                                              samples_per_peak=spp, use_cpu_nfft=True)
     ls_proc.finish()
 
-    fgpu_reg, pgpu_reg = zip(*(results_reg[0]))
+    fgpu_reg, pgpu_reg = results_reg[0]
 
     assert_similar(pgpu_reg, pgpu_ds)
 
@@ -127,14 +127,13 @@ def test_ls_kernel_direct_sums_against_python():
                              samples_per_peak=spp, use_fft=False)
     ls_proc.finish()
 
-    fgpu_ds, pgpu_ds = zip(*(result_ds[0]))
+    fgpu_ds, pgpu_ds = result_ds[0]
 
     result_reg = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                                                samples_per_peak=spp, use_fft=False,
                                                python_dir_sums=True)
     ls_proc.finish()
-    fgpu_reg, pgpu_reg = zip(*(result_reg[0]))
-
+    fgpu_reg, pgpu_reg = result_reg[0]
 
     assert_similar(pgpu_reg, pgpu_ds)
 
@@ -158,8 +157,8 @@ def test_multiple_datasets():
         ls_proc.finish()
 
     for rb, rnb in zip(mult_results, sing_results):
-        fb, pb = zip(*rb)
-        fnb, pnb = zip(*rnb)
+        fb, pb = rb
+        fnb, pnb = rnb
 
         assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
         assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
@@ -184,8 +183,35 @@ def test_run_batch():
         non_batched_results.extend(r)
 
     for rb, rnb in zip(batched_results, non_batched_results):
-        fb, pb = zip(*rb)
-        fnb, pnb = zip(*rnb)
+        fb, pb = rb
+        fnb, pnb = rnb
+
+        assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
+        assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
+
+
+@mark_cuda_test
+def test_run_batch_const_nfreq():
+
+    ndatas = 25
+    batch_size = 5
+
+    datas = [data() for i in range(ndatas)]
+    ls_proc = LombScargleAsyncProcess(sigma=nfft_sigma)
+
+    batched_results = ls_proc.batched_run_const_nfreq(datas,
+                                  min_samples_per_peak=spp)
+    ls_proc.finish()
+
+    non_batched_results = []
+    for d in datas:
+        r = ls_proc.run([d], nyquist_factor=nfac, samples_per_peak=spp)
+        ls_proc.finish()
+        non_batched_results.extend(r)
+
+    for rb, rnb in zip(batched_results, non_batched_results):
+        fb, pb = rb
+        fnb, pnb = rnb
 
         assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
         assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)

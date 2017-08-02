@@ -6,7 +6,8 @@ from pycuda.compiler import SourceModule
 import resource
 from .core import GPUAsyncProcess, BaseSpectrogram
 from .utils import weights, find_kernel, _module_reader
-from .cunfft import NFFTAsyncProcess, nfft_adjoint_async, time_shift
+from .utils import autofrequency as utils_autofreq
+from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
 
 def lomb_scargle_direct_sums(t, w, yw, freqs, YY):
     """
@@ -61,12 +62,20 @@ def lomb_scargle_direct_sums(t, w, yw, freqs, YY):
 
     return lsp
 
-def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, block_size=256,
-            sigma=2, m=8, use_cpu_nfft=False, use_double=False, phi0=0.,
-            use_fft=True, freqs=None, python_dir_sums=False, **kwargs):
+def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf, block_size=256,
+            sigma=2, m=8, use_cpu_nfft=False, use_double=False, n0=None,
+            use_fft=True, use_dy_as_weights=False,
+            python_dir_sums=False, samples_per_peak=10, **kwargs):
 
 
-    t, y, w, nf = data_cpu
+    t, y, dy = data_cpu
+    nf = np.int32(nf)
+
+    n0 = n0 if n0 is not None else len(t)
+
+    w = np.zeros_like(dy)
+    w[:n0] = dy[:n0] if use_dy_as_weights else np.power(dy[:n0], -2)
+    w /= sum(w)
 
     # types
     real_type = np.float64 if use_double else np.float32
@@ -91,8 +100,10 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, block_size=25
     yw_g.set_async(np.asarray(yw).astype(real_type), stream)
 
     if python_dir_sums:
+        df = 1. / (max(t[:n0]) - min(t[:n0])) / samples_per_peak
+
         return lomb_scargle_direct_sums(t_g.get(), w_g.get(), yw_g.get(),
-                                        freqs.get(), YY)
+                                        df * (1 + np.arange(nf)), YY)
 
     block = (block_size, 1, 1)
     grid = (int(np.ceil(nf / float(block_size))), 1)
@@ -107,11 +118,12 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, block_size=25
             raise Exception("If use_fft is False, freqs must be specified"
                             "and must be a GPUArray instance. (freqs is"
                             "a `{type}` instance".format(type(freqs)))
-
+        df = 1. / (max(t[:n0]) - min(t[:n0])) / samples_per_peak
+        df = real_type(df)
         lomb_dirsum.prepared_async_call(grid, block, stream,
                                         t_g.ptr, w_g.ptr, yw_g.ptr,
                                         freqs.ptr, g_lsp.ptr, np.int32(nf),
-                                        np.int32(len(t)), real_type(YY))
+                                        np.int32(len(t)), real_type(YY), df, df)
         cuda.memcpy_dtoh_async(lsp, g_lsp.ptr, stream)
         stream.synchronize()
         #print(zip(freqs.get()[:10], g_lsp.get()[:10]))
@@ -120,9 +132,10 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, block_size=25
 
     # NFFT
     nfft_kwargs = dict(sigma=sigma, m=m, block_size=block_size,
-                       phi0=phi0, transfer_to_host=False,
+                       transfer_to_host=False,
                        transfer_to_device=False,
-                       use_double=use_double)
+                       use_double=use_double, n0=n0,
+                       samples_per_peak=samples_per_peak)
 
     nfft_kwargs.update(kwargs)
 
@@ -209,8 +222,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         self.dtypes = dict(
             lomb = [ np.intp, np.intp, np.intp, np.int32,
                      self.real_type],
-            lomb_dirsum = [ np.intp, np.intp, np.intp, np.intp, np.intp,
-                     np.int32, np.int32, self.real_type ]
+            lomb_dirsum = [ np.intp, np.intp, np.intp, np.intp,
+                     np.int32, np.int32, self.real_type, self.real_type, self.real_type ]
         )
 
         self.nfft_proc._compile_and_prepare_functions(**kwargs)
@@ -222,47 +235,72 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         #self.prepared_functions.update(self.nfft_proc.prepared_functions)
 
 
-    @classmethod
-    def scale_data(cls, data, convert_to_weights=True,
-                   samples_per_peak=5, maximum_frequency=None,
-                   nyquist_factor=5, **kwargs):
-
-        scaled_data = []
-        scaled_freqs = []
-        freqs = []
-        phi0s = []
-        for (t, y, err) in data:
-            T = max(t) - min(t)
-            tshift, phi0 = time_shift(t, samples_per_peak=samples_per_peak)
-
-            if maximum_frequency is None:
-                maximum_frequency = nyquist_factor * 0.5 * len(t) / T
-
-            nf = int(np.ceil(maximum_frequency * T * samples_per_peak))
-
-            w = err if not convert_to_weights else weights(err)
-            scaled_data.append((tshift, y, w, nf))
-            phi0s.append(phi0)
-
-            df = 1./(samples_per_peak * T)
-            freqs.append(df * (1 + np.arange(nf)))
-            scaled_freqs.append(1 + np.arange(nf))
-        return scaled_data, freqs, scaled_freqs, phi0s
-
-
     def move_freqs_to_gpu(self, freqs, **kwargs):
         return [gpuarray.to_gpu(frq.astype(self.real_type))
                 for frq in freqs]
 
     def memory_requirement(self, data, **kwargs):
-        """ return an approximate GPU memory requirement """
+        """ return an approximate GPU memory requirement in bytes """
         tot_npts = sum([ len(t) for t, y, err in data ])
 
         nflts = 5 * tot_npts + 4 * len(data) * (4 * sigma + 3) * nf
 
         return nflts * (32 if self.real_type == np.float32 else 64)
 
-    def allocate(self, data, **kwargs):
+    def allocate_for_single_lc(self, n0, nf, cu_plan_w=None,
+                               cu_plan_yw=None, stream=None, **kwargs):
+
+        n = int(nf * self.nfft_proc.sigma)
+        t_g, yw_g, w_g, q1, q2 = tuple([gpuarray.zeros(n0, dtype=self.real_type)
+                                        for j in range(5) ])
+        q3 = gpuarray.zeros(2 * self.nfft_proc.m + 1, dtype=self.real_type)
+
+        g_lsp = gpuarray.zeros(nf, dtype=self.real_type)
+
+        # Need NFFT that's 2 * length needed, since it's *centered*
+        # -N/2, -N/2 + 1, ..., 0, 1, ..., (N-1)/2
+        grid_g_w = gpuarray.zeros(4 * n, dtype=self.real_type)
+        ghat_g_w = gpuarray.zeros(4 * n, dtype=self.complex_type)
+        ghat_g_w_f = gpuarray.zeros(4 * nf, dtype=self.complex_type)
+
+        grid_g_yw = gpuarray.zeros(2 * n, dtype=self.real_type)
+        ghat_g_yw = gpuarray.zeros(2 * n, dtype=self.complex_type)
+        ghat_g_yw_f = gpuarray.zeros(2 * nf, dtype=self.complex_type)
+
+        if cu_plan_w is None:
+            cu_plan_w = cufft.Plan(4 * n, self.complex_type, self.complex_type,
+                                   stream=stream)
+        if cu_plan_yw is None:
+            cu_plan_yw = cufft.Plan(2 * n, self.complex_type, self.complex_type,
+                                    stream=stream)
+
+        lsp = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
+                                    alignment=resource.getpagesize())
+        lsp = cuda.register_host_memory(lsp)
+
+        gpu_data = (t_g, yw_g, w_g, g_lsp, q1, q2, q3,
+                            grid_g_w, grid_g_yw, ghat_g_w,
+                            ghat_g_yw, ghat_g_w_f, ghat_g_yw_f,
+                            cu_plan_w, cu_plan_yw)
+
+        return gpu_data, lsp
+
+    def autofrequency(self, *args, **kwargs):
+        return utils_autofreq(*args, **kwargs)
+
+    def _nfreqs(self, t, nyquist_factor=5,
+                samples_per_peak=5, maximum_frequency=None, **kwargs):
+
+        df = 1. / (max(t) - min(t)) / samples_per_peak
+
+        if maximum_frequency is not None:
+            nf = int(np.ceil(maximum_frequency / df - 1))
+        else:
+            nf = int(0.5 * samples_per_peak * nyquist_factor * len(t))
+
+        return nf
+
+    def allocate(self, data, nfreqs=None, **kwargs):
 
         """
         Allocate GPU memory for Lomb Scargle computations
@@ -307,47 +345,27 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         gpu_data, lsps =  [], []
 
-        for i, (t, y, w, nf) in enumerate(data):
-            n = int(nf * self.nfft_proc.sigma)
-            n0 = len(t)
+        nfrqs = nfreqs
 
-            t_g, yw_g, w_g, q1, q2 = tuple([gpuarray.zeros(n0, dtype=self.real_type)
-                                            for j in range(5) ])
-            q3 = gpuarray.zeros(2 * self.nfft_proc.m + 1, dtype=self.real_type)
+        if nfrqs is None:
+            nfrqs = [self._nfreqs(t, **kwargs) for (t, y, dy) in data]
 
-            g_lsp = gpuarray.zeros(nf, dtype=self.real_type)
+        elif not hasattr(nfreqs, '__getitem__'):
+            nfrqs = nfrqs * np.ones(len(data))
 
-            # Need NFFT that's 2 * length needed, since it's *centered*
-            # -N/2, -N/2 + 1, ..., 0, 1, ..., (N-1)/2
-            grid_g_w = gpuarray.zeros(4 * n, dtype=self.real_type)
-            ghat_g_w = gpuarray.zeros(4 * n, dtype=self.complex_type)
-            ghat_g_w_f = gpuarray.zeros(4 * nf, dtype=self.complex_type)
+        for i, ((t, y, dy), nf) in enumerate(zip(data, nfrqs)):
 
-            grid_g_yw = gpuarray.zeros(2 * n, dtype=self.real_type)
-            ghat_g_yw = gpuarray.zeros(2 * n, dtype=self.complex_type)
-            ghat_g_yw_f = gpuarray.zeros(2 * nf, dtype=self.complex_type)
+            gpu_d, lsp = self.allocate_for_single_lc(len(t), nf, stream=self.streams[i])
 
-            cu_plan_w = cufft.Plan(4 * n, self.complex_type, self.complex_type,
-                           stream=self.streams[i])
-
-            cu_plan_yw = cufft.Plan(2 * n, self.complex_type, self.complex_type,
-                           stream=self.streams[i])
-
-            lsp = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
-                                        alignment=resource.getpagesize())
-            lsp = cuda.register_host_memory(lsp)
-
-            gpu_data.append((t_g, yw_g, w_g, g_lsp, q1, q2, q3,
-                                grid_g_w, grid_g_yw, ghat_g_w,
-                                ghat_g_yw, ghat_g_w_f, ghat_g_yw_f,
-                                cu_plan_w, cu_plan_yw))
+            gpu_data.append(gpu_d)
             lsps.append(lsp)
-
         return gpu_data, lsps
 
     def run(self, data, freqs=None, gpu_data=None, lsps=None,
             phi0s=None, scale=True, use_fft=True,
-            convert_to_weights=True, **kwargs):
+            convert_to_weights=True, nyquist_factor=5, samples_per_peak=5,
+            minimum_frequency=None, maximum_frequency = None, use_dy_as_weights=False,
+            **kwargs):
 
         """
         Run Lomb Scargle on a batch of data.
@@ -368,64 +386,153 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         lsps: optional, list of ``np.ndarray``
             List of page-locked (registered) np.ndarrays for asynchronously
             transferring results to CPU
-        scale: optional, bool (default: True)
-            Scale the incoming data and frequencies to [-0.5, 0.5].
-            If you're passing regular data (times, mags, mag_errs),
-            you want this to be true!
         use_fft: optional, bool (default: True)
             Uses the NFFT, otherwise just does direct summations (which
             are quite slow...)
-        phi0s: optional, array_like, (default: None)
-            The phase shifts for the scaled observation times
         **kwargs
 
         Returns
         -------
         results: list of lists
             list of zip(freqs, pows) for each LS periodogram
-        powers: list of np.ndarrays
-            List of periodogram powers
 
         """
-        scaled_data, freqs = data, freqs
 
-        if scale:
-            scaled_data, freqs, scaled_freqs, phi0s \
-                = self.scale_data(data, convert_to_weights=convert_to_weights,
-                                    **kwargs)
+        if len(data) > len(self.streams):
+            self._create_streams(len(data) - len(self.streams))
 
-        if phi0s is None:
-            phi0s = np.zeros(len(data))
         if not hasattr(self, 'prepared_functions') or \
             not all([func in self.prepared_functions for func in \
                      ['lomb', 'lomb_dirsum']]):
             self._compile_and_prepare_functions(**kwargs)
 
-        if lsps is None or gpu_data is None:
-            gpu_data, lsps = self.allocate(scaled_data, **kwargs)
 
-        freqs_gpu = [None]*len(data)
-        if not use_fft:
-            freqs_gpu = self.move_freqs_to_gpu(scaled_freqs)
+        freqs = [self.autofrequency(d[0], **kwargs) for d in data]
+        nfreqs = [len(frq) for frq in freqs]
+        if lsps is None or gpu_data is None:
+            gpu_data, lsps = self.allocate(data, nfreqs=nfreqs, **kwargs)
+
+
 
         ls_kwargs = dict(sigma=self.nfft_proc.sigma,
                          m=self.nfft_proc.m,
                          block_size=self.block_size,
                          use_double=self.nfft_proc.use_double,
-                         use_fft=use_fft)
+                         use_fft=use_fft,
+                         samples_per_peak=samples_per_peak,
+                         use_dy_as_weights=False)
 
         ls_kwargs.update(kwargs)
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
-        results = [lomb_scargle_async(stream, cdat, gdat, lsp, funcs,
-                                      freqs=fgpu, phi0=phi0,
+        results = [lomb_scargle_async(stream, cdat, gdat, lsp, funcs, nf,
                                       **ls_kwargs)
-                   for stream, cdat, gdat, lsp, fgpu, phi0 in \
-                                  zip(streams, scaled_data, gpu_data,
-                                      lsps, freqs_gpu, phi0s)]
-        results = [zip(f, r) for f, r in zip(freqs, results)]
+                   for stream, cdat, gdat, lsp, nf in \
+                                  zip(streams, data, gpu_data, lsps, nfreqs)]
+
+        results = [(f, r) for f, r in zip(freqs, results)]
         return results
+
+
+    def _get_pagelocked_data_buffers(self, n0, batch_size, **kwargs):
+        # make pagelocked memory buffers to transfer the data
+        data_pl_arrs = [tuple(cuda.aligned_zeros(shape=(n0,),
+                                                 dtype=self.real_type,
+                                                 alignment=resource.getpagesize())
+                              for j in range(3)) for i in range(batch_size)]
+
+        data_pl_arrs = [tuple(cuda.register_host_memory(arr)
+                              for arr in d) for d in data_pl_arrs]
+
+        return data_pl_arrs
+
+    def _transfer_batch_to_pagelocked_buffers(self, data, plbuffs, **kwargs):
+
+        for i, (t, y, w) in range(len(data)):
+            plbuffs[i][0][len(t):] = 0.
+            plbuffs[i][1][len(t):] = 0.
+            plbuffs[i][2][len(t):] = 0.
+
+            plbuffs[i][0][:len(t)] = t[:]
+            plbuffs[i][1][:len(t)] = y[:]
+            plbuffs[i][2][:len(t)] = w[:]
+
+        return plbuffs
+
+    def batched_run_const_nfreq(self, data, batch_size=10, df=None,
+                                min_samples_per_peak=10., maximum_frequency=24.,
+                                use_dy_as_weights=False, **kwargs):
+        """
+        Same as ``batched_run`` but is more efficient when the frequencies are the
+        same for each lightcurve. Doesn't reallocate memory for each batch.
+        """
+
+        bsize = min([len(data), batch_size])
+        if bsize < len(self.streams):
+            self._create_streams(bsize - len(self.streams))
+
+        streams = [self.streams[i] for i in range(bsize)]
+        lsps = [np.zeros(nf) for i in range(len(data))]
+
+        max_ndata = max([len(t) for t, y, dy in data])
+
+        # set frequencies
+        if df is None:
+            max_baseline = max([max(t) - min(t) for t, y, dy in data])
+            df = 1./(min_samples_per_peak * max_baseline)
+        freqs = df * (1 + np.arange(int(maximum_frequency / df) - 1))
+
+        # make pagelocked data buffers
+        data_buffers = self._get_pagelocked_data_buffers(max_ndata, bsize)
+
+        # make data batches
+        batches = []
+        while len(batches) * batch_size < len(data):
+            off = len(batches) * batch_size
+            end = off + min([batch_size, len(data) - off])
+            batches.append([data[i] for i in range(off, end)])
+
+        # allocate gpu and cpu (pinned) memory
+        gpu_data, pl_lsps = self.allocate(batch[0], **kwargs)
+
+        # setup keyword args for lomb scargle
+        ls_kwargs = dict(sigma=self.nfft_proc.sigma,
+                         m=self.nfft_proc.m,
+                         block_size=self.block_size,
+                         use_double=self.nfft_proc.use_double,
+                         use_fft=use_fft,
+                         use_dy_as_weights=use_dy_as_weights)
+
+        ls_kwargs.update(kwargs)
+
+        funcs = (self.function_tuple, self.nfft_proc.function_tuple)
+
+        for b, batch in enumerate(batches):
+            bs = len(batch)
+
+            # transfer batch to pagelocked buffers
+            buffs = self._transfer_batch_to_pagelocked_buffers(batch, data_buffers)
+            for i, (stream, gdat, buff, pl_lsp) \
+                in enumerate(zip(streams, gpu_data, buffs, pl_lsps)):
+
+                if i >= bs:
+                    break
+
+                samples_per_peak = 1./(df * (max(t) - min(t)))
+                lomb_scargle_async(stream, buff, gdat, pl_lsp, funcs, len(freqs),
+                                   n0=len(batch[i][0]), **ls_kwargs)
+
+            # wait to finish, then transfer pagelocked memory to non-pagelocked memory
+            for i, (stream, pl_lsp) in enumerate(zip(streams, pl_lsps)):
+                if i >= bs:
+                    break
+
+                stream.synchronize()
+
+                lsps[b * batch_size + i][:] = pl_lsp[:]
+
+        return [(freqs, lsp) for lsp in lsps]
 
 
 def lomb_scargle_simple(t, y, dy, **kwargs):
@@ -439,10 +546,13 @@ def lomb_scargle_simple(t, y, dy, **kwargs):
     w = np.power(dy, -2)
     w /= sum(w)
     proc = LombScargleAsyncProcess()
-    freqs, results = proc.run([(t, y, w)], **kwargs)
+    results = proc.run([(t, y, w)], **kwargs)
+
+    freqs, powers = results[0]
+
     proc.finish()
 
-    return freqs[0], results[0]
+    return freqs, powers
 
 
 """

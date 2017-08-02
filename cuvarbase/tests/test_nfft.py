@@ -12,8 +12,8 @@ from pycuda import gpuarray
 
 nfft_sigma = 2
 nfft_m = 12
-nfft_rtol = 1E-4
-nfft_atol = 1E-5
+nfft_rtol = 1E-3
+nfft_atol = 1E-3
 
 
 @pytest.fixture
@@ -22,6 +22,10 @@ def data(seed=100, sigma=0.1, ndata=100):
     rand = np.random.RandomState(seed)
 
     t = np.sort(rand.rand(ndata))
+    t -= t[0]
+    t[-1] = 1.0
+
+    t -= 0.5
     y = np.cos(2 * np.pi * (3./(max(t) - min(t))) * t)
 
     y += sigma * rand.randn(len(t))

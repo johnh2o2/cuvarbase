@@ -61,21 +61,45 @@ __device__ FLT lpow(FLT C, FLT S, FLT C2, FLT S2, FLT Ch, FLT Sh, FLT YY){
 }
 
 
-__global__ void lomb_dirsum(FLT *t, FLT *w, FLT *yw, FLT *freqs,
+__global__ void lomb_dirsum(FLT *t, FLT *w, FLT *yw,
+							FLT *lsp,
+							int nfreq, int n, FLT YY, FLT df, FLT fmin){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	// reg = (lambda_a, lambda_b, lambda_c)
+	if (i < nfreq){
+
+		FLT frq = fmin + i * df;
+
+		FLT C = cossum(t, w, n, frq);
+		FLT S = sinsum(t, w, n, frq);
+
+		FLT C2 = cossum(t, w, n, 2.f * frq);
+		FLT S2 = sinsum(t, w, n, 2.f * frq);
+
+		FLT Ch = cossum(t, yw, n, frq);
+		FLT Sh = sinsum(t, yw, n, frq);
+
+   		lsp[i] = lpow(C, S, C2, S2, Ch, Sh, YY);
+   	}
+}
+
+__global__ void lomb_dirsum_custom_frq(FLT *t, FLT *w, FLT *yw, FLT *freqs,
 							FLT *lsp,
 							int nfreq, int n, FLT YY){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	// reg = (lambda_a, lambda_b, lambda_c)
 	if (i < nfreq){
 
-		FLT C = cossum(t, w, n, freqs[i]);
-		FLT S = sinsum(t, w, n, freqs[i]);
+		FLT frq = freqs[i];
 
-		FLT C2 = cossum(t, w, n, 2.f * freqs[i]);
-		FLT S2 = sinsum(t, w, n, 2.f * freqs[i]);
+		FLT C = cossum(t, w, n, frq);
+		FLT S = sinsum(t, w, n, frq);
 
-		FLT Ch = cossum(t, yw, n, freqs[i]);
-		FLT Sh = sinsum(t, yw, n, freqs[i]);
+		FLT C2 = cossum(t, w, n, 2.f * frq);
+		FLT S2 = sinsum(t, w, n, 2.f * frq);
+
+		FLT Ch = cossum(t, yw, n, frq);
+		FLT Sh = sinsum(t, yw, n, frq);
 
    		lsp[i] = lpow(C, S, C2, S2, Ch, Sh, YY);
    	}

@@ -1,7 +1,6 @@
 //#include <stdio.h>
 #define RESTRICT __restrict__
 #define CONSTANT const
-#define BLOCK_SIZE
 #define MIN_W 1E-6
 //{CPP_DEFS}
 
@@ -144,14 +143,15 @@ __global__ void bin_and_phase_fold_bst_multifreq(float *t, float *yw, float *w,
 				int b = mod((int) floorf(phi * nb - s * dphi), nb)
 							+ s * nb + noverlap * nbtot + offset;
 
-				atomicAdd(&(yw_bin[b]),YW);
-				atomicAdd(&(w_bin[b]), W);
+				atomicAdd(yw_bin + b, YW);
+				atomicAdd(w_bin + b, W);
 			}
 
 			nbtot += nb;
 		}
 	}
 }
+
 
 __global__ void reduction_max(float *arr, int *arr_args, int nfreq, int nbins, int stride,
                               float *block_max, int *block_arg_max, int offset, int init){
@@ -165,19 +165,18 @@ __global__ void reduction_max(float *arr, int *arr_args, int nfreq, int nbins, i
 	int nblocks_per_freq = gridDim.x / nfreq;
 	int nthreads_per_freq = blockDim.x * nblocks_per_freq;
 
-	/*
-		freq_no / b
-				----block 1 -----       ----- block N ------------------------
-			  0 | 0 1 2 .. B - 1 | ... | (N - 1)B, ... , ndata, ..., N * B - 1|
 
-				---block N + 1---       ---- block 2N ------------------------
-			  1 | 0 1 2 .. B - 1 | ... | (N - 1)B, ... , ndata, ..., N * B - 1|
-				...
+	//	freq_no / b
+	//			----block 1 -----       ----- block N ------------------------
+	//		  0 | 0 1 2 .. B - 1 | ... | (N - 1)B, ... , ndata, ..., N * B - 1|
+	//
+	//			---block N + 1---       ---- block 2N ------------------------
+	//		  1 | 0 1 2 .. B - 1 | ... | (N - 1)B, ... , ndata, ..., N * B - 1|
+	//			...
+	//
+	//			---(nf - 1)N ----       --- nf * N ---
+	//   nf - 1 | ..             | ... |             |
 
-				---(nf - 1)N ----       --- nf * N ---
-	     nf - 1 | ..             | ... |             |
-
-	*/
 	int fno = id / nthreads_per_freq;
 	int b   = id % nthreads_per_freq;
 
@@ -213,7 +212,8 @@ __global__ void reduction_max(float *arr, int *arr_args, int nfreq, int nbins, i
 
 	// store partial max back into global memory
 	if (threadIdx.x == 0 && fno < nfreq){
-		int i = (gridDim.x == nfreq) ? 0 : fno * stride - fno * nblocks_per_freq;
+		int i = (gridDim.x == nfreq) ? 0 :
+			fno * stride - fno * nblocks_per_freq;
 
 		i += blockIdx.x + offset;
 

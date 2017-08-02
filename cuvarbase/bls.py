@@ -7,7 +7,7 @@ from pycuda.reduction import ReductionKernel
 
 from pycuda.compiler import SourceModule
 from .core import GPUAsyncProcess
-from .utils import find_kernel
+from .utils import find_kernel, _module_reader
 
 import resource
 import numpy as np
@@ -69,7 +69,8 @@ def get_qphi(nbins0, nbinsf, alpha, noverlap):
 		qp = []
 		for s in range(noverlap):
 			for i in range(nb):
-				phi = (i * q + np.float32(s) * dphi)%1.0
+				phi = (((float(i) + np.float32(s) * dphi) / nb - 0.5) + 0.5 * q) % 1.0
+				if phi < 0: phi += 1.0
 				qp.append((q, phi))
 
 		q_phi.extend(qp)
@@ -89,10 +90,8 @@ def eebls_gpu(t, y, dy, freqs, max_mem_gb=2, qmin=0.02, qmax=0.5, nstreams=10,
 	"""
 
 	# Read kernel
-	kernel_txt = open(find_kernel('bls'), 'r').read()
-
-	# encode block size
-	kernel_txt.replace('#define BLOCK_SIZE','#define BLOCK_SIZE %d'%(block_size))
+	kernel_txt = _module_reader(find_kernel('bls'),
+								cpp_defs=dict(BLOCK_SIZE=block_size))
 
 	# compile kernel
 	module = SourceModule(kernel_txt, options=['--use_fast_math'])
@@ -212,8 +211,8 @@ def eebls_gpu(t, y, dy, freqs, max_mem_gb=2, qmin=0.02, qmax=0.5, nstreams=10,
 			#import sys
 			#sys.exit()
 	bls_sols = bls_sol_g.get()
+
 	assert(not any(bls_sols < 0))
-	#print(np.unique(bls_sols))
 	qphi_sols = [ (qvals[b], phivals[b]) for b in bls_sols ]
 
 	return bls_g.get()/YY, qphi_sols

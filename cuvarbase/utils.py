@@ -35,7 +35,7 @@ def gaussian_window(t, t0, d):
     return w_window / (1. if len(w_window) == 0 else max(w_window))
 
 def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
-                      minimum_frequency=None, maximum_frequency = None):
+                      minimum_frequency=None, maximum_frequency = None, **kwargs):
     """
     Determine a suitable frequency grid for data.
 
@@ -75,10 +75,9 @@ def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
 
     df = 1. / (baseline * samples_per_peak)
 
+    nf0 = 1
     if minimum_frequency is not None:
-        nf0 = min([ 1, np.floor(minimum_frequency / df) ])
-    else:
-        nf0 = 1
+        nf0 = min([ nf0, np.floor(minimum_frequency / df) ])
 
     if maximum_frequency is not None:
         Nf = int(np.ceil(maximum_frequency / df - nf0))
