@@ -116,9 +116,9 @@ __global__ void lomb(pycuda::complex<FLT>  *sw,
 	// reg = (lambda_a, lambda_b, lambda_c)
 	if (i < nfreq && i > 0){
 		pycuda::complex<FLT> SW, SW2, SYW;
-		SW = sw[2 * nfreq + i];
-		SW2 = sw[2 * nfreq + 2 * i];
-		SYW = syw[nfreq + i];
+		SW = sw[i];
+		SW2 = sw[2 * i];
+		SYW = syw[i];
 
 		FLT C = SW.real();
 		FLT S = SW.imag();

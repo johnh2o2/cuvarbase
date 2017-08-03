@@ -171,9 +171,18 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf,
                            nfft_funcs, precomp_psi=False,
                            **nfft_kwargs)
 
+    import matplotlib.pyplot as plt
+    stream.synchronize()
+    plt.plot(ghat_g_yw_f.get(), color='r')
+    plt.show()
+    plt.plot(ghat_g_w_f.get(), color='b')
+    plt.show()
     lomb.prepared_async_call(grid, block, stream,
                              ghat_g_w_f.ptr, ghat_g_yw_f.ptr, g_lsp.ptr,
                              np.int32(nf), real_type(YY))
+    stream.synchronize()
+    plt.plot(g_lsp.get())
+    plt.show()
     cuda.memcpy_dtoh_async(lsp, g_lsp.ptr, stream)
 
     return lsp

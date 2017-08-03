@@ -11,6 +11,104 @@ import resource
 import numpy as np
 
 
+class NFFTMemory(object):
+    def __init__(self, sigma, stream, m, double_precision=False,
+                 precomp_psi=True, **kwargs):
+
+        self.sigma = sigma
+        self.stream = stream
+        self.m = m
+        self.double_precision = double_precision
+        self.precomp_psi = precomp_psi
+
+        # set datatypes
+        self.real_type = np.float32 if not self.double_precision else np.float64
+        self.complex_type = np.complex64 if not self.double_precision else np.complex128
+        
+        self.other_settings = {}
+        self.other_settings.update(kwargs)
+
+        self.n0 = kwargs.get('n0', None)
+        self.nf = kwargs.get('nf', None)
+        self.t_g = kwargs.get('t_g', None)
+        self.y_g = kwargs.get('y_g', None)
+        self.ghat_g = kwargs.get('ghat_g', None)
+        self.ghat_c = kwargs.get('ghat_c', None)
+        self.q1 = kwargs.get('q1', None)
+        self.q2 = kwargs.get('q2', None)
+        self.q3 = kwargs.get('q3', None)
+
+    def allocate_data(self, n0=None, **kwargs):
+        n0 = n0 if n0 is not None else self.n0
+
+        assert(n0 is not None)
+
+        self.t_g = gpuarray.zeros(n0, dtype=self.real_type)
+        self.y_g = gpuarray.zeros(n0, dtype=self.real_type)
+    
+    def allocate_precomp_psi(self, n0=None, nf=None, **kwargs):
+        n0 = n0 if n0 is not None else self.n0
+
+        assert(n0 is not None)
+        
+        nf = nf if nf is not None else self.nf
+
+        assert(nf is not None)
+        
+        self.q1 = gpuarray.zeros(n0, dtype=self.real_type)
+        self.q2 = gpuarray.zeros(n0, dtype=self.real_type)
+        self.q3 = gpuarray.zeros(2 * self.m + 1, dtype=self.real_type)
+
+    def allocate_grid(self, nf=None, **kwargs):
+        nf = nf if nf is not None else self.nf
+
+        assert(nf is not None)
+        self.ghat_g = gpuarray.zeros(int(self.sigma * nf), dtype=self.complex_type)
+
+    def allocate_pinned_cpu(self, nf=None, **kwargs):
+        nf = nf if nf is not None else self.nf
+
+        assert(nf is not None)
+        self.ghat_c = cuda.aligned_zeros(shape=(nf,), dtype=self.complex_type,
+                                         alignment=resource.getpagesize())
+        self.ghat_c = cuda.register_host_memory(self.ghat_c)
+    
+    def is_ready(self):
+        assert(self.n0 == len(self.t_g))
+        assert(self.n0 == len(self.y_g))
+        assert(self.n == len(self.ghat_g))
+        
+        if self.ghat_c is not None:
+            assert(self.nf == len(self.ghat_c))
+        
+        if self.precomp_psi:
+            assert(self.n0 == len(self.q1))
+            assert(self.n0 == len(self.q2))
+            assert(2 * self.m + 1 == len(self.q3))
+
+    def allocate(self, n0, nf, **kwargs):
+        self.n0 = n0
+        self.nf = nf
+        self.n  = int(self.sigma * nf)
+        
+        self.allocate_data()
+        self.allocate_grid()
+        self.allocate_pinned_cpu()
+        if self.precomp_psi:
+            self.allocate_precomp_psi()
+
+    def transfer_data_to_gpu(self, t, y, **kwargs):
+        self.t_g.set_async(np.asarray(t).astype(self.real_type), stream=self.stream)
+        self.y_g.set_async(np.asarray(y).astype(self.real_type), stream=self.stream)
+
+    def transfer_nfft_to_cpu(self, **kwargs):
+        cuda.memcpy_dtoh_async(self.ghat_cpu, ghat_g_final.ptr, stream=self.stream)
+
+
+
+        
+
+
 def nfft_adjoint_async(stream, data, gpu_data, result, functions,
                        m=8, sigma=2, min_freq=0., block_size=256, n0=None,
                        just_return_gridded_data=False, use_grid=None,
@@ -94,7 +192,8 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
 
     batch_size = np.int32(1)
 
-    def grid_size(nthreads): int(np.ceil(float(nthreads) / block_size))
+    def grid_size(nthreads): 
+        return int(np.ceil(float(nthreads) / block_size))
 
     # allow for buffered arrays with longer length
     if n0 is None:
@@ -116,6 +215,7 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
     if fast_grid:
         if precomp_psi:
             grid = (grid_size(n0 + 2 * m + 1), 1)
+            # print(grid, block, stream, n0, n, m, b, tmin, tmax, spp)
             precompute_psi.prepared_async_call(grid, block, stream,
                         t_g.ptr, q1.ptr, q2.ptr, q3.ptr, n0, n, m, b,
                         tmin, tmax, spp)
@@ -139,6 +239,11 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
     if use_grid is not None:
         grid_g.set(use_grid)
 
+    # stream.synchronize()
+    # g = grid_g.get()
+    #import matplotlib.pyplot as plt
+    # plt.plot(g)
+    # plt.show()
     # Shift the grid in Fourier space
     grid = (grid_size(n), 1)
     nfft_shift.prepared_async_call(grid, block, stream,
@@ -147,7 +252,6 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
 
     # Run IFFT on centered grid
     cufft.ifft(ghat_g, ghat_g, cu_plan)
-
     # Normalize
     grid = (grid_size(N), 1)
     divide_phi_hat.prepared_async_call(grid, block, stream,
@@ -155,10 +259,18 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
                                        batch_size, b, tmin, tmax, spp,
                                        min_freq)
 
+    #stream.synchronize()
+    #ghat_g = ghat_g_final.get()
+    #plt.plot(np.real(ghat_g))
+    #plt.plot(np.imag(ghat_g))
+    #plt.show()
     # Transfer result!
     if transfer_to_host:
         cuda.memcpy_dtoh_async(ghat_cpu, ghat_g_final.ptr, stream)
-
+        #stream.synchronize()
+        #plt.plot(np.real(ghat_cpu))
+        #plt.plot(np.imag(ghat_cpu))
+        #plt.show()
     return ghat_cpu
 
 
@@ -334,9 +446,6 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         ghat_g_final = ghat_g
         grid_g = ghat_g
 
-        ghat_cpu = cuda.aligned_zeros(shape=(N,), dtype=self.complex_type,
-                            alignment=resource.getpagesize())
-        ghat_cpu = cuda.register_host_memory(ghat_cpu)
 
         return grid_g, ghat_g, ghat_g_final, ghat_cpu
 

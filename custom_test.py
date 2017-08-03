@@ -30,6 +30,7 @@ ls_proc = LombScargleAsyncProcess()
 data = [random_data()]
 
 results = ls_proc.run(data, samples_per_peak=samples_per_peak, nyquist_factor=nyquist_factor)
+ls_proc.finish()
 
 freqs_g, pows_g = results[0]
 freqs_c = freqs_g
@@ -37,7 +38,7 @@ pows_c = LombScargle(*(data[0])).power(freqs_g)
 
 import matplotlib.pyplot as plt
 
-plt.plot(freqs_g, pows_g, color='r')
+plt.plot(freqs_g, pows_g - 1., color='r')
 plt.plot(freqs_c, pows_c, color='k')
 
 plt.show()
