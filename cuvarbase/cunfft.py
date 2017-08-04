@@ -22,12 +22,15 @@ class NFFTMemory(object):
         self.precomp_psi = precomp_psi
 
         # set datatypes
-        self.real_type = np.float32 if not self.double_precision else np.float64
-        self.complex_type = np.complex64 if not self.double_precision else np.complex128
-        
+        self.real_type = np.float32 if not self.double_precision \
+            else np.float64
+        self.complex_type = np.complex64 if not self.double_precision \
+            else np.complex128
+
         self.other_settings = {}
         self.other_settings.update(kwargs)
 
+        self.f0 = kwargs.get('f0', 0.)
         self.n0 = kwargs.get('n0', None)
         self.nf = kwargs.get('nf', None)
         self.t_g = kwargs.get('t_g', None)
@@ -37,6 +40,10 @@ class NFFTMemory(object):
         self.q1 = kwargs.get('q1', None)
         self.q2 = kwargs.get('q2', None)
         self.q3 = kwargs.get('q3', None)
+        self.cu_plan = kwargs.get('cu_plan', None)
+
+        D = (2 * self.sigma - 1) * np.pi
+        self.b = self.real_type(float(2 * self.sigma * self.m) / D)
 
     def allocate_data(self, n0=None, **kwargs):
         n0 = n0 if n0 is not None else self.n0
@@ -45,25 +52,31 @@ class NFFTMemory(object):
 
         self.t_g = gpuarray.zeros(n0, dtype=self.real_type)
         self.y_g = gpuarray.zeros(n0, dtype=self.real_type)
-    
-    def allocate_precomp_psi(self, n0=None, nf=None, **kwargs):
+
+        return self
+
+    def allocate_precomp_psi(self, n0=None,  **kwargs):
         n0 = n0 if n0 is not None else self.n0
 
         assert(n0 is not None)
-        
-        nf = nf if nf is not None else self.nf
 
-        assert(nf is not None)
-        
         self.q1 = gpuarray.zeros(n0, dtype=self.real_type)
         self.q2 = gpuarray.zeros(n0, dtype=self.real_type)
         self.q3 = gpuarray.zeros(2 * self.m + 1, dtype=self.real_type)
+
+        return self
 
     def allocate_grid(self, nf=None, **kwargs):
         nf = nf if nf is not None else self.nf
 
         assert(nf is not None)
-        self.ghat_g = gpuarray.zeros(int(self.sigma * nf), dtype=self.complex_type)
+
+        n = int(self.sigma * nf)
+        self.ghat_g = gpuarray.zeros(n,
+                                     dtype=self.complex_type)
+        self.cu_plan = cufft.Plan(n, self.complex_type, self.complex_type,
+                                  stream=self.stream)
+        return self
 
     def allocate_pinned_cpu(self, nf=None, **kwargs):
         nf = nf if nf is not None else self.nf
@@ -72,15 +85,17 @@ class NFFTMemory(object):
         self.ghat_c = cuda.aligned_zeros(shape=(nf,), dtype=self.complex_type,
                                          alignment=resource.getpagesize())
         self.ghat_c = cuda.register_host_memory(self.ghat_c)
-    
+
+        return self
+
     def is_ready(self):
         assert(self.n0 == len(self.t_g))
         assert(self.n0 == len(self.y_g))
         assert(self.n == len(self.ghat_g))
-        
+
         if self.ghat_c is not None:
             assert(self.nf == len(self.ghat_c))
-        
+
         if self.precomp_psi:
             assert(self.n0 == len(self.q1))
             assert(self.n0 == len(self.q2))
@@ -89,28 +104,32 @@ class NFFTMemory(object):
     def allocate(self, n0, nf, **kwargs):
         self.n0 = n0
         self.nf = nf
-        self.n  = int(self.sigma * nf)
-        
+        self.n = int(self.sigma * nf)
+
         self.allocate_data()
         self.allocate_grid()
         self.allocate_pinned_cpu()
         if self.precomp_psi:
             self.allocate_precomp_psi()
 
+        return self
+
     def transfer_data_to_gpu(self, t, y, **kwargs):
-        self.t_g.set_async(np.asarray(t).astype(self.real_type), stream=self.stream)
-        self.y_g.set_async(np.asarray(y).astype(self.real_type), stream=self.stream)
+        self.tmin = self.real_type(min(t))
+        self.tmax = self.real_type(max(t))
+
+        self.t_g.set_async(np.asarray(t).astype(self.real_type),
+                           stream=self.stream)
+        self.y_g.set_async(np.asarray(y).astype(self.real_type),
+                           stream=self.stream)
 
     def transfer_nfft_to_cpu(self, **kwargs):
-        cuda.memcpy_dtoh_async(self.ghat_cpu, ghat_g_final.ptr, stream=self.stream)
+        cuda.memcpy_dtoh_async(self.ghat_cpu, self.ghat_gpu.ptr,
+                               stream=self.stream)
 
 
-
-        
-
-
-def nfft_adjoint_async(stream, data, gpu_data, result, functions,
-                       m=8, sigma=2, min_freq=0., block_size=256, n0=None,
+def nfft_adjoint_async(memory, functions,
+                       min_freq=0., block_size=256, n0=None,
                        just_return_gridded_data=False, use_grid=None,
                        fast_grid=True, transfer_to_device=True,
                        transfer_to_host=True, precomp_psi=True,
@@ -169,7 +188,8 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
         Only relevant if `fast` is True. If False, will compute the `q1`, `q2`
         and `q3` values.
     use_double : bool, optional (default: False)
-        Use double-precision (on GTX cards this will make things ~24 times slower)
+        Use double-precision (on GTX cards this will make things ~24 times
+        slower)
 
     Returns
     -------
@@ -177,101 +197,77 @@ def nfft_adjoint_async(stream, data, gpu_data, result, functions,
         The resulting complex transform.
     """
 
-
-    t, y, N = data
-    t_g, y_g, q1, q2, q3, grid_g, ghat_g, ghat_g_final, cu_plan = gpu_data
-    ghat_cpu = result
     precompute_psi, fast_gaussian_grid, slow_gaussian_grid, \
-        nfft_shift, divide_phi_hat = functions
-
-    # types
-    real_type = np.float64 if use_double else np.float32
-    complex_type = np.complex128 if use_double else np.complex64
+        nfft_shift, normalize = functions
+    
+    stream = memory.stream
 
     block = (block_size, 1, 1)
 
     batch_size = np.int32(1)
 
-    def grid_size(nthreads): 
+    def grid_size(nthreads):
         return int(np.ceil(float(nthreads) / block_size))
 
-    # allow for buffered arrays with longer length
-    if n0 is None:
-        n0 = len(t)
-
-    n0 = np.int32(n0)
-    n = np.int32(sigma * N)
-    m = np.int32(m)
-    b = real_type(float(2 * sigma * m) / ((2 * sigma - 1) * np.pi))
-    tmin = real_type(min(t[:n0]))
-    tmax = real_type(max(t[:n0]))
     spp = real_type(samples_per_peak)
     min_freq = real_type(min_freq)
 
-    if transfer_to_device:
-        t_g.set_async(np.asarray(t).astype(real_type), stream=stream)
-        y_g.set_async(np.asarray(y).astype(real_type), stream=stream)
-
     if fast_grid:
-        if precomp_psi:
-            grid = (grid_size(n0 + 2 * m + 1), 1)
-            # print(grid, block, stream, n0, n, m, b, tmin, tmax, spp)
-            precompute_psi.prepared_async_call(grid, block, stream,
-                        t_g.ptr, q1.ptr, q2.ptr, q3.ptr, n0, n, m, b,
-                        tmin, tmax, spp)
+        if memory.precomp_psi:
+            grid = (grid_size(memory.n0 + 2 * memory.m + 1), 1)
+            args = (grid, block, stream)
+            args += (memory.t_g.ptr,)
+            args += (memory.q1.ptr, memory.q2.ptr, memory.q3.ptr)
+            args += (memory.n0, memory.n, memory.m, memory.b)
+            args += (memory.tmin, memory.tmax, memory.spp)
+            precompute_psi.prepared_async_call(*args)
 
         grid = (grid_size(n0), 1)
-        fast_gaussian_grid.prepared_async_call(grid, block, stream,
-                                            t_g.ptr, y_g.ptr, grid_g.ptr,
-                                            q1.ptr, q2.ptr, q3.ptr,
-                                            n0, n, batch_size, m, tmin, tmax,
-                                            spp)
+        args = (grid, block, stream)
+        args += (memory.t_g.ptr, memory.y_g.ptr, memory.ghat_g.ptr)
+        args += (memory.q1.ptr, memory.q2.ptr, memory.q3.ptr)
+        args += (memory.n0, memory.n, batch_size, memory.m)
+        args += (memory.tmin, memory.tmax, memory.spp)
+        fast_gaussian_grid.prepared_async_call(*args)
     else:
         grid = (grid_size(n), 1)
-        slow_gaussian_grid.prepared_async_call(grid, block, stream,
-                                t_g.ptr, y_g.ptr, grid_g.ptr, n0, n,
-                                batch_size, m, b, tmin, tmax, spp)
+        args = (grid, block, stream)
+        args += (memory.t_g.ptr, memory.y_g.ptr, memory.ghat_g.ptr)
+        args += (memory.n0, memory.n, batch_size, memory.m, memory.b)
+        args += (memory.tmin, memory.tmax, memory.spp)
+        slow_gaussian_grid.prepared_async_call(*args)
 
     if just_return_gridded_data:
         stream.synchronize()
-        return grid_g.get()
+        return np.real(memory.ghat_g.get())
 
     if use_grid is not None:
-        grid_g.set(use_grid)
+        memory.ghat_g.set(use_grid)
 
-    # stream.synchronize()
-    # g = grid_g.get()
-    #import matplotlib.pyplot as plt
-    # plt.plot(g)
-    # plt.show()
     # Shift the grid in Fourier space
     grid = (grid_size(n), 1)
-    nfft_shift.prepared_async_call(grid, block, stream,
-                                   grid_g.ptr, ghat_g.ptr, n,
-                                   batch_size, tmin, tmax, spp, min_freq)
+    args = (grid, block, stream)
+    args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
+    args += (memory.n, batch_size)
+    args += (memory.tmin, memory.tmax, memory.spp, min_freq)
+    nfft_shift.prepared_async_call(*args)
 
     # Run IFFT on centered grid
-    cufft.ifft(ghat_g, ghat_g, cu_plan)
+    cufft.ifft(memory.ghat_g, memory.ghat_g, memory.cu_plan)
+
     # Normalize
     grid = (grid_size(N), 1)
-    divide_phi_hat.prepared_async_call(grid, block, stream,
-                                       ghat_g.ptr, ghat_g_final.ptr, n, N,
-                                       batch_size, b, tmin, tmax, spp,
-                                       min_freq)
+    args = (grid, block, stream)
+    args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
+    args += (memory.n, memory.nf, batch_size, memory.b)
+    args += (memory.tmin, memory.tmax, memory.spp, min_freq)
+    normalize.prepared_async_call(*args)
 
-    #stream.synchronize()
-    #ghat_g = ghat_g_final.get()
-    #plt.plot(np.real(ghat_g))
-    #plt.plot(np.imag(ghat_g))
-    #plt.show()
     # Transfer result!
     if transfer_to_host:
-        cuda.memcpy_dtoh_async(ghat_cpu, ghat_g_final.ptr, stream)
-        #stream.synchronize()
-        #plt.plot(np.real(ghat_cpu))
-        #plt.plot(np.imag(ghat_cpu))
-        #plt.show()
-    return ghat_cpu
+        memory.transfer_nfft_to_cpu()
+
+    return memory.ghat_c
 
 
 class NFFTAsyncProcess(GPUAsyncProcess):
@@ -334,16 +330,18 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         if self.use_double:
             self._cpp_defs['DOUBLE_PRECISION'] = None
 
-        self.function_names = ['precompute_psi_noscale',
-                               'fast_gaussian_grid_noscale',
-                               'slow_gaussian_grid_noscale', 'nfft_shift',
-                               'divide_phi_hat_noscale']
+        self.function_names = ['precompute_psi',
+                               'fast_gaussian_grid',
+                               'slow_gaussian_grid', 'nfft_shift',
+                               'normalize']
+
+        self.allocated_memory = []
 
     def m_from_C(self, C, sigma):
         D = (np.pi * (1. - 1. / (2. * sigma - 1.)))
         return int(np.ceil(-np.log(0.25 * C) / D))
 
-    def estimate_m(self, tol, N, sigma):
+    def estimate_m(self, N):
         """
         Automatically set ``m`` based on an error tolerance of ``tol``.
 
@@ -372,8 +370,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         #   Fourier coefficients... see p. 11 of
         #   https://www-user.tu-chemnitz.de/~potts/nfft/guide/nfft3.pdf
         #   Need to think about how to estimate the value of m more accurately
-        C = tol / N
-        return self.m_from_C(C, sigma)
+        return self.m_from_C(self.m_tol / N, self.sigma)
 
     def _compile_and_prepare_functions(self, **kwargs):
         module_txt = _module_reader(find_kernel('cunfft'), self._cpp_defs)
@@ -381,73 +378,34 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         self.module = SourceModule(module_txt, options=self.module_options)
 
         self.dtypes = dict(
-            precompute_psi_noscale = [np.intp, np.intp, np.intp, np.intp, np.int32,
-                              np.int32, np.int32, self.real_type, self.real_type,
-                              self.real_type, self.real_type],
+            precompute_psi=[np.intp, np.intp, np.intp, np.intp, np.int32,
+                            np.int32, np.int32, self.real_type,
+                            self.real_type, self.real_type, self.real_type],
 
-            fast_gaussian_grid_noscale = [np.intp, np.intp, np.intp, np.intp,
-                                  np.intp, np.intp, np.int32, np.int32,
-                                  np.int32, np.int32, self.real_type,
-                                  self.real_type, self.real_type],
+            fast_gaussian_grid=[np.intp, np.intp, np.intp, np.intp,
+                                np.intp, np.intp, np.int32, np.int32,
+                                np.int32, np.int32, self.real_type,
+                                self.real_type, self.real_type],
 
-            slow_gaussian_grid_noscale = [np.intp, np.intp, np.intp, np.int32,
-                                  np.int32, np.int32, np.int32, self.real_type,
-                                  self.real_type, self.real_type, self.real_type],
+            slow_gaussian_grid=[np.intp, np.intp, np.intp, np.int32,
+                                np.int32, np.int32, np.int32, self.real_type,
+                                self.real_type, self.real_type,
+                                self.real_type],
 
-            divide_phi_hat_noscale = [np.intp, np.intp, np.int32, np.int32, np.int32,
-                              self.real_type, self.real_type, self.real_type, 
-                              self.real_type, self.real_type],
+            normalize=[np.intp, np.intp, np.int32, np.int32, np.int32,
+                       self.real_type, self.real_type, self.real_type,
+                       self.real_type, self.real_type],
 
-            nfft_shift = [np.intp, np.intp, np.int32, np.int32, self.real_type,
-                          self.real_type, self.real_type, self.real_type]
+            nfft_shift=[np.intp, np.intp, np.int32, np.int32, self.real_type,
+                        self.real_type, self.real_type, self.real_type]
         )
 
         for function, dtype in self.dtypes.iteritems():
             func = self.module.get_function(function)
             self.prepared_functions[function] = func.prepare(dtype)
 
-
-
         self.function_tuple = tuple([self.prepared_functions[f]
                                      for f in self.function_names])
-
-
-    def allocate_grid(self, N):
-        """
-        Allocate GPU memory for NFFT grid & final FFT.
-
-        Allocates a total of (2 * sigma * n + N) * sizeof(float)
-        bytes of memory on the GPU.
-
-        Parameters
-        ----------
-        N: int
-            Size of grid.
-
-        Returns
-        -------
-        grid_g: GPUArray, real
-            Grid (GPU)
-        ghat_g: GPUArray, complex
-            Temporary array (GPU)
-        ghat_g_final:
-
-        ghat_cpu: ``np.ndarray`` (aligned)
-            Grid (CPU) ``np.ndarray``, aligned with page size to
-            allow asynchronous data transfer
-
-        """
-
-        if not N%2 == 0:
-            raise Exception("N = %d is not even."%(N))
-        n = int(self.sigma * N)
-
-        ghat_g = gpuarray.zeros(n, dtype=self.complex_type)
-        ghat_g_final = ghat_g
-        grid_g = ghat_g
-
-
-        return grid_g, ghat_g, ghat_g_final, ghat_cpu
 
     def allocate(self, data, **kwargs):
         """
@@ -462,54 +420,26 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             * ``N``: int, FFT size
         **kwargs
 
-        Returns
-        -------
-        gpu_data: list of tuples
-            List of tuples containing GPU-allocated objects for each
-            dataset
-            * ``t_g``: ``GPUArray``, real, length = length of data
-            * ``y_g``
-            * ``q1``
-            * ``q2``
-            * ``q3``
-            * ``grid_g``
-            * ``ghat_g``
-            * ``ghat_g_final``
-            * ``cu_plan``
-        pow_cpus: list of ``np.ndarray``s
-            List of registered ndarrays for transferring final NFFTs
-
         """
+
+        # Purge any previously allocated memory
+        self.allocated_memory = []
 
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
-        gpu_data, pow_cpus =  [], []
+        for i, (t, y, nf) in enumerate(data):
 
-        for i, (t, y, N) in enumerate(data):
+            m = self.m
+            if self.autoset_m:
+                m = self.estimate_m(nf)
 
-            n = int(self.sigma * N)
+            mem = NFFTMemory(sigma, self.streams[i], m,
+                             double_precision=self.use_double)
 
-            n0 = len(t)
+            self.allocated_memory.append(mem.allocate(len(t), nf))
 
-            t_g, y_g, q1, q2 = tuple([gpuarray.zeros(n0, dtype=self.real_type)
-                                      for j in range(4)])
-
-            q3 = gpuarray.zeros(2 * self.m + 1, dtype=self.real_type)
-            grid_g, ghat_g, ghat_g_final, ghat_cpu = self.allocate_grid(N)
-
-            cu_plan = cufft.Plan(int(n), self.complex_type, self.complex_type,
-                                 batch=1, stream=self.streams[i],
-                                 istride=1, ostride=1, idist=n, odist=n)
-
-            gpu_data.append((t_g, y_g, q1, q2, q3, grid_g, ghat_g,
-                             ghat_g_final, cu_plan))
-
-            pow_cpus.append(ghat_cpu)
-
-        return gpu_data, pow_cpus
-
-    def run(self, data, gpu_data=None, pow_cpus=None, **kwargs):
+    def run(self, data, mem=None, **kwargs):
         """
         Run the adjoint NFFT on a batch of data
 
@@ -533,30 +463,26 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             List of adjoint NFFTs
 
         """
-        if self.autoset_m:
-            N = max([d[2] for d in data])
-            self.m = self.estimate_m(self.m_tol, N, self.sigma)
-
         if not hasattr(self, 'prepared_functions') or \
             not all([func in self.prepared_functions
                      for func in self.function_names]):
             self._compile_and_prepare_functions(**kwargs)
 
-        if pow_cpus is None or gpu_data is None:
-            gpu_data, pow_cpus = self.allocate(data, **kwargs)
+        if mem is None:
+            self.allocate(data, **kwargs)
+        else:
+            assert(len(mem) == len(data))
+            self.allocated_memory = mem
 
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
 
-        nfft_kwargs = dict(sigma=self.sigma, m=self.m,
-                           block_size=self.block_size,
-                           use_double=self.use_double)
+        nfft_kwargs = dict(block_size=self.block_size)
 
         nfft_kwargs.update(kwargs)
 
-        results = [nfft_adjoint_async(stream, cdat, gdat, pcpu,
-                                      self.function_tuple,
+        results = [nfft_adjoint_async(stream, cdat, mem, self.function_tuple,
                                       **nfft_kwargs)
-                   for stream, cdat, gdat, pcpu in \
-                   zip(streams, data, gpu_data, pow_cpus)]
+                   for stream, cdat, mem in
+                   zip(streams, data, self.allocated_memory)]
 
         return results

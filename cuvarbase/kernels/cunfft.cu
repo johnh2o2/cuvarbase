@@ -205,7 +205,7 @@ __global__ void slow_gaussian_grid(
 	}
 }
 
-__global__ void divide_phi_hat(
+__global__ void normalize(
 	CMPLX *gin,
 	CMPLX *gout,
 	CONSTANT int n, // sigma * N

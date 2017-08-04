@@ -61,7 +61,7 @@ __device__ FLT lpow(FLT C, FLT S, FLT C2, FLT S2, FLT Ch, FLT Sh, FLT YY){
 }
 
 
-__global__ void lomb_dirsum(FLT *t, FLT *w, FLT *yw,
+__global__ void lomb_dirsum(FLT *t, FLT *yw, FLT *w,
 							FLT *lsp,
 							int nfreq, int n, FLT YY, FLT df, FLT fmin){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;

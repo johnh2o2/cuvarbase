@@ -7,7 +7,183 @@ import resource
 from .core import GPUAsyncProcess, BaseSpectrogram
 from .utils import weights, find_kernel, _module_reader
 from .utils import autofrequency as utils_autofreq
-from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
+from .cunfft import NFFTAsyncProcess, nfft_adjoint_async, NFFTMemory
+
+
+class LombScargleMemory(object):
+    def __init__(self, sigma, stream, m, **kwargs):
+
+        self.sigma = sigma
+        self.stream = stream
+        self.m = m
+        self.precomp_psi = precomp_psi
+
+        self.other_settings = {}
+        self.other_settings.update(kwargs)
+
+        self.n0 = kwargs.get('n0', None)
+        self.nf = kwargs.get('nf', None)
+
+        self.t_g = kwargs.get('t_g', None)
+        self.yw_g = kwargs.get('yw_g', None)
+        self.w_g = kwargs.get('w_g', None)
+        self.lsp_g = kwargs.get('lsp_g', None)
+
+        self.nfft_mem_yw = kwargs.get('nfft_mem_yw', None)
+        self.nfft_mem_w = kwargs.get('nfft_mem_w', None)
+
+        if self.nfft_mem_yw is None:
+            self.nfft_mem_yw = NFFTMemory(sigma, stream, m, **kwargs)
+
+        if self.nfft_mem_w is None:
+            self.nfft_mem_w = NFFTMemory(sigma, stream, m, **kwargs)
+
+        self.real_type = self.nfft_mem_yw.real_type
+        self.complex_type = self.nfft_mem_yw.complex_type
+
+        self.buffered_transfer = kwargs.get('buffered_transfer', False)
+
+        self.tbuff, self.ywbuff, self.wbuff = None, None, None
+        self.lsp_c = kwargs.get('lsp_c', None)
+
+    def allocate_data(self, n0=None, **kwargs):
+        n0 = n0 if n0 is not None else self.n0
+
+        assert(n0 is not None)
+
+        self.t_g = gpuarray.zeros(n0, dtype=self.real_type)
+        self.yw_g = gpuarray.zeros(n0, dtype=self.real_type)
+        self.w_g = gpuarray.zeros(n0, dtype=self.real_type)
+
+        self.nfft_mem_w.t_g = self.t_g
+        self.nfft_mem_w.y_g = self.w_g
+
+        self.nfft_mem_yw.t_g = self.t_g
+        self.nfft_mem_yw.y_g = self.yw_g
+
+        return self
+
+    def allocate_grids(self, n0=None, nf=None, **kwargs):
+
+        n0 = n0 if n0 is not None else self.n0
+
+        assert(n0 is not None)
+
+        nf = nf if nf is not None else self.nf
+
+        assert(nf is not None)
+
+        if self.nfft_mem_yw.precomp_psi:
+            self.nfft_mem_yw.allocate_precomp_psi(n0=n0)
+
+        # Only one precomp psi needed
+        self.nfft_mem_w.precomp_psi = False
+        self.nfft_mem_w.q1 = self.nfft_mem_yw.q1
+        self.nfft_mem_w.q2 = self.nfft_mem_yw.q2
+        self.nfft_mem_w.q3 = self.nfft_mem_yw.q3
+
+        nfft_mem_yw.allocate_grid(nf=nf)
+        nfft_mem_w.allocate_grid(nf=2*nf)
+
+        self.lsp_g = gpuarray.zeros(nf, dtype=self.real_type)
+        return self
+
+    def allocate_pinned_cpu(self, nf=None, **kwargs):
+        nf = nf if nf is not None else self.nf
+
+        assert(nf is not None)
+        self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.complex_type,
+                                        alignment=resource.getpagesize())
+        self.lsp_c = cuda.register_host_memory(self.lsp_c)
+
+        return self
+
+    def is_ready(self):
+        raise NotImplementedError()
+
+    def allocate_buffered_data_arrays(self, n0=None, **kwargs):
+        n0 = n0 if n0 is not None else self.n0
+
+        assert(n0 is not None)
+        self.tbuff = cuda.aligned_zeros(shape=(n0,),
+                                        dtype=self.real_type,
+                                        alignment=resource.getpagesize())
+        self.tbuff = cuda.register_host_memory(self.tbuff)
+
+        self.ywbuff = cuda.aligned_zeros(shape=(n0,),
+                                         dtype=self.real_type,
+                                         alignment=resource.getpagesize())
+        self.ywbuff = cuda.register_host_memory(self.tbuff)
+
+        self.wbuff = cuda.aligned_zeros(shape=(n0,),
+                                        dtype=self.real_type,
+                                        alignment=resource.getpagesize())
+        self.wbuff = cuda.register_host_memory(self.tbuff)
+        return self
+
+    def allocate(self, n0, nf, **kwargs):
+        self.n0 = np.int32(n0)
+        self.nf = np.int32(nf)
+        self.n = np.int32(self.sigma * self.nf)
+
+        self.nfft_mem_yw.n = self.n
+        self.nfft_mem_yw.nf = self.nf
+        self.nfft_mem_yw.n0 = self.n0
+
+        self.nfft_mem_w.n = 2 * self.n
+        self.nfft_mem_w.nf = 2 * self.nf
+        self.nfft_mem_w.n0 = self.n0
+
+        self.allocate_data()
+        self.allocate_grids()
+        self.allocate_pinned_cpu()
+
+        if self.buffered_transfer:
+            self.allocate_buffered_data_arrays()
+
+        return self
+
+    def transfer_data_to_gpu(self, t, y, dy,
+                             convert_to_weights=True, **kwargs):
+
+        w = dy if not convert_to_weights else weights(dy)
+
+        self.ybar = self.real_type(np.dot(y, dy))
+        yw = np.multiply(w, y - self.ybar)
+        self.yy = self.real_type(np.dot(w, np.power(y - self.ybar, 2)))
+
+        t_, yw_, w_ = None, None, None
+        if self.buffered_transfer and len(t) < self.n0:
+            self.n0 = np.int32(len(t))
+            self.tbuff[:n0] = t[:]
+            self.ywbuff[:n0] = yw[:]
+            self.wbuff[:n0] = w[:]
+            t_, yw_, w_ = self.tbuff, self.ybuff, self.wbuff
+        else:
+            t_ = np.asarray(t).astype(self.real_type)
+            yw_ = np.asarray(yw).astype(self.real_type)
+            w_ = np.asarray(w).astype(self.real_type)
+        
+        # Set minimum and maximum t values (needed to scale things
+        # for the NFFT)
+        self.tmin = self.real_type(min(t))
+        self.tmax = self.real_type(max(t))
+        
+        self.nfft_mem_yw.tmin = self.tmin
+        self.nfft_mem_w.tmin = self.tmin
+
+        self.nfft_mem_yw.tmax = self.tmax
+        self.nfft_mem_w.tmax = self.tmax
+
+        # Do asynchronous data transfer
+        self.t_g.set_async(t_, stream=self.stream)
+        self.yw_g.set_async(yw_, stream=self.stream)
+        self.w_g.set_async(w_, stream=self.stream)
+
+    def transfer_lsp_to_cpu(self, **kwargs):
+        cuda.memcpy_dtoh_async(self.lsp_c, self.lsp_g.ptr,
+                               stream=self.stream)
+
 
 def lomb_scargle_direct_sums(t, w, yw, freqs, YY):
     """
@@ -63,46 +239,18 @@ def lomb_scargle_direct_sums(t, w, yw, freqs, YY):
     return lsp
 
 
-def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf,
-                       block_size=256, sigma=2, m=8, use_cpu_nfft=False,
-                       use_double=False, n0=None, use_fft=True,
-                       minimum_frequency=0., use_dy_as_weights=False,
-                       python_dir_sums=False, samples_per_peak=10, **kwargs):
-
-    t, y, dy = data_cpu
-    nf = np.int32(nf)
-
-    n0 = n0 if n0 is not None else len(t)
-
-    w = np.zeros_like(dy)
-    w[:n0] = dy[:n0] if use_dy_as_weights else np.power(dy[:n0], -2)
-    w /= sum(w)
-
-    # types
-    real_type = np.float64 if use_double else np.float32
-    complex_type = np.complex128 if use_double else np.complex64
+def lomb_scargle_async(memory, functions, nf,
+                       block_size=256, use_double=False, n0=None, use_fft=True,
+                       minimum_frequency=0., python_dir_sums=False,
+                       samples_per_peak=10, transfer_to_device=True, **kwargs):
 
     (lomb, lomb_dirsum), nfft_funcs = functions
+    df = 1. / (memory.tmax - memory.tmin) / samples_per_peak
+    df = real_type(df)
+    stream = memory.stream
 
-    t_g, yw_g, w_g, g_lsp, q1, q2, q3, \
-        grid_g_w, grid_g_yw, ghat_g_w, \
-        ghat_g_yw, ghat_g_w_f, ghat_g_yw_f, \
-        cu_plan_w, cu_plan_yw = data_gpu
-
-    ybar = np.dot(w, y)
-    yw = np.multiply(w, y - ybar)
-    YY = np.dot(w, np.power(y-ybar, 2))
-
-    data_w = (t, w, 2 * nf)
-    data_yw = (t, yw, nf)
-
-    t_g.set_async(np.asarray(t).astype(real_type), stream)
-    w_g.set_async(np.asarray(w).astype(real_type), stream)
-    yw_g.set_async(np.asarray(yw).astype(real_type), stream)
-
+    # Use direct sums (on CPU)
     if python_dir_sums:
-        df = 1. / (max(t[:n0]) - min(t[:n0])) / samples_per_peak
-
         return lomb_scargle_direct_sums(t_g.get(), w_g.get(), yw_g.get(),
                                         df * (1 + np.arange(nf)), YY)
 
@@ -119,28 +267,25 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf,
             raise Exception("If use_fft is False, freqs must be specified"
                             "and must be a GPUArray instance. (freqs is"
                             "a `{type}` instance".format(type(freqs)))
-        df = 1. / (max(t[:n0]) - min(t[:n0])) / samples_per_peak
-        df = real_type(df)
-        lomb_dirsum.prepared_async_call(grid, block, stream,
-                                        t_g.ptr, w_g.ptr, yw_g.ptr,
-                                        freqs.ptr, g_lsp.ptr, np.int32(nf),
-                                        np.int32(len(t)), real_type(YY),
-                                        df, df)
-        cuda.memcpy_dtoh_async(lsp, g_lsp.ptr, stream)
-        stream.synchronize()
-        # print(zip(freqs.get()[:10], g_lsp.get()[:10]))
 
+        args = (grid, block, stream,
+                memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr,
+                memory.lsp_g.ptr, memory.nf, memory.n0, memory.yy,
+                df, df)
+
+        lomb_dirsum.prepared_async_call(*args)
+
+        memory.transfer_lsp_to_cpu()
         return lsp
 
     # NFFT
-    nfft_kwargs = dict(sigma=sigma, m=m, block_size=block_size,
-                       transfer_to_host=False,
-                       transfer_to_device=False, min_freq=minimum_frequency,
-                       use_double=use_double, n0=n0,
+    nfft_kwargs = dict(transfer_to_host=False,
+                       transfer_to_device=False,
+                       min_freq=minimum_frequency,
                        samples_per_peak=samples_per_peak)
 
     nfft_kwargs.update(kwargs)
-
+    """
     if use_cpu_nfft:
         # FOR DEBUGGING
         from nfft import nfft_adjoint as nfft_adjoint_cpu
@@ -155,37 +300,23 @@ def lomb_scargle_async(stream, data_cpu, data_gpu, lsp, functions, nf,
 
         ghat_g_yw_f.set_async(gh_yw, stream)
         ghat_g_w_f.set_async(gh_w, stream)
-
+    """
     else:
-        # NFFT(w)
-        gpu_data_w = (t_g, w_g, q1, q2, q3, grid_g_w,
-                      ghat_g_w, ghat_g_w_f, cu_plan_w)
-        nfft_adjoint_async(stream, data_w, gpu_data_w, None,
-                           nfft_funcs, precomp_psi=True,
-                           **nfft_kwargs)
-
         # NFFT(w * (y - ybar))
-        gpu_data_yw = (t_g, yw_g, q1, q2, q3, grid_g_yw,
-                       ghat_g_yw, ghat_g_yw_f, cu_plan_yw)
-        nfft_adjoint_async(stream, data_yw, gpu_data_yw, None,
-                           nfft_funcs, precomp_psi=False,
-                           **nfft_kwargs)
+        nfft_adjoint_async(memory.nfft_mem_yw, nfft_funcs, **nfft_kwargs)
 
-    import matplotlib.pyplot as plt
-    stream.synchronize()
-    plt.plot(ghat_g_yw_f.get(), color='r')
-    plt.show()
-    plt.plot(ghat_g_w_f.get(), color='b')
-    plt.show()
-    lomb.prepared_async_call(grid, block, stream,
-                             ghat_g_w_f.ptr, ghat_g_yw_f.ptr, g_lsp.ptr,
-                             np.int32(nf), real_type(YY))
-    stream.synchronize()
-    plt.plot(g_lsp.get())
-    plt.show()
-    cuda.memcpy_dtoh_async(lsp, g_lsp.ptr, stream)
+        # NFFT(w)
+        nfft_adjoint_async(memory.nfft_mem_w, nfft_funcs, **nfft_kwargs)
 
-    return lsp
+    args = (grid, block, stream)
+    args += (memory.nfft_mem_w.ghat_g.ptr, memory.nfft_mem_yw.ghat_g.ptr)
+    args += (memory.lsp_g.ptr, memory.nf, memory.yy)
+    lomb.prepared_async_call(*args)
+
+    if transfer_to_device:
+        memory.transfer_lsp_to_cpu()
+
+    return memory.lsp_c
 
 
 class LombScargleAsyncProcess(GPUAsyncProcess):
@@ -221,16 +352,19 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         self.block_size = self.nfft_proc.block_size
         self.module_options = self.nfft_proc.module_options
 
+        self.allocated_memory = []
+
     def _compile_and_prepare_functions(self, **kwargs):
 
         module_text = _module_reader(find_kernel('lomb'), self._cpp_defs)
 
         self.module = SourceModule(module_text, options=self.module_options)
         self.dtypes = dict(
-            lomb = [ np.intp, np.intp, np.intp, np.int32,
-                     self.real_type],
-            lomb_dirsum = [ np.intp, np.intp, np.intp, np.intp,
-                     np.int32, np.int32, self.real_type, self.real_type, self.real_type ]
+            lomb=[np.intp, np.intp, np.intp, np.int32,
+                  self.real_type],
+            lomb_dirsum=[np.intp, np.intp, np.intp, np.intp,
+                         np.int32, np.int32, self.real_type, self.real_type,
+                         self.real_type]
         )
 
         self.nfft_proc._compile_and_prepare_functions(**kwargs)
@@ -239,62 +373,20 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             self.prepared_functions[fname] = func.prepare(dtype)
         self.function_tuple = tuple(self.prepared_functions[fname]
                                     for fname in sorted(self.dtypes.keys()))
-        #self.prepared_functions.update(self.nfft_proc.prepared_functions)
-
-
-    def move_freqs_to_gpu(self, freqs, **kwargs):
-        return [gpuarray.to_gpu(frq.astype(self.real_type))
-                for frq in freqs]
 
     def memory_requirement(self, data, **kwargs):
         """ return an approximate GPU memory requirement in bytes """
         raise NotImplementedError()
 
-        tot_npts = sum([ len(t) for t, y, err in data ])
-
-        nflts = 5 * tot_npts + 4 * len(data) * (4 * sigma + 3) * nf
-
-        return nflts * (32 if self.real_type == np.float32 else 64)
-
     def allocate_for_single_lc(self, n0, nf, cu_plan_w=None,
                                cu_plan_yw=None, stream=None, **kwargs):
 
-        n = int(nf * self.nfft_proc.sigma)
-        t_g, yw_g, w_g, q1, q2 = tuple([gpuarray.zeros(n0, dtype=self.real_type)
-                                        for j in range(5) ])
-        q3 = gpuarray.zeros(2 * self.nfft_proc.m + 1, dtype=self.real_type)
+        m = self.nfft_proc.estimate_m(nf)
 
-        g_lsp = gpuarray.zeros(nf, dtype=self.real_type)
+        mem = LombScargleMemory(sigma, stream, m, **kwargs)
+        mem.allocate(n0, nf, **kwargs)
 
-        # Need NFFT that's 2 * length needed, since it's *centered*
-        # -N/2, -N/2 + 1, ..., 0, 1, ..., (N-1)/2
-        # grid_g_w = gpuarray.zeros(4 * n, dtype=self.real_type)
-        ghat_g_w = gpuarray.zeros(2 * n, dtype=self.complex_type)
-        ghat_g_w_f = ghat_g_w
-        grid_g_w = ghat_g_w
-
-        # grid_g_yw = gpuarray.zeros(2 * n, dtype=self.real_type)
-        ghat_g_yw = gpuarray.zeros(n, dtype=self.complex_type)
-        ghat_g_yw_f = ghat_g_yw
-        grid_g_yw = ghat_g_yw
-
-        if cu_plan_w is None:
-            cu_plan_w = cufft.Plan(2 * n, self.complex_type, self.complex_type,
-                                   stream=stream)
-        if cu_plan_yw is None:
-            cu_plan_yw = cufft.Plan(n, self.complex_type, self.complex_type,
-                                    stream=stream)
-
-        lsp = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
-                                    alignment=resource.getpagesize())
-        lsp = cuda.register_host_memory(lsp)
-
-        gpu_data = (t_g, yw_g, w_g, g_lsp, q1, q2, q3,
-                            grid_g_w, grid_g_yw, ghat_g_w,
-                            ghat_g_yw, ghat_g_w_f, ghat_g_yw_f,
-                            cu_plan_w, cu_plan_yw)
-
-        return gpu_data, lsp
+        return mem
 
     def autofrequency(self, *args, **kwargs):
         return utils_autofreq(*args, **kwargs)
@@ -350,7 +442,6 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         """
 
-
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
@@ -366,11 +457,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         for i, ((t, y, dy), nf) in enumerate(zip(data, nfrqs)):
 
-            gpu_d, lsp = self.allocate_for_single_lc(len(t), nf, stream=self.streams[i])
+            mem = self.allocate_for_single_lc(len(t), nf,
+                                              stream=self.streams[i])
 
-            gpu_data.append(gpu_d)
-            lsps.append(lsp)
-        return gpu_data, lsps
+
 
     def run(self, data, freqs=None, gpu_data=None, lsps=None,
             phi0s=None, scale=True, use_fft=True,
