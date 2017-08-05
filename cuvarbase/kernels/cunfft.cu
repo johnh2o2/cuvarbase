@@ -72,7 +72,7 @@ __global__ void nfft_shift(
 	if (batch < nbatch) {
         FLT k0 = f0 * spp * (xf - x0);
 
-		FLT phi = (2 * PI * (i % n) * k0) / n;
+		FLT phi = (2.f * PI * (i % n) * k0) / n;
 		
         CMPLX shift = CMPLX(cos(phi), sin(phi));
 
@@ -97,7 +97,7 @@ __global__ void precompute_psi(
 
 	FLT binv = 1.f/b;
 	if (i < n0){
-		FLT xg = (x[i] - x0) / (spp * (xf - x0)) - 0.5f;
+		FLT xg = (x[i] - x0) / (spp * (xf - x0));
 
 		xg = m + modflt(n * xg, 1.f);
 
@@ -136,13 +136,13 @@ __global__ void fast_gaussian_grid(
 		int di = i % n0;
 
 		// scale
-		FLT xval = (x[di] - x0) / (spp * (xf - x0)) - 0.5f;
+		FLT xval = (x[di] - x0) / (spp * (xf - x0));
 
 		// observation
 		FLT yi = y[i];
 
 		// nearest gridpoint (rounding down)
-		int u = (int) floorf(n * (xval + 0.5f) - m);
+		int u = (int) floorf(n * xval - m);
 
 		// precomputed filter values
 		FLT Q  = q1[di];
@@ -150,7 +150,8 @@ __global__ void fast_gaussian_grid(
 
 		// add datapoint to grid
 		for(int k = u; k < u + 2 * m + 1; k++){
-			ATOMIC_ADD(&(grid[mod(k, n) + batch * n]._M_re), Q * q3[k - u] * yi);
+			ATOMIC_ADD(&(grid[mod(k, n) + batch * n]._M_re), 
+				       Q * q3[k - u] * yi);
 			Q *= Q2;
 		}
 	}
@@ -187,10 +188,10 @@ __global__ void slow_gaussian_grid(
 		for(int di = 0; di < n0; di ++){
 
 			// scale
-			FLT xval = (x[di] - x0) / (spp * (xf - x0)) - 0.5f;
+			FLT xval = (x[di] - x0) / (spp * (xf - x0));
 
 			// grid index of datapoint (float)
-			dgi = n * (xval + 0.5f);
+			dgi = n * xval;
 
 			// "distance" between grid_index and datapoint
 			dx = diffmod(dgi, grid_index, n);
@@ -228,10 +229,12 @@ __global__ void normalize(
 
 		// *= exp(2pi i (k0 + k) * n0 / n)
 		FLT sT = spp * (xf - x0);
-        FLT n0 = x0 * n / sT;
+        FLT n0 = (x0 / sT) * n;
 		FLT k0 = f0 * sT;
 
 		FLT theta_k = (2.f * PI * n0 * (k0 + k)) / n;
+
+		theta_k = modflt(theta_k, 2.f * PI);
 
 		G *= CMPLX(cos(theta_k), sin(theta_k));
 

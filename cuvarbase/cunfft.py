@@ -30,6 +30,8 @@ class NFFTMemory(object):
         self.other_settings = {}
         self.other_settings.update(kwargs)
 
+        self.t = kwargs.get('t', None)
+        self.y = kwargs.get('y', None)
         self.f0 = kwargs.get('f0', 0.)
         self.n0 = kwargs.get('n0', None)
         self.nf = kwargs.get('nf', None)
@@ -101,9 +103,12 @@ class NFFTMemory(object):
             assert(self.n0 == len(self.q2))
             assert(2 * self.m + 1 == len(self.q3))
 
-    def allocate(self, n0, nf, **kwargs):
-        self.n0 = n0
-        self.nf = nf
+    def allocate(self, **kwargs):
+        self.n0 = kwargs.get('n0', self.n0)
+        self.nf = kwargs.get('nf', self.nf)
+
+        assert(self.n0 is not None)
+        assert(self.nf is not None)
         self.n = int(self.sigma * nf)
 
         self.allocate_data()
@@ -114,92 +119,88 @@ class NFFTMemory(object):
 
         return self
 
-    def transfer_data_to_gpu(self, t, y, **kwargs):
-        self.tmin = self.real_type(min(t))
-        self.tmax = self.real_type(max(t))
+    def transfer_data_to_gpu(self, **kwargs):
+        t = kwargs.get('t', self.t)
+        y = kwargs.get('y', self.y)
 
-        self.t_g.set_async(np.asarray(t).astype(self.real_type),
+        assert(t is not None)
+        assert(y is not None)
+
+        self.t_g.set_async(t,
                            stream=self.stream)
-        self.y_g.set_async(np.asarray(y).astype(self.real_type),
+        self.y_g.set_async(y,
                            stream=self.stream)
 
     def transfer_nfft_to_cpu(self, **kwargs):
         cuda.memcpy_dtoh_async(self.ghat_cpu, self.ghat_gpu.ptr,
                                stream=self.stream)
 
+    def fromdata(self, t, y, allocate=True, **kwargs):
+        self.tmin = self.real_type(min(t))
+        self.tmax = self.real_type(max(t))
+
+        self.t = np.asarray(t).astype(self.real_type)
+        self.y = np.asarray(y).astype(self.real_type)
+
+        self.n0 = kwargs.get('n0', np.int32(len(t)))
+        self.nf = kwargs.get('nf', self.nf)
+
+        if self.nf is not None and allocate:
+            self.allocate(**kwargs)
+
+        return self
+
 
 def nfft_adjoint_async(memory, functions,
-                       min_freq=0., block_size=256, n0=None,
+                       minimum_frequency=0., block_size=256,
                        just_return_gridded_data=False, use_grid=None,
                        fast_grid=True, transfer_to_device=True,
                        transfer_to_host=True, precomp_psi=True,
-                       use_double=False, samples_per_peak=1, **kwargs):
+                       samples_per_peak=1, **kwargs):
     """
     Asynchronous NFFT adjoint operation.
 
-    Use the `NFFTAsyncProcess` class and related subroutines when possible.
+    Use the ``NFFTAsyncProcess`` class and related subroutines when possible.
 
     Parameters
     ----------
-    stream: cuda.Stream
-        Cuda stream to use.
-    data: tuple, length 3
-        The tuple contains (`t`, `y`, `N`);
-            * `t` contain observation times
-            * `y` contain the measured values
-            * `N` is the size of the NFFT
-    gpu_data: tuple, length 8
-        The tuple contains
-            * `t_g`, `y_g` : `GPUArray`s of length `len(t)`. Used to transfer
-              `t` and `y` to the GPU. Assumed to have a dtype of `np.float32`
-            * `q1`, `q2`, `q3` : These are `GPUArray`s that hold precomputed
-               values for the fast gridding procedures. The `q1` and `q2`
-               `GPUArrays` both have the same length as `t` and the `q3` array
-               has length `2 * m + 1`, where `m` is the filter radius. Assumed
-               to have a dtype of `np.float32`
-            * `grid_g` : `GPUArray` for the grid; length `n * sigma`, dtype
-               assumed to be `np.float32`.
-            * `ghat_g` : `GPUArray` for the transform: assumed to have length
-               `n * sigma` and have a dtype of `np.complex64`
-            * `cu_plan` : is the `skcuda.fft.Plan` for the FFT.
-    result: `GPUArray`
-        Place to transfer (asynchronously) the result on the CPU.
-        Must be registered with `cuda.register_host_memory` in order to be
-        asynchronous.
+    memory: ``NFFTMemory``
+        Allocated memory, must have data already set (see, e.g.,
+        ``NFFTAsyncProcess.set_data()``)
     functions: tuple, length 5
         Tuple of compiled functions from `SourceModule`. Must be prepared with
         their appropriate dtype.
-    m: int, optional
-        The filter "radius" for smoothing data onto grid.
-    sigma: int, optional
-        The grid size divided by the final FFT size
+    minimum_frequency: float, optional (default: 0)
+        First frequency of transform
     block_size: int, optional
         Number of CUDA threads per block
     just_return_gridded_data: bool, optional
         If True, returns grid via `grid_g.get()` after gridding
-    use_grid: `GPUArray`, optional
+    use_grid: ``GPUArray``, optional
         If specified, will skip gridding procedure and use the `GPUArray`
         provided
     fast_grid: bool, optional, default: True
         Whether or not to use the "fast" gridding procedure
-    transfer_to_device: bool, optional, default: True
-        If False, does not transfer result from GPU to CPU.
-    precomp_psi: bool, optional, default: True
-        Only relevant if `fast` is True. If False, will compute the `q1`, `q2`
-        and `q3` values.
-    use_double : bool, optional (default: False)
-        Use double-precision (on GTX cards this will make things ~24 times
-        slower)
+    transfer_to_device: bool, optional, (default: True)
+        If the data is already on the gpu, set as False
+    transfer_to_host: bool, optional, (default: True)
+        If False, will not transfer the resulting nfft to CPU memory
+    precomp_psi: bool, optional, (default: True)
+        Only relevant if ``fast`` is True. Will precompute values for the
+        fast gridding procedure.
+    samples_per_peak: float, optional (default: 1)
+        Frequency spacing is reduced by this factor, but number of frequencies
+        is kept the same
 
     Returns
     -------
-    `ghat_cpu`: GPUArray
-        The resulting complex transform.
+    ghat_cpu: ``np.array``
+        The resulting NFFT
     """
 
     precompute_psi, fast_gaussian_grid, slow_gaussian_grid, \
         nfft_shift, normalize = functions
-    
+
     stream = memory.stream
 
     block = (block_size, 1, 1)
@@ -210,8 +211,13 @@ def nfft_adjoint_async(memory, functions,
         return int(np.ceil(float(nthreads) / block_size))
 
     spp = real_type(samples_per_peak)
-    min_freq = real_type(min_freq)
+    minimum_frequency = real_type(minimum_frequency)
 
+    # transfer data -> gpu
+    if transfer_to_device:
+        memory.transfer_data_to_gpu()
+
+    # smooth data onto uniform grid
     if fast_grid:
         if memory.precomp_psi:
             grid = (grid_size(memory.n0 + 2 * memory.m + 1), 1)
@@ -237,30 +243,34 @@ def nfft_adjoint_async(memory, functions,
         args += (memory.tmin, memory.tmax, memory.spp)
         slow_gaussian_grid.prepared_async_call(*args)
 
+    # Stop if user wants the grid
     if just_return_gridded_data:
         stream.synchronize()
         return np.real(memory.ghat_g.get())
 
+    # Set the grid manually if the user wants to
+    # (only for debugging)
     if use_grid is not None:
         memory.ghat_g.set(use_grid)
 
-    # Shift the grid in Fourier space
-    grid = (grid_size(n), 1)
-    args = (grid, block, stream)
-    args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
-    args += (memory.n, batch_size)
-    args += (memory.tmin, memory.tmax, memory.spp, min_freq)
-    nfft_shift.prepared_async_call(*args)
+    # for a non-zero minimum frequency, do a shift
+    if abs(minimum_frequency) > 1E-9:
+        grid = (grid_size(n), 1)
+        args = (grid, block, stream)
+        args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
+        args += (memory.n, batch_size)
+        args += (memory.tmin, memory.tmax, memory.spp, minimum_frequency)
+        nfft_shift.prepared_async_call(*args)
 
-    # Run IFFT on centered grid
+    # Run IFFT on grid
     cufft.ifft(memory.ghat_g, memory.ghat_g, memory.cu_plan)
 
-    # Normalize
+    # Normalize result (deconvolve smoothing kernel)
     grid = (grid_size(N), 1)
     args = (grid, block, stream)
     args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
     args += (memory.n, memory.nf, batch_size, memory.b)
-    args += (memory.tmin, memory.tmax, memory.spp, min_freq)
+    args += (memory.tmin, memory.tmax, memory.spp, minimum_frequency)
     normalize.prepared_async_call(*args)
 
     # Transfer result!
@@ -285,7 +295,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
     autoset_m: bool, optional (default: True)
         Automatically set the ``m`` parameter based on the
         error tolerance given by the ``m_tol`` parameter
-    m_tol: float, optional (default: 1E-8)
+    tol: float, optional (default: 1E-8)
         Error tolerance for the NFFT (used to auto set ``m``)
     block_size: int, optional (default: 256)
         CUDA block size.
@@ -343,17 +353,12 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
     def estimate_m(self, N):
         """
-        Automatically set ``m`` based on an error tolerance of ``tol``.
-
+        Estimate ``m`` based on an error tolerance of ``self.tol``.
 
         Parameters
         ----------
-        tol: float
-            Error tolerance
         N: int
             size of NFFT
-        sigma: float
-            Grid size is ``sigma * N``
 
         Returns
         -------
@@ -417,13 +422,18 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             List of data, ``[(t_1, y_1, N_1), ...]``
             * ``t``: Observation times.
             * ``y``: Observations.
-            * ``N``: int, FFT size
+            * ``nf``: int, FFT size
         **kwargs
+
+        Returns
+        -------
+        allocated_memory: list of ``NFFTMemory`` objects
+            List of allocated memory for each dataset
 
         """
 
         # Purge any previously allocated memory
-        self.allocated_memory = []
+        allocated_memory = []
 
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
@@ -437,9 +447,11 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             mem = NFFTMemory(sigma, self.streams[i], m,
                              double_precision=self.use_double)
 
-            self.allocated_memory.append(mem.allocate(len(t), nf))
+            allocated_memory.append(mem.fromdata(t, y, nf=nf, allocate=True))
 
-    def run(self, data, mem=None, **kwargs):
+        return allocated_memory
+
+    def run(self, data, memory=None, **kwargs):
         """
         Run the adjoint NFFT on a batch of data
 
@@ -449,12 +461,8 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             list of [(t, y, w), ...] containing
             * ``t``: observation times
             * ``y``: observations
-            * ``N``: size of NFFT
-        gpu_data: optional, list of tuples
-            List of tuples containing allocated GPU objects for each dataset
-        pow_cpus: optional, list of ``np.ndarray``
-            List of page-locked (registered) np.ndarrays for asynchronous
-            transfers of NFFT to CPU
+            * ``nf``: int, size of NFFT
+        memory: 
         **kwargs
 
         Returns
@@ -468,21 +476,14 @@ class NFFTAsyncProcess(GPUAsyncProcess):
                      for func in self.function_names]):
             self._compile_and_prepare_functions(**kwargs)
 
-        if mem is None:
-            self.allocate(data, **kwargs)
-        else:
-            assert(len(mem) == len(data))
-            self.allocated_memory = mem
-
-        streams = [s for i, s in enumerate(self.streams) if i < len(data)]
+        if memory is None:
+            memory = self.allocate(data, **kwargs)
 
         nfft_kwargs = dict(block_size=self.block_size)
-
         nfft_kwargs.update(kwargs)
 
-        results = [nfft_adjoint_async(stream, cdat, mem, self.function_tuple,
+        results = [nfft_adjoint_async(mem, self.function_tuple,
                                       **nfft_kwargs)
-                   for stream, cdat, mem in
-                   zip(streams, data, self.allocated_memory)]
+                   for mem in memory]
 
         return results
