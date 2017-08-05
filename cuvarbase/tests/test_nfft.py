@@ -113,7 +113,8 @@ def test_fast_gridding_with_jvdp_nfft():
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                        just_return_gridded_data=True, fast_grid=True)
+                        just_return_gridded_data=True, fast_grid=True,
+                        minimum_frequency=-int(nf/2))
 
     # get CPU grid
     cpu_grid = get_cpu_grid(t, y, nf, sigma=nfft_sigma, m=nfft_m)
@@ -127,10 +128,11 @@ def test_fast_gridding_against_scalar_version():
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                        just_return_gridded_data=True, fast_grid=True)
+                        just_return_gridded_data=True, fast_grid=True,
+                        minimum_frequency=-int(nf/2))
 
     # get python version of gpu grid calculation
-    cpu_grid = gpu_grid_scalar(t, y, nfft_sigma, nfft_m, N)
+    cpu_grid = gpu_grid_scalar(t, y, nfft_sigma, nfft_m, nf)
 
     tols = dict(rtol=nfft_rtol, atol=nfft_atol)
     assert_allclose(gpu_grid, cpu_grid, **tols)
@@ -142,10 +144,11 @@ def test_slow_gridding_against_scalar_fast_gridding():
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                        just_return_gridded_data=True, fast_grid=False)
+                        just_return_gridded_data=True, fast_grid=False,
+                        minimum_frequency=-int(nf/2))
 
     # get python version of gpu grid calculation
-    cpu_grid = gpu_grid_scalar(t, y, nfft_sigma, nfft_m, N)
+    cpu_grid = gpu_grid_scalar(t, y, nfft_sigma, nfft_m, nf)
 
     tols = dict(rtol=nfft_rtol, atol=nfft_atol)
     assert_allclose(gpu_grid, cpu_grid, **tols)
@@ -157,7 +160,8 @@ def test_slow_gridding_against_jvdp_nfft():
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                        just_return_gridded_data=True, fast_grid=False)
+                        just_return_gridded_data=True, fast_grid=False,
+                        minimum_frequency=-int(nf/2))
 
     # get CPU grid
     cpu_grid = get_cpu_grid(t, y, nf, sigma=nfft_sigma, m=nfft_m)
@@ -197,10 +201,12 @@ def test_nfft_against_existing_impl():
     t, y, err = data()
 
     nf = int(nfft_sigma * len(t))
-    gpu_nfft = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m)
+    gpu_nfft = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
+                                minimum_frequency=-int(nf/2))
 
     cpu_nfft = nfft_adjoint_cpu(t, y, nf, sigma=nfft_sigma, m=nfft_m)
 
+    
     tols = dict(rtol=nfft_rtol, atol=nfft_atol)
     assert_allclose(np.real(cpu_nfft), np.real(gpu_nfft), **tols)
     assert_allclose(np.imag(cpu_nfft), np.imag(gpu_nfft), **tols)

@@ -33,10 +33,12 @@ class LombScargleMemory(object):
         self.nfft_mem_w = kwargs.get('nfft_mem_w', None)
 
         if self.nfft_mem_yw is None:
-            self.nfft_mem_yw = NFFTMemory(sigma, stream, m, **kwargs)
+            self.nfft_mem_yw = NFFTMemory(self.sigma, self.stream, 
+                                          self.m, **kwargs)
 
         if self.nfft_mem_w is None:
-            self.nfft_mem_w = NFFTMemory(sigma, stream, m, **kwargs)
+            self.nfft_mem_w = NFFTMemory(self.sigma, self.stream, 
+                                         self.m, **kwargs)
 
         self.real_type = self.nfft_mem_yw.real_type
         self.complex_type = self.nfft_mem_yw.complex_type
@@ -87,8 +89,8 @@ class LombScargleMemory(object):
         self.nfft_mem_w.q2 = self.nfft_mem_yw.q2
         self.nfft_mem_w.q3 = self.nfft_mem_yw.q3
 
-        nfft_mem_yw.allocate_grid(nf=nf)
-        nfft_mem_w.allocate_grid(nf=2*nf)
+        self.nfft_mem_yw.allocate_grid(nf=nf)
+        self.nfft_mem_w.allocate_grid(nf=2*nf)
 
         self.lsp_g = gpuarray.zeros(nf, dtype=self.real_type)
         return self
@@ -97,7 +99,7 @@ class LombScargleMemory(object):
         nf = kwargs.get('nf', self.nf)
         assert(nf is not None)
 
-        self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.complex_type,
+        self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
                                         alignment=resource.getpagesize())
         self.lsp_c = cuda.register_host_memory(self.lsp_c)
 
@@ -169,11 +171,11 @@ class LombScargleMemory(object):
         self.n0 = kwargs.get('n0', np.int32(len(t)))
 
         if dy is not None:
-            assert('w' is not in kwargs)
+            assert('w' not in kwargs)
             w = weights(dy)
 
         if y is not None:
-            assert('yw' is not in kwargs)
+            assert('yw' not in kwargs)
 
             self.ybar = self.real_type(np.dot(y, w))
             yw = np.multiply(w, y - self.ybar)
@@ -225,6 +227,7 @@ class LombScargleMemory(object):
         self.w_g.set_async(w, stream=self.stream)
 
     def transfer_lsp_to_cpu(self, **kwargs):
+        print(self.lsp_c, self.lsp_g.ptr, self.stream)
         cuda.memcpy_dtoh_async(self.lsp_c, self.lsp_g.ptr,
                                stream=self.stream)
 
@@ -299,11 +302,11 @@ def lomb_scargle_async(memory, functions,
 
     (lomb, lomb_dirsum), nfft_funcs = functions
     df = 1. / (memory.tmax - memory.tmin) / samples_per_peak
-    df = real_type(df)
+    df = memory.real_type(df)
     stream = memory.stream
 
     block = (block_size, 1, 1)
-    grid = (int(np.ceil(nf / float(block_size))), 1)
+    grid = (int(np.ceil(memory.nf / float(block_size))), 1)
 
     # lightcurve -> gpu
     if transfer_to_device:
@@ -330,16 +333,15 @@ def lomb_scargle_async(memory, functions,
         if transfer_to_device:
             memory.transfer_lsp_to_cpu()
         return memory.lsp_c
-
-    # NFFT
-    nfft_kwargs = dict(transfer_to_host=False,
-                       transfer_to_device=False,
-                       min_freq=minimum_frequency,
-                       samples_per_peak=samples_per_peak)
-
-    nfft_kwargs.update(kwargs)
-
     else:
+        # NFFT
+        nfft_kwargs = dict(transfer_to_host=False,
+                           transfer_to_device=False,
+                           min_freq=minimum_frequency,
+                           samples_per_peak=samples_per_peak)
+
+        nfft_kwargs.update(kwargs)
+
         # NFFT(w * (y - ybar))
         nfft_adjoint_async(memory.nfft_mem_yw, nfft_funcs, **nfft_kwargs)
 
