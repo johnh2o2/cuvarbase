@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <pycuda-complex.hpp>
 
 #define RESTRICT __restrict__
@@ -58,7 +59,7 @@ __device__ FLT diffmod(CONSTANT FLT a, CONSTANT FLT b, CONSTANT FLT M) {
 __global__ void nfft_shift(
 	CMPLX *in,
 	CMPLX *out,
-	CONSTANT int n,
+	CONSTANT int ng,
 	CONSTANT int nbatch,
 	CONSTANT FLT x0,
 	CONSTANT FLT xf,
@@ -67,13 +68,13 @@ __global__ void nfft_shift(
 
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
-	int batch = i / n;
+	int batch = i / ng;
 
 	if (batch < nbatch) {
         FLT k0 = f0 * spp * (xf - x0);
 
-		FLT phi = (2.f * PI * (i % n) * k0) / n;
-		
+		FLT phi = (2.f * PI * (i % ng) * k0) / ng;
+
         CMPLX shift = CMPLX(cos(phi), sin(phi));
 
 		out[i] = shift * in[i];
@@ -86,7 +87,7 @@ __global__ void precompute_psi(
 	FLT * q2,        // precomputed filter values (length n0)
 	FLT * q3,        // precomputed filter values (length 2 * m + 1)
 	CONSTANT int n0,     // data size
-	CONSTANT int n,      // grid size
+	CONSTANT int ng,      // grid size
 	CONSTANT int m,      // max filter radius
 	CONSTANT FLT b,      // filter scaling
 	CONSTANT FLT x0,     // min(x)
@@ -99,7 +100,7 @@ __global__ void precompute_psi(
 	if (i < n0){
 		FLT xg = (x[i] - x0) / (spp * (xf - x0));
 
-		xg = m + modflt(n * xg, 1.f);
+		xg = m + modflt(ng * xg, 1.f);
 
 		q1[i] = exp(-xg * (xg * binv)) / sqrt(b * PI);
 		q2[i] = exp( 2.f * xg * binv);
@@ -119,7 +120,7 @@ __global__ void fast_gaussian_grid(
 	FLT *RESTRICT q2,	 // precomputed filter values
 	FLT *RESTRICT q3,	 // precomputed filter values
 	CONSTANT int n0,     // data size
-	CONSTANT int n,      // grid size
+	CONSTANT int ng,      // grid size
 	CONSTANT int nbatch, // number of grids/datasets
 	CONSTANT int m,      // max filter radius
 	CONSTANT FLT x0,     // min(x)
@@ -142,17 +143,21 @@ __global__ void fast_gaussian_grid(
 		FLT yi = y[i];
 
 		// nearest gridpoint (rounding down)
-		int u = (int) floorf(n * xval - m);
+		int u = (int) floorf(ng * xval - m);
 
 		// precomputed filter values
 		FLT Q  = q1[di];
 		FLT Q2 = q2[di];
 
 		// add datapoint to grid
-		for(int k = u; k < u + 2 * m + 1; k++){
-			ATOMIC_ADD(&(grid[mod(k, n) + batch * n]._M_re), 
-				       Q * q3[k - u] * yi);
-			Q *= Q2;
+		for(int k = 0; k < 2 * m + 1; k++){
+            FLT dg = Q * q3[k] * yi;
+            if (!(isnan(dg) || isinf(dg)))
+			    ATOMIC_ADD(&(grid[mod(k + u, ng) + batch * ng]._M_re),
+				          dg);
+            else
+                break;
+            Q *= Q2;
 		}
 	}
 }
@@ -164,17 +169,17 @@ __global__ void slow_gaussian_grid(
 	FLT *RESTRICT y,     // data (observations)
 	CMPLX * grid,          // grid
 	CONSTANT int n0,     // data size
-	CONSTANT int n,      // grid size
+	CONSTANT int ng,      // grid size
 	CONSTANT int nbatch, // number of grids
 	CONSTANT int m,      // max filter radius
 	CONSTANT FLT b,      // filter scaling
 	CONSTANT FLT x0,     // min(x)
 	CONSTANT FLT xf,     // max(x)
-	CONSTANT FLT spp)    // samples per peak 
+	CONSTANT FLT spp)    // samples per peak
 {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-	int batch = i / n;
+	int batch = i / ng;
 
 	if (batch < nbatch){
 		FLT dx, dgi;
@@ -182,7 +187,7 @@ __global__ void slow_gaussian_grid(
 
 
 		// grid index for this thread
-		int grid_index = i - n * batch;
+		int grid_index = i - ng * batch;
 
 		// iterate through data
 		for(int di = 0; di < n0; di ++){
@@ -191,10 +196,10 @@ __global__ void slow_gaussian_grid(
 			FLT xval = (x[di] - x0) / (spp * (xf - x0));
 
 			// grid index of datapoint (float)
-			dgi = n * xval;
+			dgi = ng * xval;
 
 			// "distance" between grid_index and datapoint
-			dx = diffmod(dgi, grid_index, n);
+			dx = diffmod(dgi, grid_index, ng);
 
 			// skip if datapoint too far away
 			if (dx > m)
@@ -209,8 +214,8 @@ __global__ void slow_gaussian_grid(
 __global__ void normalize(
 	CMPLX *gin,
 	CMPLX *gout,
-	CONSTANT int n, // sigma * N
-	CONSTANT int N, // number of desired frequency samples
+	CONSTANT int ng, // sigma * nf
+	CONSTANT int nf, // number of desired frequency samples
 	CONSTANT int nbatch, // number of transforms
 	CONSTANT FLT b,      // filter scaling
 	CONSTANT FLT x0,     // min(x)
@@ -220,26 +225,23 @@ __global__ void normalize(
 {
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
-	int batch = i / N;
+	int batch = i / nf;
 
 	if (batch < nbatch){
-		int k = i % N;
+		int k = i % nf;
 
-		CMPLX G = gin[batch * n + k];
+		FLT sT = spp * (xf - x0);
+        FLT n0 = (x0 / sT) * ng;
+		FLT k0 = f0 * sT;
+		CMPLX G = gin[batch * ng + k];
 
 		// *= exp(2pi i (k0 + k) * n0 / n)
-		FLT sT = spp * (xf - x0);
-        FLT n0 = (x0 / sT) * n;
-		FLT k0 = f0 * sT;
-
-		FLT theta_k = (2.f * PI * n0 * (k0 + k)) / n;
-
-		theta_k = modflt(theta_k, 2.f * PI);
+		FLT theta_k = (2.f * PI * n0 * (k0 + k)) / ng;
 
 		G *= CMPLX(cos(theta_k), sin(theta_k));
 
 		// normalization factor from gridding kernel (gaussian)
-		FLT khat = (PI * (k + k0)) / n;
+		FLT khat = theta_k / (2.f * n0);
 		gout[i] = G * exp(b * khat * khat);
 	}
 

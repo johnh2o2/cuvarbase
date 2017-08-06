@@ -10,34 +10,38 @@ from ..cunfft import NFFTAsyncProcess
 from pycuda.tools import mark_cuda_test
 from pycuda import gpuarray
 
-nfft_sigma = 2
+nfft_sigma = 4
 nfft_m = 12
 nfft_rtol = 1E-3
 nfft_atol = 1E-3
 spp = 1
 
 
+def direct_sums(t, y, freqs):
+    C = [np.sum(y * np.cos(2 * np.pi * t * f)) for f in freqs]
+    S = [np.sum(y * np.sin(2 * np.pi * t * f)) for f in freqs]
+
+    return np.array([c + 1j * s for c, s in zip(C, S)])
+
 def scale_time(t, samples_per_peak):
     return (t - min(t)) / (samples_per_peak * (max(t) - min(t))) - 0.5
 
 
 @pytest.fixture
-def data(seed=100, sigma=0.1, ndata=100, samples_per_peak=1,
-         scale=True):
+def data(seed=100, sigma=0.1, ndata=100, samples_per_peak=spp):
 
     rand = np.random.RandomState(seed)
 
     t = 10 * np.sort(rand.rand(ndata))
     y = np.cos(2 * np.pi * (3./(max(t) - min(t))) * t)
 
-    if scale:
-        t = scale_time(t, samples_per_peak=samples_per_peak)
+    tscl = scale_time(t, samples_per_peak=samples_per_peak)
 
     y += sigma * rand.randn(len(t))
 
     err = sigma * np.ones_like(y)
 
-    return t, y, err
+    return t, tscl, y, err
 
 
 def get_b(sigma, m):
@@ -74,10 +78,11 @@ def gpu_grid_scalar(t, y, sigma, m, N):
 
 
 def simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, use_double=True,
-                    m=nfft_m, **kwargs):
-    proc = NFFTAsyncProcess(sigma=sigma, m=m, use_double=use_double)
+                    m=nfft_m, samples_per_peak=spp, **kwargs):
+    proc = NFFTAsyncProcess(sigma=sigma, m=m, autoset_m=False,
+                            use_double=use_double)
 
-    nfft_kwargs = dict(samples_per_peak=spp)
+    nfft_kwargs = dict(samples_per_peak=samples_per_peak)
     nfft_kwargs.update(kwargs)
     results = proc.run([(t, y, nf)], **nfft_kwargs)
 
@@ -92,47 +97,33 @@ def get_cpu_grid(t, y, nf, sigma=nfft_sigma, m=nfft_m):
 
 
 @mark_cuda_test
-def test_nfft_adjoint_async():
-    t, y, err = data(scale=True)
-
-    nf = int(nfft_sigma * len(t))
-    gpu_nfft = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                               minimum_frequency=-int(nf/2))
-
-    cpu_nfft = nfft_adjoint_cpu(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                                use_fft=True, truncated=True)
-
-    tols = dict(rtol=nfft_rtol, atol=nfft_atol)
-    assert_allclose(gpu_nfft.real, cpu_nfft.real, **tols)
-    assert_allclose(gpu_nfft.imag, cpu_nfft.imag, **tols)
-
-
-@mark_cuda_test
 def test_fast_gridding_with_jvdp_nfft():
-    t, y, err = data()
+    t, tsc, y, err = data()
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
                         just_return_gridded_data=True, fast_grid=True,
-                        minimum_frequency=-int(nf/2))
+                        minimum_frequency=-int(nf/2),
+                        samples_per_peak=spp)
 
     # get CPU grid
-    cpu_grid = get_cpu_grid(t, y, nf, sigma=nfft_sigma, m=nfft_m)
+    cpu_grid = get_cpu_grid(tsc, y, nf, sigma=nfft_sigma, m=nfft_m)
 
     assert_allclose(gpu_grid, cpu_grid, atol=1E-4, rtol=0)
 
 
 @mark_cuda_test
 def test_fast_gridding_against_scalar_version():
-    t, y, err = data()
+    t, tsc, y, err = data()
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
                         just_return_gridded_data=True, fast_grid=True,
-                        minimum_frequency=-int(nf/2))
+                        minimum_frequency=-int(nf/2),
+                        samples_per_peak=spp)
 
     # get python version of gpu grid calculation
-    cpu_grid = gpu_grid_scalar(t, y, nfft_sigma, nfft_m, nf)
+    cpu_grid = gpu_grid_scalar(tsc, y, nfft_sigma, nfft_m, nf)
 
     tols = dict(rtol=nfft_rtol, atol=nfft_atol)
     assert_allclose(gpu_grid, cpu_grid, **tols)
@@ -140,15 +131,16 @@ def test_fast_gridding_against_scalar_version():
 
 @mark_cuda_test
 def test_slow_gridding_against_scalar_fast_gridding():
-    t, y, err = data()
+    t, tsc, y, err = data()
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
                         just_return_gridded_data=True, fast_grid=False,
-                        minimum_frequency=-int(nf/2))
+                        minimum_frequency=-int(nf/2),
+                        samples_per_peak=spp)
 
     # get python version of gpu grid calculation
-    cpu_grid = gpu_grid_scalar(t, y, nfft_sigma, nfft_m, nf)
+    cpu_grid = gpu_grid_scalar(tsc, y, nfft_sigma, nfft_m, nf)
 
     tols = dict(rtol=nfft_rtol, atol=nfft_atol)
     assert_allclose(gpu_grid, cpu_grid, **tols)
@@ -156,15 +148,17 @@ def test_slow_gridding_against_scalar_fast_gridding():
 
 @mark_cuda_test
 def test_slow_gridding_against_jvdp_nfft():
-    t, y, err = data()
+    t, tsc, y, err = data()
+
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
                         just_return_gridded_data=True, fast_grid=False,
-                        minimum_frequency=-int(nf/2))
+                        minimum_frequency=-int(nf/2),
+                        samples_per_peak=spp)
 
     # get CPU grid
-    cpu_grid = get_cpu_grid(t, y, nf, sigma=nfft_sigma, m=nfft_m)
+    cpu_grid = get_cpu_grid(tsc, y, nf, sigma=nfft_sigma, m=nfft_m)
 
     diffs = np.absolute(gpu_grid - cpu_grid)
     inds = (np.argsort(diffs)[::-1])[:10]
@@ -180,7 +174,8 @@ def test_slow_gridding_against_jvdp_nfft():
 
 @mark_cuda_test
 def test_ffts():
-    t, y, err = data()
+    t, tsc, y, err = data()
+
 
     yhat = np.empty(len(y))
 
@@ -196,17 +191,96 @@ def test_ffts():
     assert_allclose(yhat, yghat.get(), **tols)
 
 
-@mark_cuda_test
-def test_nfft_against_existing_impl():
-    t, y, err = data()
+def nfft_against_direct_sums(samples_per_peak=spp, f0=None, scaled=True):
+    t, tsc, y, err = data(samples_per_peak=samples_per_peak)
 
     nf = int(nfft_sigma * len(t))
-    gpu_nfft = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                                minimum_frequency=-int(nf/2))
 
-    cpu_nfft = nfft_adjoint_cpu(t, y, nf, sigma=nfft_sigma, m=nfft_m)
+    df = 1./(samples_per_peak * (max(t) - min(t)))
+    f0 = f0 if f0 is not None else -0.5 * nf * df
+    k0 = int(f0 / df)
 
-    
+    f0 = k0 if scaled else k0 * df
+    tg = tsc if scaled else t
+    sppg = samples_per_peak
+
+    gpu_nfft = simple_gpu_nfft(tg, y, nf, sigma=nfft_sigma, m=nfft_m,
+                               minimum_frequency=f0,
+                               samples_per_peak=sppg)
+
+    # cpu_nfft = nfft_adjoint_cpu(tsc, y, 2 * (nf + k0), sigma=nfft_sigma, m=nfft_m)
+
+    freqs = (float(k0) + np.arange(nf))
+    if not scaled:
+        freqs *= df
+    direct_dft = direct_sums(tg, y, freqs)
+
     tols = dict(rtol=nfft_rtol, atol=nfft_atol)
-    assert_allclose(np.real(cpu_nfft), np.real(gpu_nfft), **tols)
-    assert_allclose(np.imag(cpu_nfft), np.imag(gpu_nfft), **tols)
+
+    def dsort(arr0, arr):
+        d = np.absolute(arr0 - arr)
+        return np.argsort(-d)
+
+    inds = dsort(np.real(direct_dft), np.real(gpu_nfft))
+
+    npr = 5
+    q = zip(inds[:npr], direct_dft[inds[:npr]], gpu_nfft[inds[:npr]])
+    for i, dft, gnfft in q:
+        print(i, dft, gnfft)
+    assert_allclose(np.real(direct_dft), np.real(gpu_nfft), **tols)
+    assert_allclose(np.imag(direct_dft), np.imag(gpu_nfft), **tols)
+
+@mark_cuda_test
+def test_nfft_against_existing_impl_scaled_centered_spp1():
+    nfft_against_direct_sums(samples_per_peak=1, scaled=True, f0=None)
+
+@mark_cuda_test
+def test_nfft_against_existing_impl_scaled_centered_spp5():
+    nfft_against_direct_sums(samples_per_peak=5, scaled=True, f0=None)
+
+@mark_cuda_test
+def test_nfft_against_existing_impl_scaled_uncentered_spp1():
+    nfft_against_direct_sums(samples_per_peak=1, scaled=True, f0=0.)
+
+@mark_cuda_test
+def test_nfft_against_existing_impl_unscaled_centered_spp1():
+    nfft_against_direct_sums(samples_per_peak=1, scaled=False, f0=None)
+
+@mark_cuda_test
+def test_nfft_against_existing_impl_unscaled_uncentered_spp5():
+    nfft_against_direct_sums(samples_per_peak=5, scaled=False, f0=0.)
+
+@mark_cuda_test
+def test_nfft_adjoint_async():
+    f0 = 0.
+    ndata = 10
+    batch_size = 3
+    use_double=False
+
+    datas = []
+    for i in range(ndata):
+        t, tsc, y, err = data()
+        nf = int(nfft_sigma * len(t))
+
+        datas.append((t, y, nf))
+
+    kwargs = dict(minimum_frequency=f0, samples_per_peak=spp)
+
+    proc = NFFTAsyncProcess(sigma=nfft_sigma, m=nfft_m, autoset_m=False,
+                            use_double=use_double)
+
+    single_nffts = [simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
+                                    use_double=use_double, **kwargs)
+                 for t, y, nf in datas]
+
+    multi_nffts = proc.run(datas, **kwargs)
+
+    batch_nffts = proc.batched_run(datas, batch_size=batch_size, **kwargs)
+
+    tols = dict(rtol=nfft_rtol, atol=nfft_atol)
+    for ghat_m, ghat_s, ghat_b in zip(multi_nffts, single_nffts, batch_nffts):
+        assert_allclose(ghat_s.real, ghat_m.real, **tols)
+        assert_allclose(ghat_s.imag, ghat_m.imag, **tols)
+
+        assert_allclose(ghat_s.real, ghat_b.real, **tols)
+        assert_allclose(ghat_s.imag, ghat_b.imag, **tols)

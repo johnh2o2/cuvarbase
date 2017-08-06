@@ -220,8 +220,6 @@ def nfft_adjoint_async(memory, functions,
     spp = memory.real_type(samples_per_peak)
     minimum_frequency = memory.real_type(minimum_frequency)
 
-
-
     # transfer data -> gpu
     if transfer_to_device:
         memory.transfer_data_to_gpu()
@@ -236,7 +234,7 @@ def nfft_adjoint_async(memory, functions,
             args += (memory.n0, memory.n, memory.m, memory.b)
             args += (memory.tmin, memory.tmax, spp)
             precompute_psi.prepared_async_call(*args)
-
+        
         grid = (grid_size(memory.n0), 1)
         args = (grid, block, stream)
         args += (memory.t_g.ptr, memory.y_g.ptr, memory.ghat_g.ptr)
@@ -251,7 +249,7 @@ def nfft_adjoint_async(memory, functions,
         args += (memory.n0, memory.n, batch_size, memory.m, memory.b)
         args += (memory.tmin, memory.tmax, spp)
         slow_gaussian_grid.prepared_async_call(*args)
-
+    
     # Stop if user wants the grid
     if just_return_gridded_data:
         stream.synchronize()
@@ -270,7 +268,7 @@ def nfft_adjoint_async(memory, functions,
         args += (memory.n, batch_size)
         args += (memory.tmin, memory.tmax, spp, minimum_frequency)
         nfft_shift.prepared_async_call(*args)
-
+    
     # Run IFFT on grid
     cufft.ifft(memory.ghat_g, memory.ghat_g, memory.cu_plan)
 
