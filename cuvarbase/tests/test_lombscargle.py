@@ -173,9 +173,8 @@ def test_batched_run(ndatas = 25, batch_size=5, sigma=nfft_sigma,
                     samples_per_peak=spp, nyquist_factor=nfac,
                     **kwargs):
 
-
-
-    datas = [data() for i in range(ndatas)]
+    datas = [data(ndata=np.random.randint(100, 350))
+             for i in range(ndatas)]
     ls_proc = LombScargleAsyncProcess(sigma=sigma, **kwargs)
 
     batched_results = ls_proc.batched_run(datas, nyquist_factor=nyquist_factor,
@@ -198,17 +197,22 @@ def test_batched_run(ndatas = 25, batch_size=5, sigma=nfft_sigma,
 
 
 @mark_cuda_test
-def test_batched_run_const_nfreq(make_plot=False, ndatas=25,
+def test_batched_run_const_nfreq(make_plot=False, ndatas=27,
                                  batch_size=5, sigma=nfft_sigma,
                                  samples_per_peak=spp,
                                  nyquist_factor=nfac,
                                  **kwargs):
 
-    datas = [data() for i in range(ndatas)]
+    frequencies = 10 + np.random.rand(ndatas) * 100.
+    datas = [data(ndata=np.random.randint(200, 350),
+                  freq=freq)
+             for i, freq in enumerate(frequencies)]
     ls_proc = LombScargleAsyncProcess(sigma=sigma, **kwargs)
 
     batched_results = ls_proc.batched_run_const_nfreq(datas,
-                                  samples_per_peak=spp, **kwargs)
+                                  samples_per_peak=spp,
+                                  batch_size=batch_size,
+                                  **kwargs)
     ls_proc.finish()
 
     ls_procnb = LombScargleAsyncProcess(sigma=nfft_sigma,
@@ -220,13 +224,18 @@ def test_batched_run_const_nfreq(make_plot=False, ndatas=25,
         ls_procnb.finish()
         non_batched_results.extend(r)
 
-    for (fb, pb), (fnb, pnb) in zip(batched_results, non_batched_results):
+    # for f0, (fb, pb), (fnb, pnb) in zip(frequencies, batched_results,
+    #                                    non_batched_results):
+    #    print f0, fb[np.argmax(pb)], fnb[np.argmax(pnb)]
+
+    for f0, (fb, pb), (fnb, pnb) in zip(frequencies, batched_results,
+                                        non_batched_results):
 
         if make_plot:
             import matplotlib.pyplot as plt
             plt.plot(fnb, pnb, color='k', lw=3)
             plt.plot(fb, pb, color='r')
-            plt.axvline(3.)
+            plt.axvline(f0)
             plt.show()
 
         assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)

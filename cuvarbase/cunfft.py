@@ -397,6 +397,12 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         #   Need to think about how to estimate the value of m more accurately
         return self.m_from_C(self.m_tol / N, self.sigma)
 
+    def get_m(self, N=None):
+        if self.autoset_m:
+            return self.estimate_m(N)
+        else:
+            return self.m
+
     def _compile_and_prepare_functions(self, **kwargs):
         module_txt = _module_reader(find_kernel('cunfft'), self._cpp_defs)
 
@@ -460,15 +466,14 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
         for i, (t, y, nf) in enumerate(data):
 
-            m = self.m
-            if self.autoset_m:
-                m = self.estimate_m(nf)
+            m = self.get_m(nf)
 
             mem = NFFTMemory(self.sigma, self.streams[i], m,
-                             use_double=self.use_double)
+                             use_double=self.use_double, **kwargs)
 
             allocated_memory.append(mem.fromdata(t, y, nf=nf,
-                                                 allocate=True))
+                                                 allocate=True,
+                                                 **kwargs))
 
         return allocated_memory
 

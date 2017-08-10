@@ -6,10 +6,10 @@ import numpy as np
 from time import time
 from astropy.stats.lombscargle import LombScargle
 
-from cuvarbase.tests.test_lombscargle import test_run_batch_const_nfreq
+from cuvarbase.tests.test_lombscargle import test_batched_run_const_nfreq
 import sys
 
-test_run_batch_const_nfreq(make_plot=True, use_fft=True)
+test_batched_run_const_nfreq(make_plot=True, use_fft=False, batch_size=5)
 sys.exit()
 samples_per_peak=5
 nyquist_factor=5

@@ -245,11 +245,16 @@ class LombScargleMemory(object):
         return self
 
     def set_gpu_arrays_to_zero(self, **kwargs):
-        self.t_g.fill(self.real_type(0))
-        self.yw_g.fill(self.real_type(0))
-        self.w_g.fill(self.real_type(0))
-        self.nfft_mem_yw.ghat_g.fill(self.real_type(0))
-        self.nfft_mem_w.ghat_g.fill(self.real_type(0))
+        for x in [self.t_g, self.yw_g, self.w_g]:
+            if not x is None:
+                x.fill(self.real_type(0))
+
+        for x in [self.t, self.yw, self.w]:
+            if not x is None:
+                x[:] = self.real_type(0.)
+
+        for mem in [self.nfft_mem_yw, self.nfft_mem_w]:
+            mem.ghat_g.fill(self.real_type(0))
 
 
 def lomb_scargle_direct_sums(t, yw, w, freqs, YY):
@@ -308,16 +313,6 @@ def lomb_scargle_direct_sums(t, yw, w, freqs, YY):
     return lsp
 
 
-def check_arr(arr):
-    if any(np.isnan(arr)):
-        print(" has nans")
-    elif any(np.isinf(arr)):
-        print(" has infs")
-
-    else:
-        print(" OK! (%s), %s"%(str(arr), str(arr.dtype)))
-
-
 def lomb_scargle_async(memory, functions, freqs,
                        block_size=256, use_fft=True,
                        python_dir_sums=False,
@@ -340,7 +335,8 @@ def lomb_scargle_async(memory, functions, freqs,
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
-
+    #print(memory.t_g.get())
+    # do direct summations with python on the CPU (for debugging)
     if python_dir_sums:
         t = memory.t_g.get()
         yw = memory.yw_g.get()
@@ -446,8 +442,33 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def allocate_for_single_lc(self, t, y, dy, nf, k0=0,
                                stream=None, **kwargs):
+        """
+        Allocate GPU (and possibly CPU) memory for single lightcurve
 
-        m = self.nfft_proc.estimate_m(nf)
+        Parameters
+        ----------
+        t: array_like
+            Observation times
+        y: array_like
+            Observations
+        dy: array_like
+            Observation uncertainties
+        nf: int
+            Number of frequencies
+        k0: int
+            The starting index for the Fourier transform. The minimum
+            frequency ``f0 = k0 * df``, where ``df`` is the frequency
+            spacing
+        stream: pycuda.driver.Stream
+            CUDA stream you want this to run on
+        **kwargs
+
+        Returns
+        -------
+        mem: LombScargleMemory
+            Memory object.
+        """
+        m = self.nfft_proc.get_m(nf)
 
         sigma = self.nfft_proc.sigma
 
@@ -520,19 +541,15 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         Parameters
         ----------
         data: list of tuples
-            list of [(t, y, w), ...] containing
+            list of [(t, y, dy), ...] containing
             * ``t``: observation times
             * ``y``: observations
-            * ``y_err``: observation uncertainties
-        convert_to_weights: optional, bool, (default: True)
-            If False, it assumes ``y_err`` are weights (i.e. sum(y_err) = 1)
-        freqs: optional, list of ``np.ndarray`` [**DO NOT USE**]
-            List of custom frequencies (don't use this!! Not working)
-        gpu_data: optional, list of tuples
-            List of tuples containing allocated GPU objects for each dataset
-        lsps: optional, list of ``np.ndarray``
-            List of page-locked (registered) np.ndarrays for asynchronously
-            transferring results to CPU
+            * ``dy``: observation uncertainties
+        freqs: optional, list of ``np.ndarray`` frequencies
+            List of custom frequencies. Right now, this has to be linearly
+            spaced with ``freqs[0] / (freqs[1] - freqs[0])`` being an integer.
+        memory: optional, list of ``LombScargleMemory`` objects
+            List of memory objects, length of list must be ``>= len(data)``
         use_fft: optional, bool (default: True)
             Uses the NFFT, otherwise just does direct summations (which
             are quite slow...)
@@ -541,7 +558,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         Returns
         -------
         results: list of lists
-            list of zip(freqs, pows) for each LS periodogram
+            list of (freqs, pows) for each LS periodogram
 
         """
 
@@ -590,8 +607,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         return results
 
     def batched_run_const_nfreq(self, data, batch_size=10,
-                                use_fft=True,
-                                use_dy_as_weights=False, freqs=None,
+                                use_fft=True, freqs=None,
                                 **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are
@@ -638,15 +654,17 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # make data batches
         batches = []
         while len(batches) * batch_size < len(data):
-            off = len(batches) * batch_size
-            end = off + min([batch_size, len(data) - off])
-            batches.append([data[i] for i in range(off, end)])
+            start = len(batches) * batch_size
+            finish = start + min([batch_size, len(data) - start])
+            batches.append([data[i] for i in range(start, finish)])
 
         # set up memory containers for gpu and cpu (pinned) memory
-        m = self.nfft_proc.estimate_m(nf)
+        m = self.nfft_proc.get_m(nf)
         sigma = self.nfft_proc.sigma
 
-        kwargs_lsmem = dict(buffered_transfer=True, n0_buffer=max_ndata)
+        kwargs_lsmem = dict(buffered_transfer=True,
+                            n0_buffer=max_ndata,
+                            use_double=self.use_double)
         kwargs_lsmem.update(kwargs)
         memory = [LombScargleMemory(sigma, stream, m, k0=k0,
                                     **kwargs_lsmem)
@@ -663,7 +681,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             self.finish()
 
             for i, (f, p) in enumerate(results):
-                lsps.append(p[:])
+                lsps.append(np.copy(p))
 
         return [(freqs, lsp) for lsp in lsps]
 
