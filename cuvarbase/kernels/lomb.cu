@@ -108,16 +108,16 @@ __global__ void lomb_dirsum_custom_frq(FLT *t, FLT *w, FLT *yw, FLT *freqs,
 __global__ void lomb(pycuda::complex<FLT>  *sw,
 					 pycuda::complex<FLT>  *syw,
 					 FLT *lsp,
-					 int nfreq, FLT YY){
+					 int nfreq, FLT YY, int k0){
 
 	// least squares (lomb scargle with FLTing mean)
 
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	// reg = (lambda_a, lambda_b, lambda_c)
-	if (i < nfreq && i > 0){
+	if (i < nfreq){
 		pycuda::complex<FLT> SW, SW2, SYW;
 		SW = sw[i];
-		SW2 = sw[2 * i];
+		SW2 = sw[2 * i + k0];
 		SYW = syw[i];
 
 		FLT C = SW.real();
@@ -128,7 +128,7 @@ __global__ void lomb(pycuda::complex<FLT>  *sw,
 
 		FLT Ch = SYW.real();
 		FLT Sh = SYW.imag();
-
-		lsp[i-1] = lpow(C, S, C2, S2, Ch, Sh, YY);
+        //lsp[i-1] = Ch;
+		lsp[i] = lpow(C, S, C2, S2, Ch, Sh, YY);
 	}
 }

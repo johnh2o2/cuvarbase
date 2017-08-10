@@ -12,8 +12,8 @@ from pycuda import gpuarray
 
 nfft_sigma = 4
 nfft_m = 12
-nfft_rtol = 1E-3
-nfft_atol = 1E-3
+nfft_rtol = 5E-3
+nfft_atol = 5E-3
 spp = 1
 
 
@@ -77,7 +77,7 @@ def gpu_grid_scalar(t, y, sigma, m, N):
     return grid
 
 
-def simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, use_double=True,
+def simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, use_double=False,
                     m=nfft_m, samples_per_peak=spp, **kwargs):
     proc = NFFTAsyncProcess(sigma=sigma, m=m, autoset_m=False,
                             use_double=use_double)
@@ -271,14 +271,16 @@ def test_nfft_adjoint_async():
 
     single_nffts = [simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
                                     use_double=use_double, **kwargs)
-                 for t, y, nf in datas]
+                    for t, y, nf in datas]
 
     multi_nffts = proc.run(datas, **kwargs)
 
     batch_nffts = proc.batched_run(datas, batch_size=batch_size, **kwargs)
+    proc.finish()
 
     tols = dict(rtol=nfft_rtol, atol=nfft_atol)
     for ghat_m, ghat_s, ghat_b in zip(multi_nffts, single_nffts, batch_nffts):
+        print("testing...")
         assert_allclose(ghat_s.real, ghat_m.real, **tols)
         assert_allclose(ghat_s.imag, ghat_m.imag, **tols)
 

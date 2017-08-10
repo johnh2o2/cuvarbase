@@ -9,6 +9,14 @@ from .utils import weights, find_kernel, _module_reader
 from .utils import autofrequency as utils_autofreq
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async, NFFTMemory
 
+def get_k0(freqs):
+    return max([1, int(round(freqs[0] / (freqs[1] - freqs[0])))])
+
+def check_k0(freqs, k0=None, rtol=1E-2, atol=1E-7):
+    k0 = k0 if k0 is not None else get_k0(freqs)
+    df = freqs[1] - freqs[0]
+    f0 = k0 * df
+    assert(abs(f0 - freqs[0]) < rtol * df + atol)
 
 class LombScargleMemory(object):
     def __init__(self, sigma, stream, m, **kwargs):
@@ -16,6 +24,7 @@ class LombScargleMemory(object):
         self.sigma = sigma
         self.stream = stream
         self.m = m
+        self.k0 = kwargs.get('k0', 0)
         self.precomp_psi = kwargs.get('precomp_psi', True)
 
         self.other_settings = {}
@@ -33,11 +42,11 @@ class LombScargleMemory(object):
         self.nfft_mem_w = kwargs.get('nfft_mem_w', None)
 
         if self.nfft_mem_yw is None:
-            self.nfft_mem_yw = NFFTMemory(self.sigma, self.stream, 
+            self.nfft_mem_yw = NFFTMemory(self.sigma, self.stream,
                                           self.m, **kwargs)
 
         if self.nfft_mem_w is None:
-            self.nfft_mem_w = NFFTMemory(self.sigma, self.stream, 
+            self.nfft_mem_w = NFFTMemory(self.sigma, self.stream,
                                          self.m, **kwargs)
 
         self.real_type = self.nfft_mem_yw.real_type
@@ -56,11 +65,12 @@ class LombScargleMemory(object):
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
-        assert(n0 is not None)
 
-        self.t_g = gpuarray.zeros(n0, dtype=self.real_type)
-        self.yw_g = gpuarray.zeros(n0, dtype=self.real_type)
-        self.w_g = gpuarray.zeros(n0, dtype=self.real_type)
+        assert(n0 is not None)
+        #print("allocating ", n0, " elements for each data array")
+        self.t_g = gpuarray.zeros(int(n0), dtype=self.real_type)
+        self.yw_g = gpuarray.zeros(int(n0), dtype=self.real_type)
+        self.w_g = gpuarray.zeros(int(n0), dtype=self.real_type)
 
         self.nfft_mem_w.t_g = self.t_g
         self.nfft_mem_w.y_g = self.w_g
@@ -68,17 +78,22 @@ class LombScargleMemory(object):
         self.nfft_mem_yw.t_g = self.t_g
         self.nfft_mem_yw.y_g = self.yw_g
 
+        n0 = np.int32(n0)
+        self.nfft_mem_yw.n0 = n0
+        self.nfft_mem_w.n0 = n0
+
         return self
 
     def allocate_grids(self, **kwargs):
-
+        k0 = kwargs.get('k0', self.k0)
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
         assert(n0 is not None)
 
-        nf = kwargs.get('nf', self.nf)
-        assert(nf is not None)
+        self.nf = kwargs.get('nf', self.nf)
+        assert(self.nf is not None)
+        self.nf = np.int32(self.nf)
 
         if self.nfft_mem_yw.precomp_psi:
             self.nfft_mem_yw.allocate_precomp_psi(n0=n0)
@@ -89,10 +104,10 @@ class LombScargleMemory(object):
         self.nfft_mem_w.q2 = self.nfft_mem_yw.q2
         self.nfft_mem_w.q3 = self.nfft_mem_yw.q3
 
-        self.nfft_mem_yw.allocate_grid(nf=nf)
-        self.nfft_mem_w.allocate_grid(nf=2*nf)
+        self.nfft_mem_yw.allocate_grid(nf=self.nf)
+        self.nfft_mem_w.allocate_grid(nf=2 * self.nf + k0)
 
-        self.lsp_g = gpuarray.zeros(nf, dtype=self.real_type)
+        self.lsp_g = gpuarray.zeros(int(self.nf), dtype=self.real_type)
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
@@ -131,23 +146,10 @@ class LombScargleMemory(object):
         return self
 
     def allocate(self, **kwargs):
-        n0 = kwargs.get('n0', self.n0)
-        if self.buffered_transfer:
-            n0 = kwargs.get('n0_buffer', self.n0_buffer)
-        assert(n0 is not None)
-
         self.nf = kwargs.get('nf', self.nf)
         assert(self.nf is not None)
 
-        self.n = np.int32(self.sigma * self.nf)
-
-        self.nfft_mem_yw.n = self.n
-        self.nfft_mem_yw.nf = self.nf
-        self.nfft_mem_yw.n0 = self.n0
-
-        self.nfft_mem_w.n = 2 * self.n
-        self.nfft_mem_w.nf = 2 * self.nf
-        self.nfft_mem_w.n0 = self.n0
+        self.nf = np.int32(self.nf)
 
         self.allocate_data(**kwargs)
         self.allocate_grids(**kwargs)
@@ -169,7 +171,8 @@ class LombScargleMemory(object):
         self.yy = self.real_type(kwargs.get('yy', 1.))
 
         self.n0 = kwargs.get('n0', np.int32(len(t)))
-
+        if self.n0 is not None:
+            self.n0 = np.int32(self.n0)
         if dy is not None:
             assert('w' not in kwargs)
             w = weights(dy)
@@ -191,7 +194,7 @@ class LombScargleMemory(object):
                 if self.buffered_transfer:
                     self.allocate_buffered_data_arrays(**kwargs)
 
-            assert(self.n0 < len(self.tbuff))
+            assert(self.n0 <= len(self.t))
 
             self.t[:self.n0] = t[:self.n0]
             self.yw[:self.n0] = yw[:self.n0]
@@ -212,22 +215,24 @@ class LombScargleMemory(object):
         self.nfft_mem_yw.tmax = self.tmax
         self.nfft_mem_w.tmax = self.tmax
 
+        self.nfft_mem_w.n0 = np.int32(len(t))
+        self.nfft_mem_yw.n0 = np.int32(len(t))
+
         return self
 
     def transfer_data_to_gpu(self, **kwargs):
         t, yw, w = self.t, self.yw, self.w
-        if self.buffered_transfer:
-            t, yw, w = self.tbuff, self.ybuff, self.wbuff
 
         assert(not any([arr is None for arr in [t, yw, w]]))
 
         # Do asynchronous data transfer
+        #print(len(t), len(self.t_g))
         self.t_g.set_async(t, stream=self.stream)
         self.yw_g.set_async(yw, stream=self.stream)
         self.w_g.set_async(w, stream=self.stream)
 
     def transfer_lsp_to_cpu(self, **kwargs):
-        print(self.lsp_c, self.lsp_g.ptr, self.stream)
+        #print(self.lsp_c, self.lsp_g.ptr, self.stream)
         cuda.memcpy_dtoh_async(self.lsp_c, self.lsp_g.ptr,
                                stream=self.stream)
 
@@ -239,6 +244,13 @@ class LombScargleMemory(object):
 
         return self
 
+    def set_gpu_arrays_to_zero(self, **kwargs):
+        self.t_g.fill(self.real_type(0))
+        self.yw_g.fill(self.real_type(0))
+        self.w_g.fill(self.real_type(0))
+        self.nfft_mem_yw.ghat_g.fill(self.real_type(0))
+        self.nfft_mem_w.ghat_g.fill(self.real_type(0))
+
 
 def lomb_scargle_direct_sums(t, yw, w, freqs, YY):
     """
@@ -247,6 +259,8 @@ def lomb_scargle_direct_sums(t, yw, w, freqs, YY):
     """
     lsp = np.zeros(len(freqs))
     for i, freq in enumerate(freqs):
+        if abs(freq) < 1E-9:
+            lsp[i] = 0.
         phase = 2 * np.pi * (((t + 0.5) * freq) % 1.0).astype(np.float64)
         phase2 = 2 * np.pi * (((t + 0.5) * 2 * freq) % 1.0).astype(np.float64)
 
@@ -294,15 +308,29 @@ def lomb_scargle_direct_sums(t, yw, w, freqs, YY):
     return lsp
 
 
-def lomb_scargle_async(memory, functions,
-                       block_size=256, use_double=False, use_fft=True,
-                       minimum_frequency=0., python_dir_sums=False,
-                       samples_per_peak=10, transfer_to_device=True,
+def check_arr(arr):
+    if any(np.isnan(arr)):
+        print(" has nans")
+    elif any(np.isinf(arr)):
+        print(" has infs")
+
+    else:
+        print(" OK! (%s), %s"%(str(arr), str(arr.dtype)))
+
+
+def lomb_scargle_async(memory, functions, freqs,
+                       block_size=256, use_fft=True,
+                       python_dir_sums=False,
+                       transfer_to_device=True,
                        transfer_to_host=True, **kwargs):
 
     (lomb, lomb_dirsum), nfft_funcs = functions
-    df = 1. / (memory.tmax - memory.tmin) / samples_per_peak
-    df = memory.real_type(df)
+
+
+    df = freqs[1] - freqs[0]
+    samples_per_peak = 1./((memory.tmax - memory.tmin) * df)
+    assert(get_k0(freqs) == memory.k0)
+
     stream = memory.stream
 
     block = (block_size, 1, 1)
@@ -312,14 +340,11 @@ def lomb_scargle_async(memory, functions,
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
-    # Use direct sums (on CPU)
-    if python_dir_sums:
-        freqs = df * (1 + np.arange(memory.nf))
 
+    if python_dir_sums:
         t = memory.t_g.get()
         yw = memory.yw_g.get()
         w = memory.w_g.get()
-
         return lomb_scargle_direct_sums(t, yw, w, freqs, memory.yy)
 
     # Use direct sums (on GPU)
@@ -327,7 +352,7 @@ def lomb_scargle_async(memory, functions,
         args = (grid, block, stream,
                 memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr,
                 memory.lsp_g.ptr, memory.nf, memory.n0, memory.yy,
-                df, df)
+                df, memory.real_type(min(freqs)))
 
         lomb_dirsum.prepared_async_call(*args)
         if transfer_to_device:
@@ -336,11 +361,12 @@ def lomb_scargle_async(memory, functions,
     else:
         # NFFT
         nfft_kwargs = dict(transfer_to_host=False,
-                           transfer_to_device=False,
-                           min_freq=minimum_frequency,
-                           samples_per_peak=samples_per_peak)
+                           transfer_to_device=False)
 
         nfft_kwargs.update(kwargs)
+
+        nfft_kwargs['minimum_frequency'] = freqs[0]
+        nfft_kwargs['samples_per_peak'] = samples_per_peak
 
         # NFFT(w * (y - ybar))
         nfft_adjoint_async(memory.nfft_mem_yw, nfft_funcs, **nfft_kwargs)
@@ -348,9 +374,10 @@ def lomb_scargle_async(memory, functions,
         # NFFT(w)
         nfft_adjoint_async(memory.nfft_mem_w, nfft_funcs, **nfft_kwargs)
 
+
     args = (grid, block, stream)
     args += (memory.nfft_mem_w.ghat_g.ptr, memory.nfft_mem_yw.ghat_g.ptr)
-    args += (memory.lsp_g.ptr, memory.nf, memory.yy)
+    args += (memory.lsp_g.ptr, memory.nf, memory.yy, memory.k0)
     lomb.prepared_async_call(*args)
 
     if transfer_to_host:
@@ -391,8 +418,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         self.block_size = self.nfft_proc.block_size
         self.module_options = self.nfft_proc.module_options
-
-        self.allocated_memory = []
+        self.use_double = self.nfft_proc.use_double
 
     def _compile_and_prepare_functions(self, **kwargs):
 
@@ -401,7 +427,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         self.module = SourceModule(module_text, options=self.module_options)
         self.dtypes = dict(
             lomb=[np.intp, np.intp, np.intp, np.int32,
-                  self.real_type],
+                  self.real_type, np.int32],
             lomb_dirsum=[np.intp, np.intp, np.intp, np.intp,
                          np.int32, np.int32, self.real_type, self.real_type,
                          self.real_type]
@@ -418,35 +444,27 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         """ return an approximate GPU memory requirement in bytes """
         raise NotImplementedError()
 
-    def allocate_for_single_lc(self, t, y, dy, nf,
+    def allocate_for_single_lc(self, t, y, dy, nf, k0=0,
                                stream=None, **kwargs):
 
         m = self.nfft_proc.estimate_m(nf)
 
         sigma = self.nfft_proc.sigma
 
-        mem = LombScargleMemory(sigma, stream, m, **kwargs)
+        mem = LombScargleMemory(sigma, stream, m, k0=k0, **kwargs)
 
-        mem.fromdata(t=t, y=y, dy=dy, nf=nf, **kwargs)
+        mem.fromdata(t=t, y=y, dy=dy, nf=nf, allocate=True, **kwargs)
 
         return mem
 
     def autofrequency(self, *args, **kwargs):
         return utils_autofreq(*args, **kwargs)
 
-    def _nfreqs(self, t, nyquist_factor=5,
-                samples_per_peak=5, maximum_frequency=None, **kwargs):
+    def _nfreqs(self, *args, **kwargs):
 
-        df = 1. / (max(t) - min(t)) / samples_per_peak
+        return len(self.autofrequency(*args, **kwargs))
 
-        if maximum_frequency is not None:
-            nf = int(np.ceil(maximum_frequency / df - 1))
-        else:
-            nf = int(0.5 * samples_per_peak * nyquist_factor * len(t))
-
-        return nf
-
-    def allocate(self, data, nfreqs=None, **kwargs):
+    def allocate(self, data, nfreqs=None, k0s=None, **kwargs):
 
         """
         Allocate GPU memory for Lomb Scargle computations
@@ -473,23 +491,28 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         allocated_memory = []
 
         nfrqs = nfreqs
+        k0 = k0s
         if nfrqs is None:
             nfrqs = [self._nfreqs(t, **kwargs) for (t, y, dy) in data]
-        elif not hasattr(nfreqs, '__getitem__'):
+        elif isinstance(nfreqs, int):
             nfrqs = nfrqs * np.ones(len(data))
 
-        for i, ((t, y, dy), nf) in enumerate(zip(data, nfrqs)):
-            mem = self.allocate_for_single_lc(t, y, dy, nf,
-                                              stream=self.streams[i])
+        if k0s is None:
+            k0s = [1] * len(nfrqs)
+        elif isinstance(k0s, float):
+            k0s = [k0s] * len(nfrqs)
+        for i, ((t, y, dy), nf, k0) in enumerate(zip(data, nfrqs, k0s)):
+            mem = self.allocate_for_single_lc(t, y, dy, nf, k0=k0,
+                                              stream=self.streams[i],
+                                              **kwargs)
             allocated_memory.append(mem)
 
         return allocated_memory
 
     def run(self, data,
             use_fft=True, memory=None,
-            convert_to_weights=True, nyquist_factor=5, samples_per_peak=5,
-            minimum_frequency=None, maximum_frequency=None,
-            use_dy_as_weights=False, **kwargs):
+            freqs=None,
+            **kwargs):
 
         """
         Run Lomb Scargle on a batch of data.
@@ -521,33 +544,55 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             list of zip(freqs, pows) for each LS periodogram
 
         """
+
+        # compile module if not compiled already
         if not hasattr(self, 'prepared_functions') or \
             not all([func in self.prepared_functions for func in
                      ['lomb', 'lomb_dirsum']]):
             self._compile_and_prepare_functions(**kwargs)
 
-        freqs = [self.autofrequency(d[0], **kwargs) for d in data]
-        nfreqs = [len(frq) for frq in freqs]
+        # create and/or check frequencies
+        frqs = freqs
+        if frqs is None:
+            frqs = [self.autofrequency(d[0], **kwargs) for d in data]
+
+        elif isinstance(frqs[0], float):
+            frqs = [frqs] * len(data)
+
+        assert(len(frqs) == len(data))
+
+        dfs = [frq[1] - frq[0] for frq in frqs]
+        k0s = [get_k0(frq) for frq in frqs]
+
+        # make sure k0 * df is the minimum frequency
+        [check_k0(frq, k0=k0) for frq, k0 in zip(frqs, k0s)]
+
         if memory is None:
-            memory = self.allocate(data, nfreqs=nfreqs, **kwargs)
+            nfreqs = [len(frq) for frq in frqs]
+            memory = self.allocate(data, nfreqs=nfreqs, k0s=k0s,
+                                    use_double=self.use_double,
+                                    **kwargs)
+        else:
+            for i, (t, y, dy) in enumerate(data):
+                memory[i].set_gpu_arrays_to_zero(**kwargs)
+                memory[i].setdata(t=t, y=y, dy=dy, **kwargs)
 
         ls_kwargs = dict(block_size=self.block_size,
-                         use_double=self.nfft_proc.use_double,
                          use_fft=use_fft)
-
         ls_kwargs.update(kwargs)
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
-        results = [lomb_scargle_async(mem, funcs, **ls_kwargs)
-                   for mem in memory]
+        results = [lomb_scargle_async(memory[i], funcs, frqs[i],
+                                      **ls_kwargs)
+                   for i in range(len(data))]
 
-        results = [(f, r) for f, r in zip(freqs, results)]
+        results = [(f, r) for f, r in zip(frqs, results)]
         return results
 
-    def batched_run_const_nfreq(self, data, batch_size=10, df=None,
-                                min_samples_per_peak=10., lsps=None,
-                                minimum_frequency=0., maximum_frequency=24.,
-                                use_dy_as_weights=False, **kwargs):
+    def batched_run_const_nfreq(self, data, batch_size=10,
+                                use_fft=True,
+                                use_dy_as_weights=False, freqs=None,
+                                **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are
         the same for each lightcurve. Doesn't reallocate memory for each batch.
@@ -558,27 +603,37 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         is not much larger than the typical number of observations
         """
 
+        # compile and prepare module functions if not already done
+        if not hasattr(self, 'prepared_functions') or \
+            not all([func in self.prepared_functions for func in
+                     ['lomb', 'lomb_dirsum']]):
+            self._compile_and_prepare_functions(**kwargs)
+
+        # create streams if needed
         bsize = min([len(data), batch_size])
-        if bsize < len(self.streams):
+        if len(self.streams) < bsize:
             self._create_streams(bsize - len(self.streams))
 
         streams = [self.streams[i] for i in range(bsize)]
         max_ndata = max([len(t) for t, y, dy in data])
 
-        # set frequencies
-        if df is None:
-            max_baseline = max([max(t) - min(t) for t, y, dy in data])
-            df = 1./(min_samples_per_peak * max_baseline)
-        freqs = df * (1 + np.arange(int(maximum_frequency / df) - 1))
+        if freqs is None:
+            data_with_max_baseline = max(data, key=lambda d : max(d[0]) - min(d[0]))
+            freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
 
-        nfreqs = len(freqs)
+            # now correct frequencies
+            df = freqs[1] - freqs[0]
+            k0 = get_k0(freqs)
+            #nf = len(freqs)
+            nf = int(round(max(freqs) / df)) - k0
+            freqs = df * (k0 + np.arange(nf))
 
-        m = self.nfft_proc.estimate_m(nfreqs)
+        df = freqs[1] - freqs[0]
+        k0 = get_k0(freqs)
+        nf = len(freqs)
+        check_k0(freqs, k0=k0)
 
-        sigma = self.nfft_proc.sigma
-
-        if lsps is None:
-            lsps = np.zeros((len(data), nfreqs), dtype=self.real_type)
+        lsps = []
 
         # make data batches
         batches = []
@@ -587,47 +642,28 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             end = off + min([batch_size, len(data) - off])
             batches.append([data[i] for i in range(off, end)])
 
-        # allocate gpu and cpu (pinned) memory
+        # set up memory containers for gpu and cpu (pinned) memory
+        m = self.nfft_proc.estimate_m(nf)
+        sigma = self.nfft_proc.sigma
+
         kwargs_lsmem = dict(buffered_transfer=True, n0_buffer=max_ndata)
         kwargs_lsmem.update(kwargs)
-
-        # initialize memory containers
-        memory = [LombScargleMemory(sigma, stream, m, **kwargs_lsmem)
+        memory = [LombScargleMemory(sigma, stream, m, k0=k0,
+                                    **kwargs_lsmem)
                   for stream in streams]
 
         # allocate memory
-        [mem.allocate(nf=nfreqs, **kwargs) for mem in memory]
-
-        # setup keyword args for lomb scargle
-        ls_kwargs = dict(block_size=self.block_size,
-                         use_double=self.nfft_proc.use_double,
-                         use_fft=use_fft)
-
-        ls_kwargs.update(kwargs)
+        [mem.allocate(nf=nf, **kwargs) for mem in memory]
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
-
         for b, batch in enumerate(batches):
-            bs = len(batch)
-            for i, (mem, (t, y, dy)) in enumerate(zip(memory, batch)):
-                if i >= bs:
-                    break
+            results = self.run(batch, memory=memory, freqs=freqs,
+                               use_fft=use_fft,
+                               **kwargs)
+            self.finish()
 
-                # Set the data in CPU memory
-                mem.setdata(t=t, y=y, dy=dy, **kwargs)
-
-                ls_kwargs['samples_per_peak'] = 1./(df * (max(t) - min(t)))
-                lomb_scargle_async(mem, funcs, **ls_kwargs)
-
-            # wait for streams to finish, then transfer pagelocked
-            # memory to non-pagelocked memory
-            for i, mem in enumerate(memory):
-                if i >= bs:
-                    break
-
-                mem.stream.synchronize()
-
-                lsps[b * batch_size + i][:] = mem.lsp_c[:]
+            for i, (f, p) in enumerate(results):
+                lsps.append(p[:])
 
         return [(freqs, lsp) for lsp in lsps]
 

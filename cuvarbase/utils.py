@@ -77,10 +77,10 @@ def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
 
     nf0 = 1
     if minimum_frequency is not None:
-        nf0 = min([ nf0, np.floor(minimum_frequency / df) ])
+        nf0 = max([nf0, int(minimum_frequency / df)])
 
     if maximum_frequency is not None:
-        Nf = int(np.ceil(maximum_frequency / df - nf0))
+        Nf = int(maximum_frequency / df) - nf0
     else:
         Nf = int(0.5 * samples_per_peak * nyquist_factor * n_samples)
 
