@@ -318,7 +318,40 @@ def lomb_scargle_async(memory, functions, freqs,
                        python_dir_sums=False,
                        transfer_to_device=True,
                        transfer_to_host=True, **kwargs):
+    """
+    Asynchronous Lomb Scargle periodogram
 
+    Use the ``LombScargleAsyncProcess`` class and
+    related subroutines when possible.
+
+    Parameters
+    ----------
+    memory: ``LombScargleMemory``
+        Allocated memory, must have data already set (see, e.g.,
+        ``LombScargleAsyncProcess.allocate()``)
+    functions: tuple (lombscargle_functions, nfft_functions)
+        Tuple of compiled functions from ``SourceModule``. Must be
+        prepared with their appropriate dtype.
+    freqs: array_like, optional (default: 0)
+        Linearly-spaced frequencies starting at an integer multiple
+        of the frequency spacing (i.e. freqs = df * (k0 + np.arange(nf)))
+    block_size: int, optional
+        Number of CUDA threads per block
+    use_fft: bool, optional (default: True)
+        If False, uses direct sums.
+    python_dir_sums: bool, optional (default: False)
+        If True, performs direct sums with Python on the CPU
+    transfer_to_device: bool, optional, (default: True)
+        If the data is already on the gpu, set as False
+    transfer_to_host: bool, optional, (default: True)
+        If False, will not transfer the resulting periodogram to
+        CPU memory
+
+    Returns
+    -------
+    lsp_c: ``np.array``
+        The resulting periodgram (``memory.lsp_c``)
+    """
     (lomb, lomb_dirsum), nfft_funcs = functions
 
 

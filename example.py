@@ -46,7 +46,7 @@ nlc = 1000
 nobs = 3000
 
 # and do 30 lightcurves at a time
-batch_size = 30
+batch_size = 5
 
 # generate the lightcurves
 lightcurves = [generate_lightcurve(nobs=nobs)

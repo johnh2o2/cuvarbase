@@ -166,7 +166,7 @@ def nfft_adjoint_async(memory, functions,
     ----------
     memory: ``NFFTMemory``
         Allocated memory, must have data already set (see, e.g.,
-        ``NFFTAsyncProcess.set_data()``)
+        ``NFFTAsyncProcess.allocate()``)
     functions: tuple, length 5
         Tuple of compiled functions from `SourceModule`. Must be prepared with
         their appropriate dtype.
