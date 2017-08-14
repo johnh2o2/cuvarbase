@@ -402,7 +402,10 @@ def lomb_scargle_async(memory, functions, freqs,
 
         # NFFT(w)
         nfft_adjoint_async(memory.nfft_mem_w, nfft_funcs, **nfft_kwargs)
-
+    #ghgw = memory.nfft_mem_w.ghat_g.get()
+    #ghgyw = memory.nfft_mem_yw.ghat_g.get()
+    #for arr in [ghgw, ghgyw]:
+    #    print(any(np.isnan(arr)), any(np.isinf(arr)))
 
     args = (grid, block, stream)
     args += (memory.nfft_mem_w.ghat_g.ptr, memory.nfft_mem_yw.ghat_g.ptr)

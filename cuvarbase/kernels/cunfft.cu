@@ -241,7 +241,7 @@ __global__ void normalize(
 		G *= CMPLX(cos(theta_k), sin(theta_k));
 
 		// normalization factor from gridding kernel (gaussian)
-		FLT khat = theta_k / (2.f * n0);
+		FLT khat = PI * (k0 + k) / ng;
 		gout[i] = G * exp(b * khat * khat);
 	}
 
