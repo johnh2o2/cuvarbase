@@ -80,10 +80,36 @@ and run the unit tests
 	py.test cuvarbase
 
 
+Installing on a Mac
+-------------------
+
+Nvidia offers `CUDA for Mac OSX <https://developer.nvidia.com/cuda-downloads>`_. After installing the
+package via downloading and running the ``.dmg`` file, you'll have to make a couple of edits to your
+``~/.bash_profile``:
+
+.. code:: sh
+    
+    export DYLD_LIBRARY_PATH="${DYLD_LIBRARY_PATH}:/usr/local/cuda/lib"
+    export PATH="/usr/local/cuda/bin:${PATH}"
+
+and then source these changes in your current shell by running ``. ~/.bash_profile``. 
+
+Another important note: **nvcc (8.0.61) does not appear to support the latest clang compiler**. If this is
+the case, running ``python example.py`` should produce the following error:
+
+.. code::
+
+    nvcc fatal   : The version ('80100') of the host compiler ('Apple clang') is not supported
+
+You can fix this problem by temporarily downgrading your clang compiler. To do this:
+
+- `Download Xcode command line tools 7.3.1 <http://adcdownload.apple.com/Developer_Tools/Command_Line_Tools_OS_X_10.11_for_Xcode_7.3.1/Command_Line_Tools_OS_X_10.11_for_Xcode_7.3.1.dmg>`_
+- Install.
+- Run ``sudo xcode-select --switch /Library/Developer/CommandLineTools`` until ``clang --version`` says ``7.3``.
+
 
 Example Usage
 -------------
-
 
 For a Lomb-Scargle periodogram
 
@@ -208,3 +234,19 @@ output to stdout:
 	 5.288674e-02 sec. / lc [5.288674e+01 sec. total]
 	no batching:
 	 5.464483e-02 sec. / lc [5.464483e+01 sec. total]
+
+Using multiple GPUs
+-------------------
+
+If you have more than one GPU, you can choose which one to
+use in a given script by setting the ``CUDA_DEVICE`` environment
+variable:
+
+.. code:: sh
+
+    CUDA_DEVICE=1 python script.py
+
+If anyone is interested in implementing multi-device load-balancing
+solution, they are encouraged to do so! At some point this may
+become important, but for the time being manually splitting up the
+jobs to different GPU's will have to suffice.
