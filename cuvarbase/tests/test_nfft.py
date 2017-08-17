@@ -23,6 +23,7 @@ def direct_sums(t, y, freqs):
 
     return np.array([c + 1j * s for c, s in zip(C, S)])
 
+
 def scale_time(t, samples_per_peak):
     return (t - min(t)) / (samples_per_peak * (max(t) - min(t))) - 0.5
 

@@ -10,7 +10,6 @@ This project is under active development, and currently includes implementations
 
 - Generalized `Lomb Scargle <https://arxiv.org/abs/0901.2573>`_ periodogram
 - Box-least squares (`BLS <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_ )
-	- Currently operational but no unit tests or documentation yet.
 - Non-equispaced fast Fourier transform (adjoint operation) (`NFFT <http://epubs.siam.org/doi/abs/10.1137/0914081>`_)
 - Phase dispersion minimization (`PDM2 <http://www.stellingwerf.com/rfs-bin/index.cgi?action=PageView&id=29>`_)
 	- Currently operational but minimal unit testing or documentation (yet)

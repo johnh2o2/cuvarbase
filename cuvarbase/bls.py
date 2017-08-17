@@ -1,5 +1,3 @@
-
-
 import sys
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
@@ -11,18 +9,6 @@ from .utils import find_kernel, _module_reader
 
 import resource
 import numpy as np
-
-
-def bin_yw(phi, y, w, nbins):
-
-    bins = np.floor(phi * nbins).astype(np.int32)
-    y_bins = np.zeros(nbins, np.float32)
-    w_bins = np.zeros(nbins, np.float32)
-    for b, Y, W in zip(bins, y, w):
-        w_bins[b] += W
-        y_bins[b] += Y * W
-
-    return y_bins, w_bins
 
 
 def reduction_max(max_func, arr, arr_args, nfreq, nbins,
@@ -71,7 +57,8 @@ def get_qphi(nbins0, nbinsf, alpha, noverlap):
         for s in range(noverlap):
             for i in range(nb):
                 phi = (((float(i) + np.float32(s) * dphi) / nb - 0.5) + 0.5 * q) % 1.0
-                if phi < 0: phi += 1.0
+                if phi < 0:
+                    phi += 1.0
                 qp.append((q, phi))
 
         q_phi.extend(qp)
@@ -80,14 +67,44 @@ def get_qphi(nbins0, nbinsf, alpha, noverlap):
     return q_phi
 
 
-def eebls_gpu(t, y, dy, freqs, max_mem_gb=2, qmin=0.02, qmax=0.5, nstreams=10,
-              noverlap=10, alpha=1.5, block_size=256, cpu_bin=False,
-              batch_size=1, plot_status=False):
+def eebls_gpu(t, y, dy, freqs, qmin=0.01, qmax=0.5, nstreams=10,
+              noverlap=10, alpha=1.5, block_size=256,
+              batch_size=1, plot_status=False, **kwargs):
 
     """
     Box-Least Squares, accelerated with PyCUDA
 
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times
+    y: array_like, float
+        Observations
+    dy: array_like, float
+        Observation uncertainties
+    freqs: array_like, float
+        Frequencies to evaluate BLS spectrum
+    qmin: float, optional (default: 0.01)
+        Minimum q value to search
+    qmax: float, optional (default: 0.5)
+        Maximum q value to search
+    nstreams: int, optional (default: 10)
+        Number of CUDA streams to utilize.
+    noverlap: int, optional (default: 10)
+        Number of overlapping bins to use
+    alpha: float (> 1), optional, (default: 1.5)
+        1 + dlog q, where dlog q = dq / q
+    block_size: int, optional (default: 256)
+        CUDA block size to use (must be power of 2)
+    batch_size: int, optional (default: 1)
+        Number of frequencies to compute in a single batch
 
+    Returns
+    -------
+    bls: array_like, float
+        BLS periodogram, normalized to 1 - chi2(best_fit) / chi2(constant)
+    qphi_sols: list of (q, phi) tuples
+        Best (q, phi) solution at each frequency
 
     """
 
@@ -144,7 +161,8 @@ def eebls_gpu(t, y, dy, freqs, max_mem_gb=2, qmin=0.02, qmax=0.5, nstreams=10,
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
 
-    yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs, streams = [], [], [], [], []
+    yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs, streams \
+        = [], [], [], [], []
     for i in range(nstreams):
         streams.append(cuda.Stream())
         yw_g_bins.append(gpuarray.zeros(gs, dtype=np.float32))
@@ -155,7 +173,7 @@ def eebls_gpu(t, y, dy, freqs, max_mem_gb=2, qmin=0.02, qmax=0.5, nstreams=10,
     bls_g = gpuarray.zeros(len(freqs), dtype=np.float32)
     bls_sol_g = gpuarray.zeros(len(freqs), dtype=np.int32)
 
-    block=(block_size, 1, 1)
+    block = (block_size, 1, 1)
 
     grid = (grid_size, 1)
 
@@ -179,40 +197,29 @@ def eebls_gpu(t, y, dy, freqs, max_mem_gb=2, qmin=0.02, qmax=0.5, nstreams=10,
 
         bin_grid = (int(np.ceil(float(ndata * nf) / block_size)), 1)
 
-        gpu_bin.prepared_async_call(bin_grid, block, stream,
-                                    t_g.ptr, yw_g.ptr, w_g.ptr,
-                                    yw_g_bin.ptr, w_g_bin.ptr, freqs_g.ptr,
-                                    ndata, nf, nbins0, nbinsf,
-                                    np.int32(batch_size * batch), noverlap,
-                                    alpha, nbins_tot)
-        #stream.synchronize()
+        args = (bin_grid, block, stream)
+        args += (t_g.ptr, yw_g.ptr, w_g.ptr)
+        args += (yw_g_bin.ptr, w_g_bin.ptr, freqs_g.ptr)
+        args += (ndata, nf, nbins0, nbinsf)
+        args += (np.int32(batch_size * batch), noverlap)
+        args += (alpha, nbins_tot)
+        gpu_bin.prepared_async_call(*args)
 
-        gpu_bls.prepared_async_call(grid, block, stream,
-                        yw_g_bin.ptr, w_g_bin.ptr,
-                        bls_tmp_g.ptr,  nf * nbins_tot * noverlap)
+        args = (grid, block, stream)
+        args += (yw_g_bin.ptr, w_g_bin.ptr)
+        args += (bls_tmp_g.ptr,  nf * nbins_tot * noverlap)
+        gpu_bls.prepared_async_call(*args)
 
         bls_tmp = None if not plot_status else bls_tmp_g.get()
 
-        #stream.synchronize()
-        reduction_max(gpu_max, bls_tmp_g, bls_tmp_sol_g,
-                        nf, nbins_tot * noverlap, stream, bls_g, bls_sol_g,
-                        batch * batch_size,  block_size)
-        if plot_status:
-            import matplotlib.pyplot as plt
-            for i in range(nf):
-                plt.title("frequency %d, (%.3e)"%(i, freqs[i]))
-                for j in range(noverlap):
-                    offset = i * nbins_tot * noverlap + j * nbins_tot
-                    inds = slice(offset, offset + nbins_tot)
-                    plt.plot(bls_tmp[inds])
-                plt.axhline(bls_g.get()[i + batch * batch_size], color='r')
-                #plt.axhline(bls_tmp2[i], ls=':', color='k')
-                plt.show()
-            #import sys
-            #sys.exit()
+        args = (gpu_max, bls_tmp_g, bls_tmp_sol_g)
+        args += (nf, nbins_tot * noverlap, stream, bls_g, bls_sol_g)
+        args += (batch * batch_size, block_size)
+        reduction_max(*args)
+
     bls_sols = bls_sol_g.get()
 
     assert(not any(bls_sols < 0))
-    qphi_sols = [ (qvals[b], phivals[b]) for b in bls_sols ]
+    qphi_sols = [(qvals[b], phivals[b]) for b in bls_sols]
 
     return bls_g.get()/YY, qphi_sols
