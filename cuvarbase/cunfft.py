@@ -235,10 +235,6 @@ def nfft_adjoint_async(memory, functions,
             args += (memory.tmin, memory.tmax, spp)
             precompute_psi.prepared_async_call(*args)
 
-        #print("q1, q2, q3?")
-        #for arr in [memory.q1, memory.q2, memory.q3]:
-        #    check_arr(arr.get())
-
         grid = (grid_size(memory.n0), 1)
         args = (grid, block, stream)
         args += (memory.t_g.ptr, memory.y_g.ptr, memory.ghat_g.ptr)
@@ -247,8 +243,6 @@ def nfft_adjoint_async(memory, functions,
         args += (memory.tmin, memory.tmax, spp)
         fast_gaussian_grid.prepared_async_call(*args)
 
-        #print("grid?")
-        #check_arr(memory.ghat_g.get())
     else:
         grid = (grid_size(memory.n), 1)
         args = (grid, block, stream)
