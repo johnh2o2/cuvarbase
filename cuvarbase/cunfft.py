@@ -270,13 +270,8 @@ def nfft_adjoint_async(memory, functions,
         args += (memory.tmin, memory.tmax, spp, minimum_frequency)
         nfft_shift.prepared_async_call(*args)
 
-        #print("nfft shift?")
-        #check_arr(memory.ghat_g.get())
-
     # Run IFFT on grid
     cufft.ifft(memory.ghat_g, memory.ghat_g, memory.cu_plan)
-    #print("after ifft?")
-    #check_arr(memory.ghat_g.get())
 
     # Normalize result (deconvolve smoothing kernel)
     grid = (grid_size(memory.nf), 1)
@@ -286,12 +281,6 @@ def nfft_adjoint_async(memory, functions,
     args += (memory.tmin, memory.tmax, spp, minimum_frequency)
     normalize.prepared_async_call(*args)
 
-
-    #print("after normalization?")
-    #check_arr(memory.ghat_g.get())
-
-    #print(memory.n, memory.nf, memory.n0, memory.b, memory.tmin, 
-    #      memory.tmax, spp, minimum_frequency)
     # Transfer result!
     if transfer_to_host:
         memory.transfer_nfft_to_cpu()
