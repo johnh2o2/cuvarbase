@@ -6,14 +6,14 @@ import numpy as np
 from time import time
 
 
-def template(phase, q=0.05):
+def template(phase, q=0.01):
     y = np.zeros(len(phase))
     y[np.absolute(phase - 0.5) < 0.5 * q] -= 1.
 
     return y
 
 
-def generate_lightcurve(nobs=1000, baseline=10.,
+def generate_lightcurve(nobs=3000, baseline=10.,
                         frequency=3.,
                         mean_mag=12., amplitude=0.1,
                         uncertainty=0.01):
@@ -44,7 +44,7 @@ result = ls_proc.run([(t, y, dy)],
 
 freqs, pows = result[0]
 
-mag_bins, phase_bins = 20, 20
+mag_bins, phase_bins = 10, 10
 pce = conditional_entropy(t, y, freqs, mag_bins=mag_bins,
                           phase_bins=phase_bins)
 

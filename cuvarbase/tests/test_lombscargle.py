@@ -168,6 +168,7 @@ def test_multiple_datasets():
         assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
         assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
 
+
 @mark_cuda_test
 def test_batched_run(ndatas = 25, batch_size=5, sigma=nfft_sigma,
                     samples_per_peak=spp, nyquist_factor=nfac,

@@ -264,14 +264,14 @@ class LombScargleMemory(object):
     def set_gpu_arrays_to_zero(self, **kwargs):
         for x in [self.t_g, self.yw_g, self.w_g]:
             if x is not None:
-                x.fill(self.real_type(0))
+                x.fill(self.real_type(0), stream=self.stream)
 
         for x in [self.t, self.yw, self.w]:
             if x is not None:
                 x[:] = self.real_type(0.)
 
         for mem in [self.nfft_mem_yw, self.nfft_mem_w]:
-            mem.ghat_g.fill(self.real_type(0))
+            mem.ghat_g.fill(self.real_type(0), stream=self.stream)
 
 
 def lomb_scargle_direct_sums(t, yw, w, freqs, YY):
@@ -548,11 +548,11 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         Parameters
         ----------
-        data: list of (t, y, N) tuples
-            List of data, ``[(t_1, y_1, w_1), ...]``
+        data: list of (t, y, dy) tuples
+            List of data, ``[(t_1, y_1, dy_1), ...]``
             * ``t``: Observation times
             * ``y``: Observations
-            * ``w``: Observation **weights** (sum(w) = 1)
+            * ``dy``: Observation uncertainties
         **kwargs
 
         Returns

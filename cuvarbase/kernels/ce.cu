@@ -62,7 +62,7 @@ __global__ void histogram_data_count(FLT *t, FLT *y, unsigned int *bin, FLT *fre
 }
 
 
-__global__ void compute_weighted_ce(FLT *bins, int nfreq, FLT *ce){
+__global__ void weighted_ce(FLT *bins, int nfreq, FLT *ce){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (i < nfreq){
@@ -87,7 +87,7 @@ __global__ void compute_weighted_ce(FLT *bins, int nfreq, FLT *ce){
 	}
 }
 
-__global__ void compute_standard_ce(unsigned int *bins, int nfreq,
+__global__ void standard_ce(unsigned int *bins, int nfreq,
                                     FLT *ce){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
