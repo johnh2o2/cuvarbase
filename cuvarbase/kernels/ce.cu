@@ -12,7 +12,9 @@
 
 
 __device__ int phase_ind(FLT ft){
-	return ((int)((ft - floor(ft)) * NPHASE)) % NPHASE;
+	FLT phi = ft - floor(ft);
+	int n = (int) (phi * NPHASE);
+	return n % NPHASE;
 }
 
 __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, FLT *bin, FLT *freqs,
@@ -27,23 +29,25 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, FLT *bin, FLT *
 		FLT Y = y[j_data];
 		FLT DY = dy[j_data];
 		
-		int n = phase_ind(freqs[i_freq] * t[j_data]);
-		int offset = i_freq * (NMAG * NPHASE) + n * NMAG;
+		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
+		int offset = i_freq * (NMAG * NPHASE);
 
 		for(int m = 0; m < NMAG; m++){
 			FLT phi = (Y - ((float) m) / NMAG) / DY;
 			if (abs(phi) > max_phi)
 				continue;
 
-			FLT wtot = (normcdf((phi + 1.f / (NMAG * DY))) - normcdf(phi));
-			ATOMIC_ADD(&(bin[offset + m]), wtot / (DY * DY));
+			FLT phi_max = phi + MAG_OVERLAP / (NMAG * DY);
+			FLT wtot = normcdf(phi_max) - normcdf(phi);
+			for(int n = n0; n > 0 && n >= n0 - PHASE_OVERLAP; n--)
+				ATOMIC_ADD(&(bin[offset + n * NMAG + m]), wtot);
 		}
 	}
 
 }
 
-__global__ void histogram_data_count(FLT *t, FLT *y, unsigned int *bin, FLT *freqs,
-	                            int nfreq, int ndata){
+__global__ void histogram_data_count(FLT *t, unsigned int *y, unsigned int *bin, FLT *freqs,
+	                                 int nfreq, int ndata){
 
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -51,12 +55,16 @@ __global__ void histogram_data_count(FLT *t, FLT *y, unsigned int *bin, FLT *fre
 	int j_data = i % ndata;
 
 	if (i_freq < nfreq && j_data < ndata){
-		FLT Y = y[j_data];
+		int offset = i_freq * (NMAG * NPHASE);
+		unsigned int m0 = y[j_data];
+		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
 
-		int n = phase_ind(freqs[i_freq] * t[j_data]);
-		int m = ((int) floor(Y * NMAG)) % NMAG;
-
-		atomicInc(&(bin[i_freq * (NMAG * NPHASE) + n * NMAG + m]), ndata);
+		for (int n=n0; n > 0 && n >= n0 - PHASE_OVERLAP; n--){
+			for (int m=m0; m > 0 && m >= m0 - MAG_OVERLAP; m--){
+				atomicInc(&(bin[offset + n * NMAG + m]), 
+				      PHASE_OVERLAP * MAG_OVERLAP * ndata);
+			}
+		}	
 	}
 
 }

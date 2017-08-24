@@ -42,6 +42,8 @@ class ConditionalEntropyMemory(object):
         self.freqs = None
         self.freqs_g = None
 
+        self.ytype = np.uint32 if not self.weighted else self.real_type
+
     def allocate_buffered_data_arrays(self, **kwargs):
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
@@ -54,8 +56,9 @@ class ConditionalEntropyMemory(object):
         self.t = cuda.register_host_memory(self.t)
 
         self.y = cuda.aligned_zeros(shape=(n0,),
-                                    dtype=self.real_type,
+                                    dtype=self.ytype,
                                     alignment=resource.getpagesize())
+
         self.y = cuda.register_host_memory(self.y)
         if self.weighted:
             self.dy = cuda.aligned_zeros(shape=(n0,),
@@ -81,7 +84,7 @@ class ConditionalEntropyMemory(object):
 
         assert(n0 is not None)
         self.t_g = gpuarray.zeros(n0, dtype=self.real_type)
-        self.y_g = gpuarray.zeros(n0, dtype=self.real_type)
+        self.y_g = gpuarray.zeros(n0, dtype=self.ytype)
         if self.weighted:
             self.dy_g = gpuarray.zeros(n0, dtype=self.real_type)
 
@@ -158,6 +161,9 @@ class ConditionalEntropyMemory(object):
 
             dy /= yscale
         y = (y - y0) / yscale
+
+        if not self.weighted:
+            y = np.floor(y * self.mag_bins).astype(self.ytype)
 
         if self.buffered_transfer:
             arrs = [self.t, self.y]
@@ -252,15 +258,15 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
     Example
     -------
-    >>> proc = LombScargleAsyncProcess()
+    >>> proc = ConditionalEntropyAsyncProcess()
     >>> Ndata = 1000
     >>> t = np.sort(365 * np.random.rand(N))
     >>> y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)
     >>> y += 0.01 * np.random.randn(len(t))
     >>> dy = 0.01 * np.ones_like(y)
-    >>> freqs, powers = proc.run([(t, y, dy)])
+    >>> results = proc.run([(t, y, dy)])
     >>> proc.finish()
-    >>> ls_freqs, ls_powers = freqs[0], powers[0]
+    >>> ce_freqs, ce_powers = results[0]
 
     """
     def __init__(self, *args, **kwargs):
@@ -271,11 +277,18 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.weighted = kwargs.get('weighted', False)
         self.block_size = kwargs.get('block_size', 256)
 
+        self.phase_overlap = kwargs.get('phase_overlap', 0)
+        self.mag_overlap = kwargs.get('mag_overlap', 0)
+
     def _compile_and_prepare_functions(self, **kwargs):
+
+        cpp_defs = dict(NPHASE=self.phase_bins,
+                        NMAG=self.mag_bins,
+                        PHASE_OVERLAP=self.phase_overlap,
+                        MAG_OVERLAP=self.mag_overlap)
         # Read kernel
         kernel_txt = _module_reader(find_kernel('ce'),
-                                    cpp_defs=dict(NPHASE=self.phase_bins,
-                                                  NMAG=self.mag_bins))
+                                    cpp_defs=cpp_defs)
 
         # compile kernel
         self.module = SourceModule(kernel_txt, options=['--use_fast_math'])
@@ -309,17 +322,17 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             Observation times
         y: array_like
             Observations
-        dy: array_like
-            Observation uncertainties
         freqs: array_like
             frequencies
-        stream: pycuda.driver.Stream
+        dy: array_like, optional
+            Observation uncertainties
+        stream: pycuda.driver.Stream, optional
             CUDA stream you want this to run on
         **kwargs
 
         Returns
         -------
-        mem: LombScargleMemory
+        mem: ConditionalEntropyMemory
             Memory object.
         """
 
@@ -345,20 +358,20 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     def allocate(self, data, freqs=None, **kwargs):
 
         """
-        Allocate GPU memory for Lomb Scargle computations
+        Allocate GPU memory for Conditional Entropy computations
 
         Parameters
         ----------
-        data: list of (t, y, N) tuples
+        data: list of (t, y, dy) tuples
             List of data, ``[(t_1, y_1, w_1), ...]``
             * ``t``: Observation times
             * ``y``: Observations
-            * ``w``: Observation **weights** (sum(w) = 1)
+            * ``dy``: Observation uncertainties
         **kwargs
 
         Returns
         -------
-        allocated_memory: list of ``LombScargleMemory``
+        allocated_memory: list of ``ConditionalEntropyMemory``
             list of allocated memory objects for each lightcurve
 
         """
@@ -399,16 +412,16 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``y``: observations
             * ``dy``: observation uncertainties
         freqs: optional, list of ``np.ndarray`` frequencies
-            List of custom frequencies. Right now, this has to be linearly
-            spaced with ``freqs[0] / (freqs[1] - freqs[0])`` being an integer.
-        memory: optional, list of ``LombScargleMemory`` objects
+            List of custom frequencies. If not specified, calls
+            ``autofrequency`` with default arguments
+        memory: optional, list of ``ConditionalEntropyMemory`` objects
             List of memory objects, length of list must be ``>= len(data)``
         **kwargs
 
         Returns
         -------
         results: list of lists
-            list of (freqs, pows) for each LS periodogram
+            list of (freqs, ce) for each CE periodogram
 
         """
         # compile module if not compiled already
