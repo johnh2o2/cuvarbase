@@ -107,6 +107,39 @@ __global__ void binned_bls_bst(float *yw, float *w, float *bls, int n){
 	}
 }
 
+__global__ void store_best_sols(int *argmaxes, float *best_phi, float *best_q,
+	                            int nbins0, int nbinsf, int noverlap, 
+	                            float alpha, int nfreq, int freq_offset){
+
+	int i = get_id();
+
+	if (i < nfreq){
+		int imax = argmaxes[i];
+		float dphi = 1.f / noverlap;
+		int nb = nbins0;
+		float x = 1.f;
+		int offset = 0;
+
+		while(offset + noverlap * nb < imax){
+			x *= alpha;
+			offset += noverlap * nb;
+			nb = ((int) x * nbins0);
+		}
+
+		float q = 1.f / nb;
+		int s = (imax - offset) / nb;
+
+		int jphi = (imax - offset) - s * nb;
+		
+		float phi = (q * (jphi + s * dphi) - 0.5 * (1 - q));
+
+		phi -= floorf(phi);
+
+		best_phi[i + freq_offset] = phi;
+		best_q[i + freq_offset] = q;
+	}
+}
+
 
 // needs ndata * nfreq threads
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)

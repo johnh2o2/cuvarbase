@@ -38,7 +38,8 @@ def reduction_max(max_func, arr, arr_args, nfreq, nbins,
 
     max_func.prepared_async_call(grid, block, stream,
                                  arr.ptr,  arr_args.ptr,
-                                 np.int32(nfreq), np.int32(nbins0), np.int32(nbins),
+                                 np.int32(nfreq), np.int32(nbins0),
+                                 np.int32(nbins),
                                  final_arr.ptr, final_argmax_arr.ptr,
                                  np.int32(final_index), init)
 
@@ -56,7 +57,8 @@ def get_qphi(nbins0, nbinsf, alpha, noverlap):
         qp = []
         for s in range(noverlap):
             for i in range(nb):
-                phi = (((float(i) + np.float32(s) * dphi) / nb - 0.5) + 0.5 * q) % 1.0
+                phi = (float(i) + np.float32(s) * dphi) / nb
+                phi = ((phi - 0.5) + 0.5 * q) % 1.0
                 if phi < 0:
                     phi += 1.0
                 qp.append((q, phi))
@@ -241,6 +243,13 @@ def bls_fast_autofreq(t, fmin=1E-2, fmax=1E2, oversampling=2,
     return freqs, q0vals
 
 
+def get_nbins(q, alpha):
+    nb = 1
+    while int(1./q) > nb:
+        nb = int(np.ceil(nb * alpha))
+    return nb
+
+
 def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
                    qmax_fac=5., noverlap=5, alpha=1.5, block_size=256,
                    batch_size=1, plot_status=False, **kwargs):
@@ -296,6 +305,7 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
     gpu_bls = module.get_function('binned_bls_bst')
     gpu_max = module.get_function('reduction_max')
     gpu_bin = module.get_function('bin_and_phase_fold_bst_multifreq')
+    gpu_store = module.get_function('store_best_sols')
 
     # Prepare the functions
     gpu_bls = gpu_bls.prepare([np.intp, np.intp, np.intp, np.int32])
@@ -306,17 +316,19 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
                                np.int32, np.int32, np.int32, np.int32,
                                np.float32, np.int32])
 
+    gpu_store = gpu_store.prepare([np.intp, np.intp, np.intp, np.int32,
+                                   np.int32, np.int32, np.float32, np.int32,
+                                   np.int32])
+
     # smallest and largest number of bins
     nbins0_max = 1
     nbinsf_max = 1
 
     qmin_all = qmin_fac * q_transit(min(freqs), rho)
     qmin_max_all = (qmax_fac / qmin_fac) * qmin_all
-    while (int(1./(qmin_max_all)) > nbins0_max):
-        nbins0_max = np.ceil(alpha * nbins0_max)
 
-    while (int(1./(qmin_all)) > nbinsf_max):
-        nbinsf_max = np.ceil(alpha * nbinsf_max)
+    nbins0_max = get_nbins(qmin_max_all, alpha)
+    nbinsf_max = get_nbins(qmin_all, alpha)
 
     ndata = np.int32(len(t))
 
@@ -351,6 +363,9 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
     bls_g = gpuarray.zeros(len(freqs), dtype=np.float32)
     bls_sol_g = gpuarray.zeros(len(freqs), dtype=np.int32)
 
+    bls_best_phi = gpuarray.zeros(len(freqs), dtype=np.float32)
+    bls_best_q = gpuarray.zeros(len(freqs), dtype=np.float32)
+
     block = (block_size, 1, 1)
 
     grid = (grid_size, 1)
@@ -362,18 +377,19 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
         imax = min([len(freqs) - 1, batch_size * (batch + 1) - 1])
         qmax = qmax_fac * q_transit(freqs[imax], rho)
 
-        nbins0 = 1
-        nbinsf = 1
-        while (int(1./(qmin)) > nbins0_max):
-            nbins0 = np.ceil(alpha * nbins0)
+        nbins0 = get_nbins(qmax, alpha)
+        nbinsf = get_nbins(qmin, alpha)
 
-        while (int(1./(qmin)) > nbinsf_max):
-            nbinsf = np.ceil(alpha * nbinsf)
+        nbins_tot = 0
+        x = 1.
+        while(np.int32(x * nbins0) <= nbinsf):
+            nbins_tot += np.int32(x * nbins0)
+            x *= alpha
 
         # q_phi = get_qphi(nbins0_max, nbinsf_max, alpha, noverlap)
         # qvals, phivals = zip(*q_phi)
 
-        nbins_tot = len(q_phi) / noverlap
+        # nbins_tot = len(q_phi) / noverlap
 
         nf = batch_size if batch < nbatches - 1 else \
             len(freqs) - batch * batch_size
@@ -412,9 +428,16 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
         args += (batch * batch_size, block_size)
         reduction_max(*args)
 
-    bls_sols = bls_sol_g.get()
+        args = (grid, block, stream)
+        args += (bls_sol_g.ptr, bls_best_phi.ptr, bls_best_q.ptr)
+        args += (np.int32(nbins0), np.int32(nbinsf), np.int32(noverlap))
+        args += (np.float32(alpha), np.int32(nf))
+        args += (np.int32(batch * batch_size),)
+        gpu_store.prepared_async_call(*args)
 
-    assert(not any(bls_sols < 0))
-    qphi_sols = [(qvals[b], phivals[b]) for b in bls_sols]
+    best_q = bls_best_q.get()
+    best_phi = bls_best_phi.get()
+
+    qphi_sols = zip(best_q, best_phi)
 
     return bls_g.get()/YY, qphi_sols
