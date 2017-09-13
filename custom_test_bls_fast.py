@@ -1,7 +1,7 @@
 import numpy as np
 #from cuvarbase.tests.test_ce import test_inject_and_recover
 from cuvarbase.tests.test_bls import data
-from cuvarbase.bls import eebls_gpu_fast, bls_fast_autofreq, q_transit, freq_transit
+from cuvarbase.bls import eebls_gpu_fast, bls_fast_autofreq, q_transit, freq_transit, fmin_transit, fmax_transit
 from cuvarbase.ce import ConditionalEntropyAsyncProcess
 from ftperiodogram.template import Template
 import matplotlib.pyplot as plt
@@ -59,29 +59,42 @@ test_inject_and_recover_weighted(make_plot=True, phase_bins=30, mag_bins=20,
                                  mag_overlap=1, phase_overlap=1, weighted=True)
 
 """
-ndata = 1000
+ndata = 10000
+noverlap = 2
+rho = 1.
+samples_per_peak = 3
 baseline = 10. * 365.
-freq = freq_transit(0.05, 1.)
+q0 = 0.05
 
-fmin, fmax = freq_transit(10./ndata, 1), freq_transit(0.2, 1.)
-q0 = 1.11 * q_transit(freq, 1.)
-print freq, q0, fmin, fmax
+qmin_fac = 1./noverlap
+qmax_fac = noverlap
+
+freq = freq_transit(q0, rho=0.5)
+
 t, y, dy = data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=ndata,
                 freq=freq, q=q0, phi0=None, baseline=baseline)
+
+fmin = fmin_transit(t, rho=rho, min_obs_per_transit=3 * 5)
+fmax = 0.5 * fmax_transit(rho=rho)
+print freq, q0, fmin, fmax
 
 # t = 1 * 365 * np.sort(np.random.rand(100))
 # y = np.random.randn(len(t))
 # dy = np.ones_like(y)
 
-freqs, q0vals = bls_fast_autofreq(t, fmin=fmin, fmax=fmax)
+freqs, q0vals = bls_fast_autofreq(t, fmin=fmin, fmax=fmax,
+                                  qmin_fac=qmin_fac, rho=rho,
+                                  samples_per_peak=samples_per_peak)
 print(len(freqs))
 
 # sys.exit()
 t0 = time()
 # freqs = np.array([f for i, f in enumerate(freqs) if i < 100])
-noverlap = 3
-bls, sols = eebls_gpu_fast(t, y, dy, freqs, noverlap=noverlap, alpha=1.2,
-                           qmin_fac=1./noverlap, qmax_fac=noverlap)
+
+bls, sols = eebls_gpu_fast(t, y, dy, freqs, qmin_fac * q0vals,
+                           qmax_fac * q0vals,
+                           noverlap=noverlap, alpha=1.5, batch_size=100,
+                           nstreams=5)
 print(time() - t0)
 
 fbest = freqs[np.argmax(bls)]
