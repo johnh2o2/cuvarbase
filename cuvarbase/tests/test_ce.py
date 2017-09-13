@@ -54,6 +54,9 @@ def test_multiple_datasets():
         fb, pb = rb
         fnb, pnb = rnb
 
+        assert(not any(np.isnan(pb)))
+        assert(not any(np.isnan(pnb)))
+
         assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
         assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
 
@@ -77,6 +80,9 @@ def test_batched_run(ndatas=25, batch_size=5, **kwargs):
     for rb, rnb in zip(batched_results, non_batched_results):
         fb, pb = rb
         fnb, pnb = rnb
+
+        assert(not any(np.isnan(pb)))
+        assert(not any(np.isnan(pnb)))
 
         assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
         assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
@@ -118,5 +124,44 @@ def test_batched_run_const_nfreq(make_plot=False, ndatas=27,
             plt.axvline(f0)
             plt.show()
 
+        assert(not any(np.isnan(pb)))
+        assert(not any(np.isnan(pnb)))
+
         assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
         assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
+
+
+@mark_cuda_test
+def test_inject_and_recover(make_plot=False, **kwargs):
+
+    proc = ConditionalEntropyAsyncProcess(**kwargs)
+    for freq in [3.0, 10.0, 50.0]:
+        t, y, err = data(seed=100, sigma=0.01, ndata=500, freq=freq)
+
+        df = 0.001
+        max_freq = 100.
+        min_freq = df
+        nf = int((max_freq - min_freq) / df)
+        freqs = min_freq + df * np.arange(nf)
+        results = proc.run([(t, y, err)], freqs=freqs)
+        proc.finish()
+        frq, p = results[0]
+        best_freq = frq[np.argmin(p)]
+
+        if make_plot:
+            import matplotlib.pyplot as plt
+            f, ax = plt.subplots()
+            ax.plot(frq, p)
+            ax.axvline(freq, ls='-', color='k')
+            ax.axvline(best_freq, ls=':', color='r')
+            plt.show()
+
+        # print best_freq, freq, abs(best_freq - freq) / freq
+        assert(not any(np.isnan(p)))
+        assert(abs(best_freq - freq) / freq < 1E-2)
+
+
+@mark_cuda_test
+def test_inject_and_recover_weighted(make_plot=False, **kwargs):
+    kwargs.update({'weighted': True})
+    test_inject_and_recover(make_plot=make_plot, **kwargs)

@@ -231,6 +231,10 @@ def q_transit(freq, rho, q0=0.038285):
     return q0 * (freq ** (4./3.)) * (rho ** (-1./3.))
 
 
+def freq_transit(q, rho, q0=0.038285):
+    return ((q / q0) ** (3./4.)) * (rho ** (1./4.))
+
+
 def bls_fast_autofreq(t, fmin=1E-2, fmax=1E2, oversampling=2,
                       rho=1, qmin_fac=0.2):
     T = max(t) - min(t)
@@ -250,9 +254,23 @@ def get_nbins(q, alpha):
     return nb
 
 
-def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
-                   qmax_fac=5., noverlap=5, alpha=1.5, block_size=256,
-                   batch_size=1, plot_status=False, **kwargs):
+def bin_data(t, y, freq, nbins, phi0=0.):
+    phi_d = (t * freq) % 1.0 - phi0
+    phi_d[phi_d < 0] += 1.
+
+    bins = np.zeros(nbins)
+
+    bs = np.floor(phi_d * nbins).astype(np.int32)
+
+    for b, Y in zip(bs, y):
+        bins[b] += Y
+
+    return bins
+
+
+def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=5, qmin_fac=0.2,
+                   qmax_fac=5., noverlap=3, alpha=1.5, block_size=256,
+                   batch_size=5, plot_status=False, **kwargs):
 
     """
     Box-Least Squares, accelerated with PyCUDA
@@ -325,19 +343,21 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
     nbinsf_max = 1
 
     qmin_all = qmin_fac * q_transit(min(freqs), rho)
-    qmin_max_all = (qmax_fac / qmin_fac) * qmin_all
+    qmax_all = qmax_fac * q_transit(max(freqs), rho)
 
-    nbins0_max = get_nbins(qmin_max_all, alpha)
+    nbins0_max = get_nbins(qmax_all, alpha)
     nbinsf_max = get_nbins(qmin_all, alpha)
 
     ndata = np.int32(len(t))
 
-    q_phi = get_qphi(nbins0_max, nbinsf_max, alpha, noverlap)
+    nbins_tot_max = 0
+    x = 1.
+    while(np.int32(x * nbins0_max) <= nbinsf_max):
+        nbins_tot_max += np.int32(x * nbins0_max)
+        x *= alpha
     # qvals, phivals = zip(*q_phi)
 
-    nbins_tot = len(q_phi) / noverlap
-
-    gs = batch_size * len(q_phi)
+    gs = batch_size * nbins_tot_max * noverlap
 
     grid_size = int(np.ceil(float(gs) / block_size))
 
@@ -345,9 +365,10 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
     w /= sum(w)
     ybar = np.dot(w, y)
     YY = np.dot(w, np.power(y - ybar, 2))
+    yw = np.array((y - ybar) * w)
 
     t_g = gpuarray.to_gpu(np.array(t).astype(np.float32))
-    yw_g = gpuarray.to_gpu(np.array((y - ybar) * w).astype(np.float32))
+    yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
 
@@ -371,10 +392,12 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
     grid = (grid_size, 1)
 
     nbatches = int(np.ceil(float(len(freqs)) / batch_size))
+
+    bls = np.zeros(len(freqs))
     for batch in range(nbatches):
 
         qmin = qmin_fac * q_transit(freqs[batch_size * batch], rho)
-        imax = min([len(freqs) - 1, batch_size * (batch + 1) - 1])
+        imax = min([len(freqs), batch_size * (batch + 1)]) - 1
         qmax = qmax_fac * q_transit(freqs[imax], rho)
 
         nbins0 = get_nbins(qmax, alpha)
@@ -405,6 +428,8 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
 
         yw_g_bin.fill(np.float32(0), stream=stream)
         w_g_bin.fill(np.float32(0), stream=stream)
+        bls_tmp_g.fill(np.float32(0), stream=stream)
+        bls_tmp_sol_g.fill(np.int32(0), stream=stream)
 
         bin_grid = (int(np.ceil(float(ndata * nf) / block_size)), 1)
 
@@ -421,8 +446,31 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
         args += (bls_tmp_g.ptr,  nf * nbins_tot * noverlap)
         gpu_bls.prepared_async_call(*args)
 
-        bls_tmp = None if not plot_status else bls_tmp_g.get()
+        # bls_tmp = None if not plot_status else bls_tmp_g.get()
+        """
+        bls_tmp = bls_tmp_g.get()
+        ywbin = yw_g_bin.get()
+        wbin = w_g_bin.get()
+        for k in range(int(nf)):
+            import matplotlib.pyplot as plt
+            f0 = freqs[k + batch_size * batch]
+            nbtot = 0
+            x = 1.
+            while(np.int32(x * nbins0) <= nbinsf):
+                nb = np.int32(x * nbins0)
+                for s in range(noverlap):
+                    phi0 = s / float(noverlap * nb)
+                    bmin = k * nbins_tot * noverlap + nbtot * noverlap + nb * s
 
+                    for name, arrc, arrg in [('yw', yw, ywbin), ('w', w, wbin)]:
+                        arrcb = bin_data(t, arrc, f0, nb, phi0=phi0)
+                        arrgb = arrg[bmin:bmin + nb]
+
+                        if not all(np.absolute(arrgb - arrcb) < 1E-7):
+                            print name, f0, max(np.absolute(arrgb - arrcb)), min(arrgb), np.median(arrgb), max(arrgb), batch, nb, s
+                nbtot += nb
+                x *= alpha
+        """
         args = (gpu_max, bls_tmp_g, bls_tmp_sol_g)
         args += (nf, nbins_tot * noverlap, stream, bls_g, bls_sol_g)
         args += (batch * batch_size, block_size)
@@ -441,3 +489,4 @@ def eebls_gpu_fast(t, y, dy, freqs, rho=1, nstreams=10, qmin_fac=0.2,
     qphi_sols = zip(best_q, best_phi)
 
     return bls_g.get()/YY, qphi_sols
+    # return bls, None

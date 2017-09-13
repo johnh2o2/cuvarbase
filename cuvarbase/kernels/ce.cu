@@ -17,6 +17,11 @@ __device__ int phase_ind(FLT ft){
 	return n % NPHASE;
 }
 
+__device__ int posmod(int n, int N){
+	int nmodN = n % N;
+	return (nmodN < 0) ? nmodN + N : nmodN;
+}
+
 __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, FLT *bin, FLT *freqs,
 	                               int nfreq, int ndata, FLT max_phi){
 
@@ -33,14 +38,15 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, FLT *bin, FLT *
 		int offset = i_freq * (NMAG * NPHASE);
 
 		for(int m = 0; m < NMAG; m++){
-			FLT phi = (Y - ((float) m) / NMAG) / DY;
-			if (abs(phi) > max_phi)
+			FLT z = (Y - ((float) m) / NMAG) / DY;
+			if (abs(z) > max_phi)
 				continue;
 
-			FLT phi_max = phi + MAG_OVERLAP / (NMAG * DY);
-			FLT wtot = normcdf(phi_max) - normcdf(phi);
-			for(int n = n0; n > 0 && n >= n0 - PHASE_OVERLAP; n--)
-				ATOMIC_ADD(&(bin[offset + n * NMAG + m]), wtot);
+			FLT zmax = z + (1 + MAG_OVERLAP) / (NMAG * DY);
+			FLT wtot = normcdf(zmax) - normcdf(z);
+			for(int n = n0; n >= n0 - PHASE_OVERLAP; n--) {
+				ATOMIC_ADD(&(bin[offset + posmod(n, NPHASE) * NMAG + m]), wtot);
+			}
 		}
 	}
 
@@ -59,14 +65,13 @@ __global__ void histogram_data_count(FLT *t, unsigned int *y, unsigned int *bin,
 		unsigned int m0 = y[j_data];
 		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
 
-		for (int n=n0; n > 0 && n >= n0 - PHASE_OVERLAP; n--){
-			for (int m=m0; m > 0 && m >= m0 - MAG_OVERLAP; m--){
-				atomicInc(&(bin[offset + n * NMAG + m]), 
-				      PHASE_OVERLAP * MAG_OVERLAP * ndata);
+		for (int n = n0; n >= n0 - PHASE_OVERLAP; n--){
+			for (int m = m0; m >= 0 && m >= m0 - MAG_OVERLAP; m--) {
+				atomicInc(&(bin[offset + posmod(n, NPHASE) * NMAG + m]), 
+				      (PHASE_OVERLAP + 1) * (MAG_OVERLAP + 1) * ndata);
 			}
 		}	
 	}
-
 }
 
 
@@ -117,6 +122,7 @@ __global__ void standard_ce(unsigned int *bins, int nfreq,
 					Hc += pmn * log(((float) p_phi_n) / ((float) pmn));
 			}
 		}
+		
 		ce[i] = Hc / bin_tot;
 	}
 }

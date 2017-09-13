@@ -1,7 +1,7 @@
-//#include <stdio.h>
+#include <stdio.h>
 #define RESTRICT __restrict__
 #define CONSTANT const
-#define MIN_W 1E-6
+#define MIN_W 1E-5
 //{CPP_DEFS}
 
 __device__ int get_id(){
@@ -102,8 +102,11 @@ __global__ void binned_bls_bst(float *yw, float *w, float *bls, int n){
 		float wtot = w[i];
 		float ybar = yw[i];
 
-		bls[i] = (wtot > MIN_W) ?
+		bls[i] = (wtot > MIN_W && wtot < 1 - MIN_W) ?
 					ybar * ybar / (wtot * (1.f - wtot)) : 0.f;
+
+		if (bls[i] > 1)
+			printf("ybar = %e, wtot = %e, ybar^2 = %e, wtot * (1 - wtot) = %e\n", ybar, wtot, ybar * ybar, wtot * (1 - wtot));
 	}
 }
 
@@ -123,7 +126,7 @@ __global__ void store_best_sols(int *argmaxes, float *best_phi, float *best_q,
 		while(offset + noverlap * nb < imax){
 			x *= alpha;
 			offset += noverlap * nb;
-			nb = ((int) x * nbins0);
+			nb = (int) (x * nbins0);
 		}
 
 		float q = 1.f / nb;
@@ -177,7 +180,7 @@ __global__ void bin_and_phase_fold_bst_multifreq(float *t, float *yw, float *w,
 							+ s * nb + noverlap * nbtot + offset;
 
 				atomicAdd(yw_bin + b, YW);
-				atomicAdd(w_bin + b, W);
+				atomicAdd( w_bin + b, W);
 			}
 
 			nbtot += nb;

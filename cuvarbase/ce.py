@@ -21,6 +21,7 @@ class ConditionalEntropyMemory(object):
         self.max_phi = kwargs.get('max_phi', 3.)
         self.stream = kwargs.get('stream', None)
         self.weighted = kwargs.get('weighted', False)
+        self.widen_mag_range = kwargs.get('widen_mag_range', False)
         self.n0 = kwargs.get('n0', None)
         self.nf = kwargs.get('nf', None)
 
@@ -156,8 +157,10 @@ class ConditionalEntropyMemory(object):
         y0 = min(y[:self.n0])
         if self.weighted:
             dy = np.asarray(dy).astype(self.real_type)
-            yscale += 2 * self.max_phi * max(dy[:self.n0])
-            y0 -= self.max_phi * min(y[:self.n0])
+            if self.widen_mag_range:
+                med_sigma = np.median(dy[:self.n0])
+                yscale += 2 * self.max_phi * med_sigma
+                y0 -= self.max_phi * med_sigma
 
             dy /= yscale
         y = (y - y0) / yscale
@@ -255,6 +258,25 @@ def conditional_entropy(memory, functions, block_size=256,
 class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     """
     GPUAsyncProcess for the Conditional Entropy period finder
+
+    Parameters
+    ----------
+    phase_bins: int, optional (default: 10)
+        Number of phase bins to use.
+    mag_bins: int, optional (default: 10)
+        Number of mag bins to use.
+    max_phi: float, optional (default: 3.)
+        For weighted CE; skips contibutions to bins that are more than
+        ``max_phi`` sigma away.
+    weighted: bool, optional (default: False)
+        If true, uses the weighted version of the CE periodogram. Slower, but
+        accounts for data uncertainties.
+    block_size: int, optional (default: 256)
+        Number of CUDA threads per CUDA block.
+    phase_overlap: int, optional (default: 0)
+        If > 0, the phase bins are overlapped with each other
+    mag_overlap: int, optional (default: 0)
+        If > 0, the mag bins are overlapped with each other
 
     Example
     -------
@@ -367,6 +389,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``t``: Observation times
             * ``y``: Observations
             * ``dy``: Observation uncertainties
+        freqs: list, optional
+            Either a list of floats (same frequencies for all data),
+            or a list of length ``n=len(data)``, with element ``i`` of the
+            list being a list of frequencies for the ``i``-th lightcurve.
         **kwargs
 
         Returns
@@ -421,7 +447,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         Returns
         -------
         results: list of lists
-            list of (freqs, ce) for each CE periodogram
+            list of (freqs, ce) corresponding to CE for each element of
+            the ``data`` array
 
         """
         # compile module if not compiled already
@@ -459,7 +486,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         return results
 
     def batched_run_const_nfreq(self, data, batch_size=10,
-                                use_fft=True, freqs=None,
+                                freqs=None,
                                 **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are

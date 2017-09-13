@@ -33,7 +33,7 @@ def transit_model(phi0, q, delta, q1=0.):
 
 @pytest.fixture
 def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=500, freq=10.,
-         q=0.01, phi0=None):
+         q=0.01, phi0=None, baseline=1.):
 
     rand = np.random.RandomState(seed)
 
@@ -44,13 +44,12 @@ def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=500, freq=10.,
 
     model = transit_model(phi0, q, delta)
 
-    t = np.sort(rand.rand(ndata))
+    t = baseline * np.sort(rand.rand(ndata))
     y = model(t, freq) + sigma * rand.randn(len(t))
     y += ybar - np.mean(y)
     err = sigma * np.ones_like(y)
 
     return t, y, err
-
 
 # TODO: Find out a way to split this into multiple tests using
 #       pytest.parametrize. Doing things the usual way won't work
