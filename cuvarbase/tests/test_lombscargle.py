@@ -12,6 +12,7 @@ lsrtol = 1E-2
 lsatol = 1E-5
 nfft_sigma = 4
 
+
 @pytest.fixture
 def data(seed=100, sigma=0.1, ndata=100, freq=3.):
 
@@ -26,6 +27,7 @@ def data(seed=100, sigma=0.1, ndata=100, freq=3.):
 
     return t, y, err
 
+
 def assert_similar(pdg0, pdg, top=5):
     inds = (np.argsort(pdg0)[::-1])[:top]
 
@@ -33,8 +35,7 @@ def assert_similar(pdg0, pdg, top=5):
     p = np.asarray(pdg)[inds]
     diff = np.absolute(p - p0)
 
-    #print(zip(diff, p0, p))
-    assert(all(diff < lsrtol * 0.5 * (p + p0) + lsatol ))
+    assert(all(diff < lsrtol * 0.5 * (p + p0) + lsatol))
 
 
 @mark_cuda_test
@@ -54,13 +55,14 @@ def test_against_astropy_double():
 
     assert_similar(power, pgpu)
 
+
 @mark_cuda_test
 def test_against_astropy_single():
     t, y, err = data()
     ls_proc = LombScargleAsyncProcess(use_double=False, sigma=nfft_sigma)
 
     results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
-                                             samples_per_peak=spp)
+                          samples_per_peak=spp)
     ls_proc.finish()
     fgpu, pgpu = results[0]
 
@@ -69,14 +71,13 @@ def test_against_astropy_single():
     assert_similar(power, pgpu)
 
 
-
 @mark_cuda_test
 def test_ls_kernel():
     t, y, err = data()
     ls_proc = LombScargleAsyncProcess(use_double=False, sigma=nfft_sigma)
 
     results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
-                                             samples_per_peak=spp)
+                          samples_per_peak=spp)
     ls_proc.finish()
     fgpu, pgpu = results[0]
 
@@ -85,13 +86,14 @@ def test_ls_kernel():
 
     assert_similar(power, pgpu)
 
+
 @mark_cuda_test
 def test_ls_kernel_direct_sums():
     t, y, err = data()
     ls_proc = LombScargleAsyncProcess(use_double=False, sigma=nfft_sigma)
 
     results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
-                              samples_per_peak=spp, use_fft=False)
+                          samples_per_peak=spp, use_fft=False)
     ls_proc.finish()
     fgpu, pgpu = results[0]
 
@@ -128,7 +130,7 @@ def test_ls_kernel_direct_sums_against_python():
     ls_proc = LombScargleAsyncProcess(use_double=False, sigma=nfft_sigma)
 
     result_ds = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
-                             samples_per_peak=spp, use_fft=False)
+                            samples_per_peak=spp, use_fft=False)
     ls_proc.finish()
 
     fgpu_ds, pgpu_ds = result_ds[0]
@@ -151,14 +153,14 @@ def test_multiple_datasets():
     ls_proc = LombScargleAsyncProcess(sigma=nfft_sigma)
 
     mult_results = ls_proc.run(datas, nyquist_factor=nfac,
-                                  samples_per_peak=spp)
+                               samples_per_peak=spp)
     ls_proc.finish()
 
     sing_results = []
 
     for d in datas:
         sing_results.extend(ls_proc.run([d], nyquist_factor=nfac,
-                                samples_per_peak=spp))
+                            samples_per_peak=spp))
         ls_proc.finish()
 
     for rb, rnb in zip(mult_results, sing_results):
@@ -170,16 +172,16 @@ def test_multiple_datasets():
 
 
 @mark_cuda_test
-def test_batched_run(ndatas = 25, batch_size=5, sigma=nfft_sigma,
-                    samples_per_peak=spp, nyquist_factor=nfac,
-                    **kwargs):
+def test_batched_run(ndatas=25, batch_size=5, sigma=nfft_sigma,
+                     samples_per_peak=spp, nyquist_factor=nfac,
+                     **kwargs):
 
     datas = [data(ndata=np.random.randint(100, 350))
              for i in range(ndatas)]
     ls_proc = LombScargleAsyncProcess(sigma=sigma, **kwargs)
 
     batched_results = ls_proc.batched_run(datas, nyquist_factor=nyquist_factor,
-                                            samples_per_peak=samples_per_peak)
+                                          samples_per_peak=samples_per_peak)
     ls_proc.finish()
 
     non_batched_results = []
@@ -211,9 +213,9 @@ def test_batched_run_const_nfreq(make_plot=False, ndatas=27,
     ls_proc = LombScargleAsyncProcess(sigma=sigma, **kwargs)
 
     batched_results = ls_proc.batched_run_const_nfreq(datas,
-                                  samples_per_peak=spp,
-                                  batch_size=batch_size,
-                                  **kwargs)
+                                                      samples_per_peak=spp,
+                                                      batch_size=batch_size,
+                                                      **kwargs)
     ls_proc.finish()
 
     ls_procnb = LombScargleAsyncProcess(sigma=nfft_sigma,

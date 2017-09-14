@@ -11,7 +11,7 @@ from pycuda.tools import mark_cuda_test
 from pycuda import gpuarray
 
 nfft_sigma = 4
-nfft_m = 12
+nfft_m = 8
 nfft_rtol = 5E-3
 nfft_atol = 5E-3
 spp = 1

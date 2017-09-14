@@ -215,7 +215,7 @@ __global__ void normalize(
 	CMPLX *gin,
 	CMPLX *gout,
 	CONSTANT int ng, // sigma * nf
-	CONSTANT int nf, // number of desired frequency samples
+	CONSTANT int nf,     // number of desired frequency samples
 	CONSTANT int nbatch, // number of transforms
 	CONSTANT FLT b,      // filter scaling
 	CONSTANT FLT x0,     // min(x)

@@ -329,7 +329,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
     def __init__(self, *args, **kwargs):
         super(NFFTAsyncProcess, self).__init__(*args, **kwargs)
 
-        self.sigma = kwargs.get('sigma', 3)
+        self.sigma = kwargs.get('sigma', 4)
         self.m = kwargs.get('m', 8)
         self.autoset_m = kwargs.get('autoset_m', False)
         self.block_size = kwargs.get('block_size', 256)

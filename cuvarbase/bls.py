@@ -449,31 +449,6 @@ def eebls_gpu_fast(t, y, dy, freqs, qminvals, qmaxvals, nstreams=5,
         args += (bls_tmp_g.ptr,  np.int32(nf * nbins_tot * noverlap))
         gpu_bls.prepared_async_call(*args)
 
-        # bls_tmp = None if not plot_status else bls_tmp_g.get()
-        """
-        bls_tmp = bls_tmp_g.get()
-        ywbin = yw_g_bin.get()
-        wbin = w_g_bin.get()
-        for k in range(int(nf)):
-            import matplotlib.pyplot as plt
-            f0 = freqs[k + batch_size * batch]
-            nbtot = 0
-            x = 1.
-            while(np.int32(x * nbins0) <= nbinsf):
-                nb = np.int32(x * nbins0)
-                for s in range(noverlap):
-                    phi0 = s / float(noverlap * nb)
-                    bmin = k * nbins_tot * noverlap + nbtot * noverlap + nb * s
-
-                    for name, arrc, arrg in [('yw', yw, ywbin), ('w', w, wbin)]:
-                        arrcb = bin_data(t, arrc, f0, nb, phi0=phi0)
-                        arrgb = arrg[bmin:bmin + nb]
-
-                        if not all(np.absolute(arrgb - arrcb) < 1E-7):
-                            print name, f0, max(np.absolute(arrgb - arrcb)), min(arrgb), np.median(arrgb), max(arrgb), batch, nb, s
-                nbtot += nb
-                x *= alpha
-        """
         args = (gpu_max, bls_tmp_g, bls_tmp_sol_g)
         args += (nf, nbins_tot * noverlap, stream, bls_g, bls_sol_g)
         args += (batch * batch_size, block_size)

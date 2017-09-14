@@ -71,7 +71,7 @@ qmax_fac = noverlap
 
 freq = freq_transit(q0, rho=0.5)
 
-t, y, dy = data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=ndata,
+t, y, dy = data(seed=100, sigma=0.001, ybar=12., snr=20, ndata=ndata,
                 freq=freq, q=q0, phi0=None, baseline=baseline)
 
 fmin = fmin_transit(t, rho=rho, min_obs_per_transit=3 * 5)

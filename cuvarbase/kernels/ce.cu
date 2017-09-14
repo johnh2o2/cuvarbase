@@ -37,16 +37,20 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, FLT *bin, FLT *
 		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
 		int offset = i_freq * (NMAG * NPHASE);
 
-		for(int m = 0; m < NMAG; m++){
-			FLT z = (Y - ((float) m) / NMAG) / DY;
-			if (abs(z) > max_phi)
-				continue;
+		int m0 = (int) (Y * NMAG);
 
-			FLT zmax = z + (1 + MAG_OVERLAP) / (NMAG * DY);
-			FLT wtot = normcdf(zmax) - normcdf(z);
-			for(int n = n0; n >= n0 - PHASE_OVERLAP; n--) {
+		for(int m = 0; m < NMAG; m++){
+			FLT z = (((float) m) / NMAG - Y);
+			if (abs(z) > max_phi * DY && m != m0)
+				continue;
+			FLT zmax = z + (1 + MAG_OVERLAP) / ((float) NMAG);
+			FLT wtot = normcdf(zmax / DY) - normcdf(z / DY);
+
+			//if (wtot > 1E-2)
+			//	printf("%e %e %e %e %e\n", wtot, z, zmax, Y, DY);
+			for(int n = n0; n >= n0 - PHASE_OVERLAP; n--)
 				ATOMIC_ADD(&(bin[offset + posmod(n, NPHASE) * NMAG + m]), wtot);
-			}
+			
 		}
 	}
 

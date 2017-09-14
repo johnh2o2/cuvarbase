@@ -135,8 +135,8 @@ def test_batched_run_const_nfreq(make_plot=False, ndatas=27,
 def test_inject_and_recover(make_plot=False, **kwargs):
 
     proc = ConditionalEntropyAsyncProcess(**kwargs)
-    for freq in [3.0, 10.0, 50.0]:
-        t, y, err = data(seed=100, sigma=0.01, ndata=500, freq=freq)
+    for freq in [5.0, 10.0, 50.0]:
+        t, y, err = data(seed=100, sigma=0.01, ndata=200, freq=freq)
 
         df = 0.001
         max_freq = 100.
