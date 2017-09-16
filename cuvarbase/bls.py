@@ -283,7 +283,7 @@ def bin_data(t, y, freq, nbins, phi0=0.):
 
 def eebls_gpu_fast(t, y, dy, freqs, qminvals, qmaxvals, nstreams=5,
                    noverlap=3, alpha=1.5, block_size=256,
-                   batch_size=5, plot_status=False, **kwargs):
+                   batch_size=5, **kwargs):
 
     """
     Box-Least Squares, accelerated with PyCUDA
@@ -296,24 +296,21 @@ def eebls_gpu_fast(t, y, dy, freqs, qminvals, qmaxvals, nstreams=5,
         Observations
     dy: array_like, float
         Observation uncertainties
-    fmin: float, optional (default: 1E-2)
-        Minimum frequency
-    fmax: float, optional (default: 1E2)
-        Maximum frequency
-    oversampling: float, optional (default: 2)
-        Factor that enhances frequency spacing relative
-        to fiducial spacing
-    rho: float, optional (default: 1)
-        Stellar density in solar units
-    nstreams: int, optional (default: 10)
+    freqs: array_like, float
+        Frequencies
+    qminvals: array_like, float
+        Minimum q values to test for each frequency
+    qmaxvals: array_like, float
+        Maximum q values to test for each frequency
+    nstreams: int, optional (default: 5)
         Number of CUDA streams to utilize.
-    noverlap: int, optional (default: 10)
-        Number of overlapping bins to use
+    noverlap: int, optional (default: 3)
+        Number of overlapping q bins to use
     alpha: float (> 1), optional, (default: 1.5)
         1 + dlog q, where dlog q = dq / q
     block_size: int, optional (default: 256)
         CUDA block size to use (must be power of 2)
-    batch_size: int, optional (default: 1)
+    batch_size: int, optional (default: 5)
         Number of frequencies to compute in a single batch
 
     Returns
