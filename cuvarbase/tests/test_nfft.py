@@ -9,8 +9,7 @@ import skcuda.fft as cufft
 from ..cunfft import NFFTAsyncProcess
 from pycuda.tools import mark_cuda_test
 from pycuda import gpuarray
-
-nfft_sigma = 4
+nfft_sigma = 5
 nfft_m = 8
 nfft_rtol = 5E-3
 nfft_atol = 5E-3
@@ -33,7 +32,7 @@ def data(seed=100, sigma=0.1, ndata=100, samples_per_peak=spp):
 
     rand = np.random.RandomState(seed)
 
-    t = 10 * np.sort(rand.rand(ndata))
+    t = np.sort(rand.rand(ndata))
     y = np.cos(2 * np.pi * (3./(max(t) - min(t))) * t)
 
     tscl = scale_time(t, samples_per_peak=samples_per_peak)
@@ -83,6 +82,9 @@ def simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, use_double=False,
     proc = NFFTAsyncProcess(sigma=sigma, m=m, autoset_m=False,
                             use_double=use_double)
 
+    for stream in proc.streams:
+        stream.synchronize()
+
     nfft_kwargs = dict(samples_per_peak=samples_per_peak)
     nfft_kwargs.update(kwargs)
     results = proc.run([(t, y, nf)], **nfft_kwargs)
@@ -103,9 +105,9 @@ def test_fast_gridding_with_jvdp_nfft():
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                        just_return_gridded_data=True, fast_grid=True,
-                        minimum_frequency=-int(nf/2),
-                        samples_per_peak=spp)
+                               just_return_gridded_data=True, fast_grid=True,
+                               minimum_frequency=-int(nf/2),
+                               samples_per_peak=spp)
 
     # get CPU grid
     cpu_grid = get_cpu_grid(tsc, y, nf, sigma=nfft_sigma, m=nfft_m)
@@ -119,9 +121,9 @@ def test_fast_gridding_against_scalar_version():
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                        just_return_gridded_data=True, fast_grid=True,
-                        minimum_frequency=-int(nf/2),
-                        samples_per_peak=spp)
+                               just_return_gridded_data=True, fast_grid=True,
+                               minimum_frequency=-int(nf/2),
+                               samples_per_peak=spp)
 
     # get python version of gpu grid calculation
     cpu_grid = gpu_grid_scalar(tsc, y, nfft_sigma, nfft_m, nf)
@@ -136,9 +138,9 @@ def test_slow_gridding_against_scalar_fast_gridding():
 
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                        just_return_gridded_data=True, fast_grid=False,
-                        minimum_frequency=-int(nf/2),
-                        samples_per_peak=spp)
+                               just_return_gridded_data=True, fast_grid=False,
+                               minimum_frequency=-int(nf/2),
+                               samples_per_peak=spp)
 
     # get python version of gpu grid calculation
     cpu_grid = gpu_grid_scalar(tsc, y, nfft_sigma, nfft_m, nf)
@@ -151,12 +153,11 @@ def test_slow_gridding_against_scalar_fast_gridding():
 def test_slow_gridding_against_jvdp_nfft():
     t, tsc, y, err = data()
 
-
     nf = int(nfft_sigma * len(t))
     gpu_grid = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
-                        just_return_gridded_data=True, fast_grid=False,
-                        minimum_frequency=-int(nf/2),
-                        samples_per_peak=spp)
+                               just_return_gridded_data=True, fast_grid=False,
+                               minimum_frequency=-int(nf/2),
+                               samples_per_peak=spp)
 
     # get CPU grid
     cpu_grid = get_cpu_grid(tsc, y, nf, sigma=nfft_sigma, m=nfft_m)
@@ -177,7 +178,6 @@ def test_slow_gridding_against_jvdp_nfft():
 def test_ffts():
     t, tsc, y, err = data()
 
-
     yhat = np.empty(len(y))
 
     yg = gpuarray.to_gpu(y.astype(np.complex128))
@@ -192,13 +192,15 @@ def test_ffts():
     assert_allclose(yhat, yghat.get(), **tols)
 
 
+@mark_cuda_test
 def nfft_against_direct_sums(samples_per_peak=spp, f0=None, scaled=True):
     t, tsc, y, err = data(samples_per_peak=samples_per_peak)
 
     nf = int(nfft_sigma * len(t))
 
     df = 1./(samples_per_peak * (max(t) - min(t)))
-    f0 = f0 if f0 is not None else -0.5 * nf * df
+    if f0 is None:
+        f0 = -0.5 * nf * df
     k0 = int(f0 / df)
 
     f0 = k0 if scaled else k0 * df
@@ -208,8 +210,6 @@ def nfft_against_direct_sums(samples_per_peak=spp, f0=None, scaled=True):
     gpu_nfft = simple_gpu_nfft(tg, y, nf, sigma=nfft_sigma, m=nfft_m,
                                minimum_frequency=f0,
                                samples_per_peak=sppg)
-
-    # cpu_nfft = nfft_adjoint_cpu(tsc, y, 2 * (nf + k0), sigma=nfft_sigma, m=nfft_m)
 
     freqs = (float(k0) + np.arange(nf))
     if not scaled:
@@ -231,33 +231,34 @@ def nfft_against_direct_sums(samples_per_peak=spp, f0=None, scaled=True):
     assert_allclose(np.real(direct_dft), np.real(gpu_nfft), **tols)
     assert_allclose(np.imag(direct_dft), np.imag(gpu_nfft), **tols)
 
+
 @mark_cuda_test
 def test_nfft_against_existing_impl_scaled_centered_spp1():
     nfft_against_direct_sums(samples_per_peak=1, scaled=True, f0=None)
+
 
 @mark_cuda_test
 def test_nfft_against_existing_impl_scaled_centered_spp5():
     nfft_against_direct_sums(samples_per_peak=5, scaled=True, f0=None)
 
+
 @mark_cuda_test
 def test_nfft_against_existing_impl_scaled_uncentered_spp1():
     nfft_against_direct_sums(samples_per_peak=1, scaled=True, f0=0.)
+
 
 @mark_cuda_test
 def test_nfft_against_existing_impl_unscaled_centered_spp1():
     nfft_against_direct_sums(samples_per_peak=1, scaled=False, f0=None)
 
+
 @mark_cuda_test
 def test_nfft_against_existing_impl_unscaled_uncentered_spp5():
     nfft_against_direct_sums(samples_per_peak=5, scaled=False, f0=0.)
 
-@mark_cuda_test
-def test_nfft_adjoint_async():
-    f0 = 0.
-    ndata = 10
-    batch_size = 3
-    use_double=False
 
+@mark_cuda_test
+def test_nfft_adjoint_async(f0=0., ndata=10, batch_size=3, use_double=False):
     datas = []
     for i in range(ndata):
         t, tsc, y, err = data()

@@ -275,60 +275,253 @@ class LombScargleMemory(object):
             mem.ghat_g.fill(self.real_type(0), stream=self.stream)
 
 
-def lomb_scargle_direct_sums(t, yw, w, freqs, YY):
+def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
     """
-    Super slow lomb scargle (for debugging), uses
-    direct summations to compute C, S, ...
+    Compute the set of frequency-dependent sums
+    for (multi-harmonic) Lomb Scargle at a given frequency
+
+    Parameters
+    ----------
+    t: array_like
+        Observation times.
+    yw: array_like
+        Observations multiplied by their corresponding weights.
+        `sum(yw)` is the weighted mean.
+    w: array_like
+        Weights for each of the observations. Usually proportional
+        to `1/sigma ** 2` where `sigma` is the observation uncertainties.
+        Normalized so that `sum(w) = 1`.
+    freq: float
+        Signal frequency.
+    YY: float
+        Weighted variance of the observations.
+    nharms: int, optional (default: 1)
+        Number of harmonics to compute. This is 1 for the standard
+        Lomb-Scargle
+
+    Returns
+    -------
+    C, S, CC, CS, SS, YC, YS: array_like
+        The set of sums with regularization added.
+
+    See also
+    --------
+    :func:`mhdirect_sums`
     """
-    lsp = np.zeros(len(freqs))
-    for i, freq in enumerate(freqs):
-        if abs(freq) < 1E-9:
-            lsp[i] = 0.
-        phase = 2 * np.pi * (((t + 0.5) * freq) % 1.0).astype(np.float64)
-        phase2 = 2 * np.pi * (((t + 0.5) * 2 * freq) % 1.0).astype(np.float64)
+    phase = 2 * np.pi * ((t * freq) % 1.0).astype(np.float64)
 
-        cc = np.cos(phase)
-        ss = np.sin(phase)
+    ns = np.arange(2 * nharms + 1)
 
-        cc2 = np.cos(phase2)
-        ss2 = np.sin(phase2)
+    def sgn(n):
+        return 1 if n == 0 else np.sign(n)
 
-        C = np.dot(w, cc)
-        S = np.dot(w, ss)
+    c = map(lambda n: np.dot(w, np.cos(n * phase)), ns)
+    s = map(lambda n: np.dot(w, np.sin(n * phase)), ns)
 
-        C2 = np.dot(w, cc2)
-        S2 = np.dot(w, ss2)
+    yc = map(lambda n: np.dot(yw, np.cos(n * phase)), ns[1:nharms+1])
+    ys = map(lambda n: np.dot(yw, np.sin(n * phase)), ns[1:nharms+1])
 
-        Ch = np.dot(yw, cc)
-        Sh = np.dot(yw, ss)
+    cc = map(lambda n: map(lambda m: 0.5 * (c[n+m] + c[abs(n-m)]),
+                           ns[1:nharms+1]),
+             ns[1:nharms+1])
 
-        tan_2omega_tau = (S2 - 2 * S * C) / (C2 - (C * C - S * S))
+    cs = map(lambda n: map(lambda m: 0.5 * (s[n+m] - sgn(n-m) * s[abs(n-m)]),
+                           ns[1:nharms+1]),
+             ns[1:nharms+1])
 
-        C2w = 1. / np.sqrt(1 + tan_2omega_tau * tan_2omega_tau)
-        S2w = tan_2omega_tau * C2w
+    ss = map(lambda n: map(lambda m: 0.5 * (c[abs(n-m)] - c[n+m]),
+                           ns[1:nharms+1]),
+             ns[1:nharms+1])
 
-        Cw = np.sqrt(0.5 * (1 + C2w))
-        Sw = np.sqrt(0.5 * (1 - C2w))
+    C = np.asarray(c)[1:nharms+1]
+    S = np.asarray(s)[1:nharms+1]
 
-        if S2w < 0:
-            Sw *= -1
+    ybar = sum(yw)
+    YC = np.asarray(yc) - ybar * C
+    YS = np.asarray(ys) - ybar * S
 
-        YC = Ch * Cw + Sh * Sw
-        YS = Sh * Cw - Ch * Sw
-        CC = 0.5 * (1 + C2 * C2w + S2 * S2w)
-        SS = 0.5 * (1 - C2 * C2w - S2 * S2w)
+    CC = np.asarray(cc) - np.outer(C, C)
+    CS = np.asarray(cs) - np.outer(C, S)
+    SS = np.asarray(ss) - np.outer(S, S)
 
-        CC -= (C * Cw + S * Sw) * (C * Cw + S * Sw)
-        SS -= (S * Cw - C * Sw) * (S * Cw - C * Sw)
+    return C, S, CC, CS, SS, YC, YS
 
-        P = (YC * YC / CC + YS * YS / SS) / YY
 
-        if (np.isinf(P) or np.isnan(P) or P < 0 or P > 1):
-            print(P, YC, YS, CC, SS, YY)
-            P = 0.
-        lsp[i] = P
+def add_regularization(sums, amplitude_priors=None, cn0=None, sn0=None):
+    """
+    Add regularization to sums. See Zechmeister & Kuerster 2009
+    for details about notation.
 
-    return lsp
+    Parameters
+    ----------
+    sums: tuple of array_like
+        C, S, CC, CS, SS, YC, YS. See `mhdirect_sums`
+        for more information.
+    amplitude_priors: float or array_like, optional
+        Corresponds to standard deviation of a Gaussian
+        prior on the amplitudes of all harmonics (if its a `float`),
+        or for each of the harmonics (if it's an `array_like`).
+    cn0: array_like
+        Location of the centroid of the Gaussian amplitude prior
+        on each of the cosine amplitudes
+    sn0: array_like
+        Location of the centroid of the Gaussian amplitude prior
+        on each of the sine amplitudes
+
+    Returns
+    -------
+    C, S, CC, CS, SS, YC, YS: array_like
+        The set of sums with regularization added.
+
+    See also
+    --------
+    :func:`mhdirect_sums`
+    """
+    C, S, CC, CS, SS, YC, YS = sums
+
+    D = np.zeros_like(C)
+    if amplitude_priors is not None:
+        D = np.ones_like(C) * np.power(amplitude_priors, -2)
+
+    cn0 = np.zeros(len(C)) if cn0 is None else cn0
+    sn0 = np.zeros(len(S)) if sn0 is None else sn0
+
+    CCreg = CC + np.diag(D)
+    SSreg = SS + np.diag(D)
+    YCreg = YC + D * cn0
+    YSreg = YS + D * sn0
+
+    return C, S, CCreg, CS, SSreg, YCreg, YSreg
+
+
+def mhgls_params_from_sums(sums, YY, ybar):
+    """
+    Compute optimal amplitudes and offset from
+    set of sums. See Zechmeister & Kuerster 2009
+    for details about notation.
+
+    Parameters
+    ----------
+    sums: tuple of array_like
+        C, S, CC, CS, SS, YC, YS. See `mhdirect_sums`
+        for more information.
+    YY: float
+        Weighted variance of `y - ybar`, where `ybar`
+        is the weighted mean and `y` are the observations
+    ybar: float
+        Weighted mean of the data (`np.dot(w, y)`), where
+        `w` are the weights and `y` are the observations.
+
+    Returns
+    -------
+    cn: array_like
+        Cosine amplitudes of each harmonic
+    sn: array_like
+        Sine amplitudes of each harmonic
+    offset: float
+        Constant offset
+    
+
+    See also
+    --------
+    :func:`mhdirect_sums`
+    """
+    C, S, CC, CS, SS, YC, YS = sums
+
+    nharms = len(C)
+
+    A = np.block([[CC, CS], [CS.T, SS]])
+    b = np.concatenate((YC, YS))
+
+    theta = np.linalg.solve(A, b)
+
+    cn = theta[:nharms]
+    sn = theta[nharms:]
+    offset = ybar - (np.dot(cn, C) + np.dot(sn, S))
+
+    return cn, sn, offset
+
+
+def mhgls_from_sums(sums, YY, ybar):
+    """
+    Compute multiharmonic periodogram power from
+    set of sums. See Zechmeister & Kuerster 2009
+    for details about notation.
+
+    Parameters
+    ----------
+    sums: tuple of array_like
+        C, S, CC, CS, SS, YC, YS. See `mhdirect_sums`
+        for more information.
+    YY: float
+        Weighted variance of `y - ybar`, where `ybar`
+        is the weighted mean and `y` are the observations
+    ybar: float
+        Weighted mean of the data (`np.dot(w, y)`), where
+        `w` are the weights and `y` are the observations.
+
+    Returns
+    -------
+    power: float
+        periodogram power
+    
+
+    See also
+    --------
+    :func:`mhdirect_sums`
+    """
+    C, S, CC, CS, SS, YC, YS = sums
+
+    cn, sn, offset = mhgls_params_from_sums(sums, YY, ybar)
+
+    XX = np.outer(cn, cn) * CC
+    XX += 2 * np.outer(cn, sn) * CS
+    XX += np.outer(sn, sn) * SS
+
+    YX = 2 * (np.dot(cn, YC) + np.dot(sn, YS))
+    P = (YX - np.sum(XX)) / YY
+
+    return P
+
+
+def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
+    """
+    Compute Lomb-Scargle periodogram using direct summations. This
+    is usually only useful for debugging and/or small numbers of
+    frequencies.
+
+    Parameters
+    ----------
+    t: array_like
+        Observation times.
+    yw: array_like
+        Observations multiplied by their corresponding weights.
+        `sum(yw)` is the weighted mean.
+    w: array_like
+        Weights for each of the observations. Usually proportional
+        to `1/sigma ** 2` where `sigma` is the observation uncertainties.
+        Normalized so that `sum(w) = 1`.
+    freqs: array_like
+        Trial frequencies to evaluate the periodogram
+    YY: float
+        Weighted variance of the observations.
+    nharms: int, optional (default: 1)
+        Number of harmonics to use in the model. Lomb Scargle only uses
+        1, but more harmonics allow for greater model flexibility
+        at the cost of higher complexity and therefore reduced signal-
+        to-noise.
+
+    Returns
+    -------
+    power: array_like
+        The periodogram powers at each of the trial frequencies
+    """
+    def sfunc(f):
+        return mhdirect_sums(t, yw, w, f, YY, nharms=nharms)
+    sums = map(lambda s: add_regularization(s, **kwargs), map(sfunc, freqs))
+
+    ybar = sum(yw)
+    return np.array(map(lambda s: mhgls_from_sums(s, YY, ybar), sums))
 
 
 def lomb_scargle_async(memory, functions, freqs,
@@ -388,7 +581,6 @@ def lomb_scargle_async(memory, functions, freqs,
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
-    # print(memory.t_g.get())
     # do direct summations with python on the CPU (for debugging)
     if python_dir_sums:
         t = memory.t_g.get()

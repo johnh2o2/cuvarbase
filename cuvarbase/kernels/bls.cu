@@ -1,7 +1,7 @@
 #include <stdio.h>
 #define RESTRICT __restrict__
 #define CONSTANT const
-#define MIN_W 1E-5
+#define MIN_W 1E-3
 //{CPP_DEFS}
 
 __device__ int get_id(){
@@ -13,8 +13,14 @@ __device__ int mod(int a, int b){
 	return (r < 0) ? r + b : r;
 }
 
+__device__ float mod1(float a){
+	return a - floorf(a);
+}
+
+
 __global__ void bin_and_phase_fold(float *t, float *yw, float *w,
-									float *yw_bin, float *w_bin, float freq,
+									float *yw_bin, float *w_bin, 
+									float freq,
 									int ndata, int nbins){
 	int i = get_id();
 
@@ -82,8 +88,7 @@ __global__ void bin_and_phase_fold_bst(float *t, float *yw, float *w,
 		float W = w[i];
 		float YW = yw[i];
 
-		float phi = t[i] * freq;
-		phi -= floorf(phi);
+		float phi = mod1(t[i] * freq);
 
 		for(int nb = nbins0; nb <= nbinsf; nb *= 2){
 			int b = ((int) floorf(phi * nb)) + (nb - nbins0);
@@ -93,8 +98,6 @@ __global__ void bin_and_phase_fold_bst(float *t, float *yw, float *w,
 	}
 }
 
-// bls for a single frequency (phase folded and binned data)
-// needs nfreqs *  (2 * nbinsf - nbins0) threads
 __global__ void binned_bls_bst(float *yw, float *w, float *bls, int n){
 	int i = get_id();
 
@@ -102,56 +105,70 @@ __global__ void binned_bls_bst(float *yw, float *w, float *bls, int n){
 		float wtot = w[i];
 		float ybar = yw[i];
 
-		bls[i] = (wtot > MIN_W && wtot < 1 - MIN_W) ?
+		bls[i] = (wtot > 1e-10 && wtot < 1.f - 1e-10) ?
 					ybar * ybar / (wtot * (1.f - wtot)) : 0.f;
 
-		if (bls[i] > 1)
-			printf("ybar = %e, wtot = %e, ybar^2 = %e, wtot * (1 - wtot) = %e\n", ybar, wtot, ybar * ybar, wtot * (1 - wtot));
+		
 	}
 }
 
-__global__ void store_best_sols(int *argmaxes, float *best_phi, float *best_q,
+__global__ void store_best_sols(int *argmaxes, float *best_phi, 
+	                            float *best_q,
 	                            int nbins0, int nbinsf, int noverlap, 
-	                            float alpha, int nfreq, int freq_offset){
+	                            float dlogq, int nfreq, int freq_offset){
 
 	int i = get_id();
 
 	if (i < nfreq){
-		int imax = argmaxes[i];
+		int imax = argmaxes[i + freq_offset];
 		float dphi = 1.f / noverlap;
 		int nb = nbins0;
 		float x = 1.f;
 		int offset = 0;
 
-		while(offset + noverlap * nb < imax){
-			x *= alpha;
+		while(offset + noverlap * nb <= imax){	
 			offset += noverlap * nb;
+
+			x *= (1 + dlogq);
 			nb = (int) (x * nbins0);
 		}
 
 		float q = 1.f / nb;
 		int s = (imax - offset) / nb;
 
-		int jphi = (imax - offset) - s * nb;
+		int jphi = (imax - offset) % nb;
 		
-		float phi = (q * (jphi + s * dphi) - 0.5 * (1 - q));
-
-		phi -= floorf(phi);
+		float phi = mod1(q * (jphi + s * dphi));
 
 		best_phi[i + freq_offset] = phi;
 		best_q[i + freq_offset] = q;
 	}
 }
 
+__global__ void store_best_sols_custom(int *argmaxes, float *best_phi, 
+	                            float *best_q, float *q_values,
+	                            float *phi_values, int nq, int nphi,
+	                            int nfreq, int freq_offset){
+
+	int i = get_id();
+
+	if (i < nfreq){
+		int imax = argmaxes[i + freq_offset];
+
+		best_phi[i + freq_offset] = phi_values[imax / nq];
+		best_q[i + freq_offset] = q_values[imax % nq];
+	}
+}
+
 
 // needs ndata * nfreq threads
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)
-// alpha -- logarithmic spacing for q; q_i = alpha^i q_0
-__global__ void bin_and_phase_fold_bst_multifreq(float *t, float *yw, float *w,
-									float *yw_bin, float *w_bin, float *freqs,
-									int ndata, int nfreq, int nbins0, int nbinsf,
-									int freq_offset, int noverlap, float alpha,
-									int nbins_tot){
+__global__ void bin_and_phase_fold_bst_multifreq(
+	                    float *t, float *yw, float *w,
+						float *yw_bin, float *w_bin, float *freqs,
+						int ndata, int nfreq, int nbins0, int nbinsf,
+						int freq_offset, int noverlap, float dlogq,
+						int nbins_tot){
 	int i = get_id();
 
 	if (i < ndata * nfreq){
@@ -164,35 +181,73 @@ __global__ void bin_and_phase_fold_bst_multifreq(float *t, float *yw, float *w,
 		float YW = yw[i_data];
 
 		// get phase [0, 1)
-		float phi = t[i_data] * freqs[i_freq + freq_offset];
-		phi -= floorf(phi);
+		float phi = mod1(t[i_data] * freqs[i_freq + freq_offset]);
 
 		float dphi = 1.f / noverlap;
 		int nbtot = 0;
 
 		// iterate through bins (logarithmically spaced)
-		for(float x = 1.f; ((int) (x * nbins0)) <= nbinsf; x *= alpha){
+		for(float x = 1.f; ((int) (x * nbins0)) <= nbinsf; 
+			                              x *= (1 + dlogq)){
 			int nb = (int) (x * nbins0);
+			float q = 1.f / nb;
 
-			// iterate through offsets [ 0, 1./sigma, ..., (sigma - 1) / sigma ]
+			// iterate through offsets [ 0, 1./sigma, ..., 
+			//                           (sigma - 1) / sigma ]
 			for (int s = 0; s < noverlap; s++){
-				int b = mod((int) floorf(phi * nb - s * dphi), nb)
-							+ s * nb + noverlap * nbtot + offset;
 
-				atomicAdd(yw_bin + b, YW);
-				atomicAdd( w_bin + b, W);
+				int b = (int) floorf(nb * mod1(phi - s * q * dphi));
+
+				b += offset + s * nb + noverlap * nbtot;
+				atomicAdd(&(yw_bin[b]), YW);
+				atomicAdd(&(w_bin[b]), W);
 			}
-
 			nbtot += nb;
 		}
 	}
 }
 
+// needs ndata * nfreq threads
+// noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)
+__global__ void bin_and_phase_fold_custom(
+	                    float *t, float *yw, float *w,
+						float *yw_bin, float *w_bin, float *freqs,
+						float *q_values, float *phi_values, 
+						int nq, int nphi, int ndata, 
+						int nfreq, int freq_offset){
+	int i = get_id();
 
-__global__ void reduction_max(float *arr, int *arr_args, int nfreq, int nbins, int stride,
-                              float *block_max, int *block_arg_max, int offset, int init){
+	if (i < ndata * nfreq){
+		int i_data = i % ndata;
+		int i_freq = i / ndata;
+
+		int offset = i_freq * nq * nphi;
+
+		float W = w[i_data];
+		float YW = yw[i_data];
+
+		// get phase [0, 1)
+		float phi = mod1(t[i_data] * freqs[i_freq + freq_offset]);
+
+		for(int pb = 0; pb < nphi; pb++){
+			float dphi = phi - phi_values[pb];
+			dphi -= floorf(dphi);
+
+			for(int qb = 0; qb < nq; qb++){
+				if (dphi < q_values[qb]){
+					atomicAdd(&(yw_bin[pb * nq + qb + offset]), YW);
+					atomicAdd(&(w_bin[pb * nq + qb + offset]), W);
+				}
+			}
+		}
+	}
+}
 
 
+__global__ void reduction_max(float *arr, int *arr_args, int nfreq, 
+	                          int nbins, int stride,
+                              float *block_max, int *block_arg_max, 
+                              int offset, int init){
 	__shared__ float partial_max[BLOCK_SIZE];
 	__shared__ int partial_arg_max[BLOCK_SIZE];
 
