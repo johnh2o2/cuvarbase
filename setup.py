@@ -39,15 +39,12 @@ setup(name='cuvarbase',
       url='None',
       packages=['cuvarbase',
                 'cuvarbase.tests'],
-      package_data = { 'cuvarbase' : [ 'kernels/*cu']},
-      requires=['numpy', 'scipy', 'pycuda', 'skcuda' ],
+      package_dat={'cuvarbase': ['kernels/*cu']},
+      requires=['numpy', 'scipy', 'pycuda', 'skcuda'],
       classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GPL License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6'],
-     )
+        'Programming Language :: Python :: 2.7'])
