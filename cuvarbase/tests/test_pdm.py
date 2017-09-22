@@ -5,6 +5,7 @@ from ..utils import weights
 from ..pdm import pdm2_cpu, PDMAsyncProcess
 from pycuda.tools import mark_cuda_test
 
+
 @pytest.fixture
 def data(seed=100, sigma=0.1, ndata=250):
 
@@ -19,6 +20,7 @@ def data(seed=100, sigma=0.1, ndata=250):
 
     return t, y, err
 
+
 @mark_cuda_test
 def test_cuda_pdm():
 
@@ -30,12 +32,13 @@ def test_cuda_pdm():
 
     t, y, err = data(seed=seed, ndata=ndata)
 
-
     w = weights(err)
     freqs = np.linspace(0, 100./(max(t) - min(t)), nfreqs)
     freqs += 0.5 * (freqs[1] - freqs[0])
 
-    pow_cpu = pdm2_cpu(t, y, w, freqs, linterp=(kind == 'binned_linterp'), nbins=nbins)
+    pow_cpu = pdm2_cpu(t, y, w, freqs,
+                       linterp=(kind == 'binned_linterp'),
+                       nbins=nbins)
 
     pdm_proc = PDMAsyncProcess()
     results = pdm_proc.run([(t, y, w, freqs)], kind=kind, nbins=nbins)

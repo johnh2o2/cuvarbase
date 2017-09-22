@@ -12,6 +12,7 @@ from .utils import _module_reader, find_kernel
 from .utils import autofrequency as utils_autofreq
 from time import time
 import resource
+import warnings
 
 
 class ConditionalEntropyMemory(object):
@@ -24,6 +25,12 @@ class ConditionalEntropyMemory(object):
         self.widen_mag_range = kwargs.get('widen_mag_range', False)
         self.n0 = kwargs.get('n0', None)
         self.nf = kwargs.get('nf', None)
+
+        self.constant_dpdm = kwargs.get('constant_dpdm', False)
+
+        if self.weighted and self.constant_dpdm:
+            raise Exception("simultaneous constant_dpdm and weighted"
+                            " options is not currently supported")
 
         self.n0_buffer = kwargs.get('n0_buffer', None)
         self.buffered_transfer = kwargs.get('buffered_transfer', False)
@@ -38,6 +45,8 @@ class ConditionalEntropyMemory(object):
         self.bins_g = None
         self.ce_c = None
         self.ce_g = None
+        self.mag_bwf = None
+        self.mag_bwf_g = None
         self.real_type = np.float32
         if kwargs.get('use_double', False):
             self.real_type = np.float64
@@ -68,6 +77,9 @@ class ConditionalEntropyMemory(object):
                                          dtype=self.real_type,
                                          alignment=resource.getpagesize())
             self.dy = cuda.register_host_memory(self.dy)
+
+        if self.constant_dpdm:
+            self.mag_bwf = cuda.aligned_zeros()
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
@@ -90,6 +102,9 @@ class ConditionalEntropyMemory(object):
         self.y_g = gpuarray.zeros(n0, dtype=self.ytype)
         if self.weighted:
             self.dy_g = gpuarray.zeros(n0, dtype=self.real_type)
+        if self.constant_dpdm:
+            self.mag_bwf_g = gpuarray.zeros(self.mag_bins,
+                                            dtype=self.real_type)
 
     def allocate_bins(self, **kwargs):
         nf = kwargs.get('nf', self.nf)
@@ -137,6 +152,8 @@ class ConditionalEntropyMemory(object):
         if self.weighted:
             assert(self.dy is not None)
             self.dy_g.set_async(self.dy, stream=self.stream)
+        if self.constant_dpdm:
+            self.mag_bwf_g.set_async(self.mag_bwf, stream=self.stream)
 
     def transfer_freqs_to_gpu(self, **kwargs):
         freqs = kwargs.get('freqs', self.freqs)
@@ -146,6 +163,26 @@ class ConditionalEntropyMemory(object):
 
     def transfer_ce_to_cpu(self, **kwargs):
         cuda.memcpy_dtoh_async(self.ce_c, self.ce_g.ptr, stream=self.stream)
+
+    def autobin(self, y, **kwargs):
+        yinds = np.argsort(y)
+        ybins = np.zeros(len(y))
+
+        assert len(y) >= self.mag_bins
+
+        di = len(y) / self.mag_bins
+        mag_bwf = np.zeros(self.mag_bins)
+        for i in range(self.mag_bins):
+            imin = max([0, int(i * di)])
+            imax = min([len(y), int((i + 1) * di)])
+
+            inds = yinds[imin:imax]
+            ybins[inds] = i
+
+            mag_bwf[i] = y[inds[-1]] - y[inds[0]]
+
+        mag_bwf /= (max(y) - min(y))
+        return ybins, mag_bwf
 
     def setdata(self, t, y, **kwargs):
         dy = kwargs.get('dy', self.dy)
@@ -166,9 +203,13 @@ class ConditionalEntropyMemory(object):
 
             dy /= yscale
         y = (y - y0) / yscale
-
         if not self.weighted:
-            y = np.floor(y * self.mag_bins).astype(self.ytype)
+            if self.constant_dpdm:
+                y, self.mag_bwf = self.autobin(y)
+                y = y.astype(self.ytype)
+
+            else:
+                y = np.floor(y * self.mag_bins).astype(self.ytype)
 
         if self.buffered_transfer:
             arrs = [self.t, self.y]
@@ -217,7 +258,7 @@ def conditional_entropy(memory, functions, block_size=256,
                         **kwargs):
     block = (block_size, 1, 1)
     grid = (int(np.ceil((memory.n0 * memory.nf) / float(block_size))), 1)
-    hist_count, hist_weight, ce_std, ce_wt = functions
+    ce_dpdm, hist_count, hist_weight, ce_std, ce_wt = functions
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
@@ -249,7 +290,12 @@ def conditional_entropy(memory, functions, block_size=256,
     grid = (int(np.ceil(memory.nf / float(block_size))), 1)
     args = (grid, block, memory.stream)
     args += (memory.bins_g.ptr, np.int32(memory.nf), memory.ce_g.ptr)
-    ce_std.prepared_async_call(*args)
+
+    if memory.constant_dpdm:
+        args += (memory.mag_bwf_g.ptr,)
+        ce_dpdm.prepared_async_call(*args)
+    else:
+        ce_std.prepared_async_call(*args)
 
     if transfer_to_host:
         memory.transfer_ce_to_cpu()
@@ -304,6 +350,14 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.phase_overlap = kwargs.get('phase_overlap', 0)
         self.mag_overlap = kwargs.get('mag_overlap', 0)
 
+        if self.mag_overlap > 0:
+            if kwargs.get('constant_dpdm', False):
+                raise Exception("mag_overlap must be zero for constant_dpdm")
+
+            warnings.warn("The CE computation does not correctly"
+                          " account for the change in integration"
+                          " area for overlapping magnitude bins."
+                          " Setting mag_overlap > 0 is not recommended.")
         self.use_double = kwargs.get('use_double', False)
 
         self.real_type = np.float32
@@ -334,7 +388,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             histogram_data_count=[np.intp, np.intp, np.intp, np.intp,
                                   np.int32, np.int32],
             weighted_ce=[np.intp, np.int32, np.intp],
-            standard_ce=[np.intp, np.int32, np.intp]
+            standard_ce=[np.intp, np.int32, np.intp],
+            constdpdm_ce=[np.intp, np.int32, np.intp, np.intp]
         )
         for fname, dtype in self.dtypes.iteritems():
             func = self.module.get_function(fname)

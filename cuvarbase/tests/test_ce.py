@@ -10,12 +10,12 @@ lsatol = 1E-5
 
 
 @pytest.fixture
-def data(seed=100, sigma=0.1, ndata=100, freq=3., t0=0.):
+def data(seed=100, sigma=0.1, ndata=100, freq=3., snr=10, t0=0.):
 
     rand = np.random.RandomState(seed)
 
     t = np.sort(rand.rand(ndata)) + t0
-    y = np.cos(2 * np.pi * freq * t)
+    y = snr * sigma * np.cos(2 * np.pi * freq * t) / np.sqrt(len(t))
 
     y += sigma * rand.randn(len(t))
 
@@ -189,22 +189,27 @@ def test_large_run(make_plot=False, **kwargs):
 
 @mark_cuda_test
 def test_double(make_plot=False):
-    proc1 = ConditionalEntropyAsyncProcess()
-    proc2 = ConditionalEntropyAsyncProcess(use_double=True)
+    kw = dict(mag_bins=5, phase_bins=10,
+              phase_overlap=0)
+    proc1 = ConditionalEntropyAsyncProcess(**kw)
+    proc2 = ConditionalEntropyAsyncProcess(use_double=True, **kw)
     freq = 10.
 
-    t, y, err = data(seed=100, sigma=0.01, ndata=200, freq=freq)
+    t, y, err = data(seed=100, sigma=0.01, snr=9, ndata=200, freq=freq)
+
+    # y[5] = np.median(y) + 10.
 
     df = 0.001
     max_freq = 100.
     min_freq = df
     nf = int((max_freq - min_freq) / df)
     freqs = min_freq + df * np.arange(nf)
-    results = proc1.run([(t, y, err)], freqs=freqs)
+
+    results = proc1.large_run([(t, y, err)], freqs=freqs, max_memory=1e8)
     proc1.finish()
     frq, p = results[0]
 
-    results1 = proc2.run([(t, y, err)], freqs=freqs)
+    results1 = proc2.large_run([(t, y, err)], freqs=freqs, max_memory=1e8)
     proc2.finish()
     frq1, p1 = results1[0]
 
@@ -215,14 +220,14 @@ def test_double(make_plot=False):
         f, ax = plt.subplots()
         ax.plot(frq, p)
         ax.plot(frq1, p1)
-        ax.axvline(freq, ls='-', color='k')
-        ax.axvline(best_freq, ls=':', color='r')
+        ax.axvline(freq, ls=':', color='k', alpha=0.5)
+        # ax.axvline(best_freq, ls=':', color='r')
         plt.show()
 
     # print best_freq, freq, abs(best_freq - freq) / freq
     assert(not any(np.isnan(p)))
     assert(not any(np.isnan(p1)))
-    assert_allclose(p, p1, rtol=1e-2)
+    assert_allclose(p, p1, rtol=1e-2, atol=1e-3)
 
 
 @mark_cuda_test

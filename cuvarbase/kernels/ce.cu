@@ -96,7 +96,6 @@ __global__ void histogram_data_count(FLT *t, unsigned int *y,
 	}
 }
 
-
 __global__ void weighted_ce(FLT *bins, int nfreq, FLT *ce){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -123,7 +122,40 @@ __global__ void weighted_ce(FLT *bins, int nfreq, FLT *ce){
 }
 
 __global__ void standard_ce(unsigned int *bins, int nfreq,
-                                    FLT *ce){
+                            FLT *ce){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (i < nfreq){
+		FLT Hc = 0.f;
+		FLT dm = ((FLT)(MAG_OVERLAP + 1)) / NMAG;
+		unsigned int bin_tot = 0;
+		for(int n=0; n < NPHASE; n++){
+			int offset = i * (NMAG * NPHASE) + n * NMAG;
+
+			unsigned int Nphi = 0;
+			for (int m=0; m < NMAG; m++)
+				Nphi += bins[offset + m];
+
+			if (Nphi == 0)
+				continue;
+
+			for (int m=0; m < NMAG; m++){
+				unsigned int N = bins[offset + m];
+
+				if (N == 0)
+					continue;
+
+				bin_tot += N;
+				Hc += N * log((dm * Nphi) / N);
+			}
+		}
+		
+		ce[i] = Hc / bin_tot;
+	}
+}
+
+__global__ void constdpdm_ce(unsigned int *bins, int nfreq,
+                             FLT *ce, FLT *mag_bwf){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (i < nfreq){
@@ -132,16 +164,21 @@ __global__ void standard_ce(unsigned int *bins, int nfreq,
 		for(int n=0; n < NPHASE; n++){
 			int offset = i * (NMAG * NPHASE) + n * NMAG;
 
-			unsigned int p_phi_n = 0;
+			unsigned int Nphi = 0;
 			for (int m=0; m < NMAG; m++)
-				p_phi_n += bins[offset + m];
+				Nphi += bins[offset + m];
+			
+			if (Nphi == 0)
+				continue;
 
 			for (int m=0; m < NMAG; m++){
-				FLT pmn = bins[offset + m];
-				bin_tot += pmn;
+				unsigned int N = bins[offset + m];
 
-				if (pmn > 0 && p_phi_n > 0)
-					Hc += pmn * log(((FLT) p_phi_n) / ((FLT) pmn));
+				if (N == 0)
+					continue;
+				
+				bin_tot += N;
+				Hc += N * log((mag_bwf[m] * Nphi) / N);
 			}
 		}
 		
