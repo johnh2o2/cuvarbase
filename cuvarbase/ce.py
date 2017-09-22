@@ -39,6 +39,8 @@ class ConditionalEntropyMemory(object):
         self.ce_c = None
         self.ce_g = None
         self.real_type = np.float32
+        if kwargs.get('use_double', False):
+            self.real_type = np.float64
 
         self.freqs = None
         self.freqs_g = None
@@ -225,7 +227,7 @@ def conditional_entropy(memory, functions, block_size=256,
         args += (memory.t_g.ptr, memory.y_g.ptr, memory.dy_g.ptr)
         args += (memory.bins_g.ptr, memory.freqs_g.ptr)
         args += (np.int32(memory.nf), np.int32(memory.n0))
-        args += (np.float32(memory.max_phi),)
+        args += (memory.real_type(memory.max_phi),)
         hist_weight.prepared_async_call(*args)
 
         grid = (int(np.ceil(memory.nf / float(block_size))), 1)
@@ -302,12 +304,22 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.phase_overlap = kwargs.get('phase_overlap', 0)
         self.mag_overlap = kwargs.get('mag_overlap', 0)
 
+        self.use_double = kwargs.get('use_double', False)
+
+        self.real_type = np.float32
+        if self.use_double:
+            self.real_type = np.float64
+
     def _compile_and_prepare_functions(self, **kwargs):
 
         cpp_defs = dict(NPHASE=self.phase_bins,
                         NMAG=self.mag_bins,
                         PHASE_OVERLAP=self.phase_overlap,
                         MAG_OVERLAP=self.mag_overlap)
+
+        if self.use_double:
+            cpp_defs['DOUBLE_PRECISION'] = None
+
         # Read kernel
         kernel_txt = _module_reader(find_kernel('ce'),
                                     cpp_defs=cpp_defs)
@@ -317,7 +329,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         self.dtypes = dict(
             histogram_data_weighted=[np.intp, np.intp, np.intp, np.intp,
-                                     np.intp, np.int32, np.int32, np.float32],
+                                     np.intp, np.int32, np.int32,
+                                     self.real_type],
             histogram_data_count=[np.intp, np.intp, np.intp, np.intp,
                                   np.int32, np.int32],
             weighted_ce=[np.intp, np.int32, np.intp],
@@ -362,7 +375,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                   mag_bins=self.mag_bins,
                   max_phi=self.max_phi,
                   stream=stream,
-                  weighted=self.weighted)
+                  weighted=self.weighted,
+                  use_double=self.use_double)
 
         kw.update(kwargs)
         mem = ConditionalEntropyMemory(**kw)

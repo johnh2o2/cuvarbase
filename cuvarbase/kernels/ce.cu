@@ -10,6 +10,20 @@
 	#define FLT float
 #endif
 
+__device__ double atomicAddDouble(double* address, double val)
+{
+    unsigned long long int* address_as_ull =
+                                          (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed,
+                        __double_as_longlong(val +
+                        __longlong_as_double(assumed)));
+    } while (assumed != old);
+    return __longlong_as_double(old);
+}
+
 
 __device__ int phase_ind(FLT ft){
 	FLT phi = ft - floor(ft);
@@ -40,10 +54,10 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, FLT *bin, FLT *
 		int m0 = (int) (Y * NMAG);
 
 		for(int m = 0; m < NMAG; m++){
-			FLT z = (((float) m) / NMAG - Y);
+			FLT z = (((FLT) m) / NMAG - Y);
 			if (abs(z) > max_phi * DY && m != m0)
 				continue;
-			FLT zmax = z + (1 + MAG_OVERLAP) / ((float) NMAG);
+			FLT zmax = z + (1 + MAG_OVERLAP) / ((FLT) NMAG);
 			FLT wtot = normcdf(zmax / DY) - normcdf(z / DY);
 
 			//if (wtot > 1E-2)
@@ -123,7 +137,7 @@ __global__ void standard_ce(unsigned int *bins, int nfreq,
 				bin_tot += pmn;
 
 				if (pmn > 0 && p_phi_n > 0)
-					Hc += pmn * log(((float) p_phi_n) / ((float) pmn));
+					Hc += pmn * log(((FLT) p_phi_n) / ((FLT) pmn));
 			}
 		}
 		

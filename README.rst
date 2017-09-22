@@ -1,4 +1,4 @@
-cuvarbase 0.1.5
+cuvarbase 0.1.7
 ===============
 
 John Hoffman -- 2017
@@ -22,6 +22,12 @@ Hopefully future developments will have
 
 What's new
 ----------
+* **0.1.6/0.1.7**
+    * Some bug fixes for GLS
+    * ``large_run`` function for Conditional Entropy period finder allows large frequency grids
+      without raising memory allocation errors.
+    * More unit tests for conditional entropy
+    * Conditional entropy now supports double precision with the ``use_double`` argument
 
 * **0.1.5**
 	* Conditional Entropy period finder now unit tested

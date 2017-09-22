@@ -10,11 +10,11 @@ lsatol = 1E-5
 
 
 @pytest.fixture
-def data(seed=100, sigma=0.1, ndata=100, freq=3.):
+def data(seed=100, sigma=0.1, ndata=100, freq=3., t0=0.):
 
     rand = np.random.RandomState(seed)
 
-    t = np.sort(rand.rand(ndata))
+    t = np.sort(rand.rand(ndata)) + t0
     y = np.cos(2 * np.pi * freq * t)
 
     y += sigma * rand.randn(len(t))
@@ -35,11 +35,11 @@ def assert_similar(pdg0, pdg, top=5):
 
 
 @mark_cuda_test
-def test_multiple_datasets():
+def test_multiple_datasets(**kwargs):
 
     ndatas = 5
     datas = [data() for i in range(ndatas)]
-    proc = ConditionalEntropyAsyncProcess()
+    proc = ConditionalEntropyAsyncProcess(**kwargs)
 
     mult_results = proc.run(datas)
     proc.finish()
@@ -136,7 +136,8 @@ def test_inject_and_recover(make_plot=False, **kwargs):
 
     proc = ConditionalEntropyAsyncProcess(**kwargs)
     for freq in [5.0, 10.0, 50.0]:
-        t, y, err = data(seed=100, sigma=0.01, ndata=200, freq=freq)
+        t0 = kwargs.get('t0', 0.)
+        t, y, err = data(seed=100, sigma=0.01, ndata=200, freq=freq, t0=t0)
 
         df = 0.001
         max_freq = 100.
@@ -184,3 +185,77 @@ def test_large_run(make_plot=False, **kwargs):
     f1, p1 = r1[0]
 
     assert_allclose(p0, p1)
+
+
+@mark_cuda_test
+def test_double(make_plot=False):
+    proc1 = ConditionalEntropyAsyncProcess()
+    proc2 = ConditionalEntropyAsyncProcess(use_double=True)
+    freq = 10.
+
+    t, y, err = data(seed=100, sigma=0.01, ndata=200, freq=freq)
+
+    df = 0.001
+    max_freq = 100.
+    min_freq = df
+    nf = int((max_freq - min_freq) / df)
+    freqs = min_freq + df * np.arange(nf)
+    results = proc1.run([(t, y, err)], freqs=freqs)
+    proc1.finish()
+    frq, p = results[0]
+
+    results1 = proc2.run([(t, y, err)], freqs=freqs)
+    proc2.finish()
+    frq1, p1 = results1[0]
+
+    best_freq = frq[np.argmin(p)]
+
+    if make_plot:
+        import matplotlib.pyplot as plt
+        f, ax = plt.subplots()
+        ax.plot(frq, p)
+        ax.plot(frq1, p1)
+        ax.axvline(freq, ls='-', color='k')
+        ax.axvline(best_freq, ls=':', color='r')
+        plt.show()
+
+    # print best_freq, freq, abs(best_freq - freq) / freq
+    assert(not any(np.isnan(p)))
+    assert(not any(np.isnan(p1)))
+    assert_allclose(p, p1, rtol=1e-2)
+
+
+@mark_cuda_test
+def test_time_shift_invariance(make_plot=False, use_double=True, **kwargs):
+    proc = ConditionalEntropyAsyncProcess(use_double=use_double, **kwargs)
+    freq = 10.
+    for t0 in [-1e4, 1e4]:
+        t, y, err = data(seed=100, sigma=0.01, ndata=200, freq=freq)
+
+        df = 0.001
+        max_freq = 100.
+        min_freq = df
+        nf = int((max_freq - min_freq) / df)
+        freqs = min_freq + df * np.arange(nf)
+        results = proc.run([(t, y, err)], freqs=freqs)
+        proc.finish()
+        frq, p = results[0]
+
+        results1 = proc.run([(t + t0, y, err)], freqs=freqs)
+        frq1, p1 = results1[0]
+
+        best_freq = frq[np.argmin(p)]
+
+        if make_plot:
+            import matplotlib.pyplot as plt
+            f, ax = plt.subplots()
+            ax.plot(frq, p)
+            ax.plot(frq1, p1)
+            ax.axvline(freq, ls='-', color='k')
+            ax.axvline(best_freq, ls=':', color='r')
+            plt.show()
+
+        # print best_freq, freq, abs(best_freq - freq) / freq
+        assert(not any(np.isnan(p)))
+        assert(not any(np.isnan(p1)))
+        assert_allclose(p, p1, rtol=1e-3)
