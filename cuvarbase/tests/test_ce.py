@@ -165,3 +165,22 @@ def test_inject_and_recover(make_plot=False, **kwargs):
 def test_inject_and_recover_weighted(make_plot=False, **kwargs):
     kwargs.update({'weighted': True})
     test_inject_and_recover(make_plot=make_plot, **kwargs)
+
+
+@mark_cuda_test
+def test_large_run(make_plot=False, **kwargs):
+    proc = ConditionalEntropyAsyncProcess(**kwargs)
+    t, y, dy = data(seed=100, sigma=0.01, ndata=200, freq=4.)
+    df = 0.001
+    max_freq = 100.
+    min_freq = df
+    nf = int((max_freq - min_freq) / df)
+    freqs = min_freq + df * np.arange(nf)
+
+    r0 = proc.run([(t, y, dy)], freqs=freqs)
+    r1 = proc.large_run([(t, y, dy)], freqs=freqs, max_memory=1e7)
+
+    f0, p0 = r0[0]
+    f1, p1 = r1[0]
+
+    assert_allclose(p0, p1)

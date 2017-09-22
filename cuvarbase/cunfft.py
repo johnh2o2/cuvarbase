@@ -45,7 +45,7 @@ class NFFTMemory(object):
         self.cu_plan = kwargs.get('cu_plan', None)
 
         D = (2 * self.sigma - 1) * np.pi
-        self.b = self.real_type(float(2 * self.sigma * self.m) / D)
+        self.b = float(2 * self.sigma * self.m) / D
 
     def allocate_data(self, **kwargs):
         self.n0 = kwargs.get('n0', self.n0)
@@ -137,13 +137,13 @@ class NFFTMemory(object):
                                stream=self.stream)
 
     def fromdata(self, t, y, allocate=True, **kwargs):
-        self.tmin = self.real_type(min(t))
-        self.tmax = self.real_type(max(t))
+        self.tmin = min(t)
+        self.tmax = max(t)
 
         self.t = np.asarray(t).astype(self.real_type)
         self.y = np.asarray(y).astype(self.real_type)
 
-        self.n0 = kwargs.get('n0', np.int32(len(t)))
+        self.n0 = kwargs.get('n0', len(t))
         self.nf = kwargs.get('nf', self.nf)
 
         if self.nf is not None and allocate:
@@ -206,24 +206,17 @@ def nfft_adjoint_async(memory, functions,
 
     block = (block_size, 1, 1)
 
-    batch_size = np.int32(1)
+    batch_size = 1
 
     def grid_size(nthreads):
         return int(np.ceil(float(nthreads) / block_size))
 
-    spp = memory.real_type(samples_per_peak)
     minimum_frequency = memory.real_type(minimum_frequency)
 
     # transfer data -> gpu
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
-    def check_arr(arr, name=None):
-        r = any(np.isnan(arr))
-        if name is None:
-            print(r)
-        else:
-            print(name, r)
     # smooth data onto uniform grid
     if fast_grid:
         if memory.precomp_psi:
@@ -231,24 +224,34 @@ def nfft_adjoint_async(memory, functions,
             args = (grid, block, stream)
             args += (memory.t_g.ptr,)
             args += (memory.q1.ptr, memory.q2.ptr, memory.q3.ptr)
-            args += (memory.n0, memory.n, memory.m, memory.b)
-            args += (memory.tmin, memory.tmax, spp)
+            args += (np.int32(memory.n0), np.int32(memory.n),
+                     np.int32(memory.m), memory.real_type(memory.b))
+            args += (memory.real_type(memory.tmin),
+                     memory.real_type(memory.tmax),
+                     memory.real_type(samples_per_peak))
             precompute_psi.prepared_async_call(*args)
 
         grid = (grid_size(memory.n0), 1)
         args = (grid, block, stream)
         args += (memory.t_g.ptr, memory.y_g.ptr, memory.ghat_g.ptr)
         args += (memory.q1.ptr, memory.q2.ptr, memory.q3.ptr)
-        args += (memory.n0, memory.n, batch_size, memory.m)
-        args += (memory.tmin, memory.tmax, spp)
+        args += (np.int32(memory.n0), np.int32(memory.n),
+                 np.int32(batch_size), np.int32(memory.m))
+        args += (memory.real_type(memory.tmin),
+                 memory.real_type(memory.tmax),
+                 memory.real_type(samples_per_peak))
         fast_gaussian_grid.prepared_async_call(*args)
 
     else:
         grid = (grid_size(memory.n), 1)
         args = (grid, block, stream)
         args += (memory.t_g.ptr, memory.y_g.ptr, memory.ghat_g.ptr)
-        args += (memory.n0, memory.n, batch_size, memory.m, memory.b)
-        args += (memory.tmin, memory.tmax, spp)
+        args += (np.int32(memory.n0), np.int32(memory.n),
+                 np.int32(batch_size), np.int32(memory.m),
+                 memory.real_type(memory.b))
+        args += (memory.real_type(memory.tmin),
+                 memory.real_type(memory.tmax),
+                 memory.real_type(samples_per_peak))
         slow_gaussian_grid.prepared_async_call(*args)
 
     # Stop if user wants the grid
@@ -266,8 +269,11 @@ def nfft_adjoint_async(memory, functions,
         grid = (grid_size(memory.n), 1)
         args = (grid, block, stream)
         args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
-        args += (memory.n, batch_size)
-        args += (memory.tmin, memory.tmax, spp, minimum_frequency)
+        args += (np.int32(memory.n), np.int32(batch_size))
+        args += (memory.real_type(memory.tmin),
+                 memory.real_type(memory.tmax),
+                 memory.real_type(samples_per_peak),
+                 memory.real_type(minimum_frequency))
         nfft_shift.prepared_async_call(*args)
 
     # Run IFFT on grid
@@ -277,8 +283,14 @@ def nfft_adjoint_async(memory, functions,
     grid = (grid_size(memory.nf), 1)
     args = (grid, block, stream)
     args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
-    args += (memory.n, memory.nf, batch_size, memory.b)
-    args += (memory.tmin, memory.tmax, spp, minimum_frequency)
+    args += (np.int32(memory.n),
+             np.int32(memory.nf),
+             np.int32(batch_size),
+             memory.real_type(memory.b))
+    args += (memory.real_type(memory.tmin),
+             memory.real_type(memory.tmax),
+             memory.real_type(samples_per_peak),
+             memory.real_type(minimum_frequency))
     normalize.prepared_async_call(*args)
 
     # Transfer result!

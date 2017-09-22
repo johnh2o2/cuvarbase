@@ -38,9 +38,9 @@ class LombScargleMemory(object):
 
         self.floating_mean = kwargs.get('floating_mean', True)
 
-        self.mode = np.int32(1 if self.floating_mean else 0)
+        self.mode = 1 if self.floating_mean else 0
         if self.window:
-            self.mode = np.int32(2)
+            self.mode = 2
 
         self.n0 = kwargs.get('n0', None)
         self.nf = kwargs.get('nf', None)
@@ -88,9 +88,9 @@ class LombScargleMemory(object):
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
 
         assert(n0 is not None)
-        self.t_g = gpuarray.zeros(int(n0), dtype=self.real_type)
-        self.yw_g = gpuarray.zeros(int(n0), dtype=self.real_type)
-        self.w_g = gpuarray.zeros(int(n0), dtype=self.real_type)
+        self.t_g = gpuarray.zeros(n0, dtype=self.real_type)
+        self.yw_g = gpuarray.zeros(n0, dtype=self.real_type)
+        self.w_g = gpuarray.zeros(n0, dtype=self.real_type)
 
         self.nfft_mem_w.t_g = self.t_g
         self.nfft_mem_w.y_g = self.w_g
@@ -98,7 +98,6 @@ class LombScargleMemory(object):
         self.nfft_mem_yw.t_g = self.t_g
         self.nfft_mem_yw.y_g = self.yw_g
 
-        n0 = np.int32(n0)
         self.nfft_mem_yw.n0 = n0
         self.nfft_mem_w.n0 = n0
 
@@ -113,7 +112,6 @@ class LombScargleMemory(object):
 
         self.nf = kwargs.get('nf', self.nf)
         assert(self.nf is not None)
-        self.nf = np.int32(self.nf)
 
         if self.nfft_mem_yw.precomp_psi:
             self.nfft_mem_yw.allocate_precomp_psi(n0=n0)
@@ -127,7 +125,7 @@ class LombScargleMemory(object):
         self.nfft_mem_yw.allocate_grid(nf=self.nf)
         self.nfft_mem_w.allocate_grid(nf=2 * self.nf + k0)
 
-        self.lsp_g = gpuarray.zeros(int(self.nf), dtype=self.real_type)
+        self.lsp_g = gpuarray.zeros(self.nf, dtype=self.real_type)
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
@@ -169,8 +167,6 @@ class LombScargleMemory(object):
         self.nf = kwargs.get('nf', self.nf)
         assert(self.nf is not None)
 
-        self.nf = np.int32(self.nf)
-
         self.allocate_data(**kwargs)
         self.allocate_grids(**kwargs)
         self.allocate_pinned_cpu(**kwargs)
@@ -187,12 +183,10 @@ class LombScargleMemory(object):
 
         y = kwargs.get('y', None)
         dy = kwargs.get('dy', None)
-        self.ybar = self.real_type(0)
-        self.yy = self.real_type(kwargs.get('yy', 1.))
+        self.ybar = 0.
+        self.yy = kwargs.get('yy', 1.)
 
-        self.n0 = kwargs.get('n0', np.int32(len(t)))
-        if self.n0 is not None:
-            self.n0 = np.int32(self.n0)
+        self.n0 = kwargs.get('n0', len(t))
         if dy is not None:
             assert('w' not in kwargs)
             w = weights(dy)
@@ -200,10 +194,10 @@ class LombScargleMemory(object):
         if y is not None:
             assert('yw' not in kwargs)
 
-            self.ybar = self.real_type(np.dot(y, w))
+            self.ybar = np.dot(y, w)
             yw = np.multiply(w, y - self.ybar)
             y2 = np.power(y - self.ybar, 2)
-            self.yy = self.real_type(np.dot(w, y2))
+            self.yy = np.dot(w, y2)
 
         t = np.asarray(t).astype(self.real_type)
         yw = np.asarray(yw).astype(self.real_type)
@@ -226,8 +220,8 @@ class LombScargleMemory(object):
 
         # Set minimum and maximum t values (needed to scale things
         # for the NFFT)
-        self.tmin = self.real_type(min(t))
-        self.tmax = self.real_type(max(t))
+        self.tmin = min(t)
+        self.tmax = max(t)
 
         self.nfft_mem_yw.tmin = self.tmin
         self.nfft_mem_w.tmin = self.tmin
@@ -235,8 +229,8 @@ class LombScargleMemory(object):
         self.nfft_mem_yw.tmax = self.tmax
         self.nfft_mem_w.tmax = self.tmax
 
-        self.nfft_mem_w.n0 = np.int32(len(t))
-        self.nfft_mem_yw.n0 = np.int32(len(t))
+        self.nfft_mem_w.n0 = len(t)
+        self.nfft_mem_yw.n0 = len(t)
 
         return self
 
@@ -269,7 +263,7 @@ class LombScargleMemory(object):
 
         for x in [self.t, self.yw, self.w]:
             if x is not None:
-                x[:] = self.real_type(0.)
+                x[:] = 0.
 
         for mem in [self.nfft_mem_yw, self.nfft_mem_w]:
             mem.ghat_g.fill(self.real_type(0), stream=self.stream)
@@ -420,7 +414,6 @@ def mhgls_params_from_sums(sums, YY, ybar):
         Sine amplitudes of each harmonic
     offset: float
         Constant offset
-    
 
     See also
     --------
@@ -593,8 +586,12 @@ def lomb_scargle_async(memory, functions, freqs,
         args = (grid, block, stream,
                 memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr,
                 memory.lsp_g.ptr, memory.reg_g.ptr,
-                memory.nf, memory.n0, memory.yy,
-                memory.ybar, df, memory.real_type(min(freqs)),
+                np.int32(memory.nf),
+                np.int32(memory.n0),
+                memory.real_type(memory.yy),
+                memory.real_type(memory.ybar),
+                memory.real_type(df),
+                memory.real_type(min(freqs)),
                 memory.mode)
 
         lomb_dirsum.prepared_async_call(*args)
@@ -620,9 +617,11 @@ def lomb_scargle_async(memory, functions, freqs,
 
     args = (grid, block, stream)
     args += (memory.nfft_mem_w.ghat_g.ptr, memory.nfft_mem_yw.ghat_g.ptr)
-    args += (memory.lsp_g.ptr, memory.reg_g.ptr, memory.nf)
-    args += (memory.yy, memory.ybar)
-    args += (memory.k0, memory.mode)
+    args += (memory.lsp_g.ptr, memory.reg_g.ptr, np.int32(memory.nf))
+    args += (memory.real_type(memory.yy),
+             memory.real_type(memory.ybar))
+    args += (np.int32(memory.k0),
+             np.int32(memory.mode))
     lomb.prepared_async_call(*args)
 
     if transfer_to_host:

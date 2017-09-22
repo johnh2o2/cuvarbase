@@ -425,6 +425,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     def run(self, data,
             memory=None,
             freqs=None,
+            set_data=True,
             **kwargs):
 
         """
@@ -442,6 +443,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             ``autofrequency`` with default arguments
         memory: optional, list of ``ConditionalEntropyMemory`` objects
             List of memory objects, length of list must be ``>= len(data)``
+        set_data: boolean, optional (default: True)
+            Transfers data to gpu if memory is provided
         **kwargs
 
         Returns
@@ -475,7 +478,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         else:
             for i, (t, y, dy) in enumerate(data):
                 memory[i].set_gpu_arrays_to_zero(**kwargs)
-                memory[i].setdata(t, y, dy=dy, **kwargs)
+                if set_data:
+                    memory[i].setdata(t, y, dy=dy, **kwargs)
 
         kw = dict(block_size=self.block_size)
         kw.update(kwargs)
@@ -483,6 +487,78 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                    for i in range(len(data))]
 
         results = [(f, r) for f, r in zip(frqs, results)]
+        return results
+
+    def large_run(self, data,
+                  freqs=None,
+                  max_memory=1e9,
+                  **kwargs):
+        """
+        Run Conditional Entropy on a large frequency grid
+
+        Parameters
+        ----------
+        data: list of tuples
+            list of [(t, y, dy), ...] containing
+            * ``t``: observation times
+            * ``y``: observations
+            * ``dy``: observation uncertainties
+        freqs: optional, list of ``np.ndarray`` frequencies
+            List of custom frequencies. If not specified, calls
+            ``autofrequency`` with default arguments
+        max_memory: float, optional (default: 1e9)
+            Maximum memory per batch in bytes.
+        **kwargs
+
+        Returns
+        -------
+        results: list of lists
+            list of (freqs, ce) corresponding to CE for each element of
+            the ``data`` array
+
+        """
+
+        # compile module if not compiled already
+        if not hasattr(self, 'prepared_functions') or \
+            not all([func in self.prepared_functions for func in
+                     ['ce_wt']]):
+            self._compile_and_prepare_functions(**kwargs)
+
+        # create and/or check frequencies
+        frqs = freqs
+        if frqs is None:
+            frqs = [self.autofrequency(d[0], **kwargs) for d in data]
+
+        elif isinstance(frqs[0], float):
+            frqs = [frqs] * len(data)
+
+        assert(len(frqs) == len(data))
+
+        cpers = []
+        for d, f in zip(data, frqs):
+            size_of_real = 32
+            # subtract of lc memory
+            fmem = max_memory - len(d[0]) * size_of_real * 3
+
+            tot_bins = self.phase_bins * self.mag_bins
+            batch_size = int(np.floor(fmem / (size_of_real * (tot_bins + 2))))
+            nbatches = int(np.ceil(len(f) / float(batch_size)))
+
+            print nbatches
+            cper = np.zeros(len(f))
+            for i in range(nbatches):
+                imin = i * batch_size
+                imax = min([len(f), (i + 1) * batch_size])
+
+                print imax - imin
+                r = self.run([d], freqs=f[slice(imin, imax)], **kwargs)
+                self.finish()
+
+                cper[imin:imax] = r[0][1][:]
+
+            cpers.append(cper)
+
+        results = [(f, cper) for f, cper in zip(frqs, cpers)]
         return results
 
     def batched_run_const_nfreq(self, data, batch_size=10,

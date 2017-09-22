@@ -17,10 +17,9 @@ spp = 1
 
 
 def direct_sums(t, y, freqs):
-    C = [np.sum(y * np.cos(2 * np.pi * t * f)) for f in freqs]
-    S = [np.sum(y * np.sin(2 * np.pi * t * f)) for f in freqs]
-
-    return np.array([c + 1j * s for c, s in zip(C, S)])
+    def sfunc(func):
+        return map(lambda f: np.sum(y * func(2 * np.pi * t * f)), freqs)
+    return np.asarray(sfunc(np.cos)) + 1j * np.asarray(sfunc(np.sin))
 
 
 def scale_time(t, samples_per_peak):
@@ -244,7 +243,7 @@ def test_nfft_against_existing_impl_scaled_centered_spp5():
 
 @mark_cuda_test
 def test_nfft_against_existing_impl_scaled_uncentered_spp1():
-    nfft_against_direct_sums(samples_per_peak=1, scaled=True, f0=0.)
+    nfft_against_direct_sums(samples_per_peak=1, scaled=True, f0=10.)
 
 
 @mark_cuda_test
