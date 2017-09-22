@@ -38,7 +38,7 @@ setup(name='cuvarbase',
       author_email='jah5@princeton.edu',
       packages=['cuvarbase',
                 'cuvarbase.tests'],
-      package_dat={'cuvarbase': ['kernels/*cu']},
+      package_data={'cuvarbase': ['kernels/*cu']},
       requires=['numpy', 'scipy', 'pycuda', 'skcuda'],
       classifiers=[
         'Development Status :: 4 - Beta',
