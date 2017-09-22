@@ -544,13 +544,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             batch_size = int(np.floor(fmem / (size_of_real * (tot_bins + 2))))
             nbatches = int(np.ceil(len(f) / float(batch_size)))
 
-            print nbatches
             cper = np.zeros(len(f))
             for i in range(nbatches):
                 imin = i * batch_size
                 imax = min([len(f), (i + 1) * batch_size])
 
-                print imax - imin
                 r = self.run([d], freqs=f[slice(imin, imax)], **kwargs)
                 self.finish()
 
