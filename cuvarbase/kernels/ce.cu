@@ -13,7 +13,7 @@
 __device__ double atomicAddDouble(double* address, double val)
 {
     unsigned long long int* address_as_ull =
-                                          (unsigned long long int*)address;
+                       (unsigned long long int*)address;
     unsigned long long int old = *address_as_ull, assumed;
     do {
         assumed = old;
@@ -36,8 +36,10 @@ __device__ int posmod(int n, int N){
 	return (nmodN < 0) ? nmodN + N : nmodN;
 }
 
-__global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, FLT *bin, FLT *freqs,
-	                               int nfreq, int ndata, FLT max_phi){
+__global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, 
+	                                    FLT *bin, FLT *freqs,
+	                                    int nfreq, int ndata, 
+	                                    FLT max_phi){
 
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -70,8 +72,10 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, FLT *bin, FLT *
 
 }
 
-__global__ void histogram_data_count(FLT *t, unsigned int *y, unsigned int *bin, FLT *freqs,
-	                                 int nfreq, int ndata){
+__global__ void histogram_data_count(FLT *t, unsigned int *y,
+	                                 unsigned int *bin,
+	                                 FLT *freqs, int nfreq, 
+	                                 int ndata){
 
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 

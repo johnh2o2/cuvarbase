@@ -943,7 +943,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         return [(freqs, lsp) for lsp in lsps]
 
 
-def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1):
+def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=False):
     """
     False alarm probability for periodogram peak
     based on Baluev (2008) [2008MNRAS.385.1279B]
@@ -963,7 +963,10 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1):
         2H - 1 where H is the number of harmonics
     d_H: int, optional (default: 1)
         Number of degrees of freedom for default model.
-
+    use_gamma: bool, optional (default: False)
+        Use gamma function for computation of numerical
+        coefficient; more accurate but not stable for
+        Nobs >~ 100
     Returns
     -------
     fap: float
@@ -987,7 +990,12 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1):
 
     N_K = N - d_K
     N_H = N - d_H
-    g = gamma(0.5 * N_H) / gamma(0.5 * (N_K + 1))
+    g = (0.5 * N_H) ** (0.5 * (d - 1))
+
+    # this is the actual value for g, but too numerically
+    # unstable for N > ~ 100
+    if use_gamma:
+        g = gamma(0.5 * N_H) / gamma(0.5 * (N_K + 1))
 
     w = np.power(dy, -2)
 

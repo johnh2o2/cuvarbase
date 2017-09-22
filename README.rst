@@ -1,4 +1,4 @@
-cuvarbase 0.1.7
+cuvarbase 0.1.8
 ===============
 
 John Hoffman -- 2017
@@ -22,6 +22,9 @@ Hopefully future developments will have
 
 What's new
 ----------
+* **0.1.8**
+    * Removed gamma function usage from baluev 2008 false alarm probability (``use_gamma=True`` will override this)
+    * Fixed a bug in the GLS notebook
 * **0.1.6/0.1.7**
     * Some bug fixes for GLS
     * ``large_run`` function for Conditional Entropy period finder allows large frequency grids
