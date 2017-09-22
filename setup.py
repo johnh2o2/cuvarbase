@@ -39,6 +39,7 @@ setup(name='cuvarbase',
       packages=['cuvarbase',
                 'cuvarbase.tests'],
       package_data={'cuvarbase': ['kernels/*cu']},
+      url='https://pypi.python.org/pypi/cuvarbase',
       requires=['numpy', 'scipy', 'pycuda', 'skcuda'],
       classifiers=[
         'Development Status :: 4 - Beta',
