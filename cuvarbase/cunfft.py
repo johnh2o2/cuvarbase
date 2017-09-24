@@ -4,11 +4,17 @@ import sys
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import skcuda.fft as cufft
+
 from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader
 import resource
 import numpy as np
+
+cufft = None
+try:
+    import skcuda.fft as cufft
+except OSError:
+    print "Skipping loading of cufft module (this is a problem.)"
 
 
 class NFFTMemory(object):

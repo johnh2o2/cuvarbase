@@ -137,14 +137,17 @@ def test_inject_and_recover(make_plot=False, **kwargs):
     proc = ConditionalEntropyAsyncProcess(**kwargs)
     for freq in [5.0, 10.0, 50.0]:
         t0 = kwargs.get('t0', 0.)
-        t, y, err = data(seed=100, sigma=0.01, ndata=200, freq=freq, t0=t0)
+        t, y, err = data(seed=100, sigma=0.01,
+                         snr=20, ndata=200, freq=freq, t0=t0)
 
         df = 0.001
         max_freq = 100.
         min_freq = df
         nf = int((max_freq - min_freq) / df)
         freqs = min_freq + df * np.arange(nf)
-        results = proc.run([(t, y, err)], freqs=freqs)
+        results = proc.large_run([(t, y, err)],
+                                 freqs=freqs,
+                                 max_memory=1e8)
         proc.finish()
         frq, p = results[0]
         best_freq = frq[np.argmin(p)]
@@ -160,6 +163,13 @@ def test_inject_and_recover(make_plot=False, **kwargs):
         # print best_freq, freq, abs(best_freq - freq) / freq
         assert(not any(np.isnan(p)))
         assert(abs(best_freq - freq) / freq < 1E-2)
+
+
+@mark_cuda_test
+def test_balanced_magbins(make_plot=True, **kwargs):
+    test_inject_and_recover(make_plot=make_plot,
+                            balanced_magbins=True,
+                            **kwargs)
 
 
 @mark_cuda_test
@@ -188,14 +198,13 @@ def test_large_run(make_plot=False, **kwargs):
 
 
 @mark_cuda_test
-def test_double(make_plot=False):
-    kw = dict(mag_bins=5, phase_bins=10,
-              phase_overlap=0)
-    proc1 = ConditionalEntropyAsyncProcess(**kw)
-    proc2 = ConditionalEntropyAsyncProcess(use_double=True, **kw)
+def test_double(make_plot=False, **kwargs):
+
+    proc1 = ConditionalEntropyAsyncProcess(**kwargs)
+    proc2 = ConditionalEntropyAsyncProcess(use_double=True, **kwargs)
     freq = 10.
 
-    t, y, err = data(seed=100, sigma=0.01, snr=9, ndata=200, freq=freq)
+    t, y, err = data(seed=100, sigma=0.1, snr=20, ndata=100, freq=freq)
 
     # y[5] = np.median(y) + 10.
 
@@ -227,7 +236,19 @@ def test_double(make_plot=False):
     # print best_freq, freq, abs(best_freq - freq) / freq
     assert(not any(np.isnan(p)))
     assert(not any(np.isnan(p1)))
+
+    spows = sorted(zip(p, p1), key=lambda x: -abs(x[1] - x[0]))
+
+    for P, P1 in spows:
+        if abs(P - P1) > 1e-3:
+            print P, P1, abs(P - P1)
+
     assert_allclose(p, p1, rtol=1e-2, atol=1e-3)
+
+
+@mark_cuda_test
+def test_double_weighted(make_plot=False, **kwargs):
+    test_double(weighted=True, make_plot=make_plot, **kwargs)
 
 
 @mark_cuda_test

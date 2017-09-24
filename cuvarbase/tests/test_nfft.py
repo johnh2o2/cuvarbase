@@ -5,7 +5,12 @@ from nfft.utils import nfft_matrix
 from nfft.kernels import KERNELS
 from numpy.testing import assert_allclose
 from scipy import fftpack
-import skcuda.fft as cufft
+
+try:
+    import skcuda.fft as cufft
+except OSError:
+    print "Not loading cufft (this is a problem.)"
+
 from ..cunfft import NFFTAsyncProcess
 from pycuda.tools import mark_cuda_test
 from pycuda import gpuarray

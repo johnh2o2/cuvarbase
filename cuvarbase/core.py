@@ -70,7 +70,7 @@ class BaseSpectrogram(object):
         elif self.window_name is 'tophat':
             self.window = tophat_window
         else:
-            raise ValueError("Don't understand window %s"%(self.window_name))
+            raise ValueError("Don't understand window %s" % (self.window_name))
 
         self.times = times
         self.window_length = window_length
@@ -109,40 +109,40 @@ class BaseSpectrogram(object):
         if len(inds) == 0:
             return self.t[inds], self.y[inds], self.w[inds]
 
-        return self.t[inds], self.y[inds], np.multiply(w_window[inds], self.w[inds])
+        return (self.t[inds], self.y[inds],
+                np.multiply(w_window[inds], self.w[inds]))
 
     def localized_spectrum(self, time=None, freqs=None):
         t, y, w = self.t, self.y, self.w
-        if not time is None:
+        if time is not None:
             t, y, w = self.weighted_local_data(time)
 
         freqs = self.freqs if freqs is None else freqs
 
-        p = self.proc.run([ (t, y, w, freqs) ], **self.proc_kwargs)
+        p = self.proc.run([(t, y, w, freqs)], **self.proc_kwargs)
 
         self.proc.finish()
 
         return p[0]
 
     def split_data(self, times):
-        return  [ self.weighted_local_data(time) for time in times ]
-
+        return [self.weighted_local_data(time) for time in times]
 
     def spectrogram(self, times=None, freqs=None, nsplits=100):
         if times is None:
             times = self.times
         if times is None:
-            times = self.auto_time_split(nsplits = nsplits)
+            times = self.auto_time_split(nsplits=nsplits)
 
         if freqs is None:
             freqs = self.freqs
 
-        specgram   = np.zeros((len(times), len(freqs)))
+        specgram = np.zeros((len(times), len(freqs)))
         split_data = self.split_data(times)
-        split_data = [ tuple(split) + (freqs,) for split in split_data ]
+        split_data = [tuple(split) + (freqs,) for split in split_data]
 
         powers = self.proc.batched_run(split_data, batch_size=self.batch_size,
-                                                **self.proc_kwargs)
+                                       **self.proc_kwargs)
 
         for i, power in enumerate(powers):
             specgram[i, :] = power[:]

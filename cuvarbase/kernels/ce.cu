@@ -185,3 +185,36 @@ __global__ void constdpdm_ce(unsigned int *bins, int nfreq,
 		ce[i] = Hc / bin_tot;
 	}
 }
+
+__global__ void log_prob(unsigned int *bins, int nfreq,
+                         FLT *log_proba, FLT *mag_bin_fracs){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (i < nfreq){
+		FLT logP = 0.f;
+		for(int n=0; n < NPHASE; n++){
+			int offset = i * (NMAG * NPHASE) + n * NMAG;
+
+			unsigned int Nphi = 0;
+			for (int m=0; m < NMAG; m++)
+				Nphi += bins[offset + m];
+			
+			if (Nphi == 0)
+				continue;
+
+			for (int m=0; m < NMAG; m++){
+				FLT N = (FLT) (bins[offset + m]);
+
+				FLT Nexp = Nphi * mag_bin_fracs[m];
+
+				if (Nexp < 1e-9)
+					continue;
+
+				logP += N * log(Nexp) - Nexp - lgamma(N + 1.f);
+			}
+		}
+		
+		log_proba[i] = logP / (PHASE_OVERLAP + 1.f);
+	}
+}
+

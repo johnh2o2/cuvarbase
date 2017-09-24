@@ -1,7 +1,6 @@
 import numpy as np
 import pycuda.driver as cuda
 from scipy.special import gamma
-import skcuda.fft as cufft
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 import resource
