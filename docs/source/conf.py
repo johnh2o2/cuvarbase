@@ -20,6 +20,7 @@ import os
 import sys
 import ctypes
 import io
+import re 
 
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, '/usr/local/cuda/lib')
@@ -44,7 +45,7 @@ def version(path):
     raise RuntimeError("Unable to find version string.")
 
 
-VERSION = version('cuvarbase/__init__.py')
+VERSION = version('../../cuvarbase/__init__.py')
 
 
 # -- General configuration ------------------------------------------------

@@ -18,86 +18,6 @@ __device__ float mod1(float a){
 }
 
 
-__global__ void bin_and_phase_fold(float *t, float *yw, float *w,
-									float *yw_bin, float *w_bin, 
-									float freq,
-									int ndata, int nbins){
-	int i = get_id();
-
-	if (i < ndata){
-		float W = w[i];
-		float YW = yw[i];
-
-		float phi = t[i] * freq;
-		phi -= floorf(phi);
-
-		int b = ((int)floorf(phi * nbins));
-
-		atomicAdd(&(yw_bin[b]), YW);
-		atomicAdd(&(w_bin[b]), W);
-	}
-}
-
-
-// bls for a single frequency (phase folded and binned data)
-// needs nbins threads, nbins data
-__global__ void binned_bls(float *yw, float *w, float *bls, int nbins,
-								float qmin, float qmax){
-	int i = get_id();
-
-	if (i < nbins){
-
-		// initialize to 0
-		bls[i] = 0.f;
-
-		float wtot = 0.f;
-		float ybar = 0.f;
-		float p;
-
-		int jmin = __float2int_rd(qmin * nbins);
-		int jmax = __float2int_ru(qmax * nbins);
-
-		for (int k = i; k < i + jmin; k++){
-			wtot += w[k % nbins];
-			ybar += yw[k % nbins];
-		}
-
-		for (int j = jmin + i; j < jmax + i; j++){
-			wtot += w[j%nbins];
-			ybar += yw[j%nbins];
-
-			if (wtot < MIN_W)
-				continue;
-
-			p = ybar * ybar / (wtot * (1 - wtot));
-
-			if (p > bls[i])
-				bls[i] = p;
-		}
-	}
-}
-
-
-
-__global__ void bin_and_phase_fold_bst(float *t, float *yw, float *w,
-									float *yw_bin, float *w_bin, float freq,
-									int ndata, int nbins0, int nbinsf){
-	int i = get_id();
-
-	if (i < ndata){
-		float W = w[i];
-		float YW = yw[i];
-
-		float phi = mod1(t[i] * freq);
-
-		for(int nb = nbins0; nb <= nbinsf; nb *= 2){
-			int b = ((int) floorf(phi * nb)) + (nb - nbins0);
-			atomicAdd(&(yw_bin[b]),YW);
-			atomicAdd(&(w_bin[b]), W);
-		}
-	}
-}
-
 __global__ void binned_bls_bst(float *yw, float *w, float *bls, int n){
 	int i = get_id();
 
@@ -107,7 +27,6 @@ __global__ void binned_bls_bst(float *yw, float *w, float *bls, int n){
 
 		bls[i] = (wtot > 1e-10 && wtot < 1.f - 1e-10) ?
 					ybar * ybar / (wtot * (1.f - wtot)) : 0.f;
-
 		
 	}
 }

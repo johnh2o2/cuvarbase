@@ -42,12 +42,34 @@ def plot_bls_sol(t, y, dy, freq, q, phi0):
 
     f, ax = plt.subplots()
 
-    ax.scatter(phi[~mask], y[~mask], c='k', s=1, alpha=0.1)
+    ax.scatter(phi[~mask], y[~mask], c='k', s=1, alpha=0.4)
     ax.scatter(phi[mask], y[mask], c='g', s=1, alpha=0.8)
     ax.plot(phi_plot, ym, color='r')
     ax.axvline(phi0, color='k', ls=':')
-    ax.axvline(phi0 + q, color='k', ls=':')
+    # ax.axvline(phi0 + q, color='k', ls=':')
 
+    ax.axis('off')
+
+    ax.annotate('$\\delta$', xy=(phi0 - 0.03, -0.5 * delta), xytext=(-5, 0),
+                textcoords='offset points', ha='right', va='center',
+                fontsize=20)
+
+    ax.plot([phi0 - 0.03, phi0 - 0.03], [-delta, -0.03 * delta], ls='--',
+            color='k')
+
+    ax.plot([phi0, phi0 + q], [-1.03 * delta, -1.03 * delta], ls='--',
+            color='k')
+    ax.annotate('$q$', xy=(phi0 + 0.5 * q, -1.03 * delta), xytext=(0, -5),
+                textcoords='offset points', ha='center', va='top',
+                fontsize=20, transform=ax.transData)
+
+    ax.annotate('$\\phi_0$', xy=(phi0, 0), xytext=(5, 5),
+                textcoords='offset points', ha='left', va='bottom',
+                fontsize=20, transform=ax.transData)
+
+    ax.annotate('$y_0$', xy=(0.05, 0), xytext=(5, 5),
+                textcoords='offset points', ha='left', va='bottom',
+                fontsize=20, transform=ax.transData)
     plt.show()
 
 model = transit_model(0.5, 0.1, 0.1)

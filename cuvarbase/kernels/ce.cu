@@ -114,7 +114,7 @@ __global__ void weighted_ce(FLT *bins, int nfreq, FLT *ce){
 				bin_tot += pmn;
 
 				if (pmn > 0.f && p_phi_n > 1E-10)
-					Hc += pmn * log(p_phi_n / pmn);
+					Hc += pmn * log((dm * p_phi_n) / pmn);
 			}
 		}
 		ce[i] = Hc / bin_tot;

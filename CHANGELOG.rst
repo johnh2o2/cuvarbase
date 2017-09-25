@@ -1,8 +1,14 @@
 Change log
 ----------
+* **0.1.9**
+	* Added Sphinx docuemntation
+	* CE now allows for a ``balanced_magbins`` argument to 
+	
+
 * **0.1.8**
     * Removed gamma function usage from baluev 2008 false alarm probability (``use_gamma=True`` will override this)
     * Fixed a bug in the GLS notebook
+
 * **0.1.6/0.1.7**
     * Some bug fixes for GLS
     * ``large_run`` function for Conditional Entropy period finder allows large frequency grids

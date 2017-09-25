@@ -1,7 +1,14 @@
+"""
+Implementation of the box-least squares periodogram [K2002]_
+and variants.
+
+.. [K2002] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
+
+"""
+
 import sys
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
-from pycuda.reduction import ReductionKernel
 
 from pycuda.compiler import SourceModule
 from .core import GPUAsyncProcess
@@ -14,9 +21,9 @@ from time import time
 _default_block_size = 256
 
 
-def reduction_max(max_func, arr, arr_args, nfreq, nbins,
-                  stream, final_arr, final_argmax_arr,
-                  final_index, block_size):
+def _reduction_max(max_func, arr, arr_args, nfreq, nbins,
+                   stream, final_arr, final_argmax_arr,
+                   final_index, block_size):
     # assert power of 2
     assert(block_size - 2 * (block_size / 2) == 0)
 
@@ -47,36 +54,11 @@ def reduction_max(max_func, arr, arr_args, nfreq, nbins,
                                  np.int32(final_index), init)
 
 
-def get_qphi(nbins0, nbinsf, alpha, noverlap):
-    q_phi = []
-
-    x = np.float32(1.)
-    dphi = np.float32(np.float32(1.)/noverlap)
-    while(np.int32(x * nbins0) <= nbinsf):
-
-        nb = np.int32(x * nbins0)
-        q = np.float32(1.)/nb
-
-        qp = []
-        for s in range(noverlap):
-            for i in range(nb):
-                phi = (float(i) + np.float32(s) * dphi) / nb
-                phi = ((phi - 0.5) + 0.5 * q) % 1.0
-                if phi < 0:
-                    phi += 1.0
-                qp.append((q, phi))
-
-        q_phi.extend(qp)
-        x *= np.float32(alpha)
-
-    return q_phi
-
-
 def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
     T = max(t) - min(t)
     qmin = float(min_obs_per_transit) / len(t)
     fmin1 = np.power(np.sin(np.pi * qmin), 3./2.) * fmax_transit(rho=rho)
-    fmin2 = 1./(max(t) - min(t))
+    fmin2 = 2./(max(t) - min(t))
     return max([fmin1, fmin2])
 
 
@@ -99,8 +81,53 @@ def fmax_transit(rho=1., qmax=0.5, **kwargs):
     return min([fmax0, freq_transit(qmax, rho=rho, **kwargs)])
 
 
-def transit_autofreq(t, fmin=1E-2, fmax=1E2, samples_per_peak=2,
-                     rho=1., qmin_fac=0.2, **kwargs):
+def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
+                     rho=1., qmin_fac=0.2, qmax_fac=None, **kwargs):
+    """
+    Produce list of frequencies for a given frequency range
+    suitable for performing Keplerian BLS.
+
+    Parameters
+    ----------
+
+    t: array_like
+        Observation times
+    fmin: float, optional (default: ``None``)
+        Minimum frequency. By default this is determined by ``fmin_transit``.
+    fmax: float, optional (default: ``None``)
+        Maximum frequency. By default this is determined by ``fmax_transit``.
+    samples_per_peak: float, optional (default: 2)
+        Oversampling factor. Frequency spacing is multiplied by
+        ``1/samples_per_peak``
+    rho: float, optional (default: 1)
+        Mean stellar density of host star in solar units
+        :math:`\rho=\rho_{\star} / \rho_{\odot}`, where :math:`\rho_{\odot}`
+        is the mean density of the sun
+    qmin_fac: float, optional (default: 0.2)
+        The minimum :math:`q` value to search in units of the Keplerian
+        :math:`q` value
+    qmax_fac: float, optional (default: None)
+        The maximum q value to search in units of the Keplerian
+        :math:`q` value. If ``None``, this defaults to ``1/qmin_fac``.
+    **kwargs: dict
+
+    Returns
+    -------
+    freqs: array_like
+        The frequency grid
+    q0vals: array_like
+        The list of Keplerian :math:`q` values.
+
+    """
+    if qmax_fac is None:
+        qmax_fac = 1./qmin_fac
+
+    if fmin is None:
+        fmin = fmin_transit(t, rho=rho, samples_per_peak=samples_per_peak,
+                            **kwargs)
+    if fmax is None:
+        fmax = fmax_transit(rho=rho, **kwargs)
+
     T = max(t) - min(t)
     freqs = [fmin]
     while freqs[-1] < fmax:
@@ -109,20 +136,6 @@ def transit_autofreq(t, fmin=1E-2, fmax=1E2, samples_per_peak=2,
     freqs = np.array(freqs)
     q0vals = q_transit(freqs, rho=rho)
     return freqs, q0vals
-
-
-def bin_data(t, y, freq, nbins, phi0=0.):
-    phi_d = (t * freq) % 1.0 - phi0
-    phi_d[phi_d < 0] += 1.
-
-    bins = np.zeros(nbins)
-
-    bs = np.floor(phi_d * nbins).astype(np.int32)
-
-    for b, Y in zip(bs, y):
-        bins[b] += Y
-
-    return bins
 
 
 def compile_bls(block_size=_default_block_size, **kwargs):
@@ -313,7 +326,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         args = (gpu_max, bls_tmp_g, bls_tmp_sol_g)
         args += (nf, nb, stream, bls_g, bls_sol_g)
         args += (batch * batch_size, block_size)
-        reduction_max(*args)
+        _reduction_max(*args)
 
         store_grid = (int(np.ceil(float(nf) / block_size)), 1)
         args = (store_grid, block, stream)
@@ -497,7 +510,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args = (gpu_max, bls_tmp_g, bls_tmp_sol_g)
         args += (nf, nbins_tot * noverlap, stream, bls_g, bls_sol_g)
         args += (batch * batch_size, block_size)
-        reduction_max(*args)
+        _reduction_max(*args)
 
         store_grid = (int(np.ceil(float(nf) / block_size)), 1)
         args = (store_grid, block, stream)
@@ -586,7 +599,6 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
         fmin, fmax = f - 25 * df, f + 25 * df
         qmin = q / (1 + 5 * dlogq)
         qmax = q * (1 + 5 * dlogq)
-        
         df *= 0.1
         dlogq *= 0.25
 
