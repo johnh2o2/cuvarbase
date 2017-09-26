@@ -57,7 +57,8 @@ def _reduction_max(max_func, arr, arr_args, nfreq, nbins,
 def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
     T = max(t) - min(t)
     qmin = float(min_obs_per_transit) / len(t)
-    fmin1 = np.power(np.sin(np.pi * qmin), 3./2.) * fmax_transit(rho=rho)
+
+    fmin1 = freq_transit(qmin, rho=rho)
     fmin2 = 2./(max(t) - min(t))
     return max([fmin1, fmin2])
 
@@ -71,7 +72,7 @@ def q_transit(freq, rho=1., **kwargs):
 
     f23 = np.power(freq / fmax0, 2./3.)
     f23 = np.minimum(1., f23)
-    return (1./np.pi) * np.arcsin(f23)
+    return np.arcsin(f23) / np.pi
 
 
 def freq_transit(q, rho=1., **kwargs):
@@ -636,7 +637,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
     return f, pn, i, (q, phi)
 
 
-def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.5,
+def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                       qmin_fac=0.5, qmax_fac=2.0, fmin=None,
                       fmax=None, freqs=None, qvals=None, **kwargs):
     """
@@ -672,6 +673,8 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.5,
         Overrides the auto-generated frequency grid
     qvals: array_like, optional (default: None)
         Overrides the keplerian q values
+    functions: tuple, optional (default=None)
+        result of ``compile_bls(**kwargs)``.
     **kwargs:
         passed to `eebls_gpu`, `compile_bls`, `fmax_transit`,
         `fmin_transit`, and `transit_autofreq`
@@ -687,7 +690,7 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.5,
         Best (q, phi) solution at each frequency
 
     """
-    funcs = compile_bls(**kwargs)
+
     if freqs is None:
         if qvals is not None:
             raise Exception("qvals must be None if freqs is None")
@@ -705,6 +708,5 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.5,
 
     powers, sols = eebls_gpu(t, y, dy, freqs,
                              qmin=qmins, qmax=qmaxes,
-                             functions=funcs,
                              **kwargs)
     return freqs, powers, sols
