@@ -200,8 +200,8 @@ def compile_bls(block_size=_default_block_size, **kwargs):
 
 
 def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
-                     batch_size=5, nstreams=5, functions=None,
-                     **kwargs):
+                     batch_size=5, nstreams=5,
+                     functions=None, **kwargs):
     """
     Box-Least Squares, with custom q and phi values. Useful
     if you're honing the initial solution or testing between
@@ -263,6 +263,9 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
+
+    mem0 = len(freqs) * 4
+    memory_per_stream = nbtot * 32 * 4
 
     yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs, streams \
         = [], [], [], [], []
@@ -349,7 +352,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
 
 def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
-              nstreams=5, noverlap=3, dlogq=0.2,
+              nstreams=5, noverlap=3, dlogq=0.2, max_memory=1e8,
               batch_size=5, functions=None, **kwargs):
 
     """
@@ -410,18 +413,23 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     max_q_vals = locext(max, qmax)
     min_q_vals = locext(min, qmin)
 
-    #print qmin, qmax
-
     nbins0_max = int(np.floor(1./max_q_vals))
     nbinsf_max = int(np.ceil(1./min_q_vals))
 
     ndata = len(t)
+
+    real_type_size = 32
 
     nbins_tot_max = 0
     x = 1.
     while(int(np.int32(x * nbins0_max)) <= nbinsf_max):
         nbins_tot_max += int(np.int32(x * nbins0_max))
         x *= (1 + dlogq)
+
+    mem0 = float(ndata * 3 + len(freqs) * 5)
+    mem_per_f = float(4 * nstreams * nbins_tot_max * noverlap)
+
+    batch_size = int((max_memory / real_type_size - mem0) / (mem_per_f))
 
     gs = batch_size * nbins_tot_max * noverlap
 

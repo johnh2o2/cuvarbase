@@ -24,7 +24,7 @@ dt_ce = []
 ce_proc = ce.ConditionalEntropyAsyncProcess()
 ls_proc = gls.LombScargleAsyncProcess()
 baseline = 5 * 365.
-nmc = 3
+nmc = 1
 df = 0.2 / baseline
 fmax = 24 / 5.
 fmin = 2. / baseline
@@ -42,7 +42,7 @@ astropy_kwargs = dict(minimum_frequency=min(freqs),
 bls_kwargs = dict(dlogq=0.2, noverlap=3,
                   fmin_fac=1.0, fmax_fac=1.0,
                   qmin_fac=0.5, qmax_fac=2.0,
-                  batch_size=500, nstreams=5)
+                  nstreams=3)
 for ndata in tqdm(ndatas):
     dt_bls_ = []
     dt_gls_ = []
@@ -62,6 +62,8 @@ for ndata in tqdm(ndatas):
         frq_bls, p_bls, s_bls = bls.eebls_transit_gpu(t, y, dy, **bls_kwargs)
         dt_bls_.append((time() - t0) / len(frq_bls))
 
+        print ndata, len(frq_bls), dt_bls_[-1] * len(frq_bls)
+
         t0 = time()
         f_gls, p_gls = LombScargle(t, y, dy).autopower(**astropy_kwargs)
         dt_gls_astropy_.append((time() - t0) / len(f_gls))
@@ -72,13 +74,13 @@ for ndata in tqdm(ndatas):
         dt_ce_.append((time() - t0) / len(freqs))
 
     dt_ce.append(min(dt_ce_))
-    #dt_bls.append(min(dt_bls_))
+    dt_bls.append(min(dt_bls_))
     dt_gls.append(min(dt_gls_))
     dt_gls_astropy.append(min(dt_gls_astropy_))
 
 
 f, ax = plt.subplots()
-#ax.plot(ndatas, dt_bls, label="BLS")
+ax.plot(ndatas, dt_bls, label="BLS")
 ax.plot(ndatas, dt_ce, label="CE")
 ax.plot(ndatas, dt_gls, label='GLS')
 ax.plot(ndatas, dt_gls_astropy, label='GLS (astropy)')
