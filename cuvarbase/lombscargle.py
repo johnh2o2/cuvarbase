@@ -31,11 +31,14 @@ class LombScargleMemory(object):
         self.precomp_psi = kwargs.get('precomp_psi', True)
         self.amplitude_prior = kwargs.get('amplitude_prior', None)
         self.window = kwargs.get('window', False)
+        self.nharmonics = kwargs.get('nharmonics', 1)
+        self.use_fft = kwargs.get('use_fft', True)
 
         self.other_settings = {}
         self.other_settings.update(kwargs)
 
         self.floating_mean = kwargs.get('floating_mean', True)
+        self.use_double = kwargs.get('use_double', False)
 
         self.mode = 1 if self.floating_mean else 0
         if self.window:
@@ -49,27 +52,44 @@ class LombScargleMemory(object):
         self.w_g = kwargs.get('w_g', None)
         self.lsp_g = kwargs.get('lsp_g', None)
 
-        self.nfft_mem_yw = kwargs.get('nfft_mem_yw', None)
-        self.nfft_mem_w = kwargs.get('nfft_mem_w', None)
+        if self.use_fft:
+            self.nfft_mem_yw = kwargs.get('nfft_mem_yw', None)
+            self.nfft_mem_w = kwargs.get('nfft_mem_w', None)
 
-        if self.nfft_mem_yw is None:
-            self.nfft_mem_yw = NFFTMemory(self.sigma, self.stream,
-                                          self.m, **kwargs)
+            if self.nfft_mem_yw is None:
+                self.nfft_mem_yw = NFFTMemory(self.sigma, self.stream,
+                                              self.m, **kwargs)
 
-        if self.nfft_mem_w is None:
-            self.nfft_mem_w = NFFTMemory(self.sigma, self.stream,
-                                         self.m, **kwargs)
+            if self.nfft_mem_w is None:
+                self.nfft_mem_w = NFFTMemory(self.sigma, self.stream,
+                                             self.m, **kwargs)
 
-        self.real_type = self.nfft_mem_yw.real_type
-        self.complex_type = self.nfft_mem_yw.complex_type
+            self.real_type = self.nfft_mem_yw.real_type
+            self.complex_type = self.nfft_mem_yw.complex_type
+
+        else:
+            self.real_type = np.float32
+            self.complex_type = np.complex64
+
+            if self.use_double:
+                self.real_type = np.float64
+                self.complex_type = np.complex128
 
         # Set up regularization
-        self.reg_g = gpuarray.zeros(3, dtype=self.real_type)
-        self.reg = np.zeros(3, dtype=self.real_type)
+        self.reg_g = gpuarray.zeros(2 * self.nharmonics + 1,
+                                    dtype=self.real_type)
+        self.reg = np.zeros(2 * self.nharmonics + 1,
+                            dtype=self.real_type)
+
         if self.amplitude_prior is not None:
-            lmbda = 1./(self.amplitude_prior ** 2)
-            self.reg[0] = self.real_type(lmbda)
-            self.reg[1] = self.real_type(lmbda)
+            lmbda = np.power(self.amplitude_prior, -2)
+            if isinstance(lmbda, float):
+                lmbda = lmbda * np.ones(self.nharmonics)
+
+            for i, l in enumerate(lmbda):
+                self.reg[2 * i] = self.real_type(l)
+                self.reg[1 + 2 * i] = self.real_type(l)
+
             self.reg_g.set_async(self.reg, stream=self.stream)
 
         self.buffered_transfer = kwargs.get('buffered_transfer', False)
@@ -91,14 +111,15 @@ class LombScargleMemory(object):
         self.yw_g = gpuarray.zeros(n0, dtype=self.real_type)
         self.w_g = gpuarray.zeros(n0, dtype=self.real_type)
 
-        self.nfft_mem_w.t_g = self.t_g
-        self.nfft_mem_w.y_g = self.w_g
+        if self.use_fft:
+            self.nfft_mem_w.t_g = self.t_g
+            self.nfft_mem_w.y_g = self.w_g
 
-        self.nfft_mem_yw.t_g = self.t_g
-        self.nfft_mem_yw.y_g = self.yw_g
+            self.nfft_mem_yw.t_g = self.t_g
+            self.nfft_mem_yw.y_g = self.yw_g
 
-        self.nfft_mem_yw.n0 = n0
-        self.nfft_mem_w.n0 = n0
+            self.nfft_mem_yw.n0 = n0
+            self.nfft_mem_w.n0 = n0
 
         return self
 
@@ -112,17 +133,19 @@ class LombScargleMemory(object):
         self.nf = kwargs.get('nf', self.nf)
         assert(self.nf is not None)
 
-        if self.nfft_mem_yw.precomp_psi:
-            self.nfft_mem_yw.allocate_precomp_psi(n0=n0)
+        if self.use_fft:
+            if self.nfft_mem_yw.precomp_psi:
+                self.nfft_mem_yw.allocate_precomp_psi(n0=n0)
 
-        # Only one precomp psi needed
-        self.nfft_mem_w.precomp_psi = False
-        self.nfft_mem_w.q1 = self.nfft_mem_yw.q1
-        self.nfft_mem_w.q2 = self.nfft_mem_yw.q2
-        self.nfft_mem_w.q3 = self.nfft_mem_yw.q3
+            # Only one precomp psi needed
+            self.nfft_mem_w.precomp_psi = False
+            self.nfft_mem_w.q1 = self.nfft_mem_yw.q1
+            self.nfft_mem_w.q2 = self.nfft_mem_yw.q2
+            self.nfft_mem_w.q3 = self.nfft_mem_yw.q3
 
-        self.nfft_mem_yw.allocate_grid(nf=self.nf)
-        self.nfft_mem_w.allocate_grid(nf=2 * self.nf + k0)
+            fft_size = self.nharmonics * (self.nf + k0)
+            self.nfft_mem_yw.allocate_grid(nf=fft_size - k0)
+            self.nfft_mem_w.allocate_grid(nf=2 * fft_size - k0)
 
         self.lsp_g = gpuarray.zeros(self.nf, dtype=self.real_type)
         return self
@@ -664,6 +687,11 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         self.use_double = self.nfft_proc.use_double
         self.memory = None
 
+        self.nharmonics = kwargs.get('nharmonics', 1)
+
+        if self.nharmonics > 1:
+            raise Exception("Only 1 harmonic is supported right now")
+
     def _compile_and_prepare_functions(self, **kwargs):
 
         module_text = _module_reader(find_kernel('lomb'), self._cpp_defs)
@@ -684,9 +712,51 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         self.function_tuple = tuple(self.prepared_functions[fname]
                                     for fname in sorted(self.dtypes.keys()))
 
-    def memory_requirement(self, data, **kwargs):
+    def memory_requirement(self, n0, nf, k0, nbatch=1,
+                           autoadjust_sigma=False, **kwargs):
         """ return an approximate GPU memory requirement in bytes """
-        raise NotImplementedError()
+        H = self.nharmonics
+        sigma = self.nfft_proc.sigma
+        m = self.nfft_proc.get_m(nf)
+
+        if autoadjust_sigma:
+            sigma = int(np.round(float(sigma * (nf + k0)) / nf))
+
+        fft_size = H * (nf + k0)
+
+        # data
+        mem += 3 * n0
+
+        # final result
+        mem += nf
+
+        if kwargs.get('use_fft', True):
+            # yw grid / fft (doubled because complex)
+            mem = 2 * sigma * (fft_size - k0)
+
+            # w grid / fft (doubled because complex)
+            mem += 2 * sigma * (2 * fft_size - k0)
+
+            # precomputation (q1 = n0, q2 = n0, q3 = 2m + 1)
+            mem += 2 * n0 + 2 * m + 1
+
+        # inverse of design matrix
+        if H > 1:
+
+            # sparse matrix A (block-diagonal)
+            mem += (2 * H) ** 2 * nbatch
+
+            # vector b (Ax = b)
+            mem += nbatch
+
+        # double everything if we're using double precision!
+        if self.use_double:
+            mem *= 2
+
+        # size of 32 bit float
+        mem *= 4
+
+        return mem
 
     def allocate_for_single_lc(self, t, y, dy, nf, k0=0,
                                stream=None, **kwargs):
@@ -720,10 +790,15 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         sigma = self.nfft_proc.sigma
 
-        mem = LombScargleMemory(sigma, stream, m, k0=k0, **kwargs)
+        kwargs_lsmem = dict(use_double=self.use_double,
+                            nharmonics=self.nharmonics)
 
-        mem.fromdata(t=t, y=y, dy=dy, nf=nf, allocate=True, 
-                     use_double=self.use_double, **kwargs)
+        kwargs_lsmem.update(kwargs)
+        mem = LombScargleMemory(sigma, stream, m, k0=k0,
+                                **kwargs_lsmem)
+
+        mem.fromdata(t=t, y=y, dy=dy, nf=nf, allocate=True,
+                     **kwargs)
 
         return mem
 
@@ -748,6 +823,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                                     buffered_transfer=True,
                                     n0_buffer=max_nobs,
                                     nf=nf,
+                                    use_double=self.use_double,
+                                    nharmonics=self.nharmonics,
                                     **kwargs)
 
             mem.allocate(**kwargs)
@@ -874,7 +951,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if memory is None:
             nfreqs = [len(frq) for frq in frqs]
             memory = self.allocate(data, nfreqs=nfreqs, k0s=k0s,
-                                   **kwargs)
+                                   use_fft=use_fft, **kwargs)
         else:
             for i, (t, y, dy) in enumerate(data):
                 memory[i].set_gpu_arrays_to_zero(**kwargs)
@@ -951,7 +1028,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         kwargs_lsmem = dict(buffered_transfer=True,
                             n0_buffer=max_ndata,
-                            use_double=self.use_double)
+                            use_double=self.use_double,
+                            nharmonics=self.nharmonics,
+                            use_fft=use_fft)
         kwargs_lsmem.update(kwargs)
         memory = [LombScargleMemory(sigma, stream, m, k0=k0,
                                     **kwargs_lsmem)

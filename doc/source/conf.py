@@ -20,10 +20,26 @@ import os
 import sys
 import ctypes
 import io
-import re 
+import re
 
-sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, '/usr/local/cuda/lib')
+cuda_dir = "/Developer/NVIDIA/CUDA-8.0/lib/"
+sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, cuda_dir)
+
+# Set DYLD and LD library paths
+dyld_lpath = os.environ.get('DYLD_LIBRARY_PATH', '')
+ld_lpath = os.environ.get('LD_LIBRARY_PATH', '')
+
+
+def lpath_insert(p, lpath):
+    return '%s:%s' % (p, lpath)
+
+dyld_lpath = lpath_insert(cuda_dir, dyld_lpath)
+ld_lpath = lpath_insert(cuda_dir, ld_lpath)
+
+
+os.environ['DYLD_LIBRARY_PATH'] = dyld_lpath
+os.environ['LD_LIBRARY_PATH'] = ld_lpath
 
 
 def read(path, encoding='utf-8'):

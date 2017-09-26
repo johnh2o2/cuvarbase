@@ -1,4 +1,0 @@
-Lomb-Scargle periodogram
-------------------------
-
-TODO.

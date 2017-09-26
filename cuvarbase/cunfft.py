@@ -9,12 +9,8 @@ from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader
 import resource
 import numpy as np
-
-cufft = None
-try:
-    import skcuda.fft as cufft
-except OSError:
-    print "Skipping loading of cufft module (this is a problem.)"
+import ctypes
+import skcuda.fft as cufft
 
 
 class NFFTMemory(object):

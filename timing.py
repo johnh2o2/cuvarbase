@@ -42,7 +42,7 @@ astropy_kwargs = dict(minimum_frequency=min(freqs),
 bls_kwargs = dict(dlogq=0.2, noverlap=3,
                   fmin_fac=1.0, fmax_fac=1.0,
                   qmin_fac=0.5, qmax_fac=2.0,
-                  nstreams=3)
+                  nstreams=5, max_memory=1e8)
 for ndata in tqdm(ndatas):
     dt_bls_ = []
     dt_gls_ = []
@@ -89,5 +89,3 @@ ax.set_xscale('log')
 ax.set_yscale('log')
 ax.legend(loc='best')
 plt.show()
-
-

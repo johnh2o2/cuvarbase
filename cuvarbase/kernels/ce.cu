@@ -2,6 +2,10 @@
 
 //{CPP_DEFS}
 
+#ifndef MAX_SHARED_MEM_SIZE
+	#define MAX_SHARED_MEM_SIZE 48000
+#endif
+
 #ifdef DOUBLE_PRECISION
 	#define ATOMIC_ADD atomicAddDouble
 	#define FLT double
@@ -9,6 +13,11 @@
 	#define ATOMIC_ADD atomicAdd
 	#define FLT float
 #endif
+
+#define MAX_SHARED_FLT_SIZE (int) floor(((FLT) MAX_SHARED_MEM_SIZE) / sizeof(FLT))
+#define LOCAL_HIST_SIZE \
+      NMAG * NPHASE > MAX_SHARED_FLT_SIZE ? MAX_SHARED_FLT_SIZE - 1 : NMAG * NPHASE
+
 
 __device__ double atomicAddDouble(double* address, double val)
 {
@@ -95,6 +104,7 @@ __global__ void histogram_data_count(FLT *t, unsigned int *y,
 		}	
 	}
 }
+
 
 __global__ void weighted_ce(FLT *bins, int nfreq, FLT *ce){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;

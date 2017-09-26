@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+SPHINXOPTS    = -E -a
 SPHINXBUILD   = python -msphinx
 SPHINXPROJ    = cuvarbase
 SOURCEDIR     = source

@@ -10,7 +10,7 @@ spp = 10
 nfac = 5
 lsrtol = 1E-2
 lsatol = 1E-5
-nfft_sigma = 4
+nfft_sigma = 5
 
 
 @pytest.fixture

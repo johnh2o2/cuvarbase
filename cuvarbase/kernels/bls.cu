@@ -82,6 +82,9 @@ __global__ void store_best_sols_custom(int *argmaxes, float *best_phi,
 
 // needs ndata * nfreq threads
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)
+// Note: this thread heavily utilizes global atomic operations, and could
+//       likely be improved by 1-2 orders of magnitude for large Ndata (10^4)
+//       if shared memory atomics were utilized.
 __global__ void bin_and_phase_fold_bst_multifreq(
 	                    float *t, float *yw, float *w,
 						float *yw_bin, float *w_bin, float *freqs,
@@ -125,6 +128,7 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 		}
 	}
 }
+
 
 // needs ndata * nfreq threads
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)

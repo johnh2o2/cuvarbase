@@ -673,7 +673,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         cpers = []
         for d, f in zip(data, frqs):
-            size_of_real = 32
+            size_of_real = 4
+            if self.use_double:
+                size_of_real *= 2
+
             # subtract of lc memory
             fmem = max_memory - len(d[0]) * size_of_real * 3
 

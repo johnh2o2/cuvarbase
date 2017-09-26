@@ -1,4 +1,4 @@
-cuvarbase 0.1.8
+cuvarbase 0.1.9
 ===============
 
 John Hoffman -- 2017
