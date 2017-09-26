@@ -68,7 +68,7 @@ rho = 1.
 transit_kwargs = dict(freq=2.,
                       q=bls.q_transit(2., rho=rho),
                       y0=10.,
-                      sigma=0.01,
+                      sigma=0.005,
                       delta=0.01,
                       phi0=0.5)
 
@@ -115,7 +115,7 @@ q_best, phi0_best = sols[np.argmax(bls_power)]
 f_best = freqs[np.argmax(bls_power)]
 
 # Plot results
-f, (ax_bls, ax_true, ax_best) = plt.subplots(1, 3, figsize=(12, 4))
+f, (ax_bls, ax_true, ax_best) = plt.subplots(1, 3, figsize=(9, 3))
 
 # Periodogram
 ax_bls.plot(freqs, bls_power)

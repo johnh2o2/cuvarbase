@@ -102,6 +102,7 @@ __global__ void weighted_ce(FLT *bins, int nfreq, FLT *ce){
 	if (i < nfreq){
 		FLT Hc = 0.f;
 		FLT bin_tot = 0.f;
+		FLT dm = ((FLT)(MAG_OVERLAP + 1)) / NMAG;
 		for(int n=0; n < NPHASE; n++){
 			int offset = i * (NMAG * NPHASE) + n * NMAG;
 

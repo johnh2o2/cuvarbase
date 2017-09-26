@@ -64,8 +64,8 @@ def plot_bls_sol(ax, t, y, dy, freq, q, phi0, **kwargs):
 transit_kwargs = dict(freq=0.1,
                       q=0.1,
                       y0=10.,
-                      sigma=0.01,
-                      delta=0.01,
+                      sigma=0.002,
+                      delta=0.05,
                       phi0=0.5)
 
 # generate data with a transit
@@ -82,7 +82,7 @@ search_params = dict(qmin=1e-2,
 
                      # Number of overlapping phase bins
                      # to use for finding the best phi0
-                     noverlap=2)
+                     noverlap=3)
 
 # derive baseline from the data for consistency
 baseline = max(t) - min(t)
@@ -103,7 +103,7 @@ q_best, phi0_best = sols[np.argmax(bls_power)]
 f_best = freqs[np.argmax(bls_power)]
 
 # Plot results
-f, (ax_bls, ax_true, ax_best) = plt.subplots(1, 3, figsize=(12, 4))
+f, (ax_bls, ax_true, ax_best) = plt.subplots(1, 3, figsize=(9, 3))
 
 # Periodogram
 ax_bls.plot(freqs, bls_power)

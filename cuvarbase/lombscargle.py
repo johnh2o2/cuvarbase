@@ -1,6 +1,6 @@
 import numpy as np
 import pycuda.driver as cuda
-from scipy.special import gamma
+from scipy.special import gamma, gammaln
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 import resource
@@ -456,7 +456,7 @@ def mhgls_from_sums(sums, YY, ybar):
     -------
     power: float
         periodogram power
-    
+
 
     See also
     --------
@@ -662,6 +662,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         self.block_size = self.nfft_proc.block_size
         self.module_options = self.nfft_proc.module_options
         self.use_double = self.nfft_proc.use_double
+        self.memory = None
 
     def _compile_and_prepare_functions(self, **kwargs):
 
@@ -721,9 +722,37 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         mem = LombScargleMemory(sigma, stream, m, k0=k0, **kwargs)
 
-        mem.fromdata(t=t, y=y, dy=dy, nf=nf, allocate=True, **kwargs)
+        mem.fromdata(t=t, y=y, dy=dy, nf=nf, allocate=True, 
+                     use_double=self.use_double, **kwargs)
 
         return mem
+
+    def preallocate(self, max_nobs, nlcs=1, nf=None, k0=None,
+                    freqs=None, streams=None, **kwargs):
+
+        if freqs is not None:
+            k0 = get_k0(freqs)
+            nf = len(freqs)
+        if nf is not None:
+            assert k0 is not None
+
+        m = self.nfft_proc.get_m(nf)
+
+        sigma = self.nfft_proc.sigma
+
+        self.memory = []
+        for i in range(nlcs):
+            stream = None if streams is None else streams[i]
+            mem = LombScargleMemory(sigma, stream, m,
+                                    k0=k0,
+                                    buffered_transfer=True,
+                                    n0_buffer=max_nobs,
+                                    nf=nf,
+                                    **kwargs)
+
+            mem.allocate(**kwargs)
+            self.memory.append(mem)
+        return self.memory
 
     def autofrequency(self, *args, **kwargs):
         return utils_autofreq(*args, **kwargs)
@@ -840,9 +869,11 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         [check_k0(frq, k0=k0) for frq, k0 in zip(frqs, k0s)]
 
         if memory is None:
+            memory = self.memory
+
+        if memory is None:
             nfreqs = [len(frq) for frq in frqs]
             memory = self.allocate(data, nfreqs=nfreqs, k0s=k0s,
-                                   use_double=self.use_double,
                                    **kwargs)
         else:
             for i, (t, y, dy) in enumerate(data):
@@ -942,7 +973,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         return [(freqs, lsp) for lsp in lsps]
 
 
-def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=False):
+def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     """
     False alarm probability for periodogram peak
     based on Baluev (2008) [2008MNRAS.385.1279B]
@@ -962,10 +993,10 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=False):
         2H - 1 where H is the number of harmonics
     d_H: int, optional (default: 1)
         Number of degrees of freedom for default model.
-    use_gamma: bool, optional (default: False)
+    use_gamma: bool, optional (default: True)
         Use gamma function for computation of numerical
-        coefficient; more accurate but not stable for
-        Nobs >~ 100
+        coefficient; replaced with scipy.special.gammaln
+        and should be stable now
     Returns
     -------
     fap: float
@@ -991,10 +1022,8 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=False):
     N_H = N - d_H
     g = (0.5 * N_H) ** (0.5 * (d - 1))
 
-    # this is the actual value for g, but too numerically
-    # unstable for N > ~ 100
     if use_gamma:
-        g = gamma(0.5 * N_H) / gamma(0.5 * (N_K + 1))
+        g = np.exp(gammaln(0.5 * N_H) - gammaln(0.5 * (N_K + 1)))
 
     w = np.power(dy, -2)
 

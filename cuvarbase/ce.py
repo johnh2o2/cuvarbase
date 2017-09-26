@@ -56,7 +56,7 @@ class ConditionalEntropyMemory(object):
         if kwargs.get('use_double', False):
             self.real_type = np.float64
 
-        self.freqs = None
+        self.freqs = kwargs.get('freqs', None)
         self.freqs_g = None
 
         self.mag_bin_fracs = None
@@ -403,6 +403,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         if self.use_double:
             self.real_type = np.float64
 
+        self.memory = kwargs.get('memory', None)
+
     def _compile_and_prepare_functions(self, **kwargs):
 
         cpp_defs = dict(NPHASE=self.phase_bins,
@@ -531,6 +533,30 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         return allocated_memory
 
+    def preallocate(self, max_nobs, freqs,
+                    nlcs=1, streams=None, **kwargs):
+        kw = dict(phase_bins=self.phase_bins,
+                  mag_bins=self.mag_bins,
+                  max_phi=self.max_phi,
+                  weighted=self.weighted,
+                  use_double=self.use_double,
+                  n0_buffer=max_nobs,
+                  buffered_transfer=True,
+                  allocate=True,
+                  freqs=freqs)
+
+        kw.update(kwargs)
+
+        self.memory = []
+        for i in range(nlcs):
+            stream = None if streams is None else streams[i]
+            kw.update(dict(stream=stream))
+            mem = ConditionalEntropyMemory(**kw)
+            mem.allocate(**kwargs)
+            self.memory.append(mem)
+
+        return self.memory
+
     def run(self, data,
             memory=None,
             freqs=None,
@@ -578,6 +604,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             frqs = [frqs] * len(data)
 
         assert(len(frqs) == len(data))
+
+        memory = memory if memory is not None else self.memory
 
         if memory is None:
             memory = self.allocate(data, freqs=frqs,

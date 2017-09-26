@@ -1,5 +1,5 @@
 Box least squares (BLS) periodogram
-===================================
+***********************************
 
 The box-least squares periodogram [BLS]_ searches for the periodic dips in brightness that occur when, e.g., a planet passes in front of its host star. The algorithm fits
 a `boxcar function <https://en.wikipedia.org/wiki/Boxcar_function>`_ to the data. The parameters used are
@@ -15,6 +15,7 @@ a `boxcar function <https://en.wikipedia.org/wiki/Boxcar_function>`_ to the data
 
 Using ``cuvarbase`` BLS
 -----------------------
+
 
 .. plot:: plots/bls_example.py
 	:include-source:

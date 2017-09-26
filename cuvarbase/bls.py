@@ -68,7 +68,10 @@ def fmax_transit0(rho=1., **kwargs):
 
 def q_transit(freq, rho=1., **kwargs):
     fmax0 = fmax_transit0(rho=rho)
-    return (1./np.pi) * np.arcsin(np.power(freq / fmax0, 2./3.))
+
+    f23 = np.power(freq / fmax0, 2./3.)
+    f23 = np.minimum(1., f23)
+    return (1./np.pi) * np.arcsin(f23)
 
 
 def freq_transit(q, rho=1., **kwargs):
@@ -345,7 +348,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
 
 def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
-              nstreams=5, noverlap=3, dlogq=0.5,
+              nstreams=5, noverlap=3, dlogq=0.2,
               batch_size=5, functions=None, **kwargs):
 
     """
@@ -405,6 +408,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     max_q_vals = locext(max, qmax)
     min_q_vals = locext(min, qmin)
+
+    #print qmin, qmax
 
     nbins0_max = int(np.floor(1./max_q_vals))
     nbinsf_max = int(np.ceil(1./min_q_vals))
@@ -633,7 +638,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
 
 def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.5,
                       qmin_fac=0.5, qmax_fac=2.0, fmin=None,
-                      fmax=None, **kwargs):
+                      fmax=None, freqs=None, qvals=None, **kwargs):
     """
     Compute BLS for timeseries assuming edge-on keplerian
     orbit of a planet with Mp/Ms << 1, Rp/Rs < 1, Lp/Ls << 1 and
@@ -663,6 +668,10 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.5,
     qmax_fac: float, optional (default: 2.0)
         Fraction of the fiducial q value to search
         at each frequency (maximum)
+    freqs: array_like, optional (default: None)
+        Overrides the auto-generated frequency grid
+    qvals: array_like, optional (default: None)
+        Overrides the keplerian q values
     **kwargs:
         passed to `eebls_gpu`, `compile_bls`, `fmax_transit`,
         `fmin_transit`, and `transit_autofreq`
@@ -679,15 +688,20 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.5,
 
     """
     funcs = compile_bls(**kwargs)
-    if fmin is None:
-        fmin = fmin_transit(t, **kwargs) * fmin_frac
-    if fmax is None:
-        fmax = fmax_transit(qmax=0.5 / qmax_fac, **kwargs) * fmax_frac
-    freqs, q0vals = transit_autofreq(t, fmin=fmin, fmax=fmax,
-                                     qmin_fac=qmin_fac, **kwargs)
+    if freqs is None:
+        if qvals is not None:
+            raise Exception("qvals must be None if freqs is None")
+        if fmin is None:
+            fmin = fmin_transit(t, **kwargs) * fmin_frac
+        if fmax is None:
+            fmax = fmax_transit(qmax=0.5 / qmax_fac, **kwargs) * fmax_frac
+        freqs, qvals = transit_autofreq(t, fmin=fmin, fmax=fmax,
+                                        qmin_fac=qmin_fac, **kwargs)
+    if qvals is None:
+        qvals = q_transit(freqs, **kwargs)
 
-    qmins = q0vals * qmin_fac
-    qmaxes = q0vals * qmax_fac
+    qmins = qvals * qmin_fac
+    qmaxes = qvals * qmax_fac
 
     powers, sols = eebls_gpu(t, y, dy, freqs,
                              qmin=qmins, qmax=qmaxes,
