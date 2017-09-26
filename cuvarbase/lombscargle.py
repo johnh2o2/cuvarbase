@@ -245,14 +245,15 @@ class LombScargleMemory(object):
         self.tmin = min(t)
         self.tmax = max(t)
 
-        self.nfft_mem_yw.tmin = self.tmin
-        self.nfft_mem_w.tmin = self.tmin
+        if self.use_fft:
+            self.nfft_mem_yw.tmin = self.tmin
+            self.nfft_mem_w.tmin = self.tmin
 
-        self.nfft_mem_yw.tmax = self.tmax
-        self.nfft_mem_w.tmax = self.tmax
+            self.nfft_mem_yw.tmax = self.tmax
+            self.nfft_mem_w.tmax = self.tmax
 
-        self.nfft_mem_w.n0 = len(t)
-        self.nfft_mem_yw.n0 = len(t)
+            self.nfft_mem_w.n0 = len(t)
+            self.nfft_mem_yw.n0 = len(t)
 
         return self
 
