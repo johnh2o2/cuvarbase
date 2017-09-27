@@ -88,9 +88,11 @@ class NFFTMemory(object):
         self.nf = kwargs.get('nf', self.nf)
 
         assert(self.nf is not None)
-        self.ghat_c = cuda.aligned_zeros(shape=(self.nf,),
-                                         dtype=self.complex_type,
-                                         alignment=resource.getpagesize())
+        #self.ghat_c = cuda.aligned_zeros(shape=(self.nf,),
+        #                                 dtype=self.complex_type,
+        #                                 alignment=resource.getpagesize())
+        #self.ghat_c = cuda.register_host_memory(self.ghat_c)
+        self.ghat_c = np.zeros(self.nf, dtype=self.complex_type)
         self.ghat_c = cuda.register_host_memory(self.ghat_c)
 
         return self
@@ -370,6 +372,12 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         self.allocated_memory = []
 
     def m_from_C(self, C, sigma):
+        """ 
+        Returns an estimate for what ``m`` value to use from ``C``,
+        where ``C`` is something like ``err_tolerance/N_freq``.
+
+        Pulled from <https://github.com/jakevdp/nfft>_
+        """
         D = (np.pi * (1. - 1. / (2. * sigma - 1.)))
         return int(np.ceil(-np.log(0.25 * C) / D))
 
@@ -400,6 +408,19 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         return self.m_from_C(self.m_tol / N, self.sigma)
 
     def get_m(self, N=None):
+        """ 
+        Returns the ``m`` value for ``N`` frequencies.
+
+        Parameters
+        ----------
+        N: int
+            Number of frequencies, only needed if ``autoset_m`` is ``False``.
+
+        Returns
+        -------
+        m: int
+            The filter radius (in grid points)
+        """
         if self.autoset_m:
             return self.estimate_m(N)
         else:

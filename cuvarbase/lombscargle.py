@@ -1,9 +1,12 @@
+import resource
+
 import numpy as np
-import pycuda.driver as cuda
 from scipy.special import gamma, gammaln
+
+import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import resource
+
 from .core import GPUAsyncProcess
 from .utils import weights, find_kernel, _module_reader
 from .utils import autofrequency as utils_autofreq
@@ -22,6 +25,19 @@ def check_k0(freqs, k0=None, rtol=1E-2, atol=1E-7):
 
 
 class LombScargleMemory(object):
+    """
+    Container class for allocating memory and transferring
+    data between the GPU and CPU for Lomb-Scargle computations
+
+    Parameters
+    ----------
+    sigma: int
+        The ``sigma`` parameter for the NFFT
+    stream: :class:`pycuda.driver.Stream` instance
+        The CUDA stream used for calculations/data transfer
+    m: int
+        The ``m`` parameter for the NFFT
+    """
     def __init__(self, sigma, stream, m, **kwargs):
 
         self.sigma = sigma
@@ -102,6 +118,7 @@ class LombScargleMemory(object):
         self.w = kwargs.get('w', None)
 
     def allocate_data(self, **kwargs):
+        """ Allocates memory for lightcurve """
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
@@ -124,6 +141,10 @@ class LombScargleMemory(object):
         return self
 
     def allocate_grids(self, **kwargs):
+        """
+        Allocates memory for NFFT grids, NFFT precomputation vectors,
+        and the GPU vector for the Lomb-Scargle power
+        """
         k0 = kwargs.get('k0', self.k0)
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
@@ -151,19 +172,27 @@ class LombScargleMemory(object):
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
+        """ Allocates pinned CPU memory for asynchronous transfer of result """
         nf = kwargs.get('nf', self.nf)
         assert(nf is not None)
 
-        self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
-                                        alignment=resource.getpagesize())
+        #self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
+        #                                alignment=resource.getpagesize())
+        #self.lsp_c = cuda.register_host_memory(self.lsp_c)
+        self.lsp_c = np.zeros(nf, dtype=self.real_type)
         self.lsp_c = cuda.register_host_memory(self.lsp_c)
 
         return self
 
     def is_ready(self):
+        """ don't use this. """
         raise NotImplementedError()
 
     def allocate_buffered_data_arrays(self, **kwargs):
+        """
+        Allocates pinned memory for lightcurves if we're reusing
+        this container
+        """
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
@@ -186,6 +215,7 @@ class LombScargleMemory(object):
         return self
 
     def allocate(self, **kwargs):
+        """ Allocate all memory necessary """
         self.nf = kwargs.get('nf', self.nf)
         assert(self.nf is not None)
 
@@ -199,6 +229,7 @@ class LombScargleMemory(object):
         return self
 
     def setdata(self, **kwargs):
+        """ Sets the value of the data arrays. """
         t = kwargs.get('t', self.t)
         yw = kwargs.get('yw', self.yw)
         w = kwargs.get('w', self.w)
@@ -258,6 +289,7 @@ class LombScargleMemory(object):
         return self
 
     def transfer_data_to_gpu(self, **kwargs):
+        """ Transfers the lightcurve to the GPU """
         t, yw, w = self.t, self.yw, self.w
 
         assert(not any([arr is None for arr in [t, yw, w]]))
@@ -268,10 +300,11 @@ class LombScargleMemory(object):
         self.w_g.set_async(w, stream=self.stream)
 
     def transfer_lsp_to_cpu(self, **kwargs):
-        cuda.memcpy_dtoh_async(self.lsp_c, self.lsp_g.ptr,
-                               stream=self.stream)
+        """ Asynchronous transfer of LSP result to CPU """
+        self.lsp_g.get_async(ary=self.lsp_c, stream=self.stream)
 
     def fromdata(self, **kwargs):
+        """ Sets and (optionally) allocates memory for data """
         self.setdata(**kwargs)
 
         if kwargs.get('allocate', True):
@@ -280,6 +313,7 @@ class LombScargleMemory(object):
         return self
 
     def set_gpu_arrays_to_zero(self, **kwargs):
+        """ Sets all gpu arrays to zero """
         for x in [self.t_g, self.yw_g, self.w_g]:
             if x is not None:
                 x.fill(self.real_type(0), stream=self.stream)

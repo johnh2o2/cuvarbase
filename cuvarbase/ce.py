@@ -186,7 +186,6 @@ class ConditionalEntropyMemory(object):
         self.freqs_g.set_async(freqs, stream=self.stream)
 
     def transfer_ce_to_cpu(self, **kwargs):
-        #cuda.memcpy_dtoh_async(self.ce_c, self.ce_g.ptr, stream=self.stream)
         self.ce_g.get_async(stream=self.stream, ary=self.ce_c)
 
     def compute_mag_bin_fracs(self, y, **kwargs):
