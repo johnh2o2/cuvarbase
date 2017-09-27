@@ -1,10 +1,8 @@
-import numpy as np
 import pytest
-
-from numpy.testing import assert_allclose
-
-from ..ce import ConditionalEntropyAsyncProcess
 from pycuda.tools import mark_cuda_test
+import numpy as np
+from numpy.testing import assert_allclose
+from ..ce import ConditionalEntropyAsyncProcess
 lsrtol = 1E-2
 lsatol = 1E-5
 
@@ -90,11 +88,12 @@ def test_batched_run(ndatas=25, batch_size=5, **kwargs):
 
 @mark_cuda_test
 def test_batched_run_const_nfreq(make_plot=False, ndatas=27,
-                                 batch_size=5,
+                                 batch_size=5, seed=100,
                                  **kwargs):
-
-    frequencies = 10 + np.random.rand(ndatas) * 100.
-    datas = [data(ndata=np.random.randint(200, 350),
+    
+    rand = np.random.RandomState(seed)
+    frequencies = 10 + rand.rand(ndatas) * 100.
+    datas = [data(ndata=rand.randint(200, 350),
                   freq=freq)
              for i, freq in enumerate(frequencies)]
     proc = ConditionalEntropyAsyncProcess(**kwargs)
@@ -123,10 +122,10 @@ def test_batched_run_const_nfreq(make_plot=False, ndatas=27,
             plt.plot(fb, pb, color='r')
             plt.axvline(f0)
             plt.show()
-
+        print "f0", f0
         assert(not any(np.isnan(pb)))
         assert(not any(np.isnan(pnb)))
-
+        
         assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
         assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
 
@@ -239,7 +238,9 @@ def test_double(make_plot=False, **kwargs):
 
     spows = sorted(zip(p, p1), key=lambda x: -abs(x[1] - x[0]))
 
-    bad_frac = sum(np.absolute(p - p1) > 1e-2 * 0.5 * (p + p1)) / float(len(p))
+    diffs = np.absolute(p - p1)
+    tolerance = 1e-2 * 0.5 * (np.absolute(p) + np.absolute(p1)) + 1e-3
+    bad_frac = sum(diffs > tolerance) / float(len(p))
 
     for P, P1 in spows:
         if abs(P - P1) > 1e-3:

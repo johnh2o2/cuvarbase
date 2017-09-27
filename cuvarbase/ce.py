@@ -47,6 +47,7 @@ class ConditionalEntropyMemory(object):
         self.y_g = None
         self.dy_g = None
 
+        self.set_bins = False
         self.bins_g = None
         self.ce_c = None
         self.ce_g = None
@@ -121,11 +122,12 @@ class ConditionalEntropyMemory(object):
         assert(nf is not None)
 
         self.nbins = nf * self.phase_bins * self.mag_bins
-
+        
         if self.weighted:
             self.bins_g = gpuarray.zeros(self.nbins, dtype=self.real_type)
         else:
             self.bins_g = gpuarray.zeros(self.nbins, dtype=np.uint32)
+            self.set_bins=True
 
         if self.balanced_magbins:
             self.mag_bwf_g = gpuarray.zeros(self.mag_bins,
@@ -184,7 +186,8 @@ class ConditionalEntropyMemory(object):
         self.freqs_g.set_async(freqs, stream=self.stream)
 
     def transfer_ce_to_cpu(self, **kwargs):
-        cuda.memcpy_dtoh_async(self.ce_c, self.ce_g.ptr, stream=self.stream)
+        #cuda.memcpy_dtoh_async(self.ce_c, self.ce_g.ptr, stream=self.stream)
+        self.ce_g.get_async(stream=self.stream, ary=self.ce_c)
 
     def compute_mag_bin_fracs(self, y, **kwargs):
         N = float(len(y))
@@ -316,12 +319,14 @@ def conditional_entropy(memory, functions, block_size=256,
             memory.transfer_ce_to_cpu()
         return memory.ce_c
 
+    # print memory.bins_g, memory.set_bins
     args = (grid, block, memory.stream)
     args += (memory.t_g.ptr, memory.y_g.ptr)
     args += (memory.bins_g.ptr, memory.freqs_g.ptr)
     args += (np.int32(memory.nf), np.int32(memory.n0))
     hist_count.prepared_async_call(*args)
 
+    # print memory.bins_g, memory.set_bins
     grid = (int(np.ceil(memory.nf / float(block_size))), 1)
     args = (grid, block, memory.stream)
     args += (memory.bins_g.ptr, np.int32(memory.nf), memory.ce_g.ptr)
@@ -336,7 +341,9 @@ def conditional_entropy(memory, functions, block_size=256,
         ce_std.prepared_async_call(*args)
 
     if transfer_to_host:
+        memory.stream.synchronize()
         memory.transfer_ce_to_cpu()
+        memory.stream.synchronize()
 
     return memory.ce_c
 
@@ -612,11 +619,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                                    **kwargs)
             for mem in memory:
                 mem.transfer_freqs_to_gpu()
-        else:
+        elif set_data:
             for i, (t, y, dy) in enumerate(data):
                 memory[i].set_gpu_arrays_to_zero(**kwargs)
-                if set_data:
-                    memory[i].setdata(t, y, dy=dy, **kwargs)
+                memory[i].setdata(t, y, dy=dy, **kwargs)
 
         kw = dict(block_size=self.block_size)
         kw.update(kwargs)
@@ -755,5 +761,5 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
             for i, (f, ce) in enumerate(results):
                 ces.append(np.copy(ce))
-
+        
         return [(freqs, ce) for ce in ces]
