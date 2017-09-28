@@ -25,7 +25,6 @@ def data(seed=100, sigma=0.1, ndata=250):
     return t, y, err
 
 
-@mark_cuda_test
 def test_cuda_pdm():
 
     kind = 'binned_linterp'
