@@ -4,15 +4,18 @@ DOC_BRANCH=devel
 NEEDED="cuvarbase docs/Makefile docs/source README.rst INSTALL.rst CHANGELOG.rst"
 
 HAS_GH_BRANCH=`git branch | grep gh-pages`
-
-if [ "$HAS_GH_BRANCH" != "" ]; then
-    echo "Detected gh-pages branch. Deleting this and starting over."
-    git branch -d gh-pages
+if [ "$HAS_GH_BRANCH" == "" ]; then
+    echo "Did not detect gh-pages branch. Creating now."
+    git checkout --orphan gh-pages || exit 1
+    git symbolic-ref HEAD refs/heads/gh-pages
+    rm .git/index
+else 
+    git checkout gh-pages || exit 1
 fi
 
-git checkout --orphan gh-pages || exit 1
-git symbolic-ref HEAD refs/heads/gh-pages
-rm .git/index
+# update
+git pull origin gh-pages
+
 git clean -fdx
 
 git checkout $DOC_BRANCH $NEEDED
