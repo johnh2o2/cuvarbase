@@ -5,7 +5,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>&lt;no title&gt; &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>What’s new in cuvarbase &#8212; cuvarbase 0.1.9 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="&lt;no title&gt;" href="install.html" />
-    <link rel="prev" title="Indices and tables" href="index.html" />
+    <link rel="next" title="Install instructions" href="install.html" />
+    <link rel="prev" title="cuvarbase 0.1.9" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -41,7 +41,115 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  
+  <div class="section" id="what-s-new-in-cuvarbase">
+<h1>What’s new in cuvarbase<a class="headerlink" href="#what-s-new-in-cuvarbase" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><strong>0.1.9</strong><ul>
+<li>Added Sphinx documentation</li>
+<li><strong>Now Python 3 compatible!</strong></li>
+<li>Miscillaneous bug fixes</li>
+<li><dl class="first docutils">
+<dt>CE</dt>
+<dd><ul class="first last">
+<li>Run functions for <code class="docutils literal"><span class="pre">ConditionalEntropyAsyncProcess</span></code> now allow for a <code class="docutils literal"><span class="pre">balanced_magbins</span></code> argument to set the magnitude bins to have widths that vary with the distribution of magnitude values. This is more robust to outliers, but performance comparisons between the usual CE algorithm indicate that you should use care.</li>
+<li>Added <code class="docutils literal"><span class="pre">precompute</span></code> function to <code class="docutils literal"><span class="pre">ConditionalEntropyAsyncProcess</span></code> that allows you to speed up computations without resorting to the <code class="docutils literal"><span class="pre">batched_run_constant_nfreq</span></code> function. Currently it still assumes that the frequencies used will be the same for all lightcurves.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>GLS</dt>
+<dd><ul class="first last">
+<li>Added <code class="docutils literal"><span class="pre">precompute</span></code> function to <code class="docutils literal"><span class="pre">LombScargleAsyncProcess</span></code>.</li>
+<li>Avoids allocating GPU memory for NFFT when <code class="docutils literal"><span class="pre">use_fft</span></code> is <code class="docutils literal"><span class="pre">False</span></code>.</li>
+<li><code class="docutils literal"><span class="pre">LombScargleAsyncProcess.memory_requirement</span></code> is now implemented.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>BLS</dt>
+<dd><ul class="first last">
+<li><code class="docutils literal"><span class="pre">eebls_gpu</span></code>, <code class="docutils literal"><span class="pre">eebls_transit_gpu</span></code>, and <code class="docutils literal"><span class="pre">eebls_custom_gpu</span></code> now have a <code class="docutils literal"><span class="pre">max_memory</span></code> option that allows you to automatically set the <code class="docutils literal"><span class="pre">batch_size</span></code> without worrying about memory allocation errors.</li>
+<li><code class="docutils literal"><span class="pre">eebls_transit_gpu</span></code> now allows for a <code class="docutils literal"><span class="pre">freqs</span></code> argument and a <code class="docutils literal"><span class="pre">qvals</span></code> argument for customizing the frequencies and the fiducial <code class="docutils literal"><span class="pre">q</span></code> values</li>
+<li>Fixed a small bug in <code class="docutils literal"><span class="pre">fmin_transit</span></code> that miscalculated the minimum frequency.</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</li>
+<li><dl class="first docutils">
+<dt><strong>0.1.8</strong></dt>
+<dd><ul class="first last">
+<li>Removed gamma function usage from baluev 2008 false alarm probability (<code class="docutils literal"><span class="pre">use_gamma=True</span></code> will override this)</li>
+<li>Fixed a bug in the GLS notebook</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><strong>0.1.6/0.1.7</strong></dt>
+<dd><ul class="first last">
+<li>Some bug fixes for GLS</li>
+<li><code class="docutils literal"><span class="pre">large_run</span></code> function for Conditional Entropy period finder allows large frequency grids
+without raising memory allocation errors.</li>
+<li>More unit tests for conditional entropy</li>
+<li>Conditional entropy now supports double precision with the <code class="docutils literal"><span class="pre">use_double</span></code> argument</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><strong>0.1.5</strong></dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>Conditional Entropy period finder now unit tested</dt>
+<dd><ul class="first last">
+<li>Weighted variant also implemented – accounts for heteroskedasticity if
+that’s important</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>BLS</dt>
+<dd><ul class="first last">
+<li>New unit tests</li>
+<li><dl class="first docutils">
+<dt>A new transiting exoplanet BLS function: <code class="docutils literal"><span class="pre">eebls_transit_gpu</span></code></dt>
+<dd><ul class="first last">
+<li>Only searches plausible parameter space for Keplerian orbit</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>GLS</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>False alarm probability: <code class="docutils literal"><span class="pre">fap_baluev</span></code></dt>
+<dd><ul class="first last">
+<li>Implements <a class="reference external" href="http://adsabs.harvard.edu/abs/2008MNRAS.385.1279B">Baluev 2008</a> false alarm probability measure based on extreme value theory</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+
 
           </div>
         </div>
@@ -62,7 +170,9 @@
 
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">What’s new in cuvarbase</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Install instructions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ce.html">Conditional Entropy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lomb.html">Lomb-Scargle periodogram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="bls.html">Box least squares (BLS) periodogram</a></li>
@@ -73,8 +183,8 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">Indices and tables</a></li>
-      <li>Next: <a href="install.html" title="next chapter">&lt;no title&gt;</a></li>
+      <li>Previous: <a href="index.html" title="previous chapter">cuvarbase 0.1.9</a></li>
+      <li>Next: <a href="install.html" title="next chapter">Install instructions</a></li>
   </ul></li>
 </ul>
 </div>
