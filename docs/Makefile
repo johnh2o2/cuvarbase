@@ -12,9 +12,7 @@ DOC_BRANCH = devel
 
 gh-pages:
 	git checkout gh-pages
-	cd ..
-	rm -rf build _sources _static
-	cd docs
+	rm -rf ../build ../_sources ../_static ../_modules ../_images
 	git checkout $(DOC_BRANCH) $(GH_PAGES_SOURCES)
 	git reset HEAD
 	make html
