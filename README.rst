@@ -1,4 +1,4 @@
-cuvarbase 0.1.9
+cuvarbase 0.2.0
 ===============
 
 John Hoffman
