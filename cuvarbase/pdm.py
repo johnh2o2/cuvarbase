@@ -4,11 +4,15 @@ from __future__ import print_function
 
 from builtins import zip
 from builtins import range
+
 import numpy as np
+import resource
+
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import resource
+import pycuda.autoinit
+
 from .core import GPUAsyncProcess, BaseSpectrogram
 from .utils import weights, find_kernel
 

@@ -7,14 +7,18 @@ from __future__ import print_function, division
 from builtins import zip
 from builtins import range
 from builtins import object
-from .core import GPUAsyncProcess
+
 import numpy as np
+
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
+import pycuda.autoinit
 from pycuda.compiler import SourceModule
+
+from .core import GPUAsyncProcess
 from .utils import _module_reader, find_kernel
 from .utils import autofrequency as utils_autofreq
-from time import time
+
 import resource
 import warnings
 
@@ -292,14 +296,18 @@ class ConditionalEntropyMemory(object):
 
 def conditional_entropy(memory, functions, block_size=256,
                         transfer_to_host=True,
-                        transfer_to_device=True,
+                        transfer_to_device=True, debug=False,
                         **kwargs):
     block = (block_size, 1, 1)
     grid = (int(np.ceil((memory.n0 * memory.nf) / float(block_size))), 1)
     ce_dpdm, hist_count, hist_weight, ce_logp, ce_std, ce_wt = functions
 
+    if debug:
+            memory.stream.synchronize()
     if transfer_to_device:
         memory.transfer_data_to_gpu()
+        if debug:
+            memory.stream.synchronize()
 
     if memory.weighted:
         args = (grid, block, memory.stream)
@@ -308,15 +316,21 @@ def conditional_entropy(memory, functions, block_size=256,
         args += (np.int32(memory.nf), np.int32(memory.n0))
         args += (memory.real_type(memory.max_phi),)
         hist_weight.prepared_async_call(*args)
+        if debug:
+            memory.stream.synchronize()
 
         grid = (int(np.ceil(memory.nf / float(block_size))), 1)
 
         args = (grid, block, memory.stream)
         args += (memory.bins_g.ptr, np.int32(memory.nf), memory.ce_g.ptr)
         ce_wt.prepared_async_call(*args)
+        if debug:
+            memory.stream.synchronize()
 
         if transfer_to_host:
             memory.transfer_ce_to_cpu()
+            if debug:
+                memory.stream.synchronize()
         return memory.ce_c
 
     args = (grid, block, memory.stream)
@@ -324,6 +338,8 @@ def conditional_entropy(memory, functions, block_size=256,
     args += (memory.bins_g.ptr, memory.freqs_g.ptr)
     args += (np.int32(memory.nf), np.int32(memory.n0))
     hist_count.prepared_async_call(*args)
+    if debug:
+            memory.stream.synchronize()
 
     grid = (int(np.ceil(memory.nf / float(block_size))), 1)
     args = (grid, block, memory.stream)
@@ -338,8 +354,14 @@ def conditional_entropy(memory, functions, block_size=256,
     else:
         ce_std.prepared_async_call(*args)
 
+    if debug:
+        memory.stream.synchronize()
+
     if transfer_to_host:
         memory.transfer_ce_to_cpu()
+
+    if debug:
+        memory.stream.synchronize()
 
     return memory.ce_c
 

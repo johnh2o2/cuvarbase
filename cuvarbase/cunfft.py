@@ -4,17 +4,20 @@ from __future__ import division
 from __future__ import print_function
 
 from builtins import object
+
 import sys
+import resource
+import numpy as np
+
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
+import pycuda.autoinit
+
+import skcuda.fft as cufft
 
 from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader
-import resource
-import numpy as np
-import ctypes
-import skcuda.fft as cufft
 
 
 class NFFTMemory(object):

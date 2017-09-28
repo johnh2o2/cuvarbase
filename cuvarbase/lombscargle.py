@@ -14,6 +14,7 @@ from scipy.special import gamma, gammaln
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
+import pycuda.autoinit
 
 from .core import GPUAsyncProcess
 from .utils import weights, find_kernel, _module_reader
