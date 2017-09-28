@@ -15,7 +15,7 @@ git checkout gh-pages
 rm -rf .
 touch .nojekyll
 git checkout master docs/build/html
-mv ./docs/build/html/* ./
+cp -r ./docs/build/html/* ./
 rm -rf ./docs
 git add --all
 #git commit -m "publishing updated docs..."
