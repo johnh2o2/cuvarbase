@@ -113,7 +113,7 @@ __device__ float var_binless_tophat(
         CONSTANT float freq,
         CONSTANT int ndata,
         CONSTANT float dphi){
-	float mbar, tj, wtot, var, dphase;
+	float mbar, tj, wtot, var;
 	bool in_bin;
 	var = 0.f;
 	for(int j = 0; j < ndata; j++){
@@ -137,14 +137,14 @@ __device__ float var_binless_gauss(
         CONSTANT float freq,
         CONSTANT int ndata,
         CONSTANT float dphi){
-    float mbar, tj, wtot, var, wgt, dphase;
+    float mbar, tj, wtot, var, wgt;
 	var = 0.f;
     for(int j = 0; j < ndata; j++){
         mbar = 0.f;
         wtot = 0.f;
         tj = t[j];
         for(int k = 0; k < ndata; k++){
-			dphase = phase_diff(fabsf(t[k] - tj), freq);
+			float dphase = phase_diff(fabsf(t[k] - tj), freq);
 			wgt   = w[k] * GAUSSIAN(dphase / dphi);
             mbar += wgt * y[k];
             wtot += wgt;

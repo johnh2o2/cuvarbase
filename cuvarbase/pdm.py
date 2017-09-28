@@ -109,15 +109,16 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
     var = np.float32(np.dot(w, np.power(y - ybar, 2)))
 
     # transfer data
-    w_g.set_async(np.array(w, dtype=np.float32), stream=stream)
-    t_g.set_async(np.array(t, dtype=np.float32), stream=stream)
-    y_g.set_async(np.array(y, dtype=np.float32), stream=stream)
+    w_g.set_async(np.asarray(w).astype(np.float32), stream=stream)
+    t_g.set_async(np.asarray(t).astype(np.float32), stream=stream)
+    y_g.set_async(np.asarray(y).astype(np.float32), stream=stream)
 
     function.prepared_async_call(grid, block, stream,
-                                 t_g.ptr, y_g.ptr, w_g.ptr, freqs_g.ptr, pow_g,
+                                 t_g.ptr, y_g.ptr, w_g.ptr,
+                                 freqs_g.ptr, pow_g.ptr,
                                  ndata, nfreqs, dphi, var)
 
-    cuda.memcpy_dtoh_async(pow_cpu, pow_g, stream)
+    pow_g.get_async(stream=stream, ary=pow_cpu)
 
     return pow_cpu
 
@@ -158,7 +159,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
                 t_g, y_g, w_g = tuple([gpuarray.zeros(len(t), dtype=np.float32)
                                        for i in range(3)])
 
-            pow_g = cuda.mem_alloc(pow_cpu.nbytes)
+            pow_g = gpuarray.zeros(len(pow_cpu), dtype=pow_cpu.dtype)
             freqs_g = gpuarray.to_gpu(np.asarray(freqs).astype(np.float32))
 
             gpu_data.append((t_g, y_g, w_g, freqs_g, pow_g))

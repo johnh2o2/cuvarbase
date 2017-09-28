@@ -41,8 +41,8 @@ source activate $CONDA_ENVIRONMENT_NAME
 
 cd $CUVARBASE_DIR
 
-# Install from the present directory
-pip install -e .
+# Install from the present directory, ignoring caches
+pip install --no-cache-dir -e .
 
 # test
 python setup.py test
