@@ -13,16 +13,29 @@ fi
 
 # update
 git pull origin gh-pages
+
+# clean out
 git rm -rf .
 
+# checkout the files we need for the documentation
 git checkout $DOC_BRANCH $NEEDED
 git reset HEAD
+
+# make docs
 cd docs
 make html || exit 1
 cd ..
+
+# move content to parent directory
 mv docs/build/html/* ./
+
+# remove unneeded files
 rm -rf $NEEDED docs
 
+# this will fix some problems
+touch .nojekyll
+
+# update the repo
 git add --all
 git commit -m "Updating docs"
 git push -u origin gh-pages
