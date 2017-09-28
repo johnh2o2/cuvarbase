@@ -6,7 +6,7 @@ NEEDED="cuvarbase docs/Makefile docs/source README.rst INSTALL.rst CHANGELOG.rst
 HAS_GH_BRANCH=`git branch | grep gh-pages`
 if [ "$HAS_GH_BRANCH" == "" ]; then
     echo "Did not detect gh-pages branch. Creating now."
-    git checkout --orphan gh-pages || exit 1
+    git checkout -b gh-pages || exit 1
     git symbolic-ref HEAD refs/heads/gh-pages
     rm .git/index
 else 
