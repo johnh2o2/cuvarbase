@@ -6,7 +6,7 @@ rand = np.random.RandomState(100)
 freq = 40
 def data(ndata=100, freq=freq, sigma=0.4):
     t = np.sort(rand.rand(ndata))
-    y = sum([np.cos(2 * np.pi * n * freq * t - n) / np.sqrt(n + 1) for n in range(4)])
+    y = sum([np.cos(2 * np.pi * n * freq * t - n) / np.sqrt(abs(n - 2) + 1) for n in range(4)])
     dy = sigma * np.ones_like(t)
 
     y += dy * rand.randn(ndata)
@@ -32,7 +32,7 @@ phi = (t * freq) % 2.0
 ax.plot(frq, p, color='0.6', lw=2)
 
 for n in range(1, 4):
-    mask = np.absolute(frq - n * freq) / freq < 1e-2
+    mask = np.absolute(frq - n * freq) / freq < 1e-1
     ax.plot(frq[mask], p[mask])
 
 ax.set_xlim(min(frq), max(frq))
