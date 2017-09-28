@@ -7,7 +7,7 @@ SPHINXBUILD   = python -msphinx
 SPHINXPROJ    = cuvarbase
 SOURCEDIR     = source
 BUILDDIR      = build
-GH_PAGES_SOURCES = source Makefile ../cuvarbase
+GH_PAGES_SOURCES = source Makefile ../cuvarbase ../CHANGELOG.rst ../README.rst ../INSTALL.rst
 DOC_BRANCH = devel
 
 gh-pages:
