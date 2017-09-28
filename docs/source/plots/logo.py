@@ -16,20 +16,25 @@ def data(ndata=100, freq=freq, sigma=0.4):
 t, y, dy = data()
 data = [(t, y, dy)]
 proc = ls.LombScargleAsyncProcess()
-result = proc.run(data)
+result = proc.run(data, minimum_frequency=10, maximum_frequency=150)
 proc.finish()
 
 frq, p = result[0]
 
 mask = np.absolute(frq - freq) / freq < 0.02
 
-f, ax = plt.subplots()
+f, ax = plt.subplots(figsize=(3, 3))
 
 phi = (t * freq) % 2.0
 
 #ax.plot(frq[~mask], p[~mask], color='k', lw=2, zorder=10)
 #ax.plot(frq[mask], p[mask], color='r', lw=2, zorder=11)
-ax.plot(frq, p, color='k', lw=2)
+ax.plot(frq, p, color='0.6', lw=2)
+
+for n in range(1, 4):
+    mask = np.absolute(frq - n * freq) / freq < 1e-2
+    ax.plot(frq[mask], p[mask])
+
 ax.set_xlim(min(frq), max(frq))
 xmin, xmax = ax.get_xlim()
 ymin, ymax = ax.get_ylim()
@@ -39,5 +44,6 @@ ys = (ymax - ymin) * (y - min(y)) / yrange
 #ax.scatter(0.5 * phi * (xmax - xmin), ys, s=2, c='k', alpha=0.2)
 ax.axis('off')
 #ax.axvline(freq, ls=':', color='r')
+f.subplots_adjust(left=0, top=1, bottom=0, right=1)
 f.savefig('logo.png')
 #plt.show()
