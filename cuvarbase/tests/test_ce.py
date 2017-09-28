@@ -12,12 +12,13 @@ from numpy.testing import assert_allclose
 from ..ce import ConditionalEntropyAsyncProcess
 lsrtol = 1E-2
 lsatol = 1E-5
+seed = 100
+
+rand = np.random.RandomState(seed)
 
 
 @pytest.fixture
 def data(seed=100, sigma=0.1, ndata=100, freq=3., snr=10, t0=0.):
-
-    rand = np.random.RandomState(seed)
 
     t = np.sort(rand.rand(ndata)) + t0
     y = snr * sigma * np.cos(2 * np.pi * freq * t) / np.sqrt(len(t))
@@ -66,9 +67,9 @@ class TestCE(object):
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
 
-    def test_batched_run(self, ndatas=25, batch_size=5, **kwargs):
+    def test_batched_run(self, ndatas=7, batch_size=3, **kwargs):
 
-        datas = [data(ndata=np.random.randint(100, 350))
+        datas = [data(ndata=rand.randint(50, 100))
                  for i in range(ndatas)]
         proc = ConditionalEntropyAsyncProcess(**kwargs)
 
@@ -91,12 +92,11 @@ class TestCE(object):
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
 
-    def test_batched_run_const_nfreq(self, make_plot=False, ndatas=27,
-                                     batch_size=5, seed=100,
+    def test_batched_run_const_nfreq(self, make_plot=False, ndatas=7,
+                                     batch_size=3, seed=100,
                                      **kwargs):
-        rand = np.random.RandomState(seed)
-        frequencies = 10 + rand.rand(ndatas) * 100.
-        datas = [data(ndata=rand.randint(200, 350),
+        frequencies = np.sort(10 + rand.rand(ndatas) * 100.)
+        datas = [data(ndata=rand.randint(50, 100),
                       freq=freq)
                  for i, freq in enumerate(frequencies)]
         proc = ConditionalEntropyAsyncProcess(**kwargs)
@@ -136,8 +136,8 @@ class TestCE(object):
         proc = ConditionalEntropyAsyncProcess(**kwargs)
         for freq in [5.0, 10.0, 50.0]:
             t0 = kwargs.get('t0', 0.)
-            t, y, err = data(seed=100, sigma=0.01,
-                             snr=20, ndata=200, freq=freq, t0=t0)
+            t, y, err = data(sigma=0.01, snr=100, ndata=200,
+                             freq=freq, t0=t0)
 
             df = 0.001
             max_freq = 100.
@@ -174,7 +174,7 @@ class TestCE(object):
 
     def test_large_run(self, make_plot=False, **kwargs):
         proc = ConditionalEntropyAsyncProcess(**kwargs)
-        t, y, dy = data(seed=100, sigma=0.01, ndata=200, freq=4.)
+        t, y, dy = data(igma=0.01, ndata=100, freq=4.)
         df = 0.001
         max_freq = 100.
         min_freq = df
@@ -195,7 +195,7 @@ class TestCE(object):
         proc2 = ConditionalEntropyAsyncProcess(use_double=True, **kwargs)
         freq = 10.
 
-        t, y, err = data(seed=100, sigma=0.1, snr=20, ndata=100, freq=freq)
+        t, y, err = data(sigma=0.1, snr=20, ndata=100, freq=freq)
 
         # y[5] = np.median(y) + 10.
 
@@ -205,11 +205,11 @@ class TestCE(object):
         nf = int((max_freq - min_freq) / df)
         freqs = min_freq + df * np.arange(nf)
 
-        results = proc1.large_run([(t, y, err)], freqs=freqs, max_memory=1e8)
+        results = proc1.large_run([(t, y, err)], freqs=freqs, max_memory=1e7)
         proc1.finish()
         frq, p = results[0]
 
-        results1 = proc2.large_run([(t, y, err)], freqs=freqs, max_memory=1e8)
+        results1 = proc2.large_run([(t, y, err)], freqs=freqs, max_memory=1e7)
         proc2.finish()
         frq1, p1 = results1[0]
 

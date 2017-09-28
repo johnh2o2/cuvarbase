@@ -14,11 +14,11 @@ from astropy.stats.lombscargle import LombScargle
 from ..lombscargle import LombScargleAsyncProcess
 from pycuda.tools import mark_cuda_test
 import pycuda.autoinit
-spp = 10
+spp = 3
 nfac = 5
 lsrtol = 1E-2
 lsatol = 1E-5
-nfft_sigma = 5
+nfft_sigma = 6
 
 rand = np.random.RandomState(100)
 
@@ -41,6 +41,12 @@ def assert_similar(pdg0, pdg, top=5):
     p0 = np.asarray(pdg0)[inds]
     p = np.asarray(pdg)[inds]
     diff = np.absolute(p - p0)
+
+    res = sorted(zip(p0, p, diff), key=lambda x: -x[2])
+
+    for p0v, pv, dv in res:
+        if dv > 1e-3:
+            print(p0v, pv, dv)
 
     assert(all(diff < lsrtol * 0.5 * (p + p0) + lsatol))
 
