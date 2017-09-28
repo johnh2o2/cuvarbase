@@ -12,13 +12,13 @@
 set -x
 
 # Decide which python version to test
-PYTHON_VERSION=3.4
+PYTHON_VERSION=3.6
 
 # Put your cuda installation directory here
 export CUDA_ROOT=/usr/local/cuda
 
 ########################################################################
-CONDA_ENVIRONMENT_NAME=CUVARBASE_TESTING
+CONDA_ENVIRONMENT_NAME=cuvar
 CUVARBASE_DIR=$PWD
 
 # Export the library paths
