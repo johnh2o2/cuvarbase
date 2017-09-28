@@ -1,3 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from builtins import zip
+from builtins import range
+from builtins import object
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -23,7 +30,7 @@ spp = 1
 
 def direct_sums(t, y, freqs):
     def sfunc(func):
-        return map(lambda f: np.sum(y * func(2 * np.pi * t * f)), freqs)
+        return [np.sum(y * func(2 * np.pi * t * f)) for f in freqs]
     return np.asarray(sfunc(np.cos)) + 1j * np.asarray(sfunc(np.sin))
 
 
@@ -226,7 +233,7 @@ class TestNFFT(object):
         inds = dsort(np.real(direct_dft), np.real(gpu_nfft))
 
         npr = 5
-        q = zip(inds[:npr], direct_dft[inds[:npr]], gpu_nfft[inds[:npr]])
+        q = list(zip(inds[:npr], direct_dft[inds[:npr]], gpu_nfft[inds[:npr]]))
         for i, dft, gnfft in q:
             print(i, dft, gnfft)
         assert_allclose(np.real(direct_dft), np.real(gpu_nfft), **tols)
@@ -264,7 +271,6 @@ class TestNFFT(object):
 
         single_nffts = []
         for t, y, nf in datas:
-            print "HELLOWW"
             nfft = simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, m=nfft_m,
                                    use_double=use_double, **kwargs)
             single_nffts.append(nfft)
@@ -277,7 +283,6 @@ class TestNFFT(object):
         tols = dict(rtol=nfft_rtol, atol=nfft_atol)
         for ghat_m, ghat_s, ghat_b in zip(multi_nffts, single_nffts,
                                           batch_nffts):
-            print("testing...")
             assert_allclose(ghat_s.real, ghat_m.real, **tols)
             assert_allclose(ghat_s.imag, ghat_m.imag, **tols)
 

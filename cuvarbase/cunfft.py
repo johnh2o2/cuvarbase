@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
+from builtins import object
 import sys
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
@@ -88,11 +92,9 @@ class NFFTMemory(object):
         self.nf = kwargs.get('nf', self.nf)
 
         assert(self.nf is not None)
-        #self.ghat_c = cuda.aligned_zeros(shape=(self.nf,),
-        #                                 dtype=self.complex_type,
-        #                                 alignment=resource.getpagesize())
-        #self.ghat_c = cuda.register_host_memory(self.ghat_c)
-        self.ghat_c = np.zeros(self.nf, dtype=self.complex_type)
+        self.ghat_c = cuda.aligned_zeros(shape=(self.nf,),
+                                         dtype=self.complex_type,
+                                         alignment=resource.getpagesize())
         self.ghat_c = cuda.register_host_memory(self.ghat_c)
 
         return self
@@ -454,7 +456,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
                         self.real_type, self.real_type, self.real_type]
         )
 
-        for function, dtype in self.dtypes.iteritems():
+        for function, dtype in self.dtypes.items():
             func = self.module.get_function(function)
             self.prepared_functions[function] = func.prepare(dtype)
 

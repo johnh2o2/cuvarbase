@@ -1,3 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from builtins import zip
+from builtins import range
+from builtins import object
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -158,9 +165,7 @@ class TestBLS(object):
                                                    fmin=freq * 0.99,
                                                    fmax=freq * 1.01)
 
-            pcpu = map(lambda (f, (q, phi0)): single_bls(t, y, dy,
-                                                         f, q, phi0),
-                       zip(freqs, sols))
+            pcpu = [single_bls(t, y, dy, x[0], *x[1]) for x in zip(freqs, sols)]
             pcpu = np.asarray(pcpu)
 
             sorted_results = sorted(zip(pcpu, power, freqs, sols),
@@ -170,18 +175,18 @@ class TestBLS(object):
                 if i > 10:
                     break
 
-                print pcs, pgs
+                print(pcs, pgs)
                 if plot:
                     plot_bls_sol(t, y, dy, freq, qs, phs)
 
-            pows, diffs = zip(*sorted(zip(pcpu, np.absolute(power - pcpu)),
-                                      key=lambda x: -x[1]))
+            pows, diffs = list(zip(*sorted(zip(pcpu, np.absolute(power - pcpu)),
+                                      key=lambda x: -x[1])))
 
             upper_bound = 1e-3 * np.array(pows) + 1e-5
             mostly_ok = sum(np.array(diffs) > upper_bound) / len(pows) < 1e-2
             not_too_bad = max(diffs) < 1e-1
 
-            print max(diffs)
+            print(max(diffs))
             assert mostly_ok and not_too_bad
             # assert_allclose(pcpu, power, atol=1e-5, rtol=1e-3)
 
@@ -225,8 +230,8 @@ class TestBLS(object):
                 cpu_bls.append(pc)
                 sols.append((qsol, phisol))
                 blses.append(p)
-            qsg, phsg = zip(*gsols)
-            qs, phs = zip(*sols)
+            qsg, phsg = list(zip(*gsols))
+            qs, phs = list(zip(*sols))
             if plot:
                 import matplotlib.pyplot as plt
                 f, ax = plt.subplots()
@@ -278,8 +283,7 @@ class TestBLS(object):
                                      nstreams=5, noverlap=3, dlogq=0.5,
                                      batch_size=100)
 
-            bls_c = map(lambda (f, (qs, ps)): single_bls(t, y, dy, f, qs, ps),
-                        zip(freqs, gsols))
+            bls_c = [single_bls(t, y, dy, x[0], *x[1]) for x in zip(freqs, gsols)]
             if plot:
                 import matplotlib.pyplot as plt
                 f, ax = plt.subplots()
@@ -294,17 +298,17 @@ class TestBLS(object):
 
                 for i in inds[:10]:
                     qs, phis = gsols[i]
-                    print power[i], bls_c[i]
+                    print(power[i], bls_c[i])
                     plot_bls_sol(t, y, dy, freqs[i], qs, phis)
 
-            pows, diffs = zip(*sorted(zip(bls_c, np.absolute(power - bls_c)),
-                                      key=lambda x: -x[1]))
+            pows, diffs = list(zip(*sorted(zip(bls_c, np.absolute(power - bls_c)),
+                                      key=lambda x: -x[1])))
 
             upper_bound = 1e-3 * np.array(pows) + 1e-5
             mostly_ok = sum(np.array(diffs) > upper_bound) / len(pows) < 1e-2
             not_too_bad = max(diffs) < 1e-1
 
-            print diffs[0], pows[0]
+            print(diffs[0], pows[0])
             assert mostly_ok and not_too_bad
         # assert_allclose(bls_c, power, rtol=1e-3, atol=1e-5)
 
@@ -330,9 +334,7 @@ class TestBLS(object):
                   fmin=0.75 * freq, fmax=1.25 * freq)
         freqs, power, sols = eebls_transit_gpu(t, y, err, **kw)
 
-        power_cpu = np.array(map(lambda (f, (qs, phis)):
-                             single_bls(t, y, err, f, qs, phis),
-                             zip(freqs, sols)))
+        power_cpu = np.array([single_bls(t, y, err, x[0], *x[1]) for x in zip(freqs, sols)])
 
         if plot:
             import matplotlib.pyplot as plt
@@ -341,9 +343,9 @@ class TestBLS(object):
             ax.plot(freqs, power_cpu)
             ax.plot(freqs, power)
 
-            pows, diffs = zip(*sorted(zip(power_cpu, power - power_cpu),
-                              key=lambda x: -abs(x[1])))
-            print(zip(pows[:10], diffs[:10]))
+            pows, diffs = list(zip(*sorted(zip(power_cpu, power - power_cpu),
+                              key=lambda x: -abs(x[1]))))
+            print(list(zip(pows[:10], diffs[:10])))
             plt.show()
 
         diffs = np.absolute(power - power_cpu)
@@ -351,5 +353,5 @@ class TestBLS(object):
         mostly_ok = sum(np.array(diffs) > upper_bound) / len(diffs) < 1e-2
         not_too_bad = max(diffs) < 1e-1
 
-        print max(diffs)
+        print(max(diffs))
         assert mostly_ok and not_too_bad

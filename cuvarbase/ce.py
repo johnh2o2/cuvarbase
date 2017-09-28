@@ -2,7 +2,11 @@
 Implementation of Graham et al. 2013's Conditional Entropy
 period finding algorithm
 """
+from __future__ import print_function, division
 
+from builtins import zip
+from builtins import range
+from builtins import object
 from .core import GPUAsyncProcess
 import numpy as np
 import pycuda.driver as cuda
@@ -47,7 +51,6 @@ class ConditionalEntropyMemory(object):
         self.y_g = None
         self.dy_g = None
 
-        self.set_bins = False
         self.bins_g = None
         self.ce_c = None
         self.ce_g = None
@@ -122,12 +125,11 @@ class ConditionalEntropyMemory(object):
         assert(nf is not None)
 
         self.nbins = nf * self.phase_bins * self.mag_bins
-        
+
         if self.weighted:
             self.bins_g = gpuarray.zeros(self.nbins, dtype=self.real_type)
         else:
             self.bins_g = gpuarray.zeros(self.nbins, dtype=np.uint32)
-            self.set_bins=True
 
         if self.balanced_magbins:
             self.mag_bwf_g = gpuarray.zeros(self.mag_bins,
@@ -215,7 +217,6 @@ class ConditionalEntropyMemory(object):
 
         mag_bwf /= (max(y) - min(y))
 
-        # print self.balanced_magbins, ybins
         return ybins, mag_bwf.astype(self.real_type)
 
     def setdata(self, t, y, **kwargs):
@@ -272,11 +273,11 @@ class ConditionalEntropyMemory(object):
         return self
 
     def set_gpu_arrays_to_zero(self, **kwargs):
-        for x in [self.t_g, self.y_g, self.dy_g]:
-            if x is not None:
-                x.fill(self.real_type(0), stream=self.stream)
+        self.t_g.fill(self.real_type(0), stream=self.stream)
+        self.y_g.fill(self.ytype(0), stream=self.stream)
         if self.weighted:
             self.bins_g.fill(self.real_type(0), stream=self.stream)
+            self.dy_g.fill(self.real_type(0), stream=self.stream)
         else:
             self.bins_g.fill(np.uint32(0), stream=self.stream)
 
@@ -318,14 +319,12 @@ def conditional_entropy(memory, functions, block_size=256,
             memory.transfer_ce_to_cpu()
         return memory.ce_c
 
-    # print memory.bins_g, memory.set_bins
     args = (grid, block, memory.stream)
     args += (memory.t_g.ptr, memory.y_g.ptr)
     args += (memory.bins_g.ptr, memory.freqs_g.ptr)
     args += (np.int32(memory.nf), np.int32(memory.n0))
     hist_count.prepared_async_call(*args)
 
-    # print memory.bins_g, memory.set_bins
     grid = (int(np.ceil(memory.nf / float(block_size))), 1)
     args = (grid, block, memory.stream)
     args += (memory.bins_g.ptr, np.int32(memory.nf), memory.ce_g.ptr)
@@ -340,9 +339,7 @@ def conditional_entropy(memory, functions, block_size=256,
         ce_std.prepared_async_call(*args)
 
     if transfer_to_host:
-        memory.stream.synchronize()
         memory.transfer_ce_to_cpu()
-        memory.stream.synchronize()
 
     return memory.ce_c
 
@@ -439,7 +436,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             standard_ce=[np.intp, np.int32, np.intp],
             weighted_ce=[np.intp, np.int32, np.intp]
         )
-        for fname, dtype in self.dtypes.iteritems():
+        for fname, dtype in self.dtypes.items():
             func = self.module.get_function(fname)
             self.prepared_functions[fname] = func.prepare(dtype)
         self.function_tuple = tuple(self.prepared_functions[fname]
@@ -760,5 +757,5 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
             for i, (f, ce) in enumerate(results):
                 ces.append(np.copy(ce))
-        
+
         return [(freqs, ce) for ce in ces]

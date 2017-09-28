@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
 import pkg_resources
 
@@ -22,7 +26,7 @@ def _module_reader(fname, cpp_defs=None):
     preamble = ['#define {key} {value}'.format(key=key,
                                                value=('' if value is None
                                                       else value))
-                for key, value in cpp_defs.iteritems()]
+                for key, value in cpp_defs.items()]
     txt = txt.replace('//{CPP_DEFS}', '\n'.join(preamble))
 
     return txt
@@ -100,7 +104,7 @@ def dphase(dt, freq):
 
 
 def get_autofreqs(t, **kwargs):
-    autofreqs_kwargs = {var: value for var, value in kwargs.iteritems()
+    autofreqs_kwargs = {var: value for var, value in kwargs.items()
                         if var in ['minimum_frequency', 'maximum_frequency',
                                    'nyquist_factor', 'samples_per_peak']}
     return autofrequency(t, **autofreqs_kwargs)

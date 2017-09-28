@@ -1,7 +1,10 @@
-Change log
-----------
+What's new in cuvarbase
+***********************
+
 * **0.1.9**
 	* Added Sphinx documentation
+	* **Now Python 3 compatible!**
+    * Miscillaneous bug fixes
 	* CE
 		* Run functions for ``ConditionalEntropyAsyncProcess`` now allow for a ``balanced_magbins`` argument to set the magnitude bins to have widths that vary with the distribution of magnitude values. This is more robust to outliers, but performance comparisons between the usual CE algorithm indicate that you should use care.
 		* Added ``precompute`` function to ``ConditionalEntropyAsyncProcess`` that allows you to speed up computations without resorting to the ``batched_run_constant_nfreq`` function. Currently it still assumes that the frequencies used will be the same for all lightcurves.

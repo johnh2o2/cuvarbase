@@ -44,14 +44,6 @@ cuvarbase\.tests\.test\_pdm module
     :undoc-members:
     :show-inheritance:
 
-cuvarbase\.tests\.test\_wavelet module
---------------------------------------
-
-.. automodule:: cuvarbase.tests.test_wavelet
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

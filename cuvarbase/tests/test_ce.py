@@ -1,3 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from builtins import zip
+from builtins import range
+from builtins import object
 import pytest
 from pycuda.tools import mark_cuda_test
 import numpy as np
@@ -118,7 +125,6 @@ class TestCE(object):
                 plt.plot(fb, pb, color='r')
                 plt.axvline(f0)
                 plt.show()
-            print "f0", f0
             assert(not any(np.isnan(pb)))
             assert(not any(np.isnan(pnb)))
 
@@ -230,7 +236,7 @@ class TestCE(object):
 
         for P, P1 in spows:
             if abs(P - P1) > 1e-3:
-                print P, P1, abs(P - P1)
+                print(P, P1, abs(P - P1))
 
         assert bad_frac < 1e-2
         # assert_allclose(p, p1, rtol=1e-2, atol=1e-3)

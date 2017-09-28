@@ -5,7 +5,10 @@ and variants.
 .. [K2002] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
 
 """
+from __future__ import print_function, division
 
+from builtins import zip
+from builtins import range
 import sys
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
@@ -370,7 +373,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     best_q = bls_best_q.get()
     best_phi = bls_best_phi.get()
 
-    qphi_sols = zip(best_q, best_phi)
+    qphi_sols = list(zip(best_q, best_phi))
 
     return bls_g.get()/YY, qphi_sols
 
@@ -575,7 +578,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     best_q = bls_best_q.get()
     best_phi = bls_best_phi.get()
 
-    qphi_sols = zip(best_q, best_phi)
+    qphi_sols = list(zip(best_q, best_phi))
 
     return bls_g.get()/YY, qphi_sols
 
@@ -669,7 +672,6 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
         nf = int((fmax - fmin)/df)
         freqs = np.linspace(fmin, fmax + df, nf)
 
-        print (phimin, phimax, qmin, qmax, q, dphi, nphi)
         powers, sols = eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
                                         batch_size=5, nstreams=5,
                                         functions=functions, **kwargs)
@@ -679,7 +681,6 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
         q, phi = sols[ibest]
         pn = powers[ibest]
         i += 1
-        print i, (pn - p0) / p0, q, phi, pn
     return f, pn, i, (q, phi)
 
 

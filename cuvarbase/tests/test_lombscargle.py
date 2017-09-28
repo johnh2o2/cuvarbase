@@ -1,3 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from builtins import zip
+from builtins import range
+from builtins import object
 import numpy as np
 import pytest
 
@@ -13,12 +20,11 @@ lsrtol = 1E-2
 lsatol = 1E-5
 nfft_sigma = 5
 
+rand = np.random.RandomState(100)
+
 
 @pytest.fixture
 def data(seed=100, sigma=0.1, ndata=100, freq=3.):
-
-    rand = np.random.RandomState(seed)
-
     t = np.sort(rand.rand(ndata))
     y = np.cos(2 * np.pi * freq * t)
 
@@ -40,7 +46,6 @@ def assert_similar(pdg0, pdg, top=5):
 
 
 class TestLombScargle(object):
-
     def test_against_astropy_double(self):
         t, y, err = data()
         ls_proc = LombScargleAsyncProcess(use_double=True,
@@ -136,9 +141,7 @@ class TestLombScargle(object):
 
         assert_similar(pgpu_reg, pgpu_ds)
 
-    def test_multiple_datasets(self):
-
-        ndatas = 5
+    def test_multiple_datasets(self, ndatas=5):
         datas = [data() for i in range(ndatas)]
         ls_proc = LombScargleAsyncProcess(sigma=nfft_sigma)
 
@@ -160,11 +163,11 @@ class TestLombScargle(object):
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
 
-    def test_batched_run(self, ndatas=25, batch_size=5, sigma=nfft_sigma,
+    def test_batched_run(self, ndatas=5, batch_size=5, sigma=nfft_sigma,
                          samples_per_peak=spp, nyquist_factor=nfac,
                          **kwargs):
 
-        datas = [data(ndata=np.random.randint(100, 350))
+        datas = [data(ndata=rand.randint(50, 100))
                  for i in range(ndatas)]
         ls_proc = LombScargleAsyncProcess(sigma=sigma, **kwargs)
 
@@ -194,8 +197,8 @@ class TestLombScargle(object):
                                      nyquist_factor=nfac,
                                      **kwargs):
 
-        frequencies = 10 + np.random.rand(ndatas) * 100.
-        datas = [data(ndata=np.random.randint(50, 100),
+        frequencies = 10 + rand.rand(ndatas) * 100.
+        datas = [data(ndata=rand.randint(50, 100),
                       freq=freq)
                  for i, freq in enumerate(frequencies)]
         ls_proc = LombScargleAsyncProcess(sigma=sigma, **kwargs)

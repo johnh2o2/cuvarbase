@@ -1,3 +1,11 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from builtins import zip
+from builtins import map
+from builtins import range
+from builtins import object
 import resource
 
 import numpy as np
@@ -176,10 +184,8 @@ class LombScargleMemory(object):
         nf = kwargs.get('nf', self.nf)
         assert(nf is not None)
 
-        #self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
-        #                                alignment=resource.getpagesize())
-        #self.lsp_c = cuda.register_host_memory(self.lsp_c)
-        self.lsp_c = np.zeros(nf, dtype=self.real_type)
+        self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
+                                        alignment=resource.getpagesize())
         self.lsp_c = cuda.register_host_memory(self.lsp_c)
 
         return self
@@ -366,23 +372,17 @@ def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
     def sgn(n):
         return 1 if n == 0 else np.sign(n)
 
-    c = map(lambda n: np.dot(w, np.cos(n * phase)), ns)
-    s = map(lambda n: np.dot(w, np.sin(n * phase)), ns)
+    c = [np.dot(w, np.cos(n * phase)) for n in ns]
+    s = [np.dot(w, np.sin(n * phase)) for n in ns]
 
-    yc = map(lambda n: np.dot(yw, np.cos(n * phase)), ns[1:nharms+1])
-    ys = map(lambda n: np.dot(yw, np.sin(n * phase)), ns[1:nharms+1])
+    yc = [np.dot(yw, np.cos(n * phase)) for n in ns[1:nharms+1]]
+    ys = [np.dot(yw, np.sin(n * phase)) for n in ns[1:nharms+1]]
 
-    cc = map(lambda n: map(lambda m: 0.5 * (c[n+m] + c[abs(n-m)]),
-                           ns[1:nharms+1]),
-             ns[1:nharms+1])
+    cc = [[0.5 * (c[n+m] + c[abs(n-m)]) for m in ns[1:nharms+1]] for n in ns[1:nharms+1]]
 
-    cs = map(lambda n: map(lambda m: 0.5 * (s[n+m] - sgn(n-m) * s[abs(n-m)]),
-                           ns[1:nharms+1]),
-             ns[1:nharms+1])
+    cs = [[0.5 * (s[n+m] - sgn(n-m) * s[abs(n-m)]) for m in ns[1:nharms+1]] for n in ns[1:nharms+1]]
 
-    ss = map(lambda n: map(lambda m: 0.5 * (c[abs(n-m)] - c[n+m]),
-                           ns[1:nharms+1]),
-             ns[1:nharms+1])
+    ss = [[0.5 * (c[abs(n-m)] - c[n+m]) for m in ns[1:nharms+1]] for n in ns[1:nharms+1]]
 
     C = np.asarray(c)[1:nharms+1]
     S = np.asarray(s)[1:nharms+1]
@@ -568,10 +568,10 @@ def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
     """
     def sfunc(f):
         return mhdirect_sums(t, yw, w, f, YY, nharms=nharms)
-    sums = map(lambda s: add_regularization(s, **kwargs), map(sfunc, freqs))
+    sums = [add_regularization(s, **kwargs) for s in list(map(sfunc, freqs))]
 
     ybar = sum(yw)
-    return np.array(map(lambda s: mhgls_from_sums(s, YY, ybar), sums))
+    return np.array([mhgls_from_sums(s, YY, ybar) for s in sums])
 
 
 def lomb_scargle_async(memory, functions, freqs,
@@ -741,7 +741,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         )
 
         self.nfft_proc._compile_and_prepare_functions(**kwargs)
-        for fname, dtype in self.dtypes.iteritems():
+        for fname, dtype in self.dtypes.items():
             func = self.module.get_function(fname)
             self.prepared_functions[fname] = func.prepare(dtype)
         self.function_tuple = tuple(self.prepared_functions[fname]
