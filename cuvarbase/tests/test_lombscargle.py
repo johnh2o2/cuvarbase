@@ -15,10 +15,10 @@ from ..lombscargle import LombScargleAsyncProcess
 from pycuda.tools import mark_cuda_test
 import pycuda.autoinit
 spp = 3
-nfac = 5
+nfac = 3
 lsrtol = 1E-2
-lsatol = 1E-5
-nfft_sigma = 6
+lsatol = 1E-2
+nfft_sigma = 5
 
 rand = np.random.RandomState(100)
 
@@ -71,7 +71,8 @@ class TestLombScargle(object):
 
     def test_against_astropy_single(self):
         t, y, err = data()
-        ls_proc = LombScargleAsyncProcess(use_double=False, sigma=nfft_sigma)
+        ls_proc = LombScargleAsyncProcess(use_double=False,
+                                          sigma=nfft_sigma)
 
         results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                               samples_per_peak=spp)
@@ -84,7 +85,8 @@ class TestLombScargle(object):
 
     def test_ls_kernel(self):
         t, y, err = data()
-        ls_proc = LombScargleAsyncProcess(use_double=False, sigma=nfft_sigma)
+        ls_proc = LombScargleAsyncProcess(use_double=False,
+                                          sigma=nfft_sigma)
 
         results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                               samples_per_peak=spp)
@@ -98,7 +100,8 @@ class TestLombScargle(object):
 
     def test_ls_kernel_direct_sums(self):
         t, y, err = data()
-        ls_proc = LombScargleAsyncProcess(use_double=False, sigma=nfft_sigma)
+        ls_proc = LombScargleAsyncProcess(use_double=True,
+                                          sigma=nfft_sigma)
 
         results = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                               samples_per_peak=spp, use_fft=False)
@@ -112,7 +115,8 @@ class TestLombScargle(object):
 
     def test_ls_kernel_direct_sums_is_consistent(self):
         t, y, err = data()
-        ls_proc = LombScargleAsyncProcess(use_double=False, sigma=nfft_sigma)
+        ls_proc = LombScargleAsyncProcess(use_double=False,
+                                          sigma=nfft_sigma)
 
         results_ds = ls_proc.run([(t, y, err)], nyquist_factor=nfac,
                                  samples_per_peak=spp, use_fft=False)
