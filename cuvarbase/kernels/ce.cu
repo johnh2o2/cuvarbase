@@ -14,9 +14,9 @@
 	#define FLT float
 #endif
 
-#define MAX_SHARED_FLT_SIZE (int) floor(((FLT) MAX_SHARED_MEM_SIZE) / sizeof(FLT))
-#define LOCAL_HIST_SIZE \
-      NMAG * NPHASE > MAX_SHARED_FLT_SIZE ? MAX_SHARED_FLT_SIZE - 1 : NMAG * NPHASE
+//#define MAX_SHARED_FLT_SIZE (int) floor(((FLT) MAX_SHARED_MEM_SIZE) / sizeof(FLT))
+//#define LOCAL_HIST_SIZE \
+//      NMAG * NPHASE > MAX_SHARED_FLT_SIZE ? MAX_SHARED_FLT_SIZE - 1 : NMAG * NPHASE
 
 
 __device__ double atomicAddDouble(double* address, double val)
@@ -83,16 +83,15 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy,
 
 __global__ void histogram_data_count(FLT *t, unsigned int *y,
 	                                 unsigned int *bin,
-	                                 FLT *freqs, int nfreq, 
-	                                 int ndata){
+	                                 FLT *freqs, unsigned int nfreq, 
+	                                 unsigned int ndata){
 
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-	int i_freq = i / ndata;
-	int j_data = i % ndata;
-
+	unsigned int i_freq = i / ndata;
+	unsigned int j_data = i % ndata;
 	if (i_freq < nfreq && j_data < ndata){
-		int offset = i_freq * (NMAG * NPHASE);
+		unsigned int offset = i_freq * (NMAG * NPHASE);
 		unsigned int m0 = y[j_data];
 		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
 

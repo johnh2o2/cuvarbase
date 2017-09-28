@@ -230,7 +230,7 @@ class ConditionalEntropyMemory(object):
 
         t = np.asarray(t).astype(self.real_type)
         y = np.asarray(y).astype(self.real_type)
-
+        
         yscale = max(y[:self.n0]) - min(y[:self.n0])
         y0 = min(y[:self.n0])
         if self.weighted:
@@ -336,7 +336,7 @@ def conditional_entropy(memory, functions, block_size=256,
     args = (grid, block, memory.stream)
     args += (memory.t_g.ptr, memory.y_g.ptr)
     args += (memory.bins_g.ptr, memory.freqs_g.ptr)
-    args += (np.int32(memory.nf), np.int32(memory.n0))
+    args += (np.uint32(memory.nf), np.uint32(memory.n0))
     hist_count.prepared_async_call(*args)
     if debug:
             memory.stream.synchronize()
