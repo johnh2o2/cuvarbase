@@ -45,5 +45,5 @@ ys = (ymax - ymin) * (y - min(y)) / yrange
 ax.axis('off')
 #ax.axvline(freq, ls=':', color='r')
 f.subplots_adjust(left=0, top=1, bottom=0, right=1)
-f.savefig('../../logo.png')
+f.savefig('../logo.png')
 #plt.show()
