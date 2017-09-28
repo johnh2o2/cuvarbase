@@ -7,16 +7,13 @@ HAS_GH_BRANCH=`git branch | grep gh-pages`
 if [ "$HAS_GH_BRANCH" == "" ]; then
     echo "Did not detect gh-pages branch. Creating now."
     git checkout -b gh-pages || exit 1
-    git symbolic-ref HEAD refs/heads/gh-pages
-    rm .git/index
 else 
     git checkout gh-pages || exit 1
 fi
 
 # update
 git pull origin gh-pages
-
-git clean -fdx
+git rm -rf .
 
 git checkout $DOC_BRANCH $NEEDED
 git reset HEAD
