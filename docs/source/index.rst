@@ -12,6 +12,7 @@
    :maxdepth: 2
    :caption: Contents:
 
+   whatsnew
    install
    ce
    lomb
