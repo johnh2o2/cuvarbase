@@ -4,7 +4,9 @@ cuvarbase 0.1.9
 John Hoffman
 (c) 2017
 
-``cuvarbase`` is a Python library that uses `PyCUDA <https://mathema.tician.de/software/pycuda/>`_ to implement several time series tools used in astronomy to GPUs.
+``cuvarbase`` is a Python library that uses `PyCUDA <https://mathema.tician.de/software/pycuda/>`_ to implement several time series tools used in astronomy on GPUs.
+
+See the `documentation <https://johnh2o2.github.io/cuvarbase/>`_.
 
 This project is under active development, and currently includes implementations of
 
