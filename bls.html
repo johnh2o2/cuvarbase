@@ -1,0 +1,483 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Box least squares (BLS) periodogram &#8212; cuvarbase 0.1.9 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API documentation" href="modules.html" />
+    <link rel="prev" title="Lomb-Scargle periodogram" href="lomb.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="box-least-squares-bls-periodogram">
+<h1>Box least squares (BLS) periodogram<a class="headerlink" href="#box-least-squares-bls-periodogram" title="Permalink to this headline">¶</a></h1>
+<p>The box-least squares periodogram <a class="reference internal" href="#bls" id="id1">[BLS]</a> searches for the periodic dips in brightness that occur when, e.g., a planet passes in front of its host star. The algorithm fits
+a <a class="reference external" href="https://en.wikipedia.org/wiki/Boxcar_function">boxcar function</a> to the data. The parameters used are</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">q</span></code>: the transit duration as a fraction of the period <span class="math">\(t_{\rm trans} / P\)</span></li>
+<li><code class="docutils literal"><span class="pre">phi0</span></code>: the phase offset of the transit (from 0)</li>
+<li><code class="docutils literal"><span class="pre">delta</span></code>: the difference between the out-of-transit brightness and the brightness during transit</li>
+<li><code class="docutils literal"><span class="pre">y0</span></code>: The out-of-transit brightness</li>
+</ul>
+<p>(<a class="reference external" href="./plots/bls_transit_diagram.py">Source code</a>)</p>
+<p>(<a class="reference external" href="./plots/bls_transit_diagram_01_00.png">png</a>, <a class="reference external" href="./plots/bls_transit_diagram_01_00.hires.png">hires.png</a>, <a class="reference external" href="./plots/bls_transit_diagram_01_00.pdf">pdf</a>)</p>
+<div class="figure">
+<img alt="_images/bls_transit_diagram_01_00.png" src="_images/bls_transit_diagram_01_00.png" />
+</div>
+<div class="section" id="using-cuvarbase-bls">
+<h2>Using <code class="docutils literal"><span class="pre">cuvarbase</span></code> BLS<a class="headerlink" href="#using-cuvarbase-bls" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cuvarbase.bls</span> <span class="kn">as</span> <span class="nn">bls</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+
+<span class="k">def</span> <span class="nf">phase</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span> <span class="o">*</span> <span class="n">freq</span> <span class="o">-</span> <span class="n">phi0</span><span class="p">)</span>
+    <span class="n">phi</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">phi</span>
+
+
+<span class="k">def</span> <span class="nf">transit_model</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">y0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">phase</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="n">phi0</span><span class="p">)</span>
+    <span class="n">transit</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">&lt;</span> <span class="n">q</span>
+
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">y</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">-=</span> <span class="n">delta</span>
+    <span class="k">return</span> <span class="n">y</span>
+
+
+<span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="n">ndata</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">baseline</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">baseline</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">ndata</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">transit_model</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">dy</span> <span class="o">=</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="n">y</span> <span class="o">+=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span>
+
+
+<span class="k">def</span> <span class="nf">plot_bls_model</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">phi_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">50.</span><span class="o">/</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">y_plot</span> <span class="o">=</span> <span class="n">transit_model</span><span class="p">(</span><span class="n">phi_plot</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">y0</span><span class="o">=</span><span class="n">y0</span><span class="p">,</span>
+                           <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="n">phi0</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">phi_plot</span><span class="p">,</span> <span class="n">y_plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">plot_bls_sol</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">/=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">phase</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="n">phi0</span><span class="p">)</span>
+    <span class="n">transit</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">&lt;</span> <span class="n">q</span>
+
+    <span class="k">def</span> <span class="nf">ybar</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+
+    <span class="n">y0</span> <span class="o">=</span> <span class="n">ybar</span><span class="p">(</span><span class="o">~</span><span class="n">transit</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">y0</span> <span class="o">-</span> <span class="n">ybar</span><span class="p">(</span><span class="n">transit</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">((</span><span class="n">phi</span><span class="p">[</span><span class="o">~</span><span class="n">transit</span><span class="p">]</span> <span class="o">+</span> <span class="n">phi0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="o">~</span><span class="n">transit</span><span class="p">],</span>
+               <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">((</span><span class="n">phi</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">+</span> <span class="n">phi0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
+               <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">plot_bls_model</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;$\phi$ ($f = </span><span class="si">%.3f</span><span class="s1">$)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">freq</span><span class="p">))</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;$y$&#39;</span><span class="p">)</span>
+
+<span class="c1"># set the transit parameters</span>
+<span class="n">transit_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">freq</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                      <span class="n">q</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                      <span class="n">y0</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span>
+                      <span class="n">sigma</span><span class="o">=</span><span class="mf">0.002</span><span class="p">,</span>
+                      <span class="n">delta</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+                      <span class="n">phi0</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># generate data with a transit</span>
+<span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="n">data</span><span class="p">(</span><span class="n">ndata</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+                <span class="n">baseline</span><span class="o">=</span><span class="mf">365.</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">transit_kwargs</span><span class="p">)</span>
+
+<span class="c1"># set up search parameters</span>
+<span class="n">search_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">qmin</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span>
+                     <span class="n">qmax</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+
+                     <span class="c1"># The logarithmic spacing of q</span>
+                     <span class="n">dlogq</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+
+                     <span class="c1"># Number of overlapping phase bins</span>
+                     <span class="c1"># to use for finding the best phi0</span>
+                     <span class="n">noverlap</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="c1"># derive baseline from the data for consistency</span>
+<span class="n">baseline</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+<span class="c1"># df ~ qmin / baseline</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">search_params</span><span class="p">[</span><span class="s1">&#39;qmin&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">baseline</span>
+<span class="n">fmin</span> <span class="o">=</span> <span class="mf">2.</span> <span class="o">/</span> <span class="n">baseline</span>
+<span class="n">fmax</span> <span class="o">=</span> <span class="mf">2.</span>
+
+<span class="n">nf</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">fmax</span> <span class="o">-</span> <span class="n">fmin</span><span class="p">)</span> <span class="o">/</span> <span class="n">df</span><span class="p">))</span>
+<span class="n">freqs</span> <span class="o">=</span> <span class="n">fmin</span> <span class="o">+</span> <span class="n">df</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nf</span><span class="p">)</span>
+
+<span class="n">bls_power</span><span class="p">,</span> <span class="n">sols</span> <span class="o">=</span> <span class="n">bls</span><span class="o">.</span><span class="n">eebls_gpu</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span>
+                                <span class="o">**</span><span class="n">search_params</span><span class="p">)</span>
+
+<span class="c1"># best BLS fit</span>
+<span class="n">q_best</span><span class="p">,</span> <span class="n">phi0_best</span> <span class="o">=</span> <span class="n">sols</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">bls_power</span><span class="p">)]</span>
+<span class="n">f_best</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">bls_power</span><span class="p">)]</span>
+
+<span class="c1"># Plot results</span>
+<span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">ax_bls</span><span class="p">,</span> <span class="n">ax_true</span><span class="p">,</span> <span class="n">ax_best</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+<span class="c1"># Periodogram</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">bls_power</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;freq&#39;</span><span class="p">],</span>
+               <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$f_0$&quot;</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">f_best</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span>
+               <span class="n">label</span><span class="o">=</span><span class="s1">&#39;BLS $f_{</span><span class="se">\\</span><span class="s1">rm best}$&#39;</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;freq.&#39;</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;BLS power&#39;</span><span class="p">)</span>
+
+<span class="c1"># True solution</span>
+<span class="n">plot_bls_sol</span><span class="p">(</span><span class="n">ax_true</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span>
+             <span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;freq&#39;</span><span class="p">],</span>
+             <span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;q&#39;</span><span class="p">],</span>
+             <span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;phi0&#39;</span><span class="p">])</span>
+
+<span class="c1"># Best-fit solution</span>
+<span class="n">plot_bls_sol</span><span class="p">(</span><span class="n">ax_best</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span>
+             <span class="n">f_best</span><span class="p">,</span> <span class="n">q_best</span><span class="p">,</span> <span class="n">phi0_best</span><span class="p">)</span>
+
+
+<span class="n">ax_true</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;True parameters&quot;</span><span class="p">)</span>
+<span class="n">ax_best</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Best BLS parameters&quot;</span><span class="p">)</span>
+
+<span class="n">f</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>(<a class="reference external" href="./plots/bls_example.py">Source code</a>, <a class="reference external" href="./plots/bls_example.png">png</a>, <a class="reference external" href="./plots/bls_example.hires.png">hires.png</a>, <a class="reference external" href="./plots/bls_example.pdf">pdf</a>)</p>
+<div class="figure">
+<img alt="_images/bls_example.png" src="_images/bls_example.png" />
+</div>
+</div>
+<div class="section" id="a-shortcut-assuming-orbital-mechanics">
+<h2>A shortcut: assuming orbital mechanics<a class="headerlink" href="#a-shortcut-assuming-orbital-mechanics" title="Permalink to this headline">¶</a></h2>
+<p>If you assume <span class="math">\(R_p\ll R_{\star}\)</span>, <span class="math">\(M_p\ll M_{\star}\)</span>, <span class="math">\(L_p\ll L_{\star}\)</span>, and <span class="math">\(e\ll 1\)</span>,  where <span class="math">\(e\)</span> is the ellipticity of the planetary orbit, <span class="math">\(L\)</span> is the luminosity, <span class="math">\(R\)</span> is the radius, and <span class="math">\(M\)</span> mass, you can eliminate a free parameter.</p>
+<p>This is because the orbital period obeys <a class="reference external" href="https://en.wikipedia.org/wiki/Kepler's_laws_of_planetary_motion#Third_law">Kepler’s third law</a>,</p>
+<div class="math">
+\[P^2 \approx \frac{4\pi^2a^3}{G(M_p + M_{\star})}\]</div>
+<p>(<a class="reference external" href="./plots/planet_transit_diagram.py">Source code</a>, <a class="reference external" href="./plots/planet_transit_diagram.png">png</a>, <a class="reference external" href="./plots/planet_transit_diagram.hires.png">hires.png</a>, <a class="reference external" href="./plots/planet_transit_diagram.pdf">pdf</a>)</p>
+<div class="figure">
+<img alt="_images/planet_transit_diagram.png" src="_images/planet_transit_diagram.png" />
+</div>
+<p>The angle of the transit is</p>
+<div class="math">
+\[\theta = 2{\rm arcsin}\left(\frac{R_p + R_{\star}}{a}\right)\]</div>
+<p>and <span class="math">\(q\)</span> is therefore <span class="math">\(\theta / (2\pi)\)</span>. Thus we have a relation between <span class="math">\(q\)</span> and the period <span class="math">\(P\)</span></p>
+<div class="math">
+\[\sin{\pi q} = (R_p + R_{\star})\left(\frac{4\pi^2}{P^2 G(M_p + M_{\star})}\right)^{1/3}\]</div>
+<p>By incorporating the fact that</p>
+<div class="math">
+\[R_{\star} = \left(\frac{3}{4\pi\rho_{\star}}\right)^{1/3}M_{\star}^{1/3}\]</div>
+<p>where <span class="math">\(\rho_{\star}\)</span> is the average stellar density of the host star, we can write</p>
+<div class="math">
+\[\sin{\pi q} = \frac{(1 + r)}{(1 + m)^{1/3}} \left(\frac{3\pi}{G\rho_{\star}}\right)^{1/3} P^{-2/3}\]</div>
+<p>where <span class="math">\(r = R_p / R_{\star}\)</span> and <span class="math">\(m = M_p / M_{\star}\)</span>. We can get rid of the constant factors and convert this to more intuitive units to obtain</p>
+<div class="math">
+\[\sin{\pi q} \approx 0.238 (1 + r - \frac{m}{3} + \dots{}) \left(\frac{\rho_{\star}}{\rho_{\odot}}\right)^{-1/3} \left(\frac{P}{\rm day}\right)^{-2/3}\]</div>
+<p>where here we’ve expanded <span class="math">\((1 + r) / (1 + m)^{1/3}\)</span> to first order in <span class="math">\(r\)</span> and <span class="math">\(m\)</span>.</p>
+</div>
+<div class="section" id="using-the-keplerian-assumption-in-cuvarbase">
+<h2>Using the Keplerian assumption in <code class="docutils literal"><span class="pre">cuvarbase</span></code><a class="headerlink" href="#using-the-keplerian-assumption-in-cuvarbase" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cuvarbase.bls</span> <span class="kn">as</span> <span class="nn">bls</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+
+<span class="k">def</span> <span class="nf">phase</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span> <span class="o">*</span> <span class="n">freq</span> <span class="o">-</span> <span class="n">phi0</span><span class="p">)</span>
+    <span class="n">phi</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">phi</span>
+
+
+<span class="k">def</span> <span class="nf">transit_model</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">y0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">phase</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="n">phi0</span><span class="p">)</span>
+    <span class="n">transit</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">&lt;</span> <span class="n">q</span>
+
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">y</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">-=</span> <span class="n">delta</span>
+    <span class="k">return</span> <span class="n">y</span>
+
+
+<span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="n">ndata</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">baseline</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">baseline</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">ndata</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">transit_model</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">dy</span> <span class="o">=</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="n">y</span> <span class="o">+=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span>
+
+
+<span class="k">def</span> <span class="nf">plot_bls_model</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">phi_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">50.</span><span class="o">/</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">y_plot</span> <span class="o">=</span> <span class="n">transit_model</span><span class="p">(</span><span class="n">phi_plot</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">y0</span><span class="o">=</span><span class="n">y0</span><span class="p">,</span>
+                           <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="n">phi0</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">phi_plot</span><span class="p">,</span> <span class="n">y_plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">plot_bls_sol</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">/=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">phase</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">phi0</span><span class="o">=</span><span class="n">phi0</span><span class="p">)</span>
+    <span class="n">transit</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">&lt;</span> <span class="n">q</span>
+
+    <span class="k">def</span> <span class="nf">ybar</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+
+    <span class="n">y0</span> <span class="o">=</span> <span class="n">ybar</span><span class="p">(</span><span class="o">~</span><span class="n">transit</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">y0</span> <span class="o">-</span> <span class="n">ybar</span><span class="p">(</span><span class="n">transit</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">((</span><span class="n">phi</span><span class="p">[</span><span class="o">~</span><span class="n">transit</span><span class="p">]</span> <span class="o">+</span> <span class="n">phi0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="o">~</span><span class="n">transit</span><span class="p">],</span>
+               <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">((</span><span class="n">phi</span><span class="p">[</span><span class="n">transit</span><span class="p">]</span> <span class="o">+</span> <span class="n">phi0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="n">transit</span><span class="p">],</span>
+               <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">plot_bls_model</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;$\phi$ ($f = </span><span class="si">%.3f</span><span class="s1">$)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">freq</span><span class="p">))</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;$y$&#39;</span><span class="p">)</span>
+
+<span class="c1"># the mean density of the host star in solar units</span>
+<span class="c1"># i.e. rho = rho_star / rho_sun</span>
+<span class="n">rho</span> <span class="o">=</span> <span class="mf">1.</span>
+
+<span class="c1"># set the transit parameters</span>
+<span class="n">transit_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">freq</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span>
+                      <span class="n">q</span><span class="o">=</span><span class="n">bls</span><span class="o">.</span><span class="n">q_transit</span><span class="p">(</span><span class="mf">2.</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">),</span>
+                      <span class="n">y0</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span>
+                      <span class="n">sigma</span><span class="o">=</span><span class="mf">0.005</span><span class="p">,</span>
+                      <span class="n">delta</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+                      <span class="n">phi0</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># generate data with a transit</span>
+<span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="n">data</span><span class="p">(</span><span class="n">ndata</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+                <span class="n">baseline</span><span class="o">=</span><span class="mf">365.</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">transit_kwargs</span><span class="p">)</span>
+
+<span class="c1"># set up search parameters</span>
+<span class="n">search_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+                     <span class="c1"># Searches q values in the range</span>
+                     <span class="c1"># (q0 * qmin_fac, q0 * qmax_fac)</span>
+                     <span class="c1"># where q0 = q0(f, rho) is the fiducial</span>
+                     <span class="c1"># q value for Keplerian transit around</span>
+                     <span class="c1"># star with mean density rho</span>
+                     <span class="n">qmin_fac</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+                     <span class="n">qmax_fac</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+
+                     <span class="c1"># Assumed mean stellar density</span>
+                     <span class="n">rho</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+
+                     <span class="c1"># The min/max frequencies as a fraction</span>
+                     <span class="c1"># of their autoset values</span>
+                     <span class="n">fmin_fac</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                     <span class="n">fmax_fac</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
+
+                     <span class="c1"># oversampling factor; frequency spacing</span>
+                     <span class="c1"># is multiplied by 1/samples_per_peak</span>
+                     <span class="n">samples_per_peak</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+
+                     <span class="c1"># The logarithmic spacing of q</span>
+                     <span class="n">dlogq</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+
+                     <span class="c1"># Number of overlapping phase bins</span>
+                     <span class="c1"># to use for finding the best phi0</span>
+                     <span class="n">noverlap</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="c1"># Run keplerian BLS; frequencies are automatically set!</span>
+<span class="n">freqs</span><span class="p">,</span> <span class="n">bls_power</span><span class="p">,</span> <span class="n">sols</span> <span class="o">=</span> <span class="n">bls</span><span class="o">.</span><span class="n">eebls_transit_gpu</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span>
+                                               <span class="o">**</span><span class="n">search_params</span><span class="p">)</span>
+
+<span class="c1"># best BLS fit</span>
+<span class="n">q_best</span><span class="p">,</span> <span class="n">phi0_best</span> <span class="o">=</span> <span class="n">sols</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">bls_power</span><span class="p">)]</span>
+<span class="n">f_best</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">bls_power</span><span class="p">)]</span>
+
+<span class="c1"># Plot results</span>
+<span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">ax_bls</span><span class="p">,</span> <span class="n">ax_true</span><span class="p">,</span> <span class="n">ax_best</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+<span class="c1"># Periodogram</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">bls_power</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;freq&#39;</span><span class="p">],</span>
+               <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$f_0$&quot;</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">f_best</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span>
+               <span class="n">label</span><span class="o">=</span><span class="s1">&#39;BLS $f_{</span><span class="se">\\</span><span class="s1">rm best}$&#39;</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;freq.&#39;</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;BLS power&#39;</span><span class="p">)</span>
+<span class="n">ax_bls</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+
+<span class="c1"># True solution</span>
+<span class="n">label_true</span> <span class="o">=</span> <span class="s1">&#39;$q=</span><span class="si">%.3f</span><span class="s1">$, &#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;q&#39;</span><span class="p">])</span>
+<span class="n">label_true</span> <span class="o">+=</span> <span class="s1">&#39;$</span><span class="se">\\</span><span class="s1">phi_0=</span><span class="si">%.3f</span><span class="s1">$&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;phi0&#39;</span><span class="p">])</span>
+<span class="n">plot_bls_sol</span><span class="p">(</span><span class="n">ax_true</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span>
+             <span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;freq&#39;</span><span class="p">],</span>
+             <span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;q&#39;</span><span class="p">],</span>
+             <span class="n">transit_kwargs</span><span class="p">[</span><span class="s1">&#39;phi0&#39;</span><span class="p">],</span>
+             <span class="n">label</span><span class="o">=</span><span class="n">label_true</span><span class="p">)</span>
+<span class="n">ax_true</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">)</span>
+
+<span class="n">label_best</span> <span class="o">=</span> <span class="s1">&#39;$q=</span><span class="si">%.3f</span><span class="s1">$, &#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">q_best</span><span class="p">)</span>
+<span class="n">label_best</span> <span class="o">+=</span> <span class="s1">&#39;$</span><span class="se">\\</span><span class="s1">phi_0=</span><span class="si">%.3f</span><span class="s1">$&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">phi0_best</span><span class="p">)</span>
+<span class="c1"># Best-fit solution</span>
+<span class="n">plot_bls_sol</span><span class="p">(</span><span class="n">ax_best</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span>
+             <span class="n">f_best</span><span class="p">,</span> <span class="n">q_best</span><span class="p">,</span> <span class="n">phi0_best</span><span class="p">,</span>
+             <span class="n">label</span><span class="o">=</span><span class="n">label_best</span><span class="p">)</span>
+<span class="n">ax_best</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">)</span>
+
+<span class="n">ax_true</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;True parameters&quot;</span><span class="p">)</span>
+<span class="n">ax_best</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Best BLS parameters&quot;</span><span class="p">)</span>
+
+<span class="n">f</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>(<a class="reference external" href="./plots/bls_example_transit.py">Source code</a>, <a class="reference external" href="./plots/bls_example_transit.png">png</a>, <a class="reference external" href="./plots/bls_example_transit.hires.png">hires.png</a>, <a class="reference external" href="./plots/bls_example_transit.pdf">pdf</a>)</p>
+<div class="figure">
+<img alt="_images/bls_example_transit.png" src="_images/bls_example_transit.png" />
+</div>
+</div>
+<div class="section" id="period-spacing-considerations">
+<h2>Period spacing considerations<a class="headerlink" href="#period-spacing-considerations" title="Permalink to this headline">¶</a></h2>
+<p>The frequency spacing <span class="math">\(\delta f\)</span> needed to resolve a BLS signal with width <span class="math">\(q\)</span>, is</p>
+<div class="math">
+\[\delta f \lesssim \frac{q}{T}\]</div>
+<p>where <span class="math">\(T\)</span> is the baseline of the observations (<span class="math">\(T = {\rm max}(t) - {\rm min}(t)\)</span>). This can be especially problematic if no assumptions are made about the nature of the signal (e.g., a Keplerian assumption). If you want to resolve a transit signal with a few observations, the minimum <span class="math">\(q\)</span> value that you would need to search is <span class="math">\(\propto 1/N\)</span> where <span class="math">\(N\)</span> is the number of observations.</p>
+<p>For a typical Lomb-Scargle periodogram, the frequency spacing is <span class="math">\(\delta f \lesssim 1/T\)</span>, so running a BLS spectrum with an adequate frequency spacing over the same frequency range requires a factor of <span class="math">\(\mathcal{O}(N)\)</span> more trial frequencies, each of which requiring <span class="math">\(\mathcal{O}(N)\)</span> computations to estimate the best fit BLS parameters. That means that BLS scales as <span class="math">\(\mathcal{O}(N^2N_f)\)</span> while Lomb-Scargle only scales as <span class="math">\(\mathcal{O}(N_f\log N_f)\)</span></p>
+<p>However, if you can use the assumption that the transit is caused by an edge-on transit of a circularly orbiting planet, we not only eliminate a degree of freedom, but (assuming <span class="math">\(\sin{\pi q}\approx \pi q\)</span>)</p>
+<div class="math">
+\[\delta f \propto q \propto f^{2/3}\]</div>
+<p>The minimum frequency you could hope to measure a transit period would be <span class="math">\(f_{\rm min} \approx 2/T\)</span>, and the maximum frequency is determined by <span class="math">\(\sin{\pi q} &lt; 1\)</span> which implies</p>
+<div class="math">
+\[f_{max} = 8.612~{\rm c/day}~\times \left(1 - \frac{3r}{2} + \frac{m}{2} -\dots{}\right) \sqrt{\frac{\rho_{\star}}{\rho_{\odot}}}\]</div>
+<p>For a 10 year baseline, this translates to <span class="math">\(2.7\times 10^5\)</span> trial frequencies. The number of trial frequencies needed to perform Lomb-Scargle over this frequency range is only about <span class="math">\(3.1\times 10^4\)</span>, so 8-10 times less. However, if we were to search the <em>entire</em> range of possible <span class="math">\(q\)</span> values at each trial frequency instead of making a Keplerian assumption, we would instead require <span class="math">\(5.35\times 10^8\)</span> trial frequencies, so the Keplerian assumption reduces the number of frequencies by over 1,000.</p>
+<table class="docutils citation" frame="void" id="bls" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[BLS]</a></td><td><a class="reference external" href="http://adsabs.harvard.edu/abs/2002A%26A...391..369K">Kovacs et al. 2002</a></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="index.html">cuvarbase</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="ce.html">Conditional Entropy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lomb.html">Lomb-Scargle periodogram</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Box least squares (BLS) periodogram</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#using-cuvarbase-bls">Using <code class="docutils literal"><span class="pre">cuvarbase</span></code> BLS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#a-shortcut-assuming-orbital-mechanics">A shortcut: assuming orbital mechanics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-the-keplerian-assumption-in-cuvarbase">Using the Keplerian assumption in <code class="docutils literal"><span class="pre">cuvarbase</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#period-spacing-considerations">Period spacing considerations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">API documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="lomb.html" title="previous chapter">Lomb-Scargle periodogram</a></li>
+      <li>Next: <a href="modules.html" title="next chapter">API documentation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, John Hoffman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/bls.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

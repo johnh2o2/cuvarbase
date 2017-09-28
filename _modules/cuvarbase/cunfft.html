@@ -1,0 +1,647 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>cuvarbase.cunfft &#8212; cuvarbase 0.1.9 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for cuvarbase.cunfft</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">object</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">pycuda.driver</span> <span class="k">as</span> <span class="nn">cuda</span>
+<span class="kn">import</span> <span class="nn">pycuda.gpuarray</span> <span class="k">as</span> <span class="nn">gpuarray</span>
+<span class="kn">from</span> <span class="nn">pycuda.compiler</span> <span class="k">import</span> <span class="n">SourceModule</span>
+
+<span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">find_kernel</span><span class="p">,</span> <span class="n">_module_reader</span>
+<span class="kn">import</span> <span class="nn">resource</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">ctypes</span>
+<span class="kn">import</span> <span class="nn">skcuda.fft</span> <span class="k">as</span> <span class="nn">cufft</span>
+
+
+<div class="viewcode-block" id="NFFTMemory"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory">[docs]</a><span class="k">class</span> <span class="nc">NFFTMemory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">use_double</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">precomp_psi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">sigma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="n">stream</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">m</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> <span class="o">=</span> <span class="n">use_double</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precomp_psi</span> <span class="o">=</span> <span class="n">precomp_psi</span>
+
+        <span class="c1"># set datatypes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> \
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex64</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> \
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">other_settings</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">other_settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;f0&#39;</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;t_g&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_g</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;y_g&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ghat_g</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ghat_g&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ghat_c</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ghat_c&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q1</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;q1&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q2</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;q2&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q3</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;q3&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cu_plan</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cu_plan&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="n">D</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">)</span> <span class="o">/</span> <span class="n">D</span>
+
+<div class="viewcode-block" id="NFFTMemory.allocate_data"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.allocate_data">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="NFFTMemory.allocate_precomp_psi"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.allocate_precomp_psi">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_precomp_psi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">q1</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q2</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q3</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="NFFTMemory.allocate_grid"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.allocate_grid">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ghat_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span>
+                                     <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cu_plan</span> <span class="o">=</span> <span class="n">cufft</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span><span class="p">,</span>
+                                  <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="NFFTMemory.allocate_pinned_cpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.allocate_pinned_cpu">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_pinned_cpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ghat_c</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">,),</span>
+                                         <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span><span class="p">,</span>
+                                         <span class="n">alignment</span><span class="o">=</span><span class="n">resource</span><span class="o">.</span><span class="n">getpagesize</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ghat_c</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ghat_c</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="NFFTMemory.is_ready"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.is_ready">[docs]</a>    <span class="k">def</span> <span class="nf">is_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t_g</span><span class="p">))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_g</span><span class="p">))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ghat_g</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ghat_c</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ghat_c</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">precomp_psi</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q1</span><span class="p">))</span>
+            <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q2</span><span class="p">))</span>
+            <span class="k">assert</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q3</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="NFFTMemory.allocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.allocate">[docs]</a>    <span class="k">def</span> <span class="nf">allocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_grid</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_pinned_cpu</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">precomp_psi</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">allocate_precomp_psi</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="NFFTMemory.transfer_data_to_gpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.transfer_data_to_gpu">[docs]</a>    <span class="k">def</span> <span class="nf">transfer_data_to_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="n">t</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NFFTMemory.transfer_nfft_to_cpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.transfer_nfft_to_cpu">[docs]</a>    <span class="k">def</span> <span class="nf">transfer_nfft_to_cpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">cuda</span><span class="o">.</span><span class="n">memcpy_dtoh_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ghat_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>
+                               <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NFFTMemory.fromdata"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory.fromdata">[docs]</a>    <span class="k">def</span> <span class="nf">fromdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">allocate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tmin</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">allocate</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div></div>
+
+
+<div class="viewcode-block" id="nfft_adjoint_async"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.nfft_adjoint_async">[docs]</a><span class="k">def</span> <span class="nf">nfft_adjoint_async</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">functions</span><span class="p">,</span>
+                       <span class="n">minimum_frequency</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+                       <span class="n">just_return_gridded_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_grid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">fast_grid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">transfer_to_device</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">transfer_to_host</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">precomp_psi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">samples_per_peak</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Asynchronous NFFT adjoint operation.</span>
+
+<span class="sd">    Use the ``NFFTAsyncProcess`` class and related subroutines when possible.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    memory: ``NFFTMemory``</span>
+<span class="sd">        Allocated memory, must have data already set (see, e.g.,</span>
+<span class="sd">        ``NFFTAsyncProcess.allocate()``)</span>
+<span class="sd">    functions: tuple, length 5</span>
+<span class="sd">        Tuple of compiled functions from `SourceModule`. Must be prepared with</span>
+<span class="sd">        their appropriate dtype.</span>
+<span class="sd">    minimum_frequency: float, optional (default: 0)</span>
+<span class="sd">        First frequency of transform</span>
+<span class="sd">    block_size: int, optional</span>
+<span class="sd">        Number of CUDA threads per block</span>
+<span class="sd">    just_return_gridded_data: bool, optional</span>
+<span class="sd">        If True, returns grid via `grid_g.get()` after gridding</span>
+<span class="sd">    use_grid: ``GPUArray``, optional</span>
+<span class="sd">        If specified, will skip gridding procedure and use the `GPUArray`</span>
+<span class="sd">        provided</span>
+<span class="sd">    fast_grid: bool, optional, default: True</span>
+<span class="sd">        Whether or not to use the &quot;fast&quot; gridding procedure</span>
+<span class="sd">    transfer_to_device: bool, optional, (default: True)</span>
+<span class="sd">        If the data is already on the gpu, set as False</span>
+<span class="sd">    transfer_to_host: bool, optional, (default: True)</span>
+<span class="sd">        If False, will not transfer the resulting nfft to CPU memory</span>
+<span class="sd">    precomp_psi: bool, optional, (default: True)</span>
+<span class="sd">        Only relevant if ``fast`` is True. Will precompute values for the</span>
+<span class="sd">        fast gridding procedure.</span>
+<span class="sd">    samples_per_peak: float, optional (default: 1)</span>
+<span class="sd">        Frequency spacing is reduced by this factor, but number of frequencies</span>
+<span class="sd">        is kept the same</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ghat_cpu: ``np.array``</span>
+<span class="sd">        The resulting NFFT</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">precompute_psi</span><span class="p">,</span> <span class="n">fast_gaussian_grid</span><span class="p">,</span> <span class="n">slow_gaussian_grid</span><span class="p">,</span> \
+        <span class="n">nfft_shift</span><span class="p">,</span> <span class="n">normalize</span> <span class="o">=</span> <span class="n">functions</span>
+
+    <span class="n">stream</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span>
+
+    <span class="n">block</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">grid_size</span><span class="p">(</span><span class="n">nthreads</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">nthreads</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">))</span>
+
+    <span class="n">minimum_frequency</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">minimum_frequency</span><span class="p">)</span>
+
+    <span class="c1"># transfer data -&gt; gpu</span>
+    <span class="k">if</span> <span class="n">transfer_to_device</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">transfer_data_to_gpu</span><span class="p">()</span>
+
+    <span class="c1"># smooth data onto uniform grid</span>
+    <span class="k">if</span> <span class="n">fast_grid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">memory</span><span class="o">.</span><span class="n">precomp_psi</span><span class="p">:</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">memory</span><span class="o">.</span><span class="n">m</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+            <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,)</span>
+            <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">q1</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">q2</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">q3</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+            <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n</span><span class="p">),</span>
+                     <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">m</span><span class="p">),</span> <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">b</span><span class="p">))</span>
+            <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmin</span><span class="p">),</span>
+                     <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmax</span><span class="p">),</span>
+                     <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">samples_per_peak</span><span class="p">))</span>
+            <span class="n">precompute_psi</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">q1</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">q2</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">q3</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n</span><span class="p">),</span>
+                 <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">batch_size</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">m</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmin</span><span class="p">),</span>
+                 <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmax</span><span class="p">),</span>
+                 <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">samples_per_peak</span><span class="p">))</span>
+        <span class="n">fast_gaussian_grid</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n</span><span class="p">),</span>
+                 <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">batch_size</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">m</span><span class="p">),</span>
+                 <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">b</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmin</span><span class="p">),</span>
+                 <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmax</span><span class="p">),</span>
+                 <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">samples_per_peak</span><span class="p">))</span>
+        <span class="n">slow_gaussian_grid</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="c1"># Stop if user wants the grid</span>
+    <span class="k">if</span> <span class="n">just_return_gridded_data</span><span class="p">:</span>
+        <span class="n">stream</span><span class="o">.</span><span class="n">synchronize</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+
+    <span class="c1"># Set the grid manually if the user wants to</span>
+    <span class="c1"># (only for debugging)</span>
+    <span class="k">if</span> <span class="n">use_grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">use_grid</span><span class="p">)</span>
+
+    <span class="c1"># for a non-zero minimum frequency, do a shift</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">minimum_frequency</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1E-9</span><span class="p">:</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">batch_size</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmin</span><span class="p">),</span>
+                 <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmax</span><span class="p">),</span>
+                 <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">samples_per_peak</span><span class="p">),</span>
+                 <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">minimum_frequency</span><span class="p">))</span>
+        <span class="n">nfft_shift</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="c1"># Run IFFT on grid</span>
+    <span class="n">cufft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">cu_plan</span><span class="p">)</span>
+
+    <span class="c1"># Normalize result (deconvolve smoothing kernel)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n</span><span class="p">),</span>
+             <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span>
+             <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">batch_size</span><span class="p">),</span>
+             <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">b</span><span class="p">))</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmin</span><span class="p">),</span>
+             <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">tmax</span><span class="p">),</span>
+             <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">samples_per_peak</span><span class="p">),</span>
+             <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">minimum_frequency</span><span class="p">))</span>
+    <span class="n">normalize</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="c1"># Transfer result!</span>
+    <span class="k">if</span> <span class="n">transfer_to_host</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">transfer_nfft_to_cpu</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="n">ghat_c</span></div>
+
+
+<div class="viewcode-block" id="NFFTAsyncProcess"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTAsyncProcess">[docs]</a><span class="k">class</span> <span class="nc">NFFTAsyncProcess</span><span class="p">(</span><span class="n">GPUAsyncProcess</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    `GPUAsyncProcess` for the adjoint NFFT.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sigma: float, optional (default: 2)</span>
+<span class="sd">        Size of NFFT grid will be NFFT_SIZE * sigma</span>
+<span class="sd">    m: int, optional (default: 8)</span>
+<span class="sd">        Maximum radius for grid contributions (by default,</span>
+<span class="sd">        this value will automatically be set based on a specified</span>
+<span class="sd">        error tolerance)</span>
+<span class="sd">    autoset_m: bool, optional (default: True)</span>
+<span class="sd">        Automatically set the ``m`` parameter based on the</span>
+<span class="sd">        error tolerance given by the ``m_tol`` parameter</span>
+<span class="sd">    tol: float, optional (default: 1E-8)</span>
+<span class="sd">        Error tolerance for the NFFT (used to auto set ``m``)</span>
+<span class="sd">    block_size: int, optional (default: 256)</span>
+<span class="sd">        CUDA block size.</span>
+<span class="sd">    use_double: bool, optional (default: False)</span>
+<span class="sd">        Use double precision. On non-Tesla cards this will</span>
+<span class="sd">        make things ~24 times slower.</span>
+<span class="sd">    use_fast_math: bool, optional (default: True)</span>
+<span class="sd">        Compile kernel with the ``--use_fast_math`` option</span>
+<span class="sd">        supplied to ``nvcc``.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; t = np.random.rand(100)</span>
+<span class="sd">    &gt;&gt;&gt; y = np.cos(10 * t - 0.4) + 0.1 * np.random.randn(len(t))</span>
+<span class="sd">    &gt;&gt;&gt; proc = NFFTAsyncProcess()</span>
+<span class="sd">    &gt;&gt;&gt; data = [(t, y, 2 * len(t))]</span>
+<span class="sd">    &gt;&gt;&gt; nfft_adjoint = proc.run(data)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NFFTAsyncProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">autoset_m</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;autoset_m&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;block_size&#39;</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_double&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m_tol</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tol&#39;</span><span class="p">,</span> <span class="mf">1E-8</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module_options</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_fast_math&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">module_options</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;--use_fast_math&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> \
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> \
+            <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">complex64</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_defs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">BLOCK_SIZE</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_defs</span><span class="p">[</span><span class="s1">&#39;DOUBLE_PRECISION&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">function_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;precompute_psi&#39;</span><span class="p">,</span>
+                               <span class="s1">&#39;fast_gaussian_grid&#39;</span><span class="p">,</span>
+                               <span class="s1">&#39;slow_gaussian_grid&#39;</span><span class="p">,</span> <span class="s1">&#39;nfft_shift&#39;</span><span class="p">,</span>
+                               <span class="s1">&#39;normalize&#39;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocated_memory</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="NFFTAsyncProcess.m_from_C"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTAsyncProcess.m_from_C">[docs]</a>    <span class="k">def</span> <span class="nf">m_from_C</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Returns an estimate for what ``m`` value to use from ``C``,</span>
+<span class="sd">        where ``C`` is something like ``err_tolerance/N_freq``.</span>
+
+<span class="sd">        Pulled from &lt;https://github.com/jakevdp/nfft&gt;_</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">0.25</span> <span class="o">*</span> <span class="n">C</span><span class="p">)</span> <span class="o">/</span> <span class="n">D</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="NFFTAsyncProcess.estimate_m"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTAsyncProcess.estimate_m">[docs]</a>    <span class="k">def</span> <span class="nf">estimate_m</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Estimate ``m`` based on an error tolerance of ``self.tol``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        N: int</span>
+<span class="sd">            size of NFFT</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        m: int</span>
+<span class="sd">            Maximum grid radius</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Pulled from &lt;https://github.com/jakevdp/nfft&gt;_.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># TODO: this should be computed in terms of the L1-norm of the true</span>
+        <span class="c1">#   Fourier coefficients... see p. 11 of</span>
+        <span class="c1">#   https://www-user.tu-chemnitz.de/~potts/nfft/guide/nfft3.pdf</span>
+        <span class="c1">#   Need to think about how to estimate the value of m more accurately</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_from_C</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m_tol</span> <span class="o">/</span> <span class="n">N</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NFFTAsyncProcess.get_m"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTAsyncProcess.get_m">[docs]</a>    <span class="k">def</span> <span class="nf">get_m</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Returns the ``m`` value for ``N`` frequencies.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        N: int</span>
+<span class="sd">            Number of frequencies, only needed if ``autoset_m`` is ``False``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        m: int</span>
+<span class="sd">            The filter radius (in grid points)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">autoset_m</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimate_m</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span></div>
+
+    <span class="k">def</span> <span class="nf">_compile_and_prepare_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">module_txt</span> <span class="o">=</span> <span class="n">_module_reader</span><span class="p">(</span><span class="n">find_kernel</span><span class="p">(</span><span class="s1">&#39;cunfft&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_defs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span> <span class="o">=</span> <span class="n">SourceModule</span><span class="p">(</span><span class="n">module_txt</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">module_options</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">precompute_psi</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">],</span>
+
+            <span class="n">fast_gaussian_grid</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                                <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                                <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">],</span>
+
+            <span class="n">slow_gaussian_grid</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                                <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">],</span>
+
+            <span class="n">normalize</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">],</span>
+
+            <span class="n">nfft_shift</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">function</span><span class="p">,</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="n">function</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span><span class="p">[</span><span class="n">function</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+                                     <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">function_names</span><span class="p">])</span>
+
+<div class="viewcode-block" id="NFFTAsyncProcess.allocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTAsyncProcess.allocate">[docs]</a>    <span class="k">def</span> <span class="nf">allocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allocate GPU memory for NFFT-related computations</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data: list of (t, y, N) tuples</span>
+<span class="sd">            List of data, ``[(t_1, y_1, N_1), ...]``</span>
+<span class="sd">            * ``t``: Observation times.</span>
+<span class="sd">            * ``y``: Observations.</span>
+<span class="sd">            * ``nf``: int, FFT size</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        allocated_memory: list of ``NFFTMemory`` objects</span>
+<span class="sd">            List of allocated memory for each dataset</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Purge any previously allocated memory</span>
+        <span class="n">allocated_memory</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_streams</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">nf</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+
+            <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_m</span><span class="p">(</span><span class="n">nf</span><span class="p">)</span>
+
+            <span class="n">mem</span> <span class="o">=</span> <span class="n">NFFTMemory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">m</span><span class="p">,</span>
+                             <span class="n">use_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="n">allocated_memory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mem</span><span class="o">.</span><span class="n">fromdata</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">nf</span><span class="o">=</span><span class="n">nf</span><span class="p">,</span>
+                                                 <span class="n">allocate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                 <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">allocated_memory</span></div>
+
+<div class="viewcode-block" id="NFFTAsyncProcess.run"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTAsyncProcess.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">memory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run the adjoint NFFT on a batch of data</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data: list of tuples</span>
+<span class="sd">            list of [(t, y, w), ...] containing</span>
+<span class="sd">            * ``t``: observation times</span>
+<span class="sd">            * ``y``: observations</span>
+<span class="sd">            * ``nf``: int, size of NFFT</span>
+<span class="sd">        memory:</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        powers: list of np.ndarrays</span>
+<span class="sd">            List of adjoint NFFTs</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;prepared_functions&#39;</span><span class="p">)</span> <span class="ow">or</span> \
+            <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span>
+                     <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">function_names</span><span class="p">]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compile_and_prepare_functions</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">nfft_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">block_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
+        <span class="n">nfft_kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">nfft_adjoint_async</span><span class="p">(</span><span class="n">mem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span><span class="p">,</span>
+                                      <span class="o">**</span><span class="n">nfft_kwargs</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">mem</span> <span class="ow">in</span> <span class="n">memory</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">results</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">cuvarbase</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ce.html">Conditional Entropy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../lomb.html">Lomb-Scargle periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bls.html">Box least squares (BLS) periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, John Hoffman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
