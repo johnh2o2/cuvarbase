@@ -20,11 +20,11 @@ git reset HEAD
 cd docs
 make html || exit 1
 cd ..
-mv ./docs/build/html/* ./
-rm -rf $NEEDED docs
+#mv ./docs/build/html/* ./
+#rm -rf $NEEDED docs
 
-git add --all
-git commit -m "Updating docs"
-git push -u origin gh-pages
+#git add --all
+#git commit -m "Updating docs"
+#git push -u origin gh-pages
 
-git checkout $DOC_BRANCH
+#git checkout $DOC_BRANCH
