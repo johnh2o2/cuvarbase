@@ -3,6 +3,10 @@ set -x
 DOC_BRANCH=devel
 NEEDED="cuvarbase docs/Makefile docs/source README.rst INSTALL.rst CHANGELOG.rst"
 
+# We need to grab hidden files with mv...
+shopt -s dotglob nullglob
+
+
 HAS_GH_BRANCH=`git branch | grep gh-pages`
 if [ "$HAS_GH_BRANCH" == "" ]; then
     echo "Did not detect gh-pages branch. Creating now."
@@ -31,9 +35,6 @@ mv docs/build/html/* ./
 
 # remove unneeded files
 rm -rf $NEEDED docs
-
-# this will fix some problems
-touch .nojekyll
 
 # update the repo
 git add --all
