@@ -1,0 +1,868 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>cuvarbase.ce &#8212; cuvarbase 0.1.9 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for cuvarbase.ce</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Implementation of Graham et al. 2013&#39;s Conditional Entropy</span>
+<span class="sd">period finding algorithm</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
+
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">zip</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">range</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">object</span>
+<span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pycuda.driver</span> <span class="k">as</span> <span class="nn">cuda</span>
+<span class="kn">import</span> <span class="nn">pycuda.gpuarray</span> <span class="k">as</span> <span class="nn">gpuarray</span>
+<span class="kn">from</span> <span class="nn">pycuda.compiler</span> <span class="k">import</span> <span class="n">SourceModule</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">_module_reader</span><span class="p">,</span> <span class="n">find_kernel</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">autofrequency</span> <span class="k">as</span> <span class="n">utils_autofreq</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">time</span>
+<span class="kn">import</span> <span class="nn">resource</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+
+<div class="viewcode-block" id="ConditionalEntropyMemory"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory">[docs]</a><span class="k">class</span> <span class="nc">ConditionalEntropyMemory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;phase_bins&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mag_bins&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;max_phi&#39;</span><span class="p">,</span> <span class="mf">3.</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;stream&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;weighted&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">widen_mag_range</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;widen_mag_range&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_log_prob</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;compute_log_prob&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">balanced_magbins</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;balanced_magbins&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">balanced_magbins</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;simultaneous balanced_magbins and weighted&quot;</span>
+                            <span class="s2">&quot; options is not currently supported&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_log_prob</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;simultaneous compute_log_prob and weighted&quot;</span>
+                            <span class="s2">&quot; options is not currently supported&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0_buffer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0_buffer&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;buffered_transfer&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_g</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dy_g</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bins_g</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ce_c</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ce_g</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf_g</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_double&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">freqs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;freqs&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freqs_g</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs_g</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ytype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.allocate_buffered_data_arrays"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.allocate_buffered_data_arrays">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_buffered_data_arrays</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0_buffer&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0_buffer</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">n0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                  <span class="n">alignment</span><span class="o">=</span><span class="n">resource</span><span class="o">.</span><span class="n">getpagesize</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n0</span><span class="p">,),</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n0</span><span class="p">,),</span>
+                                    <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ytype</span><span class="p">,</span>
+                                    <span class="n">alignment</span><span class="o">=</span><span class="n">resource</span><span class="o">.</span><span class="n">getpagesize</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n0</span><span class="p">,),</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">balanced_magbins</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,),</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_log_prob</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,),</span>
+                                                    <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.allocate_pinned_cpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.allocate_pinned_cpu">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_pinned_cpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ce_c</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">nf</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                                       <span class="n">alignment</span><span class="o">=</span><span class="n">resource</span><span class="o">.</span><span class="n">getpagesize</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ce_c</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ce_c</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.allocate_data"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.allocate_data">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0_buffer&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0_buffer</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="n">n0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ytype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.allocate_bins"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.allocate_bins">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_bins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="n">nf</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bins_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bins_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">balanced_magbins</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span>
+                                            <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_log_prob</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span>
+                                                  <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.allocate_freqs"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.allocate_freqs">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_freqs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freqs_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nf</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ce_g</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ce_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nf</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.allocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.allocate">[docs]</a>    <span class="k">def</span> <span class="nf">allocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freqs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;freqs&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">freqs</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">freqs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_bins</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_freqs</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_pinned_cpu</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">allocate_buffered_data_arrays</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.transfer_data_to_gpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.transfer_data_to_gpu">[docs]</a>    <span class="k">def</span> <span class="nf">transfer_data_to_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">assert</span><span class="p">(</span><span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">]]))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">balanced_magbins</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_log_prob</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs</span><span class="p">,</span>
+                                           <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.transfer_freqs_to_gpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.transfer_freqs_to_gpu">[docs]</a>    <span class="k">def</span> <span class="nf">transfer_freqs_to_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">freqs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;freqs&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">freqs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">freqs_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.transfer_ce_to_cpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.transfer_ce_to_cpu">[docs]</a>    <span class="k">def</span> <span class="nf">transfer_ce_to_cpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ce_g</span><span class="o">.</span><span class="n">get_async</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">,</span> <span class="n">ary</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ce_c</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.compute_mag_bin_fracs"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.compute_mag_bin_fracs">[docs]</a>    <span class="k">def</span> <span class="nf">compute_mag_bin_fracs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+        <span class="n">mbf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">y</span> <span class="o">==</span> <span class="n">i</span><span class="p">)</span><span class="o">/</span><span class="n">N</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">)])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_bin_fracs</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">]</span> <span class="o">=</span> <span class="n">mbf</span><span class="p">[:]</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.balance_magbins"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.balance_magbins">[docs]</a>    <span class="k">def</span> <span class="nf">balance_magbins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">yinds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">ybins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span>
+
+        <span class="n">di</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span>
+        <span class="n">mag_bwf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">):</span>
+            <span class="n">imin</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">di</span><span class="p">)])</span>
+            <span class="n">imax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="nb">int</span><span class="p">((</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">di</span><span class="p">)])</span>
+
+            <span class="n">inds</span> <span class="o">=</span> <span class="n">yinds</span><span class="p">[</span><span class="n">imin</span><span class="p">:</span><span class="n">imax</span><span class="p">]</span>
+            <span class="n">ybins</span><span class="p">[</span><span class="n">inds</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+
+            <span class="n">mag_bwf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">inds</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">inds</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+
+        <span class="n">mag_bwf</span> <span class="o">/=</span> <span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">ybins</span><span class="p">,</span> <span class="n">mag_bwf</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.setdata"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.setdata">[docs]</a>    <span class="k">def</span> <span class="nf">setdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dy&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+        <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="n">yscale</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">y</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">])</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">y</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">])</span>
+        <span class="n">y0</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">y</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+            <span class="n">dy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">widen_mag_range</span><span class="p">:</span>
+                <span class="n">med_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">dy</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">])</span>
+                <span class="n">yscale</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span> <span class="o">*</span> <span class="n">med_sigma</span>
+                <span class="n">y0</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span> <span class="o">*</span> <span class="n">med_sigma</span>
+
+            <span class="n">dy</span> <span class="o">/=</span> <span class="n">yscale</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="n">y0</span><span class="p">)</span> <span class="o">/</span> <span class="n">yscale</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">balanced_magbins</span><span class="p">:</span>
+                <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mag_bwf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">balance_magbins</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ytype</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">y</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ytype</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_log_prob</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">compute_mag_bin_fracs</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="n">arrs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+                <span class="n">arrs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">arr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">arrs</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">allocate_buffered_data_arrays</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span> <span class="o">=</span> <span class="n">dy</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">t</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.set_gpu_arrays_to_zero"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.set_gpu_arrays_to_zero">[docs]</a>    <span class="k">def</span> <span class="nf">set_gpu_arrays_to_zero</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ytype</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyMemory.fromdata"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyMemory.fromdata">[docs]</a>    <span class="k">def</span> <span class="nf">fromdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setdata</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;allocate&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div></div>
+
+
+<div class="viewcode-block" id="conditional_entropy"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.conditional_entropy">[docs]</a><span class="k">def</span> <span class="nf">conditional_entropy</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">functions</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+                        <span class="n">transfer_to_host</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">transfer_to_device</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">block</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span> <span class="o">*</span> <span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">block_size</span><span class="p">))),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ce_dpdm</span><span class="p">,</span> <span class="n">hist_count</span><span class="p">,</span> <span class="n">hist_weight</span><span class="p">,</span> <span class="n">ce_logp</span><span class="p">,</span> <span class="n">ce_std</span><span class="p">,</span> <span class="n">ce_wt</span> <span class="o">=</span> <span class="n">functions</span>
+
+    <span class="k">if</span> <span class="n">transfer_to_device</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">transfer_data_to_gpu</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">memory</span><span class="o">.</span><span class="n">weighted</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">dy_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">max_phi</span><span class="p">),)</span>
+        <span class="n">hist_weight</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">block_size</span><span class="p">))),</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">ce_wt</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">transfer_to_host</span><span class="p">:</span>
+            <span class="n">memory</span><span class="o">.</span><span class="n">transfer_ce_to_cpu</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_c</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">))</span>
+    <span class="n">hist_count</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">block_size</span><span class="p">))),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">memory</span><span class="o">.</span><span class="n">balanced_magbins</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">mag_bwf_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,)</span>
+        <span class="n">ce_dpdm</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">memory</span><span class="o">.</span><span class="n">compute_log_prob</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">mag_bin_fracs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,)</span>
+        <span class="n">ce_logp</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ce_std</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">transfer_to_host</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">transfer_ce_to_cpu</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_c</span></div>
+
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess">[docs]</a><span class="k">class</span> <span class="nc">ConditionalEntropyAsyncProcess</span><span class="p">(</span><span class="n">GPUAsyncProcess</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    GPUAsyncProcess for the Conditional Entropy period finder</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    phase_bins: int, optional (default: 10)</span>
+<span class="sd">        Number of phase bins to use.</span>
+<span class="sd">    mag_bins: int, optional (default: 10)</span>
+<span class="sd">        Number of mag bins to use.</span>
+<span class="sd">    max_phi: float, optional (default: 3.)</span>
+<span class="sd">        For weighted CE; skips contibutions to bins that are more than</span>
+<span class="sd">        ``max_phi`` sigma away.</span>
+<span class="sd">    weighted: bool, optional (default: False)</span>
+<span class="sd">        If true, uses the weighted version of the CE periodogram. Slower, but</span>
+<span class="sd">        accounts for data uncertainties.</span>
+<span class="sd">    block_size: int, optional (default: 256)</span>
+<span class="sd">        Number of CUDA threads per CUDA block.</span>
+<span class="sd">    phase_overlap: int, optional (default: 0)</span>
+<span class="sd">        If &gt; 0, the phase bins are overlapped with each other</span>
+<span class="sd">    mag_overlap: int, optional (default: 0)</span>
+<span class="sd">        If &gt; 0, the mag bins are overlapped with each other</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; proc = ConditionalEntropyAsyncProcess()</span>
+<span class="sd">    &gt;&gt;&gt; Ndata = 1000</span>
+<span class="sd">    &gt;&gt;&gt; t = np.sort(365 * np.random.rand(N))</span>
+<span class="sd">    &gt;&gt;&gt; y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)</span>
+<span class="sd">    &gt;&gt;&gt; y += 0.01 * np.random.randn(len(t))</span>
+<span class="sd">    &gt;&gt;&gt; dy = 0.01 * np.ones_like(y)</span>
+<span class="sd">    &gt;&gt;&gt; results = proc.run([(t, y, dy)])</span>
+<span class="sd">    &gt;&gt;&gt; proc.finish()</span>
+<span class="sd">    &gt;&gt;&gt; ce_freqs, ce_powers = results[0]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ConditionalEntropyAsyncProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;phase_bins&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mag_bins&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;max_phi&#39;</span><span class="p">,</span> <span class="mf">3.</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;weighted&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;block_size&#39;</span><span class="p">,</span> <span class="mi">256</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">phase_overlap</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;phase_overlap&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_overlap</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mag_overlap&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mag_overlap</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;balanced_magbins&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;mag_overlap must be zero &quot;</span>
+                                <span class="s2">&quot;if balanced_magbins is True&quot;</span><span class="p">)</span>
+
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;The CE computation does not correctly&quot;</span>
+                          <span class="s2">&quot; account for the change in integration&quot;</span>
+                          <span class="s2">&quot; area for overlapping magnitude bins.&quot;</span>
+                          <span class="s2">&quot; Setting mag_overlap &gt; 0 is not recommended.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_double&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;memory&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_compile_and_prepare_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">cpp_defs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">NPHASE</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span><span class="p">,</span>
+                        <span class="n">NMAG</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span>
+                        <span class="n">PHASE_OVERLAP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_overlap</span><span class="p">,</span>
+                        <span class="n">MAG_OVERLAP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_overlap</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
+            <span class="n">cpp_defs</span><span class="p">[</span><span class="s1">&#39;DOUBLE_PRECISION&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Read kernel</span>
+        <span class="n">kernel_txt</span> <span class="o">=</span> <span class="n">_module_reader</span><span class="p">(</span><span class="n">find_kernel</span><span class="p">(</span><span class="s1">&#39;ce&#39;</span><span class="p">),</span>
+                                    <span class="n">cpp_defs</span><span class="o">=</span><span class="n">cpp_defs</span><span class="p">)</span>
+
+        <span class="c1"># compile kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span> <span class="o">=</span> <span class="n">SourceModule</span><span class="p">(</span><span class="n">kernel_txt</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;--use_fast_math&#39;</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">constdpdm_ce</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
+            <span class="n">histogram_data_weighted</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                                     <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">],</span>
+            <span class="n">histogram_data_count</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                                  <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">],</span>
+            <span class="n">log_prob</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
+            <span class="n">standard_ce</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
+            <span class="n">weighted_ce</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">fname</span><span class="p">,</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span><span class="p">[</span><span class="n">fname</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span><span class="p">[</span><span class="n">fname</span><span class="p">]</span>
+                                    <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess.memory_requirement"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.memory_requirement">[docs]</a>    <span class="k">def</span> <span class="nf">memory_requirement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; return an approximate GPU memory requirement in bytes &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess.allocate_for_single_lc"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.allocate_for_single_lc">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_for_single_lc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                               <span class="n">stream</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allocate GPU (and possibly CPU) memory for single lightcurve</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        t: array_like</span>
+<span class="sd">            Observation times</span>
+<span class="sd">        y: array_like</span>
+<span class="sd">            Observations</span>
+<span class="sd">        freqs: array_like</span>
+<span class="sd">            frequencies</span>
+<span class="sd">        dy: array_like, optional</span>
+<span class="sd">            Observation uncertainties</span>
+<span class="sd">        stream: pycuda.driver.Stream, optional</span>
+<span class="sd">            CUDA stream you want this to run on</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        mem: ConditionalEntropyMemory</span>
+<span class="sd">            Memory object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">phase_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span><span class="p">,</span>
+                  <span class="n">mag_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span>
+                  <span class="n">max_phi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span><span class="p">,</span>
+                  <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span>
+                  <span class="n">weighted</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">,</span>
+                  <span class="n">use_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">)</span>
+
+        <span class="n">kw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">mem</span> <span class="o">=</span> <span class="n">ConditionalEntropyMemory</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+        <span class="n">mem</span><span class="o">.</span><span class="n">fromdata</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span> <span class="n">allocate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mem</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess.autofrequency"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.autofrequency">[docs]</a>    <span class="k">def</span> <span class="nf">autofrequency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">utils_autofreq</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_nfreqs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess.allocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.allocate">[docs]</a>    <span class="k">def</span> <span class="nf">allocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allocate GPU memory for Conditional Entropy computations</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data: list of (t, y, dy) tuples</span>
+<span class="sd">            List of data, ``[(t_1, y_1, w_1), ...]``</span>
+<span class="sd">            * ``t``: Observation times</span>
+<span class="sd">            * ``y``: Observations</span>
+<span class="sd">            * ``dy``: Observation uncertainties</span>
+<span class="sd">        freqs: list, optional</span>
+<span class="sd">            Either a list of floats (same frequencies for all data),</span>
+<span class="sd">            or a list of length ``n=len(data)``, with element ``i`` of the</span>
+<span class="sd">            list being a list of frequencies for the ``i``-th lightcurve.</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        allocated_memory: list of ``ConditionalEntropyMemory``</span>
+<span class="sd">            list of allocated memory objects for each lightcurve</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_streams</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">))</span>
+
+        <span class="n">allocated_memory</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">frqs</span> <span class="o">=</span> <span class="n">freqs</span>
+        <span class="k">if</span> <span class="n">frqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frqs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">)</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">frqs</span> <span class="o">=</span> <span class="p">[</span><span class="n">freqs</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">((</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">),</span> <span class="n">f</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">frqs</span><span class="p">)):</span>
+            <span class="n">mem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocate_for_single_lc</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
+                                              <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                              <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">allocated_memory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mem</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">allocated_memory</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess.preallocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.preallocate">[docs]</a>    <span class="k">def</span> <span class="nf">preallocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_nobs</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span>
+                    <span class="n">nlcs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">streams</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">phase_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span><span class="p">,</span>
+                  <span class="n">mag_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span>
+                  <span class="n">max_phi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span><span class="p">,</span>
+                  <span class="n">weighted</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">,</span>
+                  <span class="n">use_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">,</span>
+                  <span class="n">n0_buffer</span><span class="o">=</span><span class="n">max_nobs</span><span class="p">,</span>
+                  <span class="n">buffered_transfer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">allocate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">)</span>
+
+        <span class="n">kw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nlcs</span><span class="p">):</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">streams</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">kw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">))</span>
+            <span class="n">mem</span> <span class="o">=</span> <span class="n">ConditionalEntropyMemory</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+            <span class="n">mem</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mem</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess.run"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
+            <span class="n">memory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">set_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run Conditional Entropy on a batch of data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data: list of tuples</span>
+<span class="sd">            list of [(t, y, dy), ...] containing</span>
+<span class="sd">            * ``t``: observation times</span>
+<span class="sd">            * ``y``: observations</span>
+<span class="sd">            * ``dy``: observation uncertainties</span>
+<span class="sd">        freqs: optional, list of ``np.ndarray`` frequencies</span>
+<span class="sd">            List of custom frequencies. If not specified, calls</span>
+<span class="sd">            ``autofrequency`` with default arguments</span>
+<span class="sd">        memory: optional, list of ``ConditionalEntropyMemory`` objects</span>
+<span class="sd">            List of memory objects, length of list must be ``&gt;= len(data)``</span>
+<span class="sd">        set_data: boolean, optional (default: True)</span>
+<span class="sd">            Transfers data to gpu if memory is provided</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        results: list of lists</span>
+<span class="sd">            list of (freqs, ce) corresponding to CE for each element of</span>
+<span class="sd">            the ``data`` array</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># compile module if not compiled already</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;prepared_functions&#39;</span><span class="p">)</span> <span class="ow">or</span> \
+            <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span>
+                     <span class="p">[</span><span class="s1">&#39;ce_wt&#39;</span><span class="p">]]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compile_and_prepare_functions</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># create and/or check frequencies</span>
+        <span class="n">frqs</span> <span class="o">=</span> <span class="n">freqs</span>
+        <span class="k">if</span> <span class="n">frqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frqs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">frqs</span> <span class="o">=</span> <span class="p">[</span><span class="n">frqs</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frqs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+
+        <span class="n">memory</span> <span class="o">=</span> <span class="n">memory</span> <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span>
+
+        <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="n">frqs</span><span class="p">,</span>
+                                   <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">mem</span> <span class="ow">in</span> <span class="n">memory</span><span class="p">:</span>
+                <span class="n">mem</span><span class="o">.</span><span class="n">transfer_freqs_to_gpu</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">set_data</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+                <span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_gpu_arrays_to_zero</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">setdata</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">block_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
+        <span class="n">kw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">conditional_entropy</span><span class="p">(</span><span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))]</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[(</span><span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">frqs</span><span class="p">,</span> <span class="n">results</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess.large_run"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run">[docs]</a>    <span class="k">def</span> <span class="nf">large_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
+                  <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">max_memory</span><span class="o">=</span><span class="mf">1e9</span><span class="p">,</span>
+                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run Conditional Entropy on a large frequency grid</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data: list of tuples</span>
+<span class="sd">            list of [(t, y, dy), ...] containing</span>
+<span class="sd">            * ``t``: observation times</span>
+<span class="sd">            * ``y``: observations</span>
+<span class="sd">            * ``dy``: observation uncertainties</span>
+<span class="sd">        freqs: optional, list of ``np.ndarray`` frequencies</span>
+<span class="sd">            List of custom frequencies. If not specified, calls</span>
+<span class="sd">            ``autofrequency`` with default arguments</span>
+<span class="sd">        max_memory: float, optional (default: 1e9)</span>
+<span class="sd">            Maximum memory per batch in bytes.</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        results: list of lists</span>
+<span class="sd">            list of (freqs, ce) corresponding to CE for each element of</span>
+<span class="sd">            the ``data`` array</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># compile module if not compiled already</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;prepared_functions&#39;</span><span class="p">)</span> <span class="ow">or</span> \
+            <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span>
+                     <span class="p">[</span><span class="s1">&#39;ce_wt&#39;</span><span class="p">]]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compile_and_prepare_functions</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># create and/or check frequencies</span>
+        <span class="n">frqs</span> <span class="o">=</span> <span class="n">freqs</span>
+        <span class="k">if</span> <span class="n">frqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frqs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">frqs</span> <span class="o">=</span> <span class="p">[</span><span class="n">frqs</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frqs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+
+        <span class="n">cpers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">frqs</span><span class="p">):</span>
+            <span class="n">size_of_real</span> <span class="o">=</span> <span class="mi">4</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
+                <span class="n">size_of_real</span> <span class="o">*=</span> <span class="mi">2</span>
+
+            <span class="c1"># subtract of lc memory</span>
+            <span class="n">fmem</span> <span class="o">=</span> <span class="n">max_memory</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">size_of_real</span> <span class="o">*</span> <span class="mi">3</span>
+
+            <span class="n">tot_bins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">fmem</span> <span class="o">/</span> <span class="p">(</span><span class="n">size_of_real</span> <span class="o">*</span> <span class="p">(</span><span class="n">tot_bins</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))))</span>
+            <span class="n">nbatches</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)))</span>
+
+            <span class="n">cper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nbatches</span><span class="p">):</span>
+                <span class="n">imin</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">batch_size</span>
+                <span class="n">imax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">),</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">])</span>
+
+                <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">d</span><span class="p">],</span> <span class="n">freqs</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="p">)],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+                <span class="n">cper</span><span class="p">[</span><span class="n">imin</span><span class="p">:</span><span class="n">imax</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">][:]</span>
+
+            <span class="n">cpers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cper</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[(</span><span class="n">f</span><span class="p">,</span> <span class="n">cper</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">cper</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">frqs</span><span class="p">,</span> <span class="n">cpers</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+
+<div class="viewcode-block" id="ConditionalEntropyAsyncProcess.batched_run_const_nfreq"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.batched_run_const_nfreq">[docs]</a>    <span class="k">def</span> <span class="nf">batched_run_const_nfreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                                <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Same as ``batched_run`` but is more efficient when the frequencies are</span>
+<span class="sd">        the same for each lightcurve. Doesn&#39;t reallocate memory for each batch.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        To get best efficiency, make sure the maximum number of observations</span>
+<span class="sd">        is not much larger than the typical number of observations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># create streams if needed</span>
+        <span class="n">bsize</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">batch_size</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">bsize</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_streams</span><span class="p">(</span><span class="n">bsize</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">))</span>
+
+        <span class="n">streams</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">bsize</span><span class="p">)]</span>
+        <span class="n">max_ndata</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span> <span class="ow">in</span> <span class="n">data</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">freqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data_with_max_baseline</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                                         <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">freqs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="n">data_with_max_baseline</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">nf</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+
+        <span class="n">ces</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># make data batches</span>
+        <span class="n">batches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span>
+            <span class="n">finish</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="nb">min</span><span class="p">([</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="n">start</span><span class="p">])</span>
+            <span class="n">batches</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">)])</span>
+
+        <span class="c1"># set up memory containers for gpu and cpu (pinned) memory</span>
+        <span class="n">kwargs_mem</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">buffered_transfer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                          <span class="n">n0_buffer</span><span class="o">=</span><span class="n">max_ndata</span><span class="p">)</span>
+        <span class="n">kwargs_mem</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">memory</span> <span class="o">=</span> <span class="p">[</span><span class="n">ConditionalEntropyMemory</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs_mem</span><span class="p">)</span>
+                  <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">streams</span><span class="p">]</span>
+
+        <span class="c1"># allocate memory</span>
+        <span class="p">[</span><span class="n">mem</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">mem</span> <span class="ow">in</span> <span class="n">memory</span><span class="p">]</span>
+
+        <span class="p">[</span><span class="n">mem</span><span class="o">.</span><span class="n">transfer_freqs_to_gpu</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">mem</span> <span class="ow">in</span> <span class="n">memory</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">b</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">batches</span><span class="p">):</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">memory</span><span class="o">=</span><span class="n">memory</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">ce</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
+                <span class="n">ces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">ce</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">[(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">ce</span><span class="p">)</span> <span class="k">for</span> <span class="n">ce</span> <span class="ow">in</span> <span class="n">ces</span><span class="p">]</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">cuvarbase</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ce.html">Conditional Entropy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../lomb.html">Lomb-Scargle periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bls.html">Box least squares (BLS) periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, John Hoffman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
