@@ -48,6 +48,7 @@ def assert_similar(pdg0, pdg, top=5):
         if dv > 1e-3:
             print(p0v, pv, dv)
 
+    assert_allclose(p, p0, atol=lsatol, rtol=lsrtol)
     assert(all(diff < lsrtol * 0.5 * (p + p0) + lsatol))
 
 

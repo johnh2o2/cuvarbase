@@ -174,7 +174,7 @@ class TestCE(object):
 
     def test_large_run(self, make_plot=False, **kwargs):
         proc = ConditionalEntropyAsyncProcess(**kwargs)
-        t, y, dy = data(igma=0.01, ndata=100, freq=4.)
+        t, y, dy = data(sigma=0.01, ndata=100, freq=4.)
         df = 0.001
         max_freq = 100.
         min_freq = df
