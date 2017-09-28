@@ -1,0 +1,356 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>cuvarbase.tests.test_lombscargle &#8212; cuvarbase 0.1.9 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for cuvarbase.tests.test_lombscargle</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">zip</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">range</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">object</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pytest</span>
+
+<span class="kn">from</span> <span class="nn">numpy.testing</span> <span class="k">import</span> <span class="n">assert_allclose</span>
+<span class="kn">from</span> <span class="nn">astropy.stats.lombscargle</span> <span class="k">import</span> <span class="n">LombScargle</span>
+
+<span class="kn">from</span> <span class="nn">..lombscargle</span> <span class="k">import</span> <span class="n">LombScargleAsyncProcess</span>
+<span class="kn">from</span> <span class="nn">pycuda.tools</span> <span class="k">import</span> <span class="n">mark_cuda_test</span>
+<span class="kn">import</span> <span class="nn">pycuda.autoinit</span>
+<span class="n">spp</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">nfac</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">lsrtol</span> <span class="o">=</span> <span class="mf">1E-2</span>
+<span class="n">lsatol</span> <span class="o">=</span> <span class="mf">1E-2</span>
+<span class="n">nfft_sigma</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="data"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.data">[docs]</a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span> <span class="nf">data</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">ndata</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="mf">3.</span><span class="p">):</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">ndata</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">freq</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span>
+
+    <span class="n">y</span> <span class="o">+=</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">rand</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span></div>
+
+
+<div class="viewcode-block" id="assert_similar"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.assert_similar">[docs]</a><span class="k">def</span> <span class="nf">assert_similar</span><span class="p">(</span><span class="n">pdg0</span><span class="p">,</span> <span class="n">pdg</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">inds</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">pdg0</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])[:</span><span class="n">top</span><span class="p">]</span>
+
+    <span class="n">p0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pdg0</span><span class="p">)[</span><span class="n">inds</span><span class="p">]</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pdg</span><span class="p">)[</span><span class="n">inds</span><span class="p">]</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">p</span> <span class="o">-</span> <span class="n">p0</span><span class="p">)</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">p0</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">diff</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">p0v</span><span class="p">,</span> <span class="n">pv</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">res</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dv</span> <span class="o">&gt;</span> <span class="mf">1e-3</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">p0v</span><span class="p">,</span> <span class="n">pv</span><span class="p">,</span> <span class="n">dv</span><span class="p">)</span>
+
+    <span class="n">assert_allclose</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">p0</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">lsatol</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">lsrtol</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">all</span><span class="p">(</span><span class="n">diff</span> <span class="o">&lt;</span> <span class="n">lsrtol</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">p</span> <span class="o">+</span> <span class="n">p0</span><span class="p">)</span> <span class="o">+</span> <span class="n">lsatol</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="TestLombScargle"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle">[docs]</a><span class="k">class</span> <span class="nc">TestLombScargle</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="TestLombScargle.test_against_astropy_double"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_against_astropy_double">[docs]</a>    <span class="k">def</span> <span class="nf">test_against_astropy_double</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">data</span><span class="p">()</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">use_double</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                          <span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                              <span class="n">use_fft</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                              <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="n">fgpu</span><span class="p">,</span> <span class="n">pgpu</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">power</span> <span class="o">=</span> <span class="n">LombScargle</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">fgpu</span><span class="p">)</span>
+
+        <span class="n">assert_similar</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">pgpu</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestLombScargle.test_against_astropy_single"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_against_astropy_single">[docs]</a>    <span class="k">def</span> <span class="nf">test_against_astropy_single</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">data</span><span class="p">()</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">use_double</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                          <span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                              <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+        <span class="n">fgpu</span><span class="p">,</span> <span class="n">pgpu</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">power</span> <span class="o">=</span> <span class="n">LombScargle</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">fgpu</span><span class="p">)</span>
+
+        <span class="n">assert_similar</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">pgpu</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestLombScargle.test_ls_kernel"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_ls_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">test_ls_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">data</span><span class="p">()</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">use_double</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                          <span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                              <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+        <span class="n">fgpu</span><span class="p">,</span> <span class="n">pgpu</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">ls</span> <span class="o">=</span> <span class="n">LombScargle</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">,</span> <span class="n">fit_mean</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">center_data</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">power</span> <span class="o">=</span> <span class="n">ls</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">fgpu</span><span class="p">)</span>
+
+        <span class="n">assert_similar</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">pgpu</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestLombScargle.test_ls_kernel_direct_sums"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_ls_kernel_direct_sums">[docs]</a>    <span class="k">def</span> <span class="nf">test_ls_kernel_direct_sums</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">data</span><span class="p">()</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">use_double</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                          <span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                              <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">,</span> <span class="n">use_fft</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+        <span class="n">fgpu</span><span class="p">,</span> <span class="n">pgpu</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">ls</span> <span class="o">=</span> <span class="n">LombScargle</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">,</span> <span class="n">fit_mean</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">center_data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">power</span> <span class="o">=</span> <span class="n">ls</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">fgpu</span><span class="p">)</span>
+
+        <span class="n">assert_similar</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">pgpu</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestLombScargle.test_ls_kernel_direct_sums_is_consistent"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_ls_kernel_direct_sums_is_consistent">[docs]</a>    <span class="k">def</span> <span class="nf">test_ls_kernel_direct_sums_is_consistent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">data</span><span class="p">()</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">use_double</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                          <span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">)</span>
+
+        <span class="n">results_ds</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                                 <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">,</span> <span class="n">use_fft</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="n">fgpu_ds</span><span class="p">,</span> <span class="n">pgpu_ds</span> <span class="o">=</span> <span class="n">results_ds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">results_reg</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                                  <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">,</span> <span class="n">use_cpu_nfft</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="n">fgpu_reg</span><span class="p">,</span> <span class="n">pgpu_reg</span> <span class="o">=</span> <span class="n">results_reg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">assert_similar</span><span class="p">(</span><span class="n">pgpu_reg</span><span class="p">,</span> <span class="n">pgpu_ds</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestLombScargle.test_ls_kernel_direct_sums_against_python"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_ls_kernel_direct_sums_against_python">[docs]</a>    <span class="k">def</span> <span class="nf">test_ls_kernel_direct_sums_against_python</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">data</span><span class="p">()</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">use_double</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">)</span>
+
+        <span class="n">result_ds</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                                <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">,</span> <span class="n">use_fft</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="n">fgpu_ds</span><span class="p">,</span> <span class="n">pgpu_ds</span> <span class="o">=</span> <span class="n">result_ds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">result_reg</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span><span class="p">)],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                                 <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">,</span>
+                                 <span class="n">use_fft</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                 <span class="n">python_dir_sums</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+        <span class="n">fgpu_reg</span><span class="p">,</span> <span class="n">pgpu_reg</span> <span class="o">=</span> <span class="n">result_reg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">assert_similar</span><span class="p">(</span><span class="n">pgpu_reg</span><span class="p">,</span> <span class="n">pgpu_ds</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestLombScargle.test_multiple_datasets"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_multiple_datasets">[docs]</a>    <span class="k">def</span> <span class="nf">test_multiple_datasets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndatas</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+        <span class="n">datas</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndatas</span><span class="p">)]</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">)</span>
+
+        <span class="n">mult_results</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">datas</span><span class="p">,</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                                   <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="n">sing_results</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datas</span><span class="p">:</span>
+            <span class="n">sing_results</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">d</span><span class="p">],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                                <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">))</span>
+            <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">rb</span><span class="p">,</span> <span class="n">rnb</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mult_results</span><span class="p">,</span> <span class="n">sing_results</span><span class="p">):</span>
+            <span class="n">fb</span><span class="p">,</span> <span class="n">pb</span> <span class="o">=</span> <span class="n">rb</span>
+            <span class="n">fnb</span><span class="p">,</span> <span class="n">pnb</span> <span class="o">=</span> <span class="n">rnb</span>
+
+            <span class="n">assert_allclose</span><span class="p">(</span><span class="n">pnb</span><span class="p">,</span> <span class="n">pb</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">lsrtol</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">lsatol</span><span class="p">)</span>
+            <span class="n">assert_allclose</span><span class="p">(</span><span class="n">fnb</span><span class="p">,</span> <span class="n">fb</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">lsrtol</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">lsatol</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestLombScargle.test_batched_run"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_batched_run">[docs]</a>    <span class="k">def</span> <span class="nf">test_batched_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndatas</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">,</span>
+                         <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">,</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                         <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">datas</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">(</span><span class="n">ndata</span><span class="o">=</span><span class="n">rand</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndatas</span><span class="p">)]</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">sigma</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nyquist_factor</span><span class="p">,</span>
+                  <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">samples_per_peak</span><span class="p">)</span>
+
+        <span class="n">batched_results</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">batched_run</span><span class="p">(</span><span class="n">datas</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="n">non_batched_results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datas</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">d</span><span class="p">],</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nyquist_factor</span><span class="p">,</span>
+                            <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">samples_per_peak</span><span class="p">)</span>
+            <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+            <span class="n">non_batched_results</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">rb</span><span class="p">,</span> <span class="n">rnb</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">batched_results</span><span class="p">,</span> <span class="n">non_batched_results</span><span class="p">):</span>
+            <span class="n">fb</span><span class="p">,</span> <span class="n">pb</span> <span class="o">=</span> <span class="n">rb</span>
+            <span class="n">fnb</span><span class="p">,</span> <span class="n">pnb</span> <span class="o">=</span> <span class="n">rnb</span>
+
+            <span class="n">assert_allclose</span><span class="p">(</span><span class="n">pnb</span><span class="p">,</span> <span class="n">pb</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">lsrtol</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">lsatol</span><span class="p">)</span>
+            <span class="n">assert_allclose</span><span class="p">(</span><span class="n">fnb</span><span class="p">,</span> <span class="n">fb</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">lsrtol</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">lsatol</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TestLombScargle.test_batched_run_const_nfreq"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_lombscargle.TestLombScargle.test_batched_run_const_nfreq">[docs]</a>    <span class="k">def</span> <span class="nf">test_batched_run_const_nfreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">make_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">ndatas</span><span class="o">=</span><span class="mi">27</span><span class="p">,</span>
+                                     <span class="n">batch_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">,</span>
+                                     <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">,</span>
+                                     <span class="n">nyquist_factor</span><span class="o">=</span><span class="n">nfac</span><span class="p">,</span>
+                                     <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">frequencies</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">+</span> <span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">ndatas</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
+        <span class="n">datas</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">(</span><span class="n">ndata</span><span class="o">=</span><span class="n">rand</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+                      <span class="n">freq</span><span class="o">=</span><span class="n">freq</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frequencies</span><span class="p">)]</span>
+        <span class="n">ls_proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">sigma</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">samples_per_peak</span><span class="o">=</span><span class="n">spp</span><span class="p">,</span>
+                  <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="n">kw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">batched_results</span> <span class="o">=</span> <span class="n">ls_proc</span><span class="o">.</span><span class="n">batched_run_const_nfreq</span><span class="p">(</span><span class="n">datas</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="n">ls_proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="n">ls_procnb</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">sigma</span><span class="o">=</span><span class="n">nfft_sigma</span><span class="p">,</span>
+                                            <span class="n">use_double</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">non_batched_results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="p">(</span><span class="n">frq</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">datas</span><span class="p">,</span> <span class="n">batched_results</span><span class="p">):</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">ls_procnb</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">d</span><span class="p">],</span> <span class="n">freqs</span><span class="o">=</span><span class="n">frq</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">ls_procnb</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+            <span class="n">non_batched_results</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+        <span class="c1"># for f0, (fb, pb), (fnb, pnb) in zip(frequencies, batched_results,</span>
+        <span class="c1">#                                    non_batched_results):</span>
+        <span class="c1">#    print f0, fb[np.argmax(pb)], fnb[np.argmax(pnb)]</span>
+
+        <span class="k">for</span> <span class="n">f0</span><span class="p">,</span> <span class="p">(</span><span class="n">fb</span><span class="p">,</span> <span class="n">pb</span><span class="p">),</span> <span class="p">(</span><span class="n">fnb</span><span class="p">,</span> <span class="n">pnb</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">frequencies</span><span class="p">,</span> <span class="n">batched_results</span><span class="p">,</span>
+                                            <span class="n">non_batched_results</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="n">make_plot</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fnb</span><span class="p">,</span> <span class="n">pnb</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fb</span><span class="p">,</span> <span class="n">pb</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">f0</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+            <span class="n">assert_allclose</span><span class="p">(</span><span class="n">pnb</span><span class="p">,</span> <span class="n">pb</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">lsrtol</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">lsatol</span><span class="p">)</span>
+            <span class="n">assert_allclose</span><span class="p">(</span><span class="n">fnb</span><span class="p">,</span> <span class="n">fb</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">lsrtol</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">lsatol</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../../../index.html">cuvarbase</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../whatsnew.html">What’s new in cuvarbase</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Install instructions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../ce.html">Conditional Entropy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../lomb.html">Lomb-Scargle periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../bls.html">Box least squares (BLS) periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">API documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, John Hoffman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

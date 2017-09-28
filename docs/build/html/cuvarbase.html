@@ -1,0 +1,1613 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>cuvarbase package &#8212; cuvarbase 0.1.9 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="cuvarbase.tests package" href="cuvarbase.tests.html" />
+    <link rel="prev" title="API documentation" href="modules.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="cuvarbase-package">
+<h1>cuvarbase package<a class="headerlink" href="#cuvarbase-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cuvarbase.tests.html">cuvarbase.tests package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cuvarbase.tests.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cuvarbase.tests.html#module-cuvarbase.tests.test_bls">cuvarbase.tests.test_bls module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cuvarbase.tests.html#module-cuvarbase.tests.test_ce">cuvarbase.tests.test_ce module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cuvarbase.tests.html#module-cuvarbase.tests.test_lombscargle">cuvarbase.tests.test_lombscargle module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cuvarbase.tests.html#module-cuvarbase.tests.test_nfft">cuvarbase.tests.test_nfft module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cuvarbase.tests.html#module-cuvarbase.tests.test_pdm">cuvarbase.tests.test_pdm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cuvarbase.tests.html#module-cuvarbase.tests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-cuvarbase.bls">
+<span id="cuvarbase-bls-module"></span><h2>cuvarbase.bls module<a class="headerlink" href="#module-cuvarbase.bls" title="Permalink to this headline">¶</a></h2>
+<p>Implementation of the box-least squares periodogram <a class="reference internal" href="#k2002" id="id1">[K2002]</a>
+and variants.</p>
+<table class="docutils citation" frame="void" id="k2002" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[K2002]</a></td><td><a class="reference external" href="http://adsabs.harvard.edu/abs/2002A%26A...391..369K">Kovacs et al. 2002</a></td></tr>
+</tbody>
+</table>
+<dl class="function">
+<dt id="cuvarbase.bls.compile_bls">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">compile_bls</code><span class="sig-paren">(</span><em>block_size=256</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#compile_bls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.compile_bls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile BLS kernel</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>block_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: _default_block_size</em><em>)</em>) – CUDA threads per CUDA block.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">gpu_bin_custom, gpu_store, gpu_store_custom)</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">(gpu_bls, gpu_max, gpu_bin,</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.eebls_gpu">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_gpu</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>freqs</em>, <em>qmin=0.01</em>, <em>qmax=0.5</em>, <em>nstreams=5</em>, <em>noverlap=3</em>, <em>dlogq=0.2</em>, <em>max_memory=100000000.0</em>, <em>batch_size=None</em>, <em>functions=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_gpu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Box-Least Squares, accelerated with PyCUDA</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation times</li>
+<li><strong>y</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observations</li>
+<li><strong>dy</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation uncertainties</li>
+<li><strong>freqs</strong> (<em>array_like</em><em>, </em><em>float</em>) – Frequencies</li>
+<li><strong>qmin</strong> (<em>float</em><em> or </em><em>array_like</em>) – Minimum q value(s) to test for each frequency</li>
+<li><strong>qmax</strong> (<em>float</em><em> or </em><em>array_like</em>) – Maximum q value(s) to test for each frequency</li>
+<li><strong>nstreams</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 5</em><em>)</em>) – Number of CUDA streams to utilize.</li>
+<li><strong>noverlap</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 3</em><em>)</em>) – Number of overlapping q bins to use</li>
+<li><strong>dlogq</strong> (<em>float</em><em>, </em><em>optional</em><em>, </em><em>(</em><em>default: 0.5</em><em>)</em>) – logarithmic spacing of <span class="math">\(q\)</span> values, where <span class="math">\(d\log q = dq / q\)</span></li>
+<li><strong>batch_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Number of frequencies to compute in a single batch; determines
+this automatically based on <code class="docutils literal"><span class="pre">max_memory</span></code></li>
+<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1e8</em><em>)</em>) – Maximum memory to use in bytes. Will ignore this if
+batch_size is specified</li>
+<li><strong>functions</strong> (<em>tuple of CUDA functions</em>) – returned by <code class="docutils literal"><span class="pre">compile_bls</span></code></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>bls</strong> (<em>array_like, float</em>) – BLS periodogram, normalized to <span class="math">\(1 - \chi^2(f) / \chi^2_0\)</span></li>
+<li><strong>qphi_sols</strong> (list of <code class="docutils literal"><span class="pre">(q,</span> <span class="pre">phi)</span></code> tuples) – Best <code class="docutils literal"><span class="pre">(q,</span> <span class="pre">phi)</span></code> solution at each frequency</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.eebls_gpu_custom">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_gpu_custom</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>freqs</em>, <em>q_values</em>, <em>phi_values</em>, <em>batch_size=None</em>, <em>nstreams=5</em>, <em>max_memory=100000000.0</em>, <em>functions=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_gpu_custom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_gpu_custom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Box-Least Squares, with custom q and phi values. Useful
+if you’re honing the initial solution or testing between
+a relatively small number of possible solutions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation times</li>
+<li><strong>y</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observations</li>
+<li><strong>dy</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation uncertainties</li>
+<li><strong>freqs</strong> (<em>array_like</em><em>, </em><em>float</em>) – Frequencies</li>
+<li><strong>q_values</strong> (<em>array_like</em>) – Set of q values to search at each trial frequency</li>
+<li><strong>phi_values</strong> (<em>float</em><em> or </em><em>array_like</em>) – Set of phi values to search at each trial frequency</li>
+<li><strong>nstreams</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 5</em><em>)</em>) – Number of CUDA streams to utilize.</li>
+<li><strong>batch_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Number of frequencies to compute in a single batch; determines
+this automatically by default based on <code class="docutils literal"><span class="pre">max_memory</span></code></li>
+<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1e8</em><em>)</em>) – Maximum memory to use in bytes. Will ignore this if
+<code class="docutils literal"><span class="pre">batch_size</span></code> is specified.</li>
+<li><strong>functions</strong> (<em>tuple of CUDA functions</em>) – gpu_bls, gpu_max, gpu_bin, gpu_store functions;
+returned by <cite>compile_bls</cite></li>
+<li><strong>**kwargs</strong> – passed to <cite>compile_bls</cite></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>bls</strong> (<em>array_like, float</em>) – BLS periodogram, normalized to 1 - chi2(best_fit) / chi2(constant)</li>
+<li><strong>qphi_sols</strong> (<em>list of (q, phi) tuples</em>) – Best (q, phi) solution at each frequency</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.eebls_transit_gpu">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_transit_gpu</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>fmax_frac=1.0</em>, <em>fmin_frac=1.0</em>, <em>qmin_fac=0.5</em>, <em>qmax_fac=2.0</em>, <em>fmin=None</em>, <em>fmax=None</em>, <em>freqs=None</em>, <em>qvals=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_transit_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_transit_gpu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute BLS for timeseries assuming edge-on keplerian
+orbit of a planet with Mp/Ms &lt;&lt; 1, Rp/Rs &lt; 1, Lp/Ls &lt;&lt; 1 and
+negligible eccentricity.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation times</li>
+<li><strong>y</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observations</li>
+<li><strong>dy</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation uncertainties</li>
+<li><strong>fmax_frac</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1.0</em><em>)</em>) – Maximum frequency is <cite>fmax_frac * fmax</cite>, where
+<cite>fmax</cite> is automatically selected by <cite>fmax_transit</cite>.</li>
+<li><strong>fmin_frac</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1.5</em><em>)</em>) – Minimum frequency is <cite>fmin_frac * fmin</cite>, where
+<cite>fmin</cite> is automatically selected by <cite>fmin_transit</cite>.</li>
+<li><strong>fmin</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Overrides automatic frequency minimum with this value</li>
+<li><strong>fmax</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Overrides automatic frequency maximum with this value</li>
+<li><strong>qmin_fac</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.5</em><em>)</em>) – Fraction of the fiducial q value to search
+at each frequency (minimum)</li>
+<li><strong>qmax_fac</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 2.0</em><em>)</em>) – Fraction of the fiducial q value to search
+at each frequency (maximum)</li>
+<li><strong>freqs</strong> (<em>array_like</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Overrides the auto-generated frequency grid</li>
+<li><strong>qvals</strong> (<em>array_like</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Overrides the keplerian q values</li>
+<li><strong>functions</strong> (<em>tuple</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – result of <code class="docutils literal"><span class="pre">compile_bls(**kwargs)</span></code>.</li>
+<li><strong>**kwargs</strong> – passed to <cite>eebls_gpu</cite>, <cite>compile_bls</cite>, <cite>fmax_transit</cite>,
+<cite>fmin_transit</cite>, and <cite>transit_autofreq</cite></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>freqs</strong> (<em>array_like, float</em>) – Frequencies where BLS is evaluated</li>
+<li><strong>bls</strong> (<em>array_like, float</em>) – BLS periodogram, normalized to <span class="math">\(1 - \chi^2(f) / \chi^2_0\)</span></li>
+<li><strong>solutions</strong> (list of <code class="docutils literal"><span class="pre">(q,</span> <span class="pre">phi)</span></code> tuples) – Best <code class="docutils literal"><span class="pre">(q,</span> <span class="pre">phi)</span></code> solution at each frequency</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.fmax_transit">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">fmax_transit</code><span class="sig-paren">(</span><em>rho=1.0</em>, <em>qmax=0.5</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#fmax_transit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.fmax_transit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.fmax_transit0">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">fmax_transit0</code><span class="sig-paren">(</span><em>rho=1.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#fmax_transit0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.fmax_transit0" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.fmin_transit">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">fmin_transit</code><span class="sig-paren">(</span><em>t</em>, <em>rho=1.0</em>, <em>min_obs_per_transit=5</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#fmin_transit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.fmin_transit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.freq_transit">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">freq_transit</code><span class="sig-paren">(</span><em>q</em>, <em>rho=1.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#freq_transit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.freq_transit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.hone_solution">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">hone_solution</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>f0</em>, <em>df0</em>, <em>q0</em>, <em>dlogq0</em>, <em>phi0</em>, <em>stop=1e-05</em>, <em>samples_per_peak=5</em>, <em>max_iter=50</em>, <em>noverlap=3</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#hone_solution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.hone_solution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Experimental!</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.q_transit">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">q_transit</code><span class="sig-paren">(</span><em>freq</em>, <em>rho=1.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#q_transit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.q_transit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.single_bls">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">single_bls</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>freq</em>, <em>q</em>, <em>phi0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#single_bls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.single_bls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate BLS power for a single set of (freq, q, phi0)
+parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation times</li>
+<li><strong>y</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observations</li>
+<li><strong>dy</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation uncertainties</li>
+<li><strong>freq</strong> (<em>float</em>) – Frequency of the signal</li>
+<li><strong>q</strong> (<em>float</em>) – Transit duration in phase</li>
+<li><strong>phi0</strong> (<em>float</em>) – Phase offset of transit</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>bls</strong> – BLS power for this set of parameters</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.transit_autofreq">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">transit_autofreq</code><span class="sig-paren">(</span><em>t</em>, <em>fmin=None</em>, <em>fmax=None</em>, <em>samples_per_peak=2</em>, <em>rho=1.0</em>, <em>qmin_fac=0.2</em>, <em>qmax_fac=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#transit_autofreq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.transit_autofreq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce list of frequencies for a given frequency range
+suitable for performing Keplerian BLS.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation times.</li>
+<li><strong>fmin</strong> (float, optional (default: <code class="docutils literal"><span class="pre">None</span></code>)) – Minimum frequency. By default this is determined by <code class="docutils literal"><span class="pre">fmin_transit</span></code>.</li>
+<li><strong>fmax</strong> (float, optional (default: <code class="docutils literal"><span class="pre">None</span></code>)) – Maximum frequency. By default this is determined by <code class="docutils literal"><span class="pre">fmax_transit</span></code>.</li>
+<li><strong>samples_per_peak</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 2</em><em>)</em>) – Oversampling factor. Frequency spacing is multiplied by
+<code class="docutils literal"><span class="pre">1/samples_per_peak</span></code>.</li>
+<li><strong>rho</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1</em><em>)</em>) – Mean stellar density of host star in solar units
+<span class="math">\(\rho=\rho_{\star} / \rho_{\odot}\)</span>, where
+<span class="math">\(\rho_{\odot}\)</span>
+is the mean density of the sun</li>
+<li><strong>qmin_fac</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.2</em><em>)</em>) – The minimum <span class="math">\(q\)</span> value to search in units of the Keplerian
+<span class="math">\(q\)</span> value</li>
+<li><strong>qmax_fac</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – The maximum <span class="math">\(q\)</span> value to search in units of the Keplerian
+<span class="math">\(q\)</span> value. If <code class="docutils literal"><span class="pre">None</span></code>, this defaults to <code class="docutils literal"><span class="pre">1/qmin_fac</span></code>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>freqs</strong> (<em>array_like</em>) – The frequency grid</li>
+<li><strong>q0vals</strong> (<em>array_like</em>) – The list of Keplerian <span class="math">\(q\)</span> values.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-cuvarbase.ce">
+<span id="cuvarbase-ce-module"></span><h2>cuvarbase.ce module<a class="headerlink" href="#module-cuvarbase.ce" title="Permalink to this headline">¶</a></h2>
+<p>Implementation of Graham et al. 2013’s Conditional Entropy
+period finding algorithm</p>
+<dl class="class">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess">
+<em class="property">class </em><code class="descclassname">cuvarbase.ce.</code><code class="descname">ConditionalEntropyAsyncProcess</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cuvarbase.core.GPUAsyncProcess" title="cuvarbase.core.GPUAsyncProcess"><code class="xref py py-class docutils literal"><span class="pre">cuvarbase.core.GPUAsyncProcess</span></code></a></p>
+<p>GPUAsyncProcess for the Conditional Entropy period finder</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>phase_bins</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 10</em><em>)</em>) – Number of phase bins to use.</li>
+<li><strong>mag_bins</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 10</em><em>)</em>) – Number of mag bins to use.</li>
+<li><strong>max_phi</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 3.</em><em>)</em>) – For weighted CE; skips contibutions to bins that are more than
+<code class="docutils literal"><span class="pre">max_phi</span></code> sigma away.</li>
+<li><strong>weighted</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: False</em><em>)</em>) – If true, uses the weighted version of the CE periodogram. Slower, but
+accounts for data uncertainties.</li>
+<li><strong>block_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 256</em><em>)</em>) – Number of CUDA threads per CUDA block.</li>
+<li><strong>phase_overlap</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 0</em><em>)</em>) – If &gt; 0, the phase bins are overlapped with each other</li>
+<li><strong>mag_overlap</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 0</em><em>)</em>) – If &gt; 0, the mag bins are overlapped with each other</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">proc</span> <span class="o">=</span> <span class="n">ConditionalEntropyAsyncProcess</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ndata</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="mi">365</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">N</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">t</span> <span class="o">/</span> <span class="mf">5.0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">+=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dy</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">results</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ce_freqs</span><span class="p">,</span> <span class="n">ce_powers</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.allocate">
+<code class="descname">allocate</code><span class="sig-paren">(</span><em>data</em>, <em>freqs=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.allocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.allocate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocate GPU memory for Conditional Entropy computations</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>list of</em><em> (</em><em>t</em><em>, </em><em>y</em><em>, </em><em>dy</em><em>) </em><em>tuples</em>) – List of data, <code class="docutils literal"><span class="pre">[(t_1,</span> <span class="pre">y_1,</span> <span class="pre">w_1),</span> <span class="pre">...]</span></code>
+* <code class="docutils literal"><span class="pre">t</span></code>: Observation times
+* <code class="docutils literal"><span class="pre">y</span></code>: Observations
+* <code class="docutils literal"><span class="pre">dy</span></code>: Observation uncertainties</li>
+<li><strong>freqs</strong> (<em>list</em><em>, </em><em>optional</em>) – Either a list of floats (same frequencies for all data),
+or a list of length <code class="docutils literal"><span class="pre">n=len(data)</span></code>, with element <code class="docutils literal"><span class="pre">i</span></code> of the
+list being a list of frequencies for the <code class="docutils literal"><span class="pre">i</span></code>-th lightcurve.</li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>allocated_memory</strong> – list of allocated memory objects for each lightcurve</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of <code class="docutils literal"><span class="pre">ConditionalEntropyMemory</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.allocate_for_single_lc">
+<code class="descname">allocate_for_single_lc</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>freqs</em>, <em>dy=None</em>, <em>stream=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.allocate_for_single_lc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.allocate_for_single_lc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocate GPU (and possibly CPU) memory for single lightcurve</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em>) – Observation times</li>
+<li><strong>y</strong> (<em>array_like</em>) – Observations</li>
+<li><strong>freqs</strong> (<em>array_like</em>) – frequencies</li>
+<li><strong>dy</strong> (<em>array_like</em><em>, </em><em>optional</em>) – Observation uncertainties</li>
+<li><strong>stream</strong> (<em>pycuda.driver.Stream</em><em>, </em><em>optional</em>) – CUDA stream you want this to run on</li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mem</strong> – Memory object.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#cuvarbase.ce.ConditionalEntropyMemory" title="cuvarbase.ce.ConditionalEntropyMemory">ConditionalEntropyMemory</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.autofrequency">
+<code class="descname">autofrequency</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.autofrequency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.autofrequency" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.batched_run_const_nfreq">
+<code class="descname">batched_run_const_nfreq</code><span class="sig-paren">(</span><em>data</em>, <em>batch_size=10</em>, <em>freqs=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.batched_run_const_nfreq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.batched_run_const_nfreq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as <code class="docutils literal"><span class="pre">batched_run</span></code> but is more efficient when the frequencies are
+the same for each lightcurve. Doesn’t reallocate memory for each batch.</p>
+<p class="rubric">Notes</p>
+<p>To get best efficiency, make sure the maximum number of observations
+is not much larger than the typical number of observations</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run">
+<code class="descname">large_run</code><span class="sig-paren">(</span><em>data</em>, <em>freqs=None</em>, <em>max_memory=1000000000.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.large_run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run Conditional Entropy on a large frequency grid</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>list of tuples</em>) – list of [(t, y, dy), …] containing
+* <code class="docutils literal"><span class="pre">t</span></code>: observation times
+* <code class="docutils literal"><span class="pre">y</span></code>: observations
+* <code class="docutils literal"><span class="pre">dy</span></code>: observation uncertainties</li>
+<li><strong>freqs</strong> (optional, list of <code class="docutils literal"><span class="pre">np.ndarray</span></code> frequencies) – List of custom frequencies. If not specified, calls
+<code class="docutils literal"><span class="pre">autofrequency</span></code> with default arguments</li>
+<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1e9</em><em>)</em>) – Maximum memory per batch in bytes.</li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>results</strong> – list of (freqs, ce) corresponding to CE for each element of
+the <code class="docutils literal"><span class="pre">data</span></code> array</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of lists</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.memory_requirement">
+<code class="descname">memory_requirement</code><span class="sig-paren">(</span><em>data</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.memory_requirement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.memory_requirement" title="Permalink to this definition">¶</a></dt>
+<dd><p>return an approximate GPU memory requirement in bytes</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.preallocate">
+<code class="descname">preallocate</code><span class="sig-paren">(</span><em>max_nobs</em>, <em>freqs</em>, <em>nlcs=1</em>, <em>streams=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.preallocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.preallocate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>data</em>, <em>memory=None</em>, <em>freqs=None</em>, <em>set_data=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run Conditional Entropy on a batch of data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>list of tuples</em>) – list of [(t, y, dy), …] containing
+* <code class="docutils literal"><span class="pre">t</span></code>: observation times
+* <code class="docutils literal"><span class="pre">y</span></code>: observations
+* <code class="docutils literal"><span class="pre">dy</span></code>: observation uncertainties</li>
+<li><strong>freqs</strong> (optional, list of <code class="docutils literal"><span class="pre">np.ndarray</span></code> frequencies) – List of custom frequencies. If not specified, calls
+<code class="docutils literal"><span class="pre">autofrequency</span></code> with default arguments</li>
+<li><strong>memory</strong> (optional, list of <code class="docutils literal"><span class="pre">ConditionalEntropyMemory</span></code> objects) – List of memory objects, length of list must be <code class="docutils literal"><span class="pre">&gt;=</span> <span class="pre">len(data)</span></code></li>
+<li><strong>set_data</strong> (<em>boolean</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – Transfers data to gpu if memory is provided</li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>results</strong> – list of (freqs, ce) corresponding to CE for each element of
+the <code class="docutils literal"><span class="pre">data</span></code> array</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of lists</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory">
+<em class="property">class </em><code class="descclassname">cuvarbase.ce.</code><code class="descname">ConditionalEntropyMemory</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">future.types.newobject.newobject</span></code></p>
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.allocate">
+<code class="descname">allocate</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.allocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.allocate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.allocate_bins">
+<code class="descname">allocate_bins</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.allocate_bins"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.allocate_bins" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.allocate_buffered_data_arrays">
+<code class="descname">allocate_buffered_data_arrays</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.allocate_buffered_data_arrays"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.allocate_buffered_data_arrays" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.allocate_data">
+<code class="descname">allocate_data</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.allocate_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.allocate_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.allocate_freqs">
+<code class="descname">allocate_freqs</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.allocate_freqs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.allocate_freqs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.allocate_pinned_cpu">
+<code class="descname">allocate_pinned_cpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.allocate_pinned_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.allocate_pinned_cpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.balance_magbins">
+<code class="descname">balance_magbins</code><span class="sig-paren">(</span><em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.balance_magbins"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.balance_magbins" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.compute_mag_bin_fracs">
+<code class="descname">compute_mag_bin_fracs</code><span class="sig-paren">(</span><em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.compute_mag_bin_fracs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.compute_mag_bin_fracs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.fromdata">
+<code class="descname">fromdata</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.fromdata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.fromdata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.set_gpu_arrays_to_zero">
+<code class="descname">set_gpu_arrays_to_zero</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.set_gpu_arrays_to_zero"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.set_gpu_arrays_to_zero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.setdata">
+<code class="descname">setdata</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.setdata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.setdata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.transfer_ce_to_cpu">
+<code class="descname">transfer_ce_to_cpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.transfer_ce_to_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.transfer_ce_to_cpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.transfer_data_to_gpu">
+<code class="descname">transfer_data_to_gpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.transfer_data_to_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.transfer_data_to_gpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.ce.ConditionalEntropyMemory.transfer_freqs_to_gpu">
+<code class="descname">transfer_freqs_to_gpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyMemory.transfer_freqs_to_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyMemory.transfer_freqs_to_gpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.ce.conditional_entropy">
+<code class="descclassname">cuvarbase.ce.</code><code class="descname">conditional_entropy</code><span class="sig-paren">(</span><em>memory</em>, <em>functions</em>, <em>block_size=256</em>, <em>transfer_to_host=True</em>, <em>transfer_to_device=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#conditional_entropy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.conditional_entropy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-cuvarbase.core">
+<span id="cuvarbase-core-module"></span><h2>cuvarbase.core module<a class="headerlink" href="#module-cuvarbase.core" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cuvarbase.core.BaseSpectrogram">
+<em class="property">class </em><code class="descclassname">cuvarbase.core.</code><code class="descname">BaseSpectrogram</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>times=None</em>, <em>freqs=None</em>, <em>window='gaussian'</em>, <em>window_length=None</em>, <em>batch_size=10</em>, <em>block_size=128</em>, <em>truncate=True</em>, <em>truncate_limit=0.001</em>, <em>proc=None</em>, <em>proc_kwargs=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">future.types.newobject.newobject</span></code></p>
+<dl class="method">
+<dt id="cuvarbase.core.BaseSpectrogram.auto_time_split">
+<code class="descname">auto_time_split</code><span class="sig-paren">(</span><em>nsplits=100</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.auto_time_split"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.auto_time_split" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.core.BaseSpectrogram.localized_spectrum">
+<code class="descname">localized_spectrum</code><span class="sig-paren">(</span><em>time=None</em>, <em>freqs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.localized_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.localized_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.core.BaseSpectrogram.model">
+<code class="descname">model</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.core.BaseSpectrogram.spectrogram">
+<code class="descname">spectrogram</code><span class="sig-paren">(</span><em>times=None</em>, <em>freqs=None</em>, <em>nsplits=100</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.spectrogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.spectrogram" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.core.BaseSpectrogram.split_data">
+<code class="descname">split_data</code><span class="sig-paren">(</span><em>times</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.split_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.split_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.core.BaseSpectrogram.weighted_local_data">
+<code class="descname">weighted_local_data</code><span class="sig-paren">(</span><em>time</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.weighted_local_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.weighted_local_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cuvarbase.core.GPUAsyncProcess">
+<em class="property">class </em><code class="descclassname">cuvarbase.core.</code><code class="descname">GPUAsyncProcess</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#GPUAsyncProcess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.GPUAsyncProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">future.types.newobject.newobject</span></code></p>
+<dl class="method">
+<dt id="cuvarbase.core.GPUAsyncProcess.batched_run">
+<code class="descname">batched_run</code><span class="sig-paren">(</span><em>data</em>, <em>batch_size=10</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#GPUAsyncProcess.batched_run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.GPUAsyncProcess.batched_run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run your data in batches (avoids memory problems)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.core.GPUAsyncProcess.finish">
+<code class="descname">finish</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#GPUAsyncProcess.finish"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.GPUAsyncProcess.finish" title="Permalink to this definition">¶</a></dt>
+<dd><p>synchronize all active streams</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.core.GPUAsyncProcess.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#GPUAsyncProcess.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.GPUAsyncProcess.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-cuvarbase.cunfft">
+<span id="cuvarbase-cunfft-module"></span><h2>cuvarbase.cunfft module<a class="headerlink" href="#module-cuvarbase.cunfft" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cuvarbase.cunfft.NFFTAsyncProcess">
+<em class="property">class </em><code class="descclassname">cuvarbase.cunfft.</code><code class="descname">NFFTAsyncProcess</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTAsyncProcess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTAsyncProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cuvarbase.core.GPUAsyncProcess" title="cuvarbase.core.GPUAsyncProcess"><code class="xref py py-class docutils literal"><span class="pre">cuvarbase.core.GPUAsyncProcess</span></code></a></p>
+<p><cite>GPUAsyncProcess</cite> for the adjoint NFFT.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>sigma</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 2</em><em>)</em>) – Size of NFFT grid will be NFFT_SIZE * sigma</li>
+<li><strong>m</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 8</em><em>)</em>) – Maximum radius for grid contributions (by default,
+this value will automatically be set based on a specified
+error tolerance)</li>
+<li><strong>autoset_m</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – Automatically set the <code class="docutils literal"><span class="pre">m</span></code> parameter based on the
+error tolerance given by the <code class="docutils literal"><span class="pre">m_tol</span></code> parameter</li>
+<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1E-8</em><em>)</em>) – Error tolerance for the NFFT (used to auto set <code class="docutils literal"><span class="pre">m</span></code>)</li>
+<li><strong>block_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 256</em><em>)</em>) – CUDA block size.</li>
+<li><strong>use_double</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: False</em><em>)</em>) – Use double precision. On non-Tesla cards this will
+make things ~24 times slower.</li>
+<li><strong>use_fast_math</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – Compile kernel with the <code class="docutils literal"><span class="pre">--use_fast_math</span></code> option
+supplied to <code class="docutils literal"><span class="pre">nvcc</span></code>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">10</span> <span class="o">*</span> <span class="n">t</span> <span class="o">-</span> <span class="mf">0.4</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">proc</span> <span class="o">=</span> <span class="n">NFFTAsyncProcess</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nfft_adjoint</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTAsyncProcess.allocate">
+<code class="descname">allocate</code><span class="sig-paren">(</span><em>data</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTAsyncProcess.allocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTAsyncProcess.allocate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocate GPU memory for NFFT-related computations</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>list of</em><em> (</em><em>t</em><em>, </em><em>y</em><em>, </em><em>N</em><em>) </em><em>tuples</em>) – List of data, <code class="docutils literal"><span class="pre">[(t_1,</span> <span class="pre">y_1,</span> <span class="pre">N_1),</span> <span class="pre">...]</span></code>
+* <code class="docutils literal"><span class="pre">t</span></code>: Observation times.
+* <code class="docutils literal"><span class="pre">y</span></code>: Observations.
+* <code class="docutils literal"><span class="pre">nf</span></code>: int, FFT size</li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>allocated_memory</strong> – List of allocated memory for each dataset</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of <code class="docutils literal"><span class="pre">NFFTMemory</span></code> objects</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTAsyncProcess.estimate_m">
+<code class="descname">estimate_m</code><span class="sig-paren">(</span><em>N</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTAsyncProcess.estimate_m"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTAsyncProcess.estimate_m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimate <code class="docutils literal"><span class="pre">m</span></code> based on an error tolerance of <code class="docutils literal"><span class="pre">self.tol</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>N</strong> (<em>int</em>) – size of NFFT</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>m</strong> – Maximum grid radius</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Pulled from &lt;<a class="reference external" href="https://github.com/jakevdp/nfft">https://github.com/jakevdp/nfft</a>&gt;_.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTAsyncProcess.get_m">
+<code class="descname">get_m</code><span class="sig-paren">(</span><em>N=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTAsyncProcess.get_m"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTAsyncProcess.get_m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the <code class="docutils literal"><span class="pre">m</span></code> value for <code class="docutils literal"><span class="pre">N</span></code> frequencies.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>N</strong> (<em>int</em>) – Number of frequencies, only needed if <code class="docutils literal"><span class="pre">autoset_m</span></code> is <code class="docutils literal"><span class="pre">False</span></code>.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>m</strong> – The filter radius (in grid points)</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTAsyncProcess.m_from_C">
+<code class="descname">m_from_C</code><span class="sig-paren">(</span><em>C</em>, <em>sigma</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTAsyncProcess.m_from_C"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTAsyncProcess.m_from_C" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an estimate for what <code class="docutils literal"><span class="pre">m</span></code> value to use from <code class="docutils literal"><span class="pre">C</span></code>,
+where <code class="docutils literal"><span class="pre">C</span></code> is something like <code class="docutils literal"><span class="pre">err_tolerance/N_freq</span></code>.</p>
+<p>Pulled from &lt;<a class="reference external" href="https://github.com/jakevdp/nfft">https://github.com/jakevdp/nfft</a>&gt;_</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTAsyncProcess.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>data</em>, <em>memory=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTAsyncProcess.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTAsyncProcess.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the adjoint NFFT on a batch of data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>list of tuples</em>) – list of [(t, y, w), …] containing
+* <code class="docutils literal"><span class="pre">t</span></code>: observation times
+* <code class="docutils literal"><span class="pre">y</span></code>: observations
+* <code class="docutils literal"><span class="pre">nf</span></code>: int, size of NFFT</li>
+<li><strong>memory</strong> – </li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>powers</strong> – List of adjoint NFFTs</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of np.ndarrays</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cuvarbase.cunfft.NFFTMemory">
+<em class="property">class </em><code class="descclassname">cuvarbase.cunfft.</code><code class="descname">NFFTMemory</code><span class="sig-paren">(</span><em>sigma</em>, <em>stream</em>, <em>m</em>, <em>use_double=False</em>, <em>precomp_psi=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">future.types.newobject.newobject</span></code></p>
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.allocate">
+<code class="descname">allocate</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.allocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.allocate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.allocate_data">
+<code class="descname">allocate_data</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.allocate_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.allocate_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.allocate_grid">
+<code class="descname">allocate_grid</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.allocate_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.allocate_grid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.allocate_pinned_cpu">
+<code class="descname">allocate_pinned_cpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.allocate_pinned_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.allocate_pinned_cpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.allocate_precomp_psi">
+<code class="descname">allocate_precomp_psi</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.allocate_precomp_psi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.allocate_precomp_psi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.fromdata">
+<code class="descname">fromdata</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>allocate=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.fromdata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.fromdata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.is_ready">
+<code class="descname">is_ready</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.is_ready"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.is_ready" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.transfer_data_to_gpu">
+<code class="descname">transfer_data_to_gpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.transfer_data_to_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.transfer_data_to_gpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.cunfft.NFFTMemory.transfer_nfft_to_cpu">
+<code class="descname">transfer_nfft_to_cpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#NFFTMemory.transfer_nfft_to_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.NFFTMemory.transfer_nfft_to_cpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.cunfft.nfft_adjoint_async">
+<code class="descclassname">cuvarbase.cunfft.</code><code class="descname">nfft_adjoint_async</code><span class="sig-paren">(</span><em>memory</em>, <em>functions</em>, <em>minimum_frequency=0.0</em>, <em>block_size=256</em>, <em>just_return_gridded_data=False</em>, <em>use_grid=None</em>, <em>fast_grid=True</em>, <em>transfer_to_device=True</em>, <em>transfer_to_host=True</em>, <em>precomp_psi=True</em>, <em>samples_per_peak=1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/cunfft.html#nfft_adjoint_async"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.cunfft.nfft_adjoint_async" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous NFFT adjoint operation.</p>
+<p>Use the <code class="docutils literal"><span class="pre">NFFTAsyncProcess</span></code> class and related subroutines when possible.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>memory</strong> (<code class="docutils literal"><span class="pre">NFFTMemory</span></code>) – Allocated memory, must have data already set (see, e.g.,
+<code class="docutils literal"><span class="pre">NFFTAsyncProcess.allocate()</span></code>)</li>
+<li><strong>functions</strong> (<em>tuple</em><em>, </em><em>length 5</em>) – Tuple of compiled functions from <cite>SourceModule</cite>. Must be prepared with
+their appropriate dtype.</li>
+<li><strong>minimum_frequency</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0</em><em>)</em>) – First frequency of transform</li>
+<li><strong>block_size</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of CUDA threads per block</li>
+<li><strong>just_return_gridded_data</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, returns grid via <cite>grid_g.get()</cite> after gridding</li>
+<li><strong>use_grid</strong> (<code class="docutils literal"><span class="pre">GPUArray</span></code>, optional) – If specified, will skip gridding procedure and use the <cite>GPUArray</cite>
+provided</li>
+<li><strong>fast_grid</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default: True</em>) – Whether or not to use the “fast” gridding procedure</li>
+<li><strong>transfer_to_device</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>(</em><em>default: True</em><em>)</em>) – If the data is already on the gpu, set as False</li>
+<li><strong>transfer_to_host</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>(</em><em>default: True</em><em>)</em>) – If False, will not transfer the resulting nfft to CPU memory</li>
+<li><strong>precomp_psi</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>(</em><em>default: True</em><em>)</em>) – Only relevant if <code class="docutils literal"><span class="pre">fast</span></code> is True. Will precompute values for the
+fast gridding procedure.</li>
+<li><strong>samples_per_peak</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1</em><em>)</em>) – Frequency spacing is reduced by this factor, but number of frequencies
+is kept the same</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ghat_cpu</strong> – The resulting NFFT</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="docutils literal"><span class="pre">np.array</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-cuvarbase.lombscargle">
+<span id="cuvarbase-lombscargle-module"></span><h2>cuvarbase.lombscargle module<a class="headerlink" href="#module-cuvarbase.lombscargle" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cuvarbase.lombscargle.LombScargleAsyncProcess">
+<em class="property">class </em><code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">LombScargleAsyncProcess</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleAsyncProcess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleAsyncProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cuvarbase.core.GPUAsyncProcess" title="cuvarbase.core.GPUAsyncProcess"><code class="xref py py-class docutils literal"><span class="pre">cuvarbase.core.GPUAsyncProcess</span></code></a></p>
+<p>GPUAsyncProcess for the Lomb Scargle periodogram</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>**kwargs</strong> (passed to <code class="docutils literal"><span class="pre">NFFTAsyncProcess</span></code>) – </td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ndata</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="mi">365</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">N</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">t</span> <span class="o">/</span> <span class="mf">5.0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">+=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dy</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">freqs</span><span class="p">,</span> <span class="n">powers</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ls_freqs</span><span class="p">,</span> <span class="n">ls_powers</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">powers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleAsyncProcess.allocate">
+<code class="descname">allocate</code><span class="sig-paren">(</span><em>data</em>, <em>nfreqs=None</em>, <em>k0s=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleAsyncProcess.allocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleAsyncProcess.allocate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocate GPU memory for Lomb Scargle computations</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>list of</em><em> (</em><em>t</em><em>, </em><em>y</em><em>, </em><em>dy</em><em>) </em><em>tuples</em>) – List of data, <code class="docutils literal"><span class="pre">[(t_1,</span> <span class="pre">y_1,</span> <span class="pre">dy_1),</span> <span class="pre">...]</span></code>
+* <code class="docutils literal"><span class="pre">t</span></code>: Observation times
+* <code class="docutils literal"><span class="pre">y</span></code>: Observations
+* <code class="docutils literal"><span class="pre">dy</span></code>: Observation uncertainties</li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>allocated_memory</strong> – list of allocated memory objects for each lightcurve</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of <code class="docutils literal"><span class="pre">LombScargleMemory</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleAsyncProcess.allocate_for_single_lc">
+<code class="descname">allocate_for_single_lc</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>nf</em>, <em>k0=0</em>, <em>stream=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleAsyncProcess.allocate_for_single_lc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleAsyncProcess.allocate_for_single_lc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocate GPU (and possibly CPU) memory for single lightcurve</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em>) – Observation times</li>
+<li><strong>y</strong> (<em>array_like</em>) – Observations</li>
+<li><strong>dy</strong> (<em>array_like</em>) – Observation uncertainties</li>
+<li><strong>nf</strong> (<em>int</em>) – Number of frequencies</li>
+<li><strong>k0</strong> (<em>int</em>) – The starting index for the Fourier transform. The minimum
+frequency <code class="docutils literal"><span class="pre">f0</span> <span class="pre">=</span> <span class="pre">k0</span> <span class="pre">*</span> <span class="pre">df</span></code>, where <code class="docutils literal"><span class="pre">df</span></code> is the frequency
+spacing</li>
+<li><strong>stream</strong> (<em>pycuda.driver.Stream</em>) – CUDA stream you want this to run on</li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mem</strong> – Memory object.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#cuvarbase.lombscargle.LombScargleMemory" title="cuvarbase.lombscargle.LombScargleMemory">LombScargleMemory</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleAsyncProcess.autofrequency">
+<code class="descname">autofrequency</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleAsyncProcess.autofrequency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleAsyncProcess.autofrequency" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleAsyncProcess.batched_run_const_nfreq">
+<code class="descname">batched_run_const_nfreq</code><span class="sig-paren">(</span><em>data</em>, <em>batch_size=10</em>, <em>use_fft=True</em>, <em>freqs=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleAsyncProcess.batched_run_const_nfreq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleAsyncProcess.batched_run_const_nfreq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as <code class="docutils literal"><span class="pre">batched_run</span></code> but is more efficient when the frequencies are
+the same for each lightcurve. Doesn’t reallocate memory for each batch.</p>
+<p class="rubric">Notes</p>
+<p>To get best efficiency, make sure the maximum number of observations
+is not much larger than the typical number of observations</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleAsyncProcess.memory_requirement">
+<code class="descname">memory_requirement</code><span class="sig-paren">(</span><em>n0</em>, <em>nf</em>, <em>k0</em>, <em>nbatch=1</em>, <em>autoadjust_sigma=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleAsyncProcess.memory_requirement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleAsyncProcess.memory_requirement" title="Permalink to this definition">¶</a></dt>
+<dd><p>return an approximate GPU memory requirement in bytes</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleAsyncProcess.preallocate">
+<code class="descname">preallocate</code><span class="sig-paren">(</span><em>max_nobs</em>, <em>nlcs=1</em>, <em>nf=None</em>, <em>k0=None</em>, <em>freqs=None</em>, <em>streams=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleAsyncProcess.preallocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleAsyncProcess.preallocate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleAsyncProcess.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>data</em>, <em>use_fft=True</em>, <em>memory=None</em>, <em>freqs=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleAsyncProcess.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleAsyncProcess.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run Lomb Scargle on a batch of data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>list of tuples</em>) – list of [(t, y, dy), …] containing
+* <code class="docutils literal"><span class="pre">t</span></code>: observation times
+* <code class="docutils literal"><span class="pre">y</span></code>: observations
+* <code class="docutils literal"><span class="pre">dy</span></code>: observation uncertainties</li>
+<li><strong>freqs</strong> (optional, list of <code class="docutils literal"><span class="pre">np.ndarray</span></code> frequencies) – List of custom frequencies. Right now, this has to be linearly
+spaced with <code class="docutils literal"><span class="pre">freqs[0]</span> <span class="pre">/</span> <span class="pre">(freqs[1]</span> <span class="pre">-</span> <span class="pre">freqs[0])</span></code> being an integer.</li>
+<li><strong>memory</strong> (optional, list of <code class="docutils literal"><span class="pre">LombScargleMemory</span></code> objects) – List of memory objects, length of list must be <code class="docutils literal"><span class="pre">&gt;=</span> <span class="pre">len(data)</span></code></li>
+<li><strong>use_fft</strong> (<em>optional</em><em>, </em><em>bool</em><em> (</em><em>default: True</em><em>)</em>) – Uses the NFFT, otherwise just does direct summations (which
+are quite slow…)</li>
+<li><strong>floating_mean</strong> (<em>optional</em><em>, </em><em>bool</em><em> (</em><em>default: True</em><em>)</em>) – Add a floating mean to the model (see Zechmeister &amp; Kurster 2009)</li>
+<li><strong>window</strong> (<em>optional</em><em>, </em><em>bool</em><em> (</em><em>default: False</em><em>)</em>) – If true, computes the window function for the data instead of
+Lomb-Scargle</li>
+<li><strong>amplitude_prior</strong> (<em>optional</em><em>, </em><em>float</em><em> (</em><em>default: None</em><em>)</em>) – If not None, sets the variance of a Gaussian prior on
+the amplitude (sometimes useful for suppressing aliases)</li>
+<li><strong>**kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>results</strong> – list of (freqs, pows) for each LS periodogram</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of lists</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cuvarbase.lombscargle.LombScargleMemory">
+<em class="property">class </em><code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">LombScargleMemory</code><span class="sig-paren">(</span><em>sigma</em>, <em>stream</em>, <em>m</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">future.types.newobject.newobject</span></code></p>
+<p>Container class for allocating memory and transferring
+data between the GPU and CPU for Lomb-Scargle computations</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>sigma</strong> (<em>int</em>) – The <code class="docutils literal"><span class="pre">sigma</span></code> parameter for the NFFT</li>
+<li><strong>stream</strong> (<code class="xref py py-class docutils literal"><span class="pre">pycuda.driver.Stream</span></code> instance) – The CUDA stream used for calculations/data transfer</li>
+<li><strong>m</strong> (<em>int</em>) – The <code class="docutils literal"><span class="pre">m</span></code> parameter for the NFFT</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.allocate">
+<code class="descname">allocate</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.allocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.allocate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocate all memory necessary</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.allocate_buffered_data_arrays">
+<code class="descname">allocate_buffered_data_arrays</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.allocate_buffered_data_arrays"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.allocate_buffered_data_arrays" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocates pinned memory for lightcurves if we’re reusing
+this container</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.allocate_data">
+<code class="descname">allocate_data</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.allocate_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.allocate_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocates memory for lightcurve</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.allocate_grids">
+<code class="descname">allocate_grids</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.allocate_grids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.allocate_grids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocates memory for NFFT grids, NFFT precomputation vectors,
+and the GPU vector for the Lomb-Scargle power</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.allocate_pinned_cpu">
+<code class="descname">allocate_pinned_cpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.allocate_pinned_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.allocate_pinned_cpu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allocates pinned CPU memory for asynchronous transfer of result</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.fromdata">
+<code class="descname">fromdata</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.fromdata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.fromdata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets and (optionally) allocates memory for data</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.is_ready">
+<code class="descname">is_ready</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.is_ready"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.is_ready" title="Permalink to this definition">¶</a></dt>
+<dd><p>don’t use this.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.set_gpu_arrays_to_zero">
+<code class="descname">set_gpu_arrays_to_zero</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.set_gpu_arrays_to_zero"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.set_gpu_arrays_to_zero" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets all gpu arrays to zero</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.setdata">
+<code class="descname">setdata</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.setdata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.setdata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the value of the data arrays.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.transfer_data_to_gpu">
+<code class="descname">transfer_data_to_gpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.transfer_data_to_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.transfer_data_to_gpu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transfers the lightcurve to the GPU</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.lombscargle.LombScargleMemory.transfer_lsp_to_cpu">
+<code class="descname">transfer_lsp_to_cpu</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#LombScargleMemory.transfer_lsp_to_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.LombScargleMemory.transfer_lsp_to_cpu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous transfer of LSP result to CPU</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.add_regularization">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">add_regularization</code><span class="sig-paren">(</span><em>sums</em>, <em>amplitude_priors=None</em>, <em>cn0=None</em>, <em>sn0=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#add_regularization"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.add_regularization" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add regularization to sums. See Zechmeister &amp; Kuerster 2009
+for details about notation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sums</strong> (<em>tuple of array_like</em>) – C, S, CC, CS, SS, YC, YS. See <cite>mhdirect_sums</cite>
+for more information.</li>
+<li><strong>amplitude_priors</strong> (<em>float</em><em> or </em><em>array_like</em><em>, </em><em>optional</em>) – Corresponds to standard deviation of a Gaussian
+prior on the amplitudes of all harmonics (if its a <cite>float</cite>),
+or for each of the harmonics (if it’s an <cite>array_like</cite>).</li>
+<li><strong>cn0</strong> (<em>array_like</em>) – Location of the centroid of the Gaussian amplitude prior
+on each of the cosine amplitudes</li>
+<li><strong>sn0</strong> (<em>array_like</em>) – Location of the centroid of the Gaussian amplitude prior
+on each of the sine amplitudes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>C, S, CC, CS, SS, YC, YS</strong> – The set of sums with regularization added.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#cuvarbase.lombscargle.mhdirect_sums" title="cuvarbase.lombscargle.mhdirect_sums"><code class="xref py py-func docutils literal"><span class="pre">mhdirect_sums()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.check_k0">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">check_k0</code><span class="sig-paren">(</span><em>freqs</em>, <em>k0=None</em>, <em>rtol=0.01</em>, <em>atol=1e-07</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#check_k0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.check_k0" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.fap_baluev">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">fap_baluev</code><span class="sig-paren">(</span><em>t</em>, <em>dy</em>, <em>z</em>, <em>fmax</em>, <em>d_K=3</em>, <em>d_H=1</em>, <em>use_gamma=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#fap_baluev"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.fap_baluev" title="Permalink to this definition">¶</a></dt>
+<dd><p>False alarm probability for periodogram peak
+based on Baluev (2008) [2008MNRAS.385.1279B]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em>) – Observation times.</li>
+<li><strong>dy</strong> (<em>array_like</em>) – Observation uncertainties.</li>
+<li><strong>z</strong> (<em>array_like</em><em> or </em><em>float</em>) – Periodogram value(s)</li>
+<li><strong>fmax</strong> (<em>float</em>) – Maximum frequency searched</li>
+<li><strong>d_K</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 3</em><em>)</em>) – Number of degrees of fredom for periodgram model.
+2H - 1 where H is the number of harmonics</li>
+<li><strong>d_H</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 1</em><em>)</em>) – Number of degrees of freedom for default model.</li>
+<li><strong>use_gamma</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – Use gamma function for computation of numerical
+coefficient; replaced with scipy.special.gammaln
+and should be stable now</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fap</strong> – False alarm probability</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mf">10.</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dy</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">+=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">rand</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">results</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">freqs</span><span class="p">,</span> <span class="n">powers</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fap_baluev</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">powers</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">freqs</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.get_k0">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">get_k0</code><span class="sig-paren">(</span><em>freqs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#get_k0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.get_k0" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.lomb_scargle_async">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">lomb_scargle_async</code><span class="sig-paren">(</span><em>memory</em>, <em>functions</em>, <em>freqs</em>, <em>block_size=256</em>, <em>use_fft=True</em>, <em>python_dir_sums=False</em>, <em>transfer_to_device=True</em>, <em>transfer_to_host=True</em>, <em>window=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#lomb_scargle_async"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.lomb_scargle_async" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous Lomb Scargle periodogram</p>
+<p>Use the <code class="docutils literal"><span class="pre">LombScargleAsyncProcess</span></code> class and
+related subroutines when possible.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>memory</strong> (<code class="docutils literal"><span class="pre">LombScargleMemory</span></code>) – Allocated memory, must have data already set (see, e.g.,
+<code class="docutils literal"><span class="pre">LombScargleAsyncProcess.allocate()</span></code>)</li>
+<li><strong>functions</strong> (<em>tuple</em><em> (</em><em>lombscargle_functions</em><em>, </em><em>nfft_functions</em><em>)</em>) – Tuple of compiled functions from <code class="docutils literal"><span class="pre">SourceModule</span></code>. Must be
+prepared with their appropriate dtype.</li>
+<li><strong>freqs</strong> (<em>array_like</em><em>, </em><em>optional</em><em> (</em><em>default: 0</em><em>)</em>) – Linearly-spaced frequencies starting at an integer multiple
+of the frequency spacing (i.e. freqs = df * (k0 + np.arange(nf)))</li>
+<li><strong>block_size</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of CUDA threads per block</li>
+<li><strong>use_fft</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – If False, uses direct sums.</li>
+<li><strong>python_dir_sums</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: False</em><em>)</em>) – If True, performs direct sums with Python on the CPU</li>
+<li><strong>transfer_to_device</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>(</em><em>default: True</em><em>)</em>) – If the data is already on the gpu, set as False</li>
+<li><strong>transfer_to_host</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>(</em><em>default: True</em><em>)</em>) – If False, will not transfer the resulting periodogram to
+CPU memory</li>
+<li><strong>window</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: False</em><em>)</em>) – If True, computes the window function for the data</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>lsp_c</strong> – The resulting periodgram (<code class="docutils literal"><span class="pre">memory.lsp_c</span></code>)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="docutils literal"><span class="pre">np.array</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.lomb_scargle_direct_sums">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">lomb_scargle_direct_sums</code><span class="sig-paren">(</span><em>t</em>, <em>yw</em>, <em>w</em>, <em>freqs</em>, <em>YY</em>, <em>nharms=1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#lomb_scargle_direct_sums"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.lomb_scargle_direct_sums" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute Lomb-Scargle periodogram using direct summations. This
+is usually only useful for debugging and/or small numbers of
+frequencies.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em>) – Observation times.</li>
+<li><strong>yw</strong> (<em>array_like</em>) – Observations multiplied by their corresponding weights.
+<cite>sum(yw)</cite> is the weighted mean.</li>
+<li><strong>w</strong> (<em>array_like</em>) – Weights for each of the observations. Usually proportional
+to <cite>1/sigma ** 2</cite> where <cite>sigma</cite> is the observation uncertainties.
+Normalized so that <cite>sum(w) = 1</cite>.</li>
+<li><strong>freqs</strong> (<em>array_like</em>) – Trial frequencies to evaluate the periodogram</li>
+<li><strong>YY</strong> (<em>float</em>) – Weighted variance of the observations.</li>
+<li><strong>nharms</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 1</em><em>)</em>) – Number of harmonics to use in the model. Lomb Scargle only uses
+1, but more harmonics allow for greater model flexibility
+at the cost of higher complexity and therefore reduced signal-
+to-noise.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>power</strong> – The periodogram powers at each of the trial frequencies</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.lomb_scargle_simple">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">lomb_scargle_simple</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#lomb_scargle_simple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.lomb_scargle_simple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple lomb-scargle interface for testing that
+things work on the GPU. Note: This will be
+substantially slower than working with the
+<code class="docutils literal"><span class="pre">LombScargleAsyncProcess</span></code> interface.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.mhdirect_sums">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">mhdirect_sums</code><span class="sig-paren">(</span><em>t</em>, <em>yw</em>, <em>w</em>, <em>freq</em>, <em>YY</em>, <em>nharms=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#mhdirect_sums"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.mhdirect_sums" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the set of frequency-dependent sums
+for (multi-harmonic) Lomb Scargle at a given frequency</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em>) – Observation times.</li>
+<li><strong>yw</strong> (<em>array_like</em>) – Observations multiplied by their corresponding weights.
+<cite>sum(yw)</cite> is the weighted mean.</li>
+<li><strong>w</strong> (<em>array_like</em>) – Weights for each of the observations. Usually proportional
+to <cite>1/sigma ** 2</cite> where <cite>sigma</cite> is the observation uncertainties.
+Normalized so that <cite>sum(w) = 1</cite>.</li>
+<li><strong>freq</strong> (<em>float</em>) – Signal frequency.</li>
+<li><strong>YY</strong> (<em>float</em>) – Weighted variance of the observations.</li>
+<li><strong>nharms</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 1</em><em>)</em>) – Number of harmonics to compute. This is 1 for the standard
+Lomb-Scargle</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>C, S, CC, CS, SS, YC, YS</strong> – The set of sums with regularization added.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#cuvarbase.lombscargle.mhdirect_sums" title="cuvarbase.lombscargle.mhdirect_sums"><code class="xref py py-func docutils literal"><span class="pre">mhdirect_sums()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.mhgls_from_sums">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">mhgls_from_sums</code><span class="sig-paren">(</span><em>sums</em>, <em>YY</em>, <em>ybar</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#mhgls_from_sums"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.mhgls_from_sums" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute multiharmonic periodogram power from
+set of sums. See Zechmeister &amp; Kuerster 2009
+for details about notation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sums</strong> (<em>tuple of array_like</em>) – C, S, CC, CS, SS, YC, YS. See <cite>mhdirect_sums</cite>
+for more information.</li>
+<li><strong>YY</strong> (<em>float</em>) – Weighted variance of <cite>y - ybar</cite>, where <cite>ybar</cite>
+is the weighted mean and <cite>y</cite> are the observations</li>
+<li><strong>ybar</strong> (<em>float</em>) – Weighted mean of the data (<cite>np.dot(w, y)</cite>), where
+<cite>w</cite> are the weights and <cite>y</cite> are the observations.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>power</strong> – periodogram power</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#cuvarbase.lombscargle.mhdirect_sums" title="cuvarbase.lombscargle.mhdirect_sums"><code class="xref py py-func docutils literal"><span class="pre">mhdirect_sums()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.lombscargle.mhgls_params_from_sums">
+<code class="descclassname">cuvarbase.lombscargle.</code><code class="descname">mhgls_params_from_sums</code><span class="sig-paren">(</span><em>sums</em>, <em>YY</em>, <em>ybar</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/lombscargle.html#mhgls_params_from_sums"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.lombscargle.mhgls_params_from_sums" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute optimal amplitudes and offset from
+set of sums. See Zechmeister &amp; Kuerster 2009
+for details about notation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sums</strong> (<em>tuple of array_like</em>) – C, S, CC, CS, SS, YC, YS. See <cite>mhdirect_sums</cite>
+for more information.</li>
+<li><strong>YY</strong> (<em>float</em>) – Weighted variance of <cite>y - ybar</cite>, where <cite>ybar</cite>
+is the weighted mean and <cite>y</cite> are the observations</li>
+<li><strong>ybar</strong> (<em>float</em>) – Weighted mean of the data (<cite>np.dot(w, y)</cite>), where
+<cite>w</cite> are the weights and <cite>y</cite> are the observations.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>cn</strong> (<em>array_like</em>) – Cosine amplitudes of each harmonic</li>
+<li><strong>sn</strong> (<em>array_like</em>) – Sine amplitudes of each harmonic</li>
+<li><strong>offset</strong> (<em>float</em>) – Constant offset</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#cuvarbase.lombscargle.mhdirect_sums" title="cuvarbase.lombscargle.mhdirect_sums"><code class="xref py py-func docutils literal"><span class="pre">mhdirect_sums()</span></code></a></p>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-cuvarbase.pdm">
+<span id="cuvarbase-pdm-module"></span><h2>cuvarbase.pdm module<a class="headerlink" href="#module-cuvarbase.pdm" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cuvarbase.pdm.PDMAsyncProcess">
+<em class="property">class </em><code class="descclassname">cuvarbase.pdm.</code><code class="descname">PDMAsyncProcess</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMAsyncProcess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMAsyncProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cuvarbase.core.GPUAsyncProcess" title="cuvarbase.core.GPUAsyncProcess"><code class="xref py py-class docutils literal"><span class="pre">cuvarbase.core.GPUAsyncProcess</span></code></a></p>
+<dl class="method">
+<dt id="cuvarbase.pdm.PDMAsyncProcess.allocate">
+<code class="descname">allocate</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMAsyncProcess.allocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMAsyncProcess.allocate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.pdm.PDMAsyncProcess.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>data</em>, <em>gpu_data=None</em>, <em>pow_cpus=None</em>, <em>kind='binned_linterp'</em>, <em>nbins=30</em>, <em>**pdm_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMAsyncProcess.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMAsyncProcess.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cuvarbase.pdm.PDMSpectrogram">
+<em class="property">class </em><code class="descclassname">cuvarbase.pdm.</code><code class="descname">PDMSpectrogram</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>dphi=0.05</em>, <em>nbins=25</em>, <em>block_size=256</em>, <em>kind='binned_linterp'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMSpectrogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMSpectrogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cuvarbase.core.BaseSpectrogram" title="cuvarbase.core.BaseSpectrogram"><code class="xref py py-class docutils literal"><span class="pre">cuvarbase.core.BaseSpectrogram</span></code></a></p>
+<dl class="method">
+<dt id="cuvarbase.pdm.PDMSpectrogram.model">
+<code class="descname">model</code><span class="sig-paren">(</span><em>freq</em>, <em>time=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMSpectrogram.model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMSpectrogram.model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.pdm.binless_pdm_cpu">
+<code class="descclassname">cuvarbase.pdm.</code><code class="descname">binless_pdm_cpu</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>freqs</em>, <em>dphi=0.05</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#binless_pdm_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.binless_pdm_cpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.pdm.binned_pdm_model">
+<code class="descclassname">cuvarbase.pdm.</code><code class="descname">binned_pdm_model</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>freq</em>, <em>nbins</em>, <em>linterp=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#binned_pdm_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.binned_pdm_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.pdm.pdm2_cpu">
+<code class="descclassname">cuvarbase.pdm.</code><code class="descname">pdm2_cpu</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>freqs</em>, <em>nbins=30</em>, <em>linterp=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#pdm2_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.pdm2_cpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.pdm.pdm2_single_freq">
+<code class="descclassname">cuvarbase.pdm.</code><code class="descname">pdm2_single_freq</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>freq</em>, <em>nbins=30</em>, <em>linterp=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#pdm2_single_freq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.pdm2_single_freq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.pdm.pdm_async">
+<code class="descclassname">cuvarbase.pdm.</code><code class="descname">pdm_async</code><span class="sig-paren">(</span><em>stream</em>, <em>data_cpu</em>, <em>data_gpu</em>, <em>pow_cpu</em>, <em>function</em>, <em>dphi=0.05</em>, <em>block_size=256</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#pdm_async"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.pdm_async" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.pdm.var_binned">
+<code class="descclassname">cuvarbase.pdm.</code><code class="descname">var_binned</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>freq</em>, <em>nbins</em>, <em>linterp=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#var_binned"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.var_binned" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.pdm.var_tophat">
+<code class="descclassname">cuvarbase.pdm.</code><code class="descname">var_tophat</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>freq</em>, <em>dphi</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#var_tophat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.var_tophat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-cuvarbase.utils">
+<span id="cuvarbase-utils-module"></span><h2>cuvarbase.utils module<a class="headerlink" href="#module-cuvarbase.utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="cuvarbase.utils.autofrequency">
+<code class="descclassname">cuvarbase.utils.</code><code class="descname">autofrequency</code><span class="sig-paren">(</span><em>t</em>, <em>nyquist_factor=5</em>, <em>samples_per_peak=5</em>, <em>minimum_frequency=None</em>, <em>maximum_frequency=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/utils.html#autofrequency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.utils.autofrequency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine a suitable frequency grid for data.</p>
+<p>Note that this assumes the peak width is driven by the observational
+baseline, which is generally a good assumption when the baseline is
+much larger than the oscillation period.
+If you are searching for periods longer than the baseline of your
+observations, this may not perform well.</p>
+<p>Even with a large baseline, be aware that the maximum frequency
+returned is based on the concept of “average Nyquist frequency”, which
+may not be useful for irregularly-sampled data. The maximum frequency
+can be adjusted via the nyquist_factor argument, or through the
+maximum_frequency argument.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>samples_per_peak</strong> (<em>float</em><em> (</em><em>optional</em><em>, </em><em>default=5</em><em>)</em>) – The approximate number of desired samples across the typical peak</li>
+<li><strong>nyquist_factor</strong> (<em>float</em><em> (</em><em>optional</em><em>, </em><em>default=5</em><em>)</em>) – The multiple of the average nyquist frequency used to choose the
+maximum frequency if maximum_frequency is not provided.</li>
+<li><strong>minimum_frequency</strong> (<em>float</em><em> (</em><em>optional</em><em>)</em>) – If specified, then use this minimum frequency rather than one
+chosen based on the size of the baseline.</li>
+<li><strong>maximum_frequency</strong> (<em>float</em><em> (</em><em>optional</em><em>)</em>) – If specified, then use this maximum frequency rather than one
+chosen based on the average nyquist frequency.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>frequency</strong> – The heuristically-determined optimal frequency bin</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray or Quantity</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.utils.dphase">
+<code class="descclassname">cuvarbase.utils.</code><code class="descname">dphase</code><span class="sig-paren">(</span><em>dt</em>, <em>freq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/utils.html#dphase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.utils.dphase" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.utils.find_kernel">
+<code class="descclassname">cuvarbase.utils.</code><code class="descname">find_kernel</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/utils.html#find_kernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.utils.find_kernel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.utils.gaussian_window">
+<code class="descclassname">cuvarbase.utils.</code><code class="descname">gaussian_window</code><span class="sig-paren">(</span><em>t</em>, <em>t0</em>, <em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/utils.html#gaussian_window"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.utils.gaussian_window" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.utils.get_autofreqs">
+<code class="descclassname">cuvarbase.utils.</code><code class="descname">get_autofreqs</code><span class="sig-paren">(</span><em>t</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/utils.html#get_autofreqs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.utils.get_autofreqs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.utils.tophat_window">
+<code class="descclassname">cuvarbase.utils.</code><code class="descname">tophat_window</code><span class="sig-paren">(</span><em>t</em>, <em>t0</em>, <em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/utils.html#tophat_window"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.utils.tophat_window" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.utils.weights">
+<code class="descclassname">cuvarbase.utils.</code><code class="descname">weights</code><span class="sig-paren">(</span><em>err</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/utils.html#weights"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.utils.weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>generate observation weights from uncertainties</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-cuvarbase">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-cuvarbase" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="index.html">cuvarbase</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s new in cuvarbase</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Install instructions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ce.html">Conditional Entropy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lomb.html">Lomb-Scargle periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bls.html">Box least squares (BLS) periodogram</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">API documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">cuvarbase package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">API documentation</a><ul>
+      <li>Previous: <a href="modules.html" title="previous chapter">API documentation</a></li>
+      <li>Next: <a href="cuvarbase.tests.html" title="next chapter">cuvarbase.tests package</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, John Hoffman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/cuvarbase.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

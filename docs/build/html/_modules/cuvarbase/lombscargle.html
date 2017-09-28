@@ -1,0 +1,1288 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>cuvarbase.lombscargle &#8212; cuvarbase 0.1.9 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for cuvarbase.lombscargle</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">zip</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">map</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">range</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">object</span>
+<span class="kn">import</span> <span class="nn">resource</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="k">import</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">gammaln</span>
+
+<span class="kn">import</span> <span class="nn">pycuda.driver</span> <span class="k">as</span> <span class="nn">cuda</span>
+<span class="kn">import</span> <span class="nn">pycuda.gpuarray</span> <span class="k">as</span> <span class="nn">gpuarray</span>
+<span class="kn">from</span> <span class="nn">pycuda.compiler</span> <span class="k">import</span> <span class="n">SourceModule</span>
+
+<span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">weights</span><span class="p">,</span> <span class="n">find_kernel</span><span class="p">,</span> <span class="n">_module_reader</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">autofrequency</span> <span class="k">as</span> <span class="n">utils_autofreq</span>
+<span class="kn">from</span> <span class="nn">.cunfft</span> <span class="k">import</span> <span class="n">NFFTAsyncProcess</span><span class="p">,</span> <span class="n">nfft_adjoint_async</span><span class="p">,</span> <span class="n">NFFTMemory</span>
+
+
+<div class="viewcode-block" id="get_k0"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.get_k0">[docs]</a><span class="k">def</span> <span class="nf">get_k0</span><span class="p">(</span><span class="n">freqs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">freqs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">])))])</span></div>
+
+
+<div class="viewcode-block" id="check_k0"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.check_k0">[docs]</a><span class="k">def</span> <span class="nf">check_k0</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">k0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1E-2</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1E-7</span><span class="p">):</span>
+    <span class="n">k0</span> <span class="o">=</span> <span class="n">k0</span> <span class="k">if</span> <span class="n">k0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">get_k0</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">f0</span> <span class="o">=</span> <span class="n">k0</span> <span class="o">*</span> <span class="n">df</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">f0</span> <span class="o">-</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;</span> <span class="n">rtol</span> <span class="o">*</span> <span class="n">df</span> <span class="o">+</span> <span class="n">atol</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LombScargleMemory"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory">[docs]</a><span class="k">class</span> <span class="nc">LombScargleMemory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Container class for allocating memory and transferring</span>
+<span class="sd">    data between the GPU and CPU for Lomb-Scargle computations</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sigma: int</span>
+<span class="sd">        The ``sigma`` parameter for the NFFT</span>
+<span class="sd">    stream: :class:`pycuda.driver.Stream` instance</span>
+<span class="sd">        The CUDA stream used for calculations/data transfer</span>
+<span class="sd">    m: int</span>
+<span class="sd">        The ``m`` parameter for the NFFT</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">sigma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="n">stream</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">m</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k0&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precomp_psi</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;precomp_psi&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amplitude_prior</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;amplitude_prior&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;window&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nharmonics&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_fft</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_fft&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">other_settings</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">other_settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">floating_mean</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;floating_mean&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_double&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">floating_mean</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="mi">2</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;t_g&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yw_g</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;yw_g&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_g</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;w_g&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lsp_g</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;lsp_g&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_fft</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nfft_mem_yw&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nfft_mem_w&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span> <span class="o">=</span> <span class="n">NFFTMemory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">,</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span> <span class="o">=</span> <span class="n">NFFTMemory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">,</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">real_type</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">complex_type</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex64</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
+
+        <span class="c1"># Set up regularization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                    <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude_prior</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">lmbda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">amplitude_prior</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lmbda</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+                <span class="n">lmbda</span> <span class="o">=</span> <span class="n">lmbda</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lmbda</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reg</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reg</span><span class="p">[</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">reg_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reg</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;buffered_transfer&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0_buffer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0_buffer&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">lsp_c</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;lsp_c&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yw</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;yw&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LombScargleMemory.allocate_data"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.allocate_data">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Allocates memory for lightcurve &quot;&quot;&quot;</span>
+        <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0_buffer&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0_buffer</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="n">n0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yw_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_fft</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">t_g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">y_g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_g</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">t_g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">y_g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yw_g</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">n0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">n0</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.allocate_grids"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.allocate_grids">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_grids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allocates memory for NFFT grids, NFFT precomputation vectors,</span>
+<span class="sd">        and the GPU vector for the Lomb-Scargle power</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">k0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k0</span><span class="p">)</span>
+        <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0_buffer&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0_buffer</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">n0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_fft</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">precomp_psi</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">allocate_precomp_psi</span><span class="p">(</span><span class="n">n0</span><span class="o">=</span><span class="n">n0</span><span class="p">)</span>
+
+            <span class="c1"># Only one precomp psi needed</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">precomp_psi</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">q1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">q1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">q2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">q2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">q3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">q3</span>
+
+            <span class="n">fft_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">+</span> <span class="n">k0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">allocate_grid</span><span class="p">(</span><span class="n">nf</span><span class="o">=</span><span class="n">fft_size</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">allocate_grid</span><span class="p">(</span><span class="n">nf</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">fft_size</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">lsp_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.allocate_pinned_cpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.allocate_pinned_cpu">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_pinned_cpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Allocates pinned CPU memory for asynchronous transfer of result &quot;&quot;&quot;</span>
+        <span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">lsp_c</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">nf</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                                        <span class="n">alignment</span><span class="o">=</span><span class="n">resource</span><span class="o">.</span><span class="n">getpagesize</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lsp_c</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lsp_c</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.is_ready"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.is_ready">[docs]</a>    <span class="k">def</span> <span class="nf">is_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; don&#39;t use this. &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.allocate_buffered_data_arrays"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.allocate_buffered_data_arrays">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_buffered_data_arrays</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allocates pinned memory for lightcurves if we&#39;re reusing</span>
+<span class="sd">        this container</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0_buffer&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n0_buffer</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">n0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n0</span><span class="p">,),</span>
+                                    <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                                    <span class="n">alignment</span><span class="o">=</span><span class="n">resource</span><span class="o">.</span><span class="n">getpagesize</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">yw</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n0</span><span class="p">,),</span>
+                                     <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                                     <span class="n">alignment</span><span class="o">=</span><span class="n">resource</span><span class="o">.</span><span class="n">getpagesize</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yw</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yw</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">aligned_zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n0</span><span class="p">,),</span>
+                                    <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                                    <span class="n">alignment</span><span class="o">=</span><span class="n">resource</span><span class="o">.</span><span class="n">getpagesize</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">register_host_memory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.allocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.allocate">[docs]</a>    <span class="k">def</span> <span class="nf">allocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Allocate all memory necessary &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_grids</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocate_pinned_cpu</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">allocate_buffered_data_arrays</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.setdata"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.setdata">[docs]</a>    <span class="k">def</span> <span class="nf">setdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Sets the value of the data arrays. &quot;&quot;&quot;</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">yw</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;yw&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yw</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+
+        <span class="n">y</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dy&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ybar</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yy</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;yy&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n0&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">dy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="s1">&#39;w&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">weights</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="s1">&#39;yw&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">ybar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+            <span class="n">yw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">y</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">ybar</span><span class="p">)</span>
+            <span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">ybar</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">y2</span><span class="p">)</span>
+
+        <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="n">yw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">yw</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">arr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">]]):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffered_transfer</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">allocate_buffered_data_arrays</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">yw</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span> <span class="o">=</span> <span class="n">yw</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span> <span class="o">=</span> <span class="n">w</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">yw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">yw</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">)</span>
+
+        <span class="c1"># Set minimum and maximum t values (needed to scale things</span>
+        <span class="c1"># for the NFFT)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tmin</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_fft</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">tmin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmin</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">tmin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmin</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">tmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmax</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">tmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmax</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">n0</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.transfer_data_to_gpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.transfer_data_to_gpu">[docs]</a>    <span class="k">def</span> <span class="nf">transfer_data_to_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Transfers the lightcurve to the GPU &quot;&quot;&quot;</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">yw</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">arr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">yw</span><span class="p">,</span> <span class="n">w</span><span class="p">]]))</span>
+
+        <span class="c1"># Do asynchronous data transfer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yw_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">yw</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.transfer_lsp_to_cpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.transfer_lsp_to_cpu">[docs]</a>    <span class="k">def</span> <span class="nf">transfer_lsp_to_cpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Asynchronous transfer of LSP result to CPU &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lsp_g</span><span class="o">.</span><span class="n">get_async</span><span class="p">(</span><span class="n">ary</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lsp_c</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.fromdata"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.fromdata">[docs]</a>    <span class="k">def</span> <span class="nf">fromdata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Sets and (optionally) allocates memory for data &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setdata</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;allocate&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="LombScargleMemory.set_gpu_arrays_to_zero"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleMemory.set_gpu_arrays_to_zero">[docs]</a>    <span class="k">def</span> <span class="nf">set_gpu_arrays_to_zero</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Sets all gpu arrays to zero &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">t_g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yw_g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_g</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">x</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">x</span><span class="p">[:]</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="k">for</span> <span class="n">mem</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="p">]:</span>
+            <span class="n">mem</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="mhdirect_sums"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.mhdirect_sums">[docs]</a><span class="k">def</span> <span class="nf">mhdirect_sums</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">yw</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">YY</span><span class="p">,</span> <span class="n">nharms</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the set of frequency-dependent sums</span>
+<span class="sd">    for (multi-harmonic) Lomb Scargle at a given frequency</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t: array_like</span>
+<span class="sd">        Observation times.</span>
+<span class="sd">    yw: array_like</span>
+<span class="sd">        Observations multiplied by their corresponding weights.</span>
+<span class="sd">        `sum(yw)` is the weighted mean.</span>
+<span class="sd">    w: array_like</span>
+<span class="sd">        Weights for each of the observations. Usually proportional</span>
+<span class="sd">        to `1/sigma ** 2` where `sigma` is the observation uncertainties.</span>
+<span class="sd">        Normalized so that `sum(w) = 1`.</span>
+<span class="sd">    freq: float</span>
+<span class="sd">        Signal frequency.</span>
+<span class="sd">    YY: float</span>
+<span class="sd">        Weighted variance of the observations.</span>
+<span class="sd">    nharms: int, optional (default: 1)</span>
+<span class="sd">        Number of harmonics to compute. This is 1 for the standard</span>
+<span class="sd">        Lomb-Scargle</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    C, S, CC, CS, SS, YC, YS: array_like</span>
+<span class="sd">        The set of sums with regularization added.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    :func:`mhdirect_sums`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">phase</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">((</span><span class="n">t</span> <span class="o">*</span> <span class="n">freq</span><span class="p">)</span> <span class="o">%</span> <span class="mf">1.0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="n">ns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">nharms</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">sgn</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+    <span class="n">c</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">phase</span><span class="p">))</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">]</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">phase</span><span class="p">))</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">]</span>
+
+    <span class="n">yc</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">yw</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">phase</span><span class="p">))</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+    <span class="n">ys</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">yw</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">phase</span><span class="p">))</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+
+    <span class="n">cc</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="n">n</span><span class="o">+</span><span class="n">m</span><span class="p">]</span> <span class="o">+</span> <span class="n">c</span><span class="p">[</span><span class="nb">abs</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="n">m</span><span class="p">)])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+
+    <span class="n">cs</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">n</span><span class="o">+</span><span class="n">m</span><span class="p">]</span> <span class="o">-</span> <span class="n">sgn</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="nb">abs</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="n">m</span><span class="p">)])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+
+    <span class="n">ss</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="nb">abs</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="n">m</span><span class="p">)]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="n">n</span><span class="o">+</span><span class="n">m</span><span class="p">])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+
+    <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">c</span><span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">s</span><span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="n">nharms</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">ybar</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">yw</span><span class="p">)</span>
+    <span class="n">YC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">yc</span><span class="p">)</span> <span class="o">-</span> <span class="n">ybar</span> <span class="o">*</span> <span class="n">C</span>
+    <span class="n">YS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ys</span><span class="p">)</span> <span class="o">-</span> <span class="n">ybar</span> <span class="o">*</span> <span class="n">S</span>
+
+    <span class="n">CC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">C</span><span class="p">)</span>
+    <span class="n">CS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cs</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+    <span class="n">SS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">CC</span><span class="p">,</span> <span class="n">CS</span><span class="p">,</span> <span class="n">SS</span><span class="p">,</span> <span class="n">YC</span><span class="p">,</span> <span class="n">YS</span></div>
+
+
+<div class="viewcode-block" id="add_regularization"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.add_regularization">[docs]</a><span class="k">def</span> <span class="nf">add_regularization</span><span class="p">(</span><span class="n">sums</span><span class="p">,</span> <span class="n">amplitude_priors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cn0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sn0</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add regularization to sums. See Zechmeister &amp; Kuerster 2009</span>
+<span class="sd">    for details about notation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sums: tuple of array_like</span>
+<span class="sd">        C, S, CC, CS, SS, YC, YS. See `mhdirect_sums`</span>
+<span class="sd">        for more information.</span>
+<span class="sd">    amplitude_priors: float or array_like, optional</span>
+<span class="sd">        Corresponds to standard deviation of a Gaussian</span>
+<span class="sd">        prior on the amplitudes of all harmonics (if its a `float`),</span>
+<span class="sd">        or for each of the harmonics (if it&#39;s an `array_like`).</span>
+<span class="sd">    cn0: array_like</span>
+<span class="sd">        Location of the centroid of the Gaussian amplitude prior</span>
+<span class="sd">        on each of the cosine amplitudes</span>
+<span class="sd">    sn0: array_like</span>
+<span class="sd">        Location of the centroid of the Gaussian amplitude prior</span>
+<span class="sd">        on each of the sine amplitudes</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    C, S, CC, CS, SS, YC, YS: array_like</span>
+<span class="sd">        The set of sums with regularization added.</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    :func:`mhdirect_sums`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">CC</span><span class="p">,</span> <span class="n">CS</span><span class="p">,</span> <span class="n">SS</span><span class="p">,</span> <span class="n">YC</span><span class="p">,</span> <span class="n">YS</span> <span class="o">=</span> <span class="n">sums</span>
+
+    <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">C</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">amplitude_priors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">C</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">amplitude_priors</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">cn0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">C</span><span class="p">))</span> <span class="k">if</span> <span class="n">cn0</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">cn0</span>
+    <span class="n">sn0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">S</span><span class="p">))</span> <span class="k">if</span> <span class="n">sn0</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">sn0</span>
+
+    <span class="n">CCreg</span> <span class="o">=</span> <span class="n">CC</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+    <span class="n">SSreg</span> <span class="o">=</span> <span class="n">SS</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+    <span class="n">YCreg</span> <span class="o">=</span> <span class="n">YC</span> <span class="o">+</span> <span class="n">D</span> <span class="o">*</span> <span class="n">cn0</span>
+    <span class="n">YSreg</span> <span class="o">=</span> <span class="n">YS</span> <span class="o">+</span> <span class="n">D</span> <span class="o">*</span> <span class="n">sn0</span>
+
+    <span class="k">return</span> <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">CCreg</span><span class="p">,</span> <span class="n">CS</span><span class="p">,</span> <span class="n">SSreg</span><span class="p">,</span> <span class="n">YCreg</span><span class="p">,</span> <span class="n">YSreg</span></div>
+
+
+<div class="viewcode-block" id="mhgls_params_from_sums"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.mhgls_params_from_sums">[docs]</a><span class="k">def</span> <span class="nf">mhgls_params_from_sums</span><span class="p">(</span><span class="n">sums</span><span class="p">,</span> <span class="n">YY</span><span class="p">,</span> <span class="n">ybar</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute optimal amplitudes and offset from</span>
+<span class="sd">    set of sums. See Zechmeister &amp; Kuerster 2009</span>
+<span class="sd">    for details about notation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sums: tuple of array_like</span>
+<span class="sd">        C, S, CC, CS, SS, YC, YS. See `mhdirect_sums`</span>
+<span class="sd">        for more information.</span>
+<span class="sd">    YY: float</span>
+<span class="sd">        Weighted variance of `y - ybar`, where `ybar`</span>
+<span class="sd">        is the weighted mean and `y` are the observations</span>
+<span class="sd">    ybar: float</span>
+<span class="sd">        Weighted mean of the data (`np.dot(w, y)`), where</span>
+<span class="sd">        `w` are the weights and `y` are the observations.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cn: array_like</span>
+<span class="sd">        Cosine amplitudes of each harmonic</span>
+<span class="sd">    sn: array_like</span>
+<span class="sd">        Sine amplitudes of each harmonic</span>
+<span class="sd">    offset: float</span>
+<span class="sd">        Constant offset</span>
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    :func:`mhdirect_sums`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">CC</span><span class="p">,</span> <span class="n">CS</span><span class="p">,</span> <span class="n">SS</span><span class="p">,</span> <span class="n">YC</span><span class="p">,</span> <span class="n">YS</span> <span class="o">=</span> <span class="n">sums</span>
+
+    <span class="n">nharms</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">C</span><span class="p">)</span>
+
+    <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="n">CC</span><span class="p">,</span> <span class="n">CS</span><span class="p">],</span> <span class="p">[</span><span class="n">CS</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">SS</span><span class="p">]])</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">YC</span><span class="p">,</span> <span class="n">YS</span><span class="p">))</span>
+
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+    <span class="n">cn</span> <span class="o">=</span> <span class="n">theta</span><span class="p">[:</span><span class="n">nharms</span><span class="p">]</span>
+    <span class="n">sn</span> <span class="o">=</span> <span class="n">theta</span><span class="p">[</span><span class="n">nharms</span><span class="p">:]</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="n">ybar</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cn</span><span class="p">,</span> <span class="n">C</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sn</span><span class="p">,</span> <span class="n">S</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">cn</span><span class="p">,</span> <span class="n">sn</span><span class="p">,</span> <span class="n">offset</span></div>
+
+
+<div class="viewcode-block" id="mhgls_from_sums"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.mhgls_from_sums">[docs]</a><span class="k">def</span> <span class="nf">mhgls_from_sums</span><span class="p">(</span><span class="n">sums</span><span class="p">,</span> <span class="n">YY</span><span class="p">,</span> <span class="n">ybar</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute multiharmonic periodogram power from</span>
+<span class="sd">    set of sums. See Zechmeister &amp; Kuerster 2009</span>
+<span class="sd">    for details about notation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sums: tuple of array_like</span>
+<span class="sd">        C, S, CC, CS, SS, YC, YS. See `mhdirect_sums`</span>
+<span class="sd">        for more information.</span>
+<span class="sd">    YY: float</span>
+<span class="sd">        Weighted variance of `y - ybar`, where `ybar`</span>
+<span class="sd">        is the weighted mean and `y` are the observations</span>
+<span class="sd">    ybar: float</span>
+<span class="sd">        Weighted mean of the data (`np.dot(w, y)`), where</span>
+<span class="sd">        `w` are the weights and `y` are the observations.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    power: float</span>
+<span class="sd">        periodogram power</span>
+
+
+<span class="sd">    See also</span>
+<span class="sd">    --------</span>
+<span class="sd">    :func:`mhdirect_sums`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">CC</span><span class="p">,</span> <span class="n">CS</span><span class="p">,</span> <span class="n">SS</span><span class="p">,</span> <span class="n">YC</span><span class="p">,</span> <span class="n">YS</span> <span class="o">=</span> <span class="n">sums</span>
+
+    <span class="n">cn</span><span class="p">,</span> <span class="n">sn</span><span class="p">,</span> <span class="n">offset</span> <span class="o">=</span> <span class="n">mhgls_params_from_sums</span><span class="p">(</span><span class="n">sums</span><span class="p">,</span> <span class="n">YY</span><span class="p">,</span> <span class="n">ybar</span><span class="p">)</span>
+
+    <span class="n">XX</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">cn</span><span class="p">,</span> <span class="n">cn</span><span class="p">)</span> <span class="o">*</span> <span class="n">CC</span>
+    <span class="n">XX</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">cn</span><span class="p">,</span> <span class="n">sn</span><span class="p">)</span> <span class="o">*</span> <span class="n">CS</span>
+    <span class="n">XX</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">sn</span><span class="p">,</span> <span class="n">sn</span><span class="p">)</span> <span class="o">*</span> <span class="n">SS</span>
+
+    <span class="n">YX</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cn</span><span class="p">,</span> <span class="n">YC</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sn</span><span class="p">,</span> <span class="n">YS</span><span class="p">))</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="p">(</span><span class="n">YX</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">XX</span><span class="p">))</span> <span class="o">/</span> <span class="n">YY</span>
+
+    <span class="k">return</span> <span class="n">P</span></div>
+
+
+<div class="viewcode-block" id="lomb_scargle_direct_sums"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.lomb_scargle_direct_sums">[docs]</a><span class="k">def</span> <span class="nf">lomb_scargle_direct_sums</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">yw</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">YY</span><span class="p">,</span> <span class="n">nharms</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute Lomb-Scargle periodogram using direct summations. This</span>
+<span class="sd">    is usually only useful for debugging and/or small numbers of</span>
+<span class="sd">    frequencies.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t: array_like</span>
+<span class="sd">        Observation times.</span>
+<span class="sd">    yw: array_like</span>
+<span class="sd">        Observations multiplied by their corresponding weights.</span>
+<span class="sd">        `sum(yw)` is the weighted mean.</span>
+<span class="sd">    w: array_like</span>
+<span class="sd">        Weights for each of the observations. Usually proportional</span>
+<span class="sd">        to `1/sigma ** 2` where `sigma` is the observation uncertainties.</span>
+<span class="sd">        Normalized so that `sum(w) = 1`.</span>
+<span class="sd">    freqs: array_like</span>
+<span class="sd">        Trial frequencies to evaluate the periodogram</span>
+<span class="sd">    YY: float</span>
+<span class="sd">        Weighted variance of the observations.</span>
+<span class="sd">    nharms: int, optional (default: 1)</span>
+<span class="sd">        Number of harmonics to use in the model. Lomb Scargle only uses</span>
+<span class="sd">        1, but more harmonics allow for greater model flexibility</span>
+<span class="sd">        at the cost of higher complexity and therefore reduced signal-</span>
+<span class="sd">        to-noise.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    power: array_like</span>
+<span class="sd">        The periodogram powers at each of the trial frequencies</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">sfunc</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">mhdirect_sums</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">yw</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">YY</span><span class="p">,</span> <span class="n">nharms</span><span class="o">=</span><span class="n">nharms</span><span class="p">)</span>
+    <span class="n">sums</span> <span class="o">=</span> <span class="p">[</span><span class="n">add_regularization</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">sfunc</span><span class="p">,</span> <span class="n">freqs</span><span class="p">))]</span>
+
+    <span class="n">ybar</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">yw</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">mhgls_from_sums</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">YY</span><span class="p">,</span> <span class="n">ybar</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sums</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="lomb_scargle_async"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.lomb_scargle_async">[docs]</a><span class="k">def</span> <span class="nf">lomb_scargle_async</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">functions</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span>
+                       <span class="n">block_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">use_fft</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">python_dir_sums</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                       <span class="n">transfer_to_device</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">transfer_to_host</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">window</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Asynchronous Lomb Scargle periodogram</span>
+
+<span class="sd">    Use the ``LombScargleAsyncProcess`` class and</span>
+<span class="sd">    related subroutines when possible.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    memory: ``LombScargleMemory``</span>
+<span class="sd">        Allocated memory, must have data already set (see, e.g.,</span>
+<span class="sd">        ``LombScargleAsyncProcess.allocate()``)</span>
+<span class="sd">    functions: tuple (lombscargle_functions, nfft_functions)</span>
+<span class="sd">        Tuple of compiled functions from ``SourceModule``. Must be</span>
+<span class="sd">        prepared with their appropriate dtype.</span>
+<span class="sd">    freqs: array_like, optional (default: 0)</span>
+<span class="sd">        Linearly-spaced frequencies starting at an integer multiple</span>
+<span class="sd">        of the frequency spacing (i.e. freqs = df * (k0 + np.arange(nf)))</span>
+<span class="sd">    block_size: int, optional</span>
+<span class="sd">        Number of CUDA threads per block</span>
+<span class="sd">    use_fft: bool, optional (default: True)</span>
+<span class="sd">        If False, uses direct sums.</span>
+<span class="sd">    python_dir_sums: bool, optional (default: False)</span>
+<span class="sd">        If True, performs direct sums with Python on the CPU</span>
+<span class="sd">    transfer_to_device: bool, optional, (default: True)</span>
+<span class="sd">        If the data is already on the gpu, set as False</span>
+<span class="sd">    transfer_to_host: bool, optional, (default: True)</span>
+<span class="sd">        If False, will not transfer the resulting periodogram to</span>
+<span class="sd">        CPU memory</span>
+<span class="sd">    window: bool, optional (default: False)</span>
+<span class="sd">        If True, computes the window function for the data</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    lsp_c: ``np.array``</span>
+<span class="sd">        The resulting periodgram (``memory.lsp_c``)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="p">(</span><span class="n">lomb</span><span class="p">,</span> <span class="n">lomb_dirsum</span><span class="p">),</span> <span class="n">nfft_funcs</span> <span class="o">=</span> <span class="n">functions</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">samples_per_peak</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="p">((</span><span class="n">memory</span><span class="o">.</span><span class="n">tmax</span> <span class="o">-</span> <span class="n">memory</span><span class="o">.</span><span class="n">tmin</span><span class="p">)</span> <span class="o">*</span> <span class="n">df</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">get_k0</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span> <span class="o">==</span> <span class="n">memory</span><span class="o">.</span><span class="n">k0</span><span class="p">)</span>
+
+    <span class="n">stream</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span>
+
+    <span class="n">block</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">block_size</span><span class="p">))),</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># lightcurve -&gt; gpu</span>
+    <span class="k">if</span> <span class="n">transfer_to_device</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">transfer_data_to_gpu</span><span class="p">()</span>
+
+    <span class="c1"># do direct summations with python on the CPU (for debugging)</span>
+    <span class="k">if</span> <span class="n">python_dir_sums</span><span class="p">:</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">yw</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">yw_g</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">w_g</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">lomb_scargle_direct_sums</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">yw</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">yy</span><span class="p">)</span>
+
+    <span class="c1"># Use direct sums (on GPU)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_fft</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span>
+                <span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">yw_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">w_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>
+                <span class="n">memory</span><span class="o">.</span><span class="n">lsp_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">reg_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">),</span>
+                <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">yy</span><span class="p">),</span>
+                <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">ybar</span><span class="p">),</span>
+                <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+                <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">freqs</span><span class="p">)),</span>
+                <span class="n">memory</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+
+        <span class="n">lomb_dirsum</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">transfer_to_device</span><span class="p">:</span>
+            <span class="n">memory</span><span class="o">.</span><span class="n">transfer_lsp_to_cpu</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="n">lsp_c</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># NFFT</span>
+        <span class="n">nfft_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">transfer_to_host</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                           <span class="n">transfer_to_device</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">nfft_kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">nfft_kwargs</span><span class="p">[</span><span class="s1">&#39;minimum_frequency&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">nfft_kwargs</span><span class="p">[</span><span class="s1">&#39;samples_per_peak&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">samples_per_peak</span>
+
+        <span class="c1"># if not memory.window:</span>
+        <span class="c1"># NFFT(w * (y - ybar))</span>
+        <span class="n">nfft_adjoint_async</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="p">,</span> <span class="n">nfft_funcs</span><span class="p">,</span> <span class="o">**</span><span class="n">nfft_kwargs</span><span class="p">)</span>
+
+        <span class="c1"># NFFT(w)</span>
+        <span class="n">nfft_adjoint_async</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="p">,</span> <span class="n">nfft_funcs</span><span class="p">,</span> <span class="o">**</span><span class="n">nfft_kwargs</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">lsp_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">reg_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">))</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">yy</span><span class="p">),</span>
+             <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">ybar</span><span class="p">))</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">k0</span><span class="p">),</span>
+             <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">mode</span><span class="p">))</span>
+    <span class="n">lomb</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">transfer_to_host</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">transfer_lsp_to_cpu</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="n">lsp_c</span></div>
+
+
+<div class="viewcode-block" id="LombScargleAsyncProcess"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleAsyncProcess">[docs]</a><span class="k">class</span> <span class="nc">LombScargleAsyncProcess</span><span class="p">(</span><span class="n">GPUAsyncProcess</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    GPUAsyncProcess for the Lomb Scargle periodogram</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **kwargs: passed to ``NFFTAsyncProcess``</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; proc = LombScargleAsyncProcess()</span>
+<span class="sd">    &gt;&gt;&gt; Ndata = 1000</span>
+<span class="sd">    &gt;&gt;&gt; t = np.sort(365 * np.random.rand(N))</span>
+<span class="sd">    &gt;&gt;&gt; y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)</span>
+<span class="sd">    &gt;&gt;&gt; y += 0.01 * np.random.randn(len(t))</span>
+<span class="sd">    &gt;&gt;&gt; dy = 0.01 * np.ones_like(y)</span>
+<span class="sd">    &gt;&gt;&gt; freqs, powers = proc.run([(t, y, dy)])</span>
+<span class="sd">    &gt;&gt;&gt; proc.finish()</span>
+<span class="sd">    &gt;&gt;&gt; ls_freqs, ls_powers = freqs[0], powers[0]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LombScargleAsyncProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span> <span class="o">=</span> <span class="n">NFFTAsyncProcess</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_defs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">_cpp_defs</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">real_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">complex_type</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">block_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">module_options</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">module_options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">use_double</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nharmonics&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Only 1 harmonic is supported right now&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_compile_and_prepare_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">module_text</span> <span class="o">=</span> <span class="n">_module_reader</span><span class="p">(</span><span class="n">find_kernel</span><span class="p">(</span><span class="s1">&#39;lomb&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cpp_defs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">module</span> <span class="o">=</span> <span class="n">SourceModule</span><span class="p">(</span><span class="n">module_text</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">module_options</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">lomb</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                  <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">],</span>
+            <span class="n">lomb_dirsum</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                         <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">_compile_and_prepare_functions</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">fname</span><span class="p">,</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span><span class="p">[</span><span class="n">fname</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span><span class="p">[</span><span class="n">fname</span><span class="p">]</span>
+                                    <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+
+<div class="viewcode-block" id="LombScargleAsyncProcess.memory_requirement"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleAsyncProcess.memory_requirement">[docs]</a>    <span class="k">def</span> <span class="nf">memory_requirement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n0</span><span class="p">,</span> <span class="n">nf</span><span class="p">,</span> <span class="n">k0</span><span class="p">,</span> <span class="n">nbatch</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                           <span class="n">autoadjust_sigma</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; return an approximate GPU memory requirement in bytes &quot;&quot;&quot;</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">sigma</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">get_m</span><span class="p">(</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">autoadjust_sigma</span><span class="p">:</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">sigma</span> <span class="o">*</span> <span class="p">(</span><span class="n">nf</span> <span class="o">+</span> <span class="n">k0</span><span class="p">))</span> <span class="o">/</span> <span class="n">nf</span><span class="p">))</span>
+
+        <span class="n">fft_size</span> <span class="o">=</span> <span class="n">H</span> <span class="o">*</span> <span class="p">(</span><span class="n">nf</span> <span class="o">+</span> <span class="n">k0</span><span class="p">)</span>
+
+        <span class="c1"># data</span>
+        <span class="n">mem</span> <span class="o">+=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">n0</span>
+
+        <span class="c1"># final result</span>
+        <span class="n">mem</span> <span class="o">+=</span> <span class="n">nf</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_fft&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="c1"># yw grid / fft (doubled because complex)</span>
+            <span class="n">mem</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="p">(</span><span class="n">fft_size</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span>
+
+            <span class="c1"># w grid / fft (doubled because complex)</span>
+            <span class="n">mem</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">fft_size</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span>
+
+            <span class="c1"># precomputation (q1 = n0, q2 = n0, q3 = 2m + 1)</span>
+            <span class="n">mem</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n0</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">m</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># inverse of design matrix</span>
+        <span class="k">if</span> <span class="n">H</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+
+            <span class="c1"># sparse matrix A (block-diagonal)</span>
+            <span class="n">mem</span> <span class="o">+=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">H</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">nbatch</span>
+
+            <span class="c1"># vector b (Ax = b)</span>
+            <span class="n">mem</span> <span class="o">+=</span> <span class="n">nbatch</span>
+
+        <span class="c1"># double everything if we&#39;re using double precision!</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
+            <span class="n">mem</span> <span class="o">*=</span> <span class="mi">2</span>
+
+        <span class="c1"># size of 32 bit float</span>
+        <span class="n">mem</span> <span class="o">*=</span> <span class="mi">4</span>
+
+        <span class="k">return</span> <span class="n">mem</span></div>
+
+<div class="viewcode-block" id="LombScargleAsyncProcess.allocate_for_single_lc"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleAsyncProcess.allocate_for_single_lc">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_for_single_lc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">nf</span><span class="p">,</span> <span class="n">k0</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                               <span class="n">stream</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allocate GPU (and possibly CPU) memory for single lightcurve</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        t: array_like</span>
+<span class="sd">            Observation times</span>
+<span class="sd">        y: array_like</span>
+<span class="sd">            Observations</span>
+<span class="sd">        dy: array_like</span>
+<span class="sd">            Observation uncertainties</span>
+<span class="sd">        nf: int</span>
+<span class="sd">            Number of frequencies</span>
+<span class="sd">        k0: int</span>
+<span class="sd">            The starting index for the Fourier transform. The minimum</span>
+<span class="sd">            frequency ``f0 = k0 * df``, where ``df`` is the frequency</span>
+<span class="sd">            spacing</span>
+<span class="sd">        stream: pycuda.driver.Stream</span>
+<span class="sd">            CUDA stream you want this to run on</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        mem: LombScargleMemory</span>
+<span class="sd">            Memory object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">get_m</span><span class="p">(</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="n">sigma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">sigma</span>
+
+        <span class="n">kwargs_lsmem</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">use_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">,</span>
+                            <span class="n">nharmonics</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span><span class="p">)</span>
+
+        <span class="n">kwargs_lsmem</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">mem</span> <span class="o">=</span> <span class="n">LombScargleMemory</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">k0</span><span class="o">=</span><span class="n">k0</span><span class="p">,</span>
+                                <span class="o">**</span><span class="n">kwargs_lsmem</span><span class="p">)</span>
+
+        <span class="n">mem</span><span class="o">.</span><span class="n">fromdata</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">,</span> <span class="n">nf</span><span class="o">=</span><span class="n">nf</span><span class="p">,</span> <span class="n">allocate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                     <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mem</span></div>
+
+<div class="viewcode-block" id="LombScargleAsyncProcess.preallocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleAsyncProcess.preallocate">[docs]</a>    <span class="k">def</span> <span class="nf">preallocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_nobs</span><span class="p">,</span> <span class="n">nlcs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">streams</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">freqs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">k0</span> <span class="o">=</span> <span class="n">get_k0</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+            <span class="n">nf</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">k0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+        <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">get_m</span><span class="p">(</span><span class="n">nf</span><span class="p">)</span>
+
+        <span class="n">sigma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">sigma</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nlcs</span><span class="p">):</span>
+            <span class="n">stream</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">streams</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">mem</span> <span class="o">=</span> <span class="n">LombScargleMemory</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span>
+                                    <span class="n">k0</span><span class="o">=</span><span class="n">k0</span><span class="p">,</span>
+                                    <span class="n">buffered_transfer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="n">n0_buffer</span><span class="o">=</span><span class="n">max_nobs</span><span class="p">,</span>
+                                    <span class="n">nf</span><span class="o">=</span><span class="n">nf</span><span class="p">,</span>
+                                    <span class="n">use_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">,</span>
+                                    <span class="n">nharmonics</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span><span class="p">,</span>
+                                    <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="n">mem</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span></div>
+
+<div class="viewcode-block" id="LombScargleAsyncProcess.autofrequency"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleAsyncProcess.autofrequency">[docs]</a>    <span class="k">def</span> <span class="nf">autofrequency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">utils_autofreq</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_nfreqs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+
+<div class="viewcode-block" id="LombScargleAsyncProcess.allocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleAsyncProcess.allocate">[docs]</a>    <span class="k">def</span> <span class="nf">allocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">nfreqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k0s</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allocate GPU memory for Lomb Scargle computations</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data: list of (t, y, dy) tuples</span>
+<span class="sd">            List of data, ``[(t_1, y_1, dy_1), ...]``</span>
+<span class="sd">            * ``t``: Observation times</span>
+<span class="sd">            * ``y``: Observations</span>
+<span class="sd">            * ``dy``: Observation uncertainties</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        allocated_memory: list of ``LombScargleMemory``</span>
+<span class="sd">            list of allocated memory objects for each lightcurve</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_streams</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">))</span>
+
+        <span class="n">allocated_memory</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">nfrqs</span> <span class="o">=</span> <span class="n">nfreqs</span>
+        <span class="n">k0</span> <span class="o">=</span> <span class="n">k0s</span>
+        <span class="k">if</span> <span class="n">nfrqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">nfrqs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_nfreqs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">)</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nfreqs</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">nfrqs</span> <span class="o">=</span> <span class="n">nfrqs</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">k0s</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">k0s</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">nfrqs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">k0s</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">k0s</span> <span class="o">=</span> <span class="p">[</span><span class="n">k0s</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">nfrqs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">((</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">),</span> <span class="n">nf</span><span class="p">,</span> <span class="n">k0</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">nfrqs</span><span class="p">,</span> <span class="n">k0s</span><span class="p">)):</span>
+            <span class="n">mem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocate_for_single_lc</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">nf</span><span class="p">,</span> <span class="n">k0</span><span class="o">=</span><span class="n">k0</span><span class="p">,</span>
+                                              <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                              <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">allocated_memory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mem</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">allocated_memory</span></div>
+
+<div class="viewcode-block" id="LombScargleAsyncProcess.run"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleAsyncProcess.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
+            <span class="n">use_fft</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">memory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run Lomb Scargle on a batch of data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data: list of tuples</span>
+<span class="sd">            list of [(t, y, dy), ...] containing</span>
+<span class="sd">            * ``t``: observation times</span>
+<span class="sd">            * ``y``: observations</span>
+<span class="sd">            * ``dy``: observation uncertainties</span>
+<span class="sd">        freqs: optional, list of ``np.ndarray`` frequencies</span>
+<span class="sd">            List of custom frequencies. Right now, this has to be linearly</span>
+<span class="sd">            spaced with ``freqs[0] / (freqs[1] - freqs[0])`` being an integer.</span>
+<span class="sd">        memory: optional, list of ``LombScargleMemory`` objects</span>
+<span class="sd">            List of memory objects, length of list must be ``&gt;= len(data)``</span>
+<span class="sd">        use_fft: optional, bool (default: True)</span>
+<span class="sd">            Uses the NFFT, otherwise just does direct summations (which</span>
+<span class="sd">            are quite slow...)</span>
+<span class="sd">        floating_mean: optional, bool (default: True)</span>
+<span class="sd">            Add a floating mean to the model (see Zechmeister &amp; Kurster 2009)</span>
+<span class="sd">        window: optional, bool (default: False)</span>
+<span class="sd">            If true, computes the window function for the data instead of</span>
+<span class="sd">            Lomb-Scargle</span>
+<span class="sd">        amplitude_prior: optional, float (default: None)</span>
+<span class="sd">            If not None, sets the variance of a Gaussian prior on</span>
+<span class="sd">            the amplitude (sometimes useful for suppressing aliases)</span>
+<span class="sd">        **kwargs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        results: list of lists</span>
+<span class="sd">            list of (freqs, pows) for each LS periodogram</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># compile module if not compiled already</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;prepared_functions&#39;</span><span class="p">)</span> <span class="ow">or</span> \
+            <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span>
+                     <span class="p">[</span><span class="s1">&#39;lomb&#39;</span><span class="p">,</span> <span class="s1">&#39;lomb_dirsum&#39;</span><span class="p">]]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compile_and_prepare_functions</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># create and/or check frequencies</span>
+        <span class="n">frqs</span> <span class="o">=</span> <span class="n">freqs</span>
+        <span class="k">if</span> <span class="n">frqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frqs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">frqs</span> <span class="o">=</span> <span class="p">[</span><span class="n">frqs</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frqs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+
+        <span class="n">dfs</span> <span class="o">=</span> <span class="p">[</span><span class="n">frq</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">frq</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">frq</span> <span class="ow">in</span> <span class="n">frqs</span><span class="p">]</span>
+        <span class="n">k0s</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_k0</span><span class="p">(</span><span class="n">frq</span><span class="p">)</span> <span class="k">for</span> <span class="n">frq</span> <span class="ow">in</span> <span class="n">frqs</span><span class="p">]</span>
+
+        <span class="c1"># make sure k0 * df is the minimum frequency</span>
+        <span class="p">[</span><span class="n">check_k0</span><span class="p">(</span><span class="n">frq</span><span class="p">,</span> <span class="n">k0</span><span class="o">=</span><span class="n">k0</span><span class="p">)</span> <span class="k">for</span> <span class="n">frq</span><span class="p">,</span> <span class="n">k0</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">frqs</span><span class="p">,</span> <span class="n">k0s</span><span class="p">)]</span>
+
+        <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span>
+
+        <span class="k">if</span> <span class="n">memory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">nfreqs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">frq</span><span class="p">)</span> <span class="k">for</span> <span class="n">frq</span> <span class="ow">in</span> <span class="n">frqs</span><span class="p">]</span>
+            <span class="n">memory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">nfreqs</span><span class="o">=</span><span class="n">nfreqs</span><span class="p">,</span> <span class="n">k0s</span><span class="o">=</span><span class="n">k0s</span><span class="p">,</span>
+                                   <span class="n">use_fft</span><span class="o">=</span><span class="n">use_fft</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+                <span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_gpu_arrays_to_zero</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">setdata</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">ls_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">block_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">,</span>
+                         <span class="n">use_fft</span><span class="o">=</span><span class="n">use_fft</span><span class="p">)</span>
+        <span class="n">ls_kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">funcs</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">function_tuple</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">lomb_scargle_async</span><span class="p">(</span><span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">funcs</span><span class="p">,</span> <span class="n">frqs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                      <span class="o">**</span><span class="n">ls_kwargs</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))]</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[(</span><span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">frqs</span><span class="p">,</span> <span class="n">results</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+
+<div class="viewcode-block" id="LombScargleAsyncProcess.batched_run_const_nfreq"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.LombScargleAsyncProcess.batched_run_const_nfreq">[docs]</a>    <span class="k">def</span> <span class="nf">batched_run_const_nfreq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                                <span class="n">use_fft</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Same as ``batched_run`` but is more efficient when the frequencies are</span>
+<span class="sd">        the same for each lightcurve. Doesn&#39;t reallocate memory for each batch.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        To get best efficiency, make sure the maximum number of observations</span>
+<span class="sd">        is not much larger than the typical number of observations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># compile and prepare module functions if not already done</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;prepared_functions&#39;</span><span class="p">)</span> <span class="ow">or</span> \
+            <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span>
+                     <span class="p">[</span><span class="s1">&#39;lomb&#39;</span><span class="p">,</span> <span class="s1">&#39;lomb_dirsum&#39;</span><span class="p">]]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compile_and_prepare_functions</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># create streams if needed</span>
+        <span class="n">bsize</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">batch_size</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">bsize</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_streams</span><span class="p">(</span><span class="n">bsize</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">))</span>
+
+        <span class="n">streams</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">bsize</span><span class="p">)]</span>
+        <span class="n">max_ndata</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span> <span class="ow">in</span> <span class="n">data</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">freqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data_with_max_baseline</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                                         <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">freqs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="n">data_with_max_baseline</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="c1"># now correct frequencies</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">k0</span> <span class="o">=</span> <span class="n">get_k0</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+            <span class="c1"># nf = len(freqs)</span>
+            <span class="n">nf</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span> <span class="o">/</span> <span class="n">df</span><span class="p">))</span> <span class="o">-</span> <span class="n">k0</span>
+            <span class="n">freqs</span> <span class="o">=</span> <span class="n">df</span> <span class="o">*</span> <span class="p">(</span><span class="n">k0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nf</span><span class="p">))</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">k0</span> <span class="o">=</span> <span class="n">get_k0</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+        <span class="n">nf</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+        <span class="n">check_k0</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">k0</span><span class="o">=</span><span class="n">k0</span><span class="p">)</span>
+
+        <span class="n">lsps</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># make data batches</span>
+        <span class="n">batches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span>
+            <span class="n">finish</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="nb">min</span><span class="p">([</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="n">start</span><span class="p">])</span>
+            <span class="n">batches</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">finish</span><span class="p">)])</span>
+
+        <span class="c1"># set up memory containers for gpu and cpu (pinned) memory</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">get_m</span><span class="p">(</span><span class="n">nf</span><span class="p">)</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">sigma</span>
+
+        <span class="n">kwargs_lsmem</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">buffered_transfer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">n0_buffer</span><span class="o">=</span><span class="n">max_ndata</span><span class="p">,</span>
+                            <span class="n">use_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">,</span>
+                            <span class="n">nharmonics</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nharmonics</span><span class="p">,</span>
+                            <span class="n">use_fft</span><span class="o">=</span><span class="n">use_fft</span><span class="p">)</span>
+        <span class="n">kwargs_lsmem</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">memory</span> <span class="o">=</span> <span class="p">[</span><span class="n">LombScargleMemory</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">k0</span><span class="o">=</span><span class="n">k0</span><span class="p">,</span>
+                                    <span class="o">**</span><span class="n">kwargs_lsmem</span><span class="p">)</span>
+                  <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">streams</span><span class="p">]</span>
+
+        <span class="c1"># allocate memory</span>
+        <span class="p">[</span><span class="n">mem</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">nf</span><span class="o">=</span><span class="n">nf</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">mem</span> <span class="ow">in</span> <span class="n">memory</span><span class="p">]</span>
+
+        <span class="n">funcs</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_proc</span><span class="o">.</span><span class="n">function_tuple</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">b</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">batches</span><span class="p">):</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">memory</span><span class="o">=</span><span class="n">memory</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span>
+                               <span class="n">use_fft</span><span class="o">=</span><span class="n">use_fft</span><span class="p">,</span>
+                               <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
+                <span class="n">lsps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">[(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">lsp</span><span class="p">)</span> <span class="k">for</span> <span class="n">lsp</span> <span class="ow">in</span> <span class="n">lsps</span><span class="p">]</span></div></div>
+
+
+<div class="viewcode-block" id="fap_baluev"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.fap_baluev">[docs]</a><span class="k">def</span> <span class="nf">fap_baluev</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">fmax</span><span class="p">,</span> <span class="n">d_K</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">d_H</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">use_gamma</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    False alarm probability for periodogram peak</span>
+<span class="sd">    based on Baluev (2008) [2008MNRAS.385.1279B]</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t: array_like</span>
+<span class="sd">        Observation times.</span>
+<span class="sd">    dy: array_like</span>
+<span class="sd">        Observation uncertainties.</span>
+<span class="sd">    z: array_like or float</span>
+<span class="sd">        Periodogram value(s)</span>
+<span class="sd">    fmax: float</span>
+<span class="sd">        Maximum frequency searched</span>
+<span class="sd">    d_K: int, optional (default: 3)</span>
+<span class="sd">        Number of degrees of fredom for periodgram model.</span>
+<span class="sd">        2H - 1 where H is the number of harmonics</span>
+<span class="sd">    d_H: int, optional (default: 1)</span>
+<span class="sd">        Number of degrees of freedom for default model.</span>
+<span class="sd">    use_gamma: bool, optional (default: True)</span>
+<span class="sd">        Use gamma function for computation of numerical</span>
+<span class="sd">        coefficient; replaced with scipy.special.gammaln</span>
+<span class="sd">        and should be stable now</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fap: float</span>
+<span class="sd">        False alarm probability</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; rand = np.random.RandomState(100)</span>
+<span class="sd">    &gt;&gt;&gt; t = np.sort(rand.rand(100))</span>
+<span class="sd">    &gt;&gt;&gt; y = 12 + 0.01 * np.cos(2 * np.pi * 10. * t)</span>
+<span class="sd">    &gt;&gt;&gt; dy = 0.01 * np.ones_like(y)</span>
+<span class="sd">    &gt;&gt;&gt; y += dy * rand.rand(len(t))</span>
+<span class="sd">    &gt;&gt;&gt; proc = LombScargleAsyncProcess()</span>
+<span class="sd">    &gt;&gt;&gt; results = proc.run([(t, y, dy)])</span>
+<span class="sd">    &gt;&gt;&gt; freqs, powers = results[0]</span>
+<span class="sd">    &gt;&gt;&gt; fap_baluev(t, dy, powers, max(freqs))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">d_K</span> <span class="o">-</span> <span class="n">d_H</span>
+
+    <span class="n">N_K</span> <span class="o">=</span> <span class="n">N</span> <span class="o">-</span> <span class="n">d_K</span>
+    <span class="n">N_H</span> <span class="o">=</span> <span class="n">N</span> <span class="o">-</span> <span class="n">d_H</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">N_H</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">d</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">use_gamma</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">gammaln</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">N_H</span><span class="p">)</span> <span class="o">-</span> <span class="n">gammaln</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">N_K</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">tbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">Dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">tbar</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+
+    <span class="n">Teff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">Dt</span><span class="p">)</span>
+
+    <span class="n">W</span> <span class="o">=</span> <span class="n">fmax</span> <span class="o">*</span> <span class="n">Teff</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">**</span> <span class="mf">1.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">W</span>
+
+    <span class="n">eZ1</span> <span class="o">=</span> <span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">d</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">eZ2</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">z</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">N_K</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="n">tau</span> <span class="o">=</span> <span class="p">(</span><span class="n">g</span> <span class="o">*</span> <span class="n">A</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span> <span class="o">*</span> <span class="n">eZ1</span> <span class="o">*</span> <span class="n">eZ2</span>
+
+    <span class="n">Psing</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">z</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">N_K</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">Psing</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">tau</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="lomb_scargle_simple"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.lomb_scargle_simple">[docs]</a><span class="k">def</span> <span class="nf">lomb_scargle_simple</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple lomb-scargle interface for testing that</span>
+<span class="sd">    things work on the GPU. Note: This will be</span>
+<span class="sd">    substantially slower than working with the</span>
+<span class="sd">    ``LombScargleAsyncProcess`` interface.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">/=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">LombScargleAsyncProcess</span><span class="p">()</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">run</span><span class="p">([(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">)],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="n">freqs</span><span class="p">,</span> <span class="n">powers</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">proc</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">powers</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">cuvarbase</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../whatsnew.html">What’s new in cuvarbase</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Install instructions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ce.html">Conditional Entropy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../lomb.html">Lomb-Scargle periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bls.html">Box least squares (BLS) periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, John Hoffman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

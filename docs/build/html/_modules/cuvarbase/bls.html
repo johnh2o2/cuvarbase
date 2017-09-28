@@ -1,0 +1,868 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>cuvarbase.bls &#8212; cuvarbase 0.1.9 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for cuvarbase.bls</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Implementation of the box-least squares periodogram [K2002]_</span>
+<span class="sd">and variants.</span>
+
+<span class="sd">.. [K2002] `Kovacs et al. 2002 &lt;http://adsabs.harvard.edu/abs/2002A%26A...391..369K&gt;`_</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
+
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">zip</span>
+<span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">range</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">pycuda.driver</span> <span class="k">as</span> <span class="nn">cuda</span>
+<span class="kn">import</span> <span class="nn">pycuda.gpuarray</span> <span class="k">as</span> <span class="nn">gpuarray</span>
+
+<span class="kn">from</span> <span class="nn">pycuda.compiler</span> <span class="k">import</span> <span class="n">SourceModule</span>
+<span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">find_kernel</span><span class="p">,</span> <span class="n">_module_reader</span>
+
+<span class="kn">import</span> <span class="nn">resource</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">time</span>
+
+<span class="n">_default_block_size</span> <span class="o">=</span> <span class="mi">256</span>
+
+
+<span class="k">def</span> <span class="nf">_reduction_max</span><span class="p">(</span><span class="n">max_func</span><span class="p">,</span> <span class="n">arr</span><span class="p">,</span> <span class="n">arr_args</span><span class="p">,</span> <span class="n">nfreq</span><span class="p">,</span> <span class="n">nbins</span><span class="p">,</span>
+                   <span class="n">stream</span><span class="p">,</span> <span class="n">final_arr</span><span class="p">,</span> <span class="n">final_argmax_arr</span><span class="p">,</span>
+                   <span class="n">final_index</span><span class="p">,</span> <span class="n">block_size</span><span class="p">):</span>
+    <span class="c1"># assert power of 2</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">block_size</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">block_size</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">block</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">grid_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">nbins</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">))</span> <span class="o">*</span> <span class="n">nfreq</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">nbins0</span> <span class="o">=</span> <span class="n">nbins</span>
+
+    <span class="n">init</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">grid_size</span> <span class="o">&gt;</span> <span class="n">nfreq</span><span class="p">):</span>
+
+        <span class="n">max_func</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span>
+                                     <span class="n">arr</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">arr_args</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>
+                                     <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nfreq</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbins0</span><span class="p">),</span>
+                                     <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbins</span><span class="p">),</span>
+                                     <span class="n">arr</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">arr_args</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">init</span><span class="p">)</span>
+        <span class="n">init</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">nbins0</span> <span class="o">=</span> <span class="n">grid_size</span> <span class="o">/</span> <span class="n">nfreq</span>
+        <span class="n">grid_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">nbins0</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">))</span> <span class="o">*</span> <span class="n">nfreq</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">max_func</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span>
+                                 <span class="n">arr</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>  <span class="n">arr_args</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>
+                                 <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nfreq</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbins0</span><span class="p">),</span>
+                                 <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbins</span><span class="p">),</span>
+                                 <span class="n">final_arr</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">final_argmax_arr</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>
+                                 <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">final_index</span><span class="p">),</span> <span class="n">init</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="fmin_transit"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.fmin_transit">[docs]</a><span class="k">def</span> <span class="nf">fmin_transit</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">min_obs_per_transit</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">qmin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">min_obs_per_transit</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="n">fmin1</span> <span class="o">=</span> <span class="n">freq_transit</span><span class="p">(</span><span class="n">qmin</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">)</span>
+    <span class="n">fmin2</span> <span class="o">=</span> <span class="mf">2.</span><span class="o">/</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">([</span><span class="n">fmin1</span><span class="p">,</span> <span class="n">fmin2</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="fmax_transit0"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.fmax_transit0">[docs]</a><span class="k">def</span> <span class="nf">fmax_transit0</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">8.6307</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rho</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="q_transit"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.q_transit">[docs]</a><span class="k">def</span> <span class="nf">q_transit</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">fmax0</span> <span class="o">=</span> <span class="n">fmax_transit0</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">)</span>
+
+    <span class="n">f23</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">freq</span> <span class="o">/</span> <span class="n">fmax0</span><span class="p">,</span> <span class="mf">2.</span><span class="o">/</span><span class="mf">3.</span><span class="p">)</span>
+    <span class="n">f23</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="n">f23</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">f23</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span></div>
+
+
+<div class="viewcode-block" id="freq_transit"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.freq_transit">[docs]</a><span class="k">def</span> <span class="nf">freq_transit</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">fmax0</span> <span class="o">=</span> <span class="n">fmax_transit0</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fmax0</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">q</span><span class="p">)</span> <span class="o">**</span> <span class="mf">1.5</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="fmax_transit"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.fmax_transit">[docs]</a><span class="k">def</span> <span class="nf">fmax_transit</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">qmax</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">fmax0</span> <span class="o">=</span> <span class="n">fmax_transit0</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">min</span><span class="p">([</span><span class="n">fmax0</span><span class="p">,</span> <span class="n">freq_transit</span><span class="p">(</span><span class="n">qmax</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)])</span></div>
+
+
+<div class="viewcode-block" id="transit_autofreq"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.transit_autofreq">[docs]</a><span class="k">def</span> <span class="nf">transit_autofreq</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">fmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">samples_per_peak</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                     <span class="n">rho</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">qmin_fac</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">qmax_fac</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Produce list of frequencies for a given frequency range</span>
+<span class="sd">    suitable for performing Keplerian BLS.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t: array_like, float</span>
+<span class="sd">        Observation times.</span>
+<span class="sd">    fmin: float, optional (default: ``None``)</span>
+<span class="sd">        Minimum frequency. By default this is determined by ``fmin_transit``.</span>
+<span class="sd">    fmax: float, optional (default: ``None``)</span>
+<span class="sd">        Maximum frequency. By default this is determined by ``fmax_transit``.</span>
+<span class="sd">    samples_per_peak: float, optional (default: 2)</span>
+<span class="sd">        Oversampling factor. Frequency spacing is multiplied by</span>
+<span class="sd">        ``1/samples_per_peak``.</span>
+<span class="sd">    rho: float, optional (default: 1)</span>
+<span class="sd">        Mean stellar density of host star in solar units</span>
+<span class="sd">        :math:`\\rho=\\rho_{\\star} / \\rho_{\\odot}`, where</span>
+<span class="sd">        :math:`\\rho_{\\odot}`</span>
+<span class="sd">        is the mean density of the sun</span>
+<span class="sd">    qmin_fac: float, optional (default: 0.2)</span>
+<span class="sd">        The minimum :math:`q` value to search in units of the Keplerian</span>
+<span class="sd">        :math:`q` value</span>
+<span class="sd">    qmax_fac: float, optional (default: None)</span>
+<span class="sd">        The maximum :math:`q` value to search in units of the Keplerian</span>
+<span class="sd">        :math:`q` value. If ``None``, this defaults to ``1/qmin_fac``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    freqs: array_like</span>
+<span class="sd">        The frequency grid</span>
+<span class="sd">    q0vals: array_like</span>
+<span class="sd">        The list of Keplerian :math:`q` values.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">qmax_fac</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">qmax_fac</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="n">qmin_fac</span>
+
+    <span class="k">if</span> <span class="n">fmin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fmin</span> <span class="o">=</span> <span class="n">fmin_transit</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">,</span> <span class="n">samples_per_peak</span><span class="o">=</span><span class="n">samples_per_peak</span><span class="p">,</span>
+                            <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fmax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fmax</span> <span class="o">=</span> <span class="n">fmax_transit</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="n">T</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">freqs</span> <span class="o">=</span> <span class="p">[</span><span class="n">fmin</span><span class="p">]</span>
+    <span class="k">while</span> <span class="n">freqs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">fmax</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">qmin_fac</span> <span class="o">*</span> <span class="n">q_transit</span><span class="p">(</span><span class="n">freqs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">samples_per_peak</span> <span class="o">*</span> <span class="n">T</span><span class="p">)</span>
+        <span class="n">freqs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">freqs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">df</span><span class="p">)</span>
+    <span class="n">freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+    <span class="n">q0vals</span> <span class="o">=</span> <span class="n">q_transit</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">q0vals</span></div>
+
+
+<div class="viewcode-block" id="compile_bls"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.compile_bls">[docs]</a><span class="k">def</span> <span class="nf">compile_bls</span><span class="p">(</span><span class="n">block_size</span><span class="o">=</span><span class="n">_default_block_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compile BLS kernel</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    block_size: int, optional (default: _default_block_size)</span>
+<span class="sd">        CUDA threads per CUDA block.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    (gpu_bls, gpu_max, gpu_bin,</span>
+<span class="sd">     gpu_bin_custom, gpu_store, gpu_store_custom)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Read kernel</span>
+    <span class="n">cppd</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">BLOCK_SIZE</span><span class="o">=</span><span class="n">block_size</span><span class="p">)</span>
+    <span class="n">kernel_txt</span> <span class="o">=</span> <span class="n">_module_reader</span><span class="p">(</span><span class="n">find_kernel</span><span class="p">(</span><span class="s1">&#39;bls&#39;</span><span class="p">),</span>
+                                <span class="n">cpp_defs</span><span class="o">=</span><span class="n">cppd</span><span class="p">)</span>
+
+    <span class="c1"># compile kernel</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="n">SourceModule</span><span class="p">(</span><span class="n">kernel_txt</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;--use_fast_math&#39;</span><span class="p">])</span>
+
+    <span class="c1"># get functions</span>
+    <span class="n">gpu_bls</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="s1">&#39;binned_bls_bst&#39;</span><span class="p">)</span>
+    <span class="n">gpu_max</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="s1">&#39;reduction_max&#39;</span><span class="p">)</span>
+    <span class="n">gpu_bin</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="s1">&#39;bin_and_phase_fold_bst_multifreq&#39;</span><span class="p">)</span>
+    <span class="n">gpu_bin_custom</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="s1">&#39;bin_and_phase_fold_custom&#39;</span><span class="p">)</span>
+    <span class="n">gpu_store</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="s1">&#39;store_best_sols&#39;</span><span class="p">)</span>
+    <span class="n">gpu_store_custom</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="s1">&#39;store_best_sols_custom&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Prepare the functions</span>
+    <span class="n">gpu_bls</span> <span class="o">=</span> <span class="n">gpu_bls</span><span class="o">.</span><span class="n">prepare</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">])</span>
+    <span class="n">gpu_max</span> <span class="o">=</span> <span class="n">gpu_max</span><span class="o">.</span><span class="n">prepare</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                               <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">])</span>
+    <span class="n">gpu_bin</span> <span class="o">=</span> <span class="n">gpu_bin</span><span class="o">.</span><span class="n">prepare</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                               <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                               <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                               <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">])</span>
+
+    <span class="n">gpu_bin_custom</span> <span class="o">=</span> <span class="n">gpu_bin_custom</span><span class="o">.</span><span class="n">prepare</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                                             <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                                             <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                                             <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                                             <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">])</span>
+
+    <span class="n">gpu_store</span> <span class="o">=</span> <span class="n">gpu_store</span><span class="o">.</span><span class="n">prepare</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">])</span>
+
+    <span class="n">gpu_store_custom</span> <span class="o">=</span> <span class="n">gpu_store_custom</span><span class="o">.</span><span class="n">prepare</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                                                 <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                                                 <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">gpu_bls</span><span class="p">,</span> <span class="n">gpu_max</span><span class="p">,</span> <span class="n">gpu_bin</span><span class="p">,</span>
+            <span class="n">gpu_bin_custom</span><span class="p">,</span> <span class="n">gpu_store</span><span class="p">,</span> <span class="n">gpu_store_custom</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="eebls_gpu_custom"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.eebls_gpu_custom">[docs]</a><span class="k">def</span> <span class="nf">eebls_gpu_custom</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">q_values</span><span class="p">,</span> <span class="n">phi_values</span><span class="p">,</span>
+                     <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nstreams</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">max_memory</span><span class="o">=</span><span class="mf">1e8</span><span class="p">,</span>
+                     <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Box-Least Squares, with custom q and phi values. Useful</span>
+<span class="sd">    if you&#39;re honing the initial solution or testing between</span>
+<span class="sd">    a relatively small number of possible solutions.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t: array_like, float</span>
+<span class="sd">        Observation times</span>
+<span class="sd">    y: array_like, float</span>
+<span class="sd">        Observations</span>
+<span class="sd">    dy: array_like, float</span>
+<span class="sd">        Observation uncertainties</span>
+<span class="sd">    freqs: array_like, float</span>
+<span class="sd">        Frequencies</span>
+<span class="sd">    q_values: array_like</span>
+<span class="sd">        Set of q values to search at each trial frequency</span>
+<span class="sd">    phi_values: float or array_like</span>
+<span class="sd">        Set of phi values to search at each trial frequency</span>
+<span class="sd">    nstreams: int, optional (default: 5)</span>
+<span class="sd">        Number of CUDA streams to utilize.</span>
+<span class="sd">    batch_size: int, optional (default: None)</span>
+<span class="sd">        Number of frequencies to compute in a single batch; determines</span>
+<span class="sd">        this automatically by default based on ``max_memory``</span>
+<span class="sd">    max_memory: float, optional (default: 1e8)</span>
+<span class="sd">        Maximum memory to use in bytes. Will ignore this if</span>
+<span class="sd">        ``batch_size`` is specified.</span>
+<span class="sd">    functions: tuple of CUDA functions</span>
+<span class="sd">        gpu_bls, gpu_max, gpu_bin, gpu_store functions;</span>
+<span class="sd">        returned by `compile_bls`</span>
+<span class="sd">    **kwargs:</span>
+<span class="sd">        passed to `compile_bls`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bls: array_like, float</span>
+<span class="sd">        BLS periodogram, normalized to 1 - chi2(best_fit) / chi2(constant)</span>
+<span class="sd">    qphi_sols: list of (q, phi) tuples</span>
+<span class="sd">        Best (q, phi) solution at each frequency</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">functions</span> <span class="o">=</span> <span class="n">functions</span> <span class="k">if</span> <span class="n">functions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> \
+        <span class="k">else</span> <span class="n">compile_bls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="p">(</span><span class="n">gpu_bls</span><span class="p">,</span> <span class="n">gpu_max</span><span class="p">,</span> <span class="n">gpu_bin</span><span class="p">,</span>
+     <span class="n">gpu_bin_custom</span><span class="p">,</span> <span class="n">gpu_store</span><span class="p">,</span>
+     <span class="n">gpu_store_custom</span><span class="p">)</span> <span class="o">=</span> <span class="n">functions</span>
+
+    <span class="n">block_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;block_size&#39;</span><span class="p">,</span> <span class="n">_default_block_size</span><span class="p">)</span>
+    <span class="n">nbtot</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_values</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">phi_values</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span>
+
+    <span class="n">grid_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">nbtot</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">batch_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># compute memory</span>
+        <span class="n">real_type_size</span> <span class="o">=</span> <span class="mi">4</span>
+
+        <span class="c1"># data</span>
+        <span class="n">mem0</span> <span class="o">=</span> <span class="n">ndata</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">real_type_size</span>
+
+        <span class="n">nq</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_values</span><span class="p">)</span>
+        <span class="n">nphi</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">phi_values</span><span class="p">)</span>
+
+        <span class="c1"># q_values and phi_values</span>
+        <span class="n">mem0</span> <span class="o">+=</span> <span class="n">nq</span> <span class="o">+</span> <span class="n">nphi</span>
+
+        <span class="c1"># freqs + bls + best_phi + best_q + best_sol (int32)</span>
+        <span class="n">mem0</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span> <span class="o">*</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">real_type_size</span>
+
+        <span class="c1"># yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32)</span>
+        <span class="n">mem_per_f</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">nstreams</span> <span class="o">*</span> <span class="n">nbins_tot_max</span> <span class="o">*</span> <span class="n">noverlap</span> <span class="o">*</span> <span class="n">real_type_size</span>
+
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">max_memory</span> <span class="o">-</span> <span class="n">mem0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">mem_per_f</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Not enough memory (batch_size = 0)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># move data to GPU</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">/=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">ybar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">YY</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="n">ybar</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">yw</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="n">ybar</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+
+    <span class="n">t_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">yw_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">yw</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">w_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">freqs_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+    <span class="n">yw_g_bins</span><span class="p">,</span> <span class="n">w_g_bins</span><span class="p">,</span> <span class="n">bls_tmp_gs</span><span class="p">,</span> <span class="n">bls_tmp_sol_gs</span><span class="p">,</span> <span class="n">streams</span> \
+        <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nstreams</span><span class="p">):</span>
+        <span class="n">streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cuda</span><span class="o">.</span><span class="n">Stream</span><span class="p">())</span>
+        <span class="n">yw_g_bins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbtot</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+        <span class="n">w_g_bins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbtot</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+        <span class="n">bls_tmp_gs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbtot</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+        <span class="n">bls_tmp_sol_gs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbtot</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
+
+    <span class="n">bls_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">bls_sol_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="n">bls_best_phi</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">bls_best_q</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="n">q_values_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">q_values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">phi_values_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">phi_values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+    <span class="n">block</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">nbatches</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">))</span> <span class="o">/</span> <span class="n">batch_size</span><span class="p">))</span>
+
+    <span class="n">bls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nbatches</span><span class="p">):</span>
+        <span class="n">imin</span> <span class="o">=</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="n">batch</span>
+        <span class="n">imax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="p">(</span><span class="n">batch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+
+        <span class="n">nf</span> <span class="o">=</span> <span class="n">imax</span> <span class="o">-</span> <span class="n">imin</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">batch</span> <span class="o">%</span> <span class="n">nstreams</span>
+        <span class="n">yw_g_bin</span> <span class="o">=</span> <span class="n">yw_g_bins</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">w_g_bin</span> <span class="o">=</span> <span class="n">w_g_bins</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">bls_tmp_g</span> <span class="o">=</span> <span class="n">bls_tmp_gs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">bls_tmp_sol_g</span> <span class="o">=</span> <span class="n">bls_tmp_sol_gs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+        <span class="n">stream</span> <span class="o">=</span> <span class="n">streams</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+        <span class="n">yw_g_bin</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">w_g_bin</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">bls_tmp_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">bls_tmp_sol_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+
+        <span class="n">bin_grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">*</span> <span class="n">nf</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">bin_grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">yw_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">w_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">yw_g_bin</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">w_g_bin</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">q_values_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">phi_values_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">q_values</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phi_values</span><span class="p">)))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nf</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">batch_size</span> <span class="o">*</span> <span class="n">batch</span><span class="p">),)</span>
+        <span class="n">gpu_bin_custom</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="n">nb</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_values</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">phi_values</span><span class="p">)</span>
+
+        <span class="n">bls_grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">nf</span> <span class="o">*</span> <span class="n">nb</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">bls_grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">yw_g_bin</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">w_g_bin</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">bls_tmp_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>  <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nf</span> <span class="o">*</span> <span class="n">nb</span><span class="p">))</span>
+        <span class="n">gpu_bls</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">gpu_max</span><span class="p">,</span> <span class="n">bls_tmp_g</span><span class="p">,</span> <span class="n">bls_tmp_sol_g</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">nf</span><span class="p">,</span> <span class="n">nb</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">bls_g</span><span class="p">,</span> <span class="n">bls_sol_g</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">batch</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">block_size</span><span class="p">)</span>
+        <span class="n">_reduction_max</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="n">store_grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">nf</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">store_grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">bls_sol_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">bls_best_phi</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">bls_best_q</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">q_values_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">phi_values_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">q_values</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phi_values</span><span class="p">)))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nf</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">batch</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">))</span>
+        <span class="n">gpu_store_custom</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="n">best_q</span> <span class="o">=</span> <span class="n">bls_best_q</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="n">best_phi</span> <span class="o">=</span> <span class="n">bls_best_phi</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+    <span class="n">qphi_sols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">best_q</span><span class="p">,</span> <span class="n">best_phi</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">bls_g</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">/</span><span class="n">YY</span><span class="p">,</span> <span class="n">qphi_sols</span></div>
+
+
+<div class="viewcode-block" id="eebls_gpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.eebls_gpu">[docs]</a><span class="k">def</span> <span class="nf">eebls_gpu</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">qmin</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">qmax</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+              <span class="n">nstreams</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">dlogq</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">max_memory</span><span class="o">=</span><span class="mf">1e8</span><span class="p">,</span>
+              <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Box-Least Squares, accelerated with PyCUDA</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t: array_like, float</span>
+<span class="sd">        Observation times</span>
+<span class="sd">    y: array_like, float</span>
+<span class="sd">        Observations</span>
+<span class="sd">    dy: array_like, float</span>
+<span class="sd">        Observation uncertainties</span>
+<span class="sd">    freqs: array_like, float</span>
+<span class="sd">        Frequencies</span>
+<span class="sd">    qmin: float or array_like</span>
+<span class="sd">        Minimum q value(s) to test for each frequency</span>
+<span class="sd">    qmax: float or array_like</span>
+<span class="sd">        Maximum q value(s) to test for each frequency</span>
+<span class="sd">    nstreams: int, optional (default: 5)</span>
+<span class="sd">        Number of CUDA streams to utilize.</span>
+<span class="sd">    noverlap: int, optional (default: 3)</span>
+<span class="sd">        Number of overlapping q bins to use</span>
+<span class="sd">    dlogq: float, optional, (default: 0.5)</span>
+<span class="sd">        logarithmic spacing of :math:`q` values, where :math:`d\log q = dq / q`</span>
+<span class="sd">    batch_size: int, optional (default: None)</span>
+<span class="sd">        Number of frequencies to compute in a single batch; determines</span>
+<span class="sd">        this automatically based on ``max_memory``</span>
+<span class="sd">    max_memory: float, optional (default: 1e8)</span>
+<span class="sd">        Maximum memory to use in bytes. Will ignore this if</span>
+<span class="sd">        batch_size is specified</span>
+<span class="sd">    functions: tuple of CUDA functions</span>
+<span class="sd">        returned by ``compile_bls``</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bls: array_like, float</span>
+<span class="sd">        BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`</span>
+<span class="sd">    qphi_sols: list of ``(q, phi)`` tuples</span>
+<span class="sd">        Best ``(q, phi)`` solution at each frequency</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">locext</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="n">arr</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">arr</span>
+        <span class="k">return</span> <span class="n">ext</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="p">)])</span>
+
+    <span class="n">functions</span> <span class="o">=</span> <span class="n">functions</span> <span class="k">if</span> <span class="n">functions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> \
+        <span class="k">else</span> <span class="n">compile_bls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="p">(</span><span class="n">gpu_bls</span><span class="p">,</span> <span class="n">gpu_max</span><span class="p">,</span> <span class="n">gpu_bin</span><span class="p">,</span>
+     <span class="n">gpu_bin_custom</span><span class="p">,</span> <span class="n">gpu_store</span><span class="p">,</span>
+     <span class="n">gpu_store_custom</span><span class="p">)</span> <span class="o">=</span> <span class="n">functions</span>
+
+    <span class="c1"># smallest and largest number of bins</span>
+    <span class="n">nbins0_max</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">nbinsf_max</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">block_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;block_size&#39;</span><span class="p">,</span> <span class="n">_default_block_size</span><span class="p">)</span>
+
+    <span class="n">max_q_vals</span> <span class="o">=</span> <span class="n">locext</span><span class="p">(</span><span class="nb">max</span><span class="p">,</span> <span class="n">qmax</span><span class="p">)</span>
+    <span class="n">min_q_vals</span> <span class="o">=</span> <span class="n">locext</span><span class="p">(</span><span class="nb">min</span><span class="p">,</span> <span class="n">qmin</span><span class="p">)</span>
+
+    <span class="n">nbins0_max</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">max_q_vals</span><span class="p">))</span>
+    <span class="n">nbinsf_max</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">min_q_vals</span><span class="p">))</span>
+
+    <span class="n">ndata</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="n">nbins_tot_max</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="k">while</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">nbins0_max</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="n">nbinsf_max</span><span class="p">):</span>
+        <span class="n">nbins_tot_max</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">nbins0_max</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">*=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">dlogq</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">batch_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># compute memory</span>
+        <span class="n">real_type_size</span> <span class="o">=</span> <span class="mi">4</span>
+
+        <span class="c1"># data</span>
+        <span class="n">mem0</span> <span class="o">=</span> <span class="n">ndata</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">real_type_size</span>
+
+        <span class="c1"># freqs + bls + best_phi + best_q + best_sol (int32)</span>
+        <span class="n">mem0</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span> <span class="o">*</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">real_type_size</span>
+
+        <span class="c1"># yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32)</span>
+        <span class="n">mem_per_f</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">nstreams</span> <span class="o">*</span> <span class="n">nbins_tot_max</span> <span class="o">*</span> <span class="n">noverlap</span> <span class="o">*</span> <span class="n">real_type_size</span>
+
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">max_memory</span> <span class="o">-</span> <span class="n">mem0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">mem_per_f</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Not enough memory (batch_size = 0)&quot;</span><span class="p">)</span>
+
+    <span class="n">gs</span> <span class="o">=</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="n">nbins_tot_max</span> <span class="o">*</span> <span class="n">noverlap</span>
+
+    <span class="n">grid_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">gs</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">))</span>
+
+    <span class="c1"># move data to GPU</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">/=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">ybar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">YY</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="n">ybar</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">yw</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="n">ybar</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+
+    <span class="n">t_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">yw_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">yw</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">w_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">freqs_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+    <span class="n">yw_g_bins</span><span class="p">,</span> <span class="n">w_g_bins</span><span class="p">,</span> <span class="n">bls_tmp_gs</span><span class="p">,</span> <span class="n">bls_tmp_sol_gs</span><span class="p">,</span> <span class="n">streams</span> \
+        <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nstreams</span><span class="p">):</span>
+        <span class="n">streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cuda</span><span class="o">.</span><span class="n">Stream</span><span class="p">())</span>
+        <span class="n">yw_g_bins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+        <span class="n">w_g_bins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+        <span class="n">bls_tmp_gs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+        <span class="n">bls_tmp_sol_gs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
+
+    <span class="n">bls_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">bls_sol_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="n">bls_best_phi</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">bls_best_q</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="n">block</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">nbatches</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">))</span> <span class="o">/</span> <span class="n">batch_size</span><span class="p">))</span>
+
+    <span class="n">bls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nbatches</span><span class="p">):</span>
+
+        <span class="n">imin</span> <span class="o">=</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="n">batch</span>
+        <span class="n">imax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">),</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="p">(</span><span class="n">batch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+
+        <span class="n">minq</span> <span class="o">=</span> <span class="n">locext</span><span class="p">(</span><span class="nb">min</span><span class="p">,</span> <span class="n">qmin</span><span class="p">,</span> <span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="p">)</span>
+        <span class="n">maxq</span> <span class="o">=</span> <span class="n">locext</span><span class="p">(</span><span class="nb">max</span><span class="p">,</span> <span class="n">qmax</span><span class="p">,</span> <span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="p">)</span>
+
+        <span class="n">nbins0</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">maxq</span><span class="p">))</span>
+        <span class="n">nbinsf</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">minq</span><span class="p">))</span>
+
+        <span class="n">nbins_tot</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="mf">1.</span>
+        <span class="k">while</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">nbins0</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="n">nbinsf</span><span class="p">):</span>
+            <span class="n">nbins_tot</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">nbins0</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">*=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">dlogq</span><span class="p">)</span>
+
+        <span class="n">nf</span> <span class="o">=</span> <span class="n">imax</span> <span class="o">-</span> <span class="n">imin</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">batch</span> <span class="o">%</span> <span class="n">nstreams</span>
+        <span class="n">yw_g_bin</span> <span class="o">=</span> <span class="n">yw_g_bins</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">w_g_bin</span> <span class="o">=</span> <span class="n">w_g_bins</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">bls_tmp_g</span> <span class="o">=</span> <span class="n">bls_tmp_gs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">bls_tmp_sol_g</span> <span class="o">=</span> <span class="n">bls_tmp_sol_gs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+        <span class="n">stream</span> <span class="o">=</span> <span class="n">streams</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="c1"># stream.synchronize()</span>
+
+        <span class="n">yw_g_bin</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">w_g_bin</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">bls_tmp_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">bls_tmp_sol_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+
+        <span class="n">bin_grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">ndata</span> <span class="o">*</span> <span class="n">nf</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">bin_grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">yw_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">w_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">yw_g_bin</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">w_g_bin</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">ndata</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nf</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbins0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbinsf</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">batch_size</span> <span class="o">*</span> <span class="n">batch</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">noverlap</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">dlogq</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbins_tot</span><span class="p">))</span>
+        <span class="n">gpu_bin</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="n">all_bins</span> <span class="o">=</span> <span class="n">nf</span> <span class="o">*</span> <span class="n">nbins_tot</span> <span class="o">*</span> <span class="n">noverlap</span>
+
+        <span class="n">bls_grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">all_bins</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">bls_grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">yw_g_bin</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">w_g_bin</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">bls_tmp_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>  <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">all_bins</span><span class="p">))</span>
+        <span class="n">gpu_bls</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">gpu_max</span><span class="p">,</span> <span class="n">bls_tmp_g</span><span class="p">,</span> <span class="n">bls_tmp_sol_g</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">nf</span><span class="p">,</span> <span class="n">nbins_tot</span> <span class="o">*</span> <span class="n">noverlap</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">bls_g</span><span class="p">,</span> <span class="n">bls_sol_g</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">batch</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">block_size</span><span class="p">)</span>
+        <span class="n">_reduction_max</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="n">store_grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">nf</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">store_grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">bls_sol_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">bls_best_phi</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">bls_best_q</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbins0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nbinsf</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">noverlap</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">dlogq</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">nf</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">batch</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">),)</span>
+        <span class="n">gpu_store</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="n">best_q</span> <span class="o">=</span> <span class="n">bls_best_q</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="n">best_phi</span> <span class="o">=</span> <span class="n">bls_best_phi</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+    <span class="n">qphi_sols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">best_q</span><span class="p">,</span> <span class="n">best_phi</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">bls_g</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">/</span><span class="n">YY</span><span class="p">,</span> <span class="n">qphi_sols</span></div>
+
+
+<div class="viewcode-block" id="single_bls"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.single_bls">[docs]</a><span class="k">def</span> <span class="nf">single_bls</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">phi0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Evaluate BLS power for a single set of (freq, q, phi0)</span>
+<span class="sd">    parameters.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t: array_like, float</span>
+<span class="sd">        Observation times</span>
+<span class="sd">    y: array_like, float</span>
+<span class="sd">        Observations</span>
+<span class="sd">    dy: array_like, float</span>
+<span class="sd">        Observation uncertainties</span>
+<span class="sd">    freq: float</span>
+<span class="sd">        Frequency of the signal</span>
+<span class="sd">    q: float</span>
+<span class="sd">        Transit duration in phase</span>
+<span class="sd">    phi0: float</span>
+<span class="sd">        Phase offset of transit</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bls: float</span>
+<span class="sd">        BLS power for this set of parameters</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">freq</span><span class="p">)</span>
+    <span class="n">phi</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">phi0</span><span class="p">)</span>
+    <span class="n">phi</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">dy</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+    <span class="n">ybar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">YY</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">-</span> <span class="n">ybar</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="n">W</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+    <span class="n">YW</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)[</span><span class="n">mask</span><span class="p">])</span> <span class="o">-</span> <span class="n">ybar</span> <span class="o">*</span> <span class="n">W</span>
+
+    <span class="k">return</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">W</span> <span class="o">&lt;</span> <span class="mf">1e-9</span> <span class="k">else</span> <span class="p">(</span><span class="n">YW</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">W</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">W</span><span class="p">))</span> <span class="o">/</span> <span class="n">YY</span></div>
+
+
+<div class="viewcode-block" id="hone_solution"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.hone_solution">[docs]</a><span class="k">def</span> <span class="nf">hone_solution</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">f0</span><span class="p">,</span> <span class="n">df0</span><span class="p">,</span> <span class="n">q0</span><span class="p">,</span> <span class="n">dlogq0</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span>
+                  <span class="n">samples_per_peak</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Experimental!</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p0</span> <span class="o">=</span> <span class="n">single_bls</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">f0</span><span class="p">,</span> <span class="n">q0</span><span class="p">,</span> <span class="n">phi0</span><span class="p">)</span>
+    <span class="n">pn</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df0</span>
+    <span class="n">dlogq</span> <span class="o">=</span> <span class="n">dlogq0</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">q0</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">phi0</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">f0</span>
+    <span class="n">nol</span> <span class="o">=</span> <span class="n">noverlap</span>
+
+    <span class="n">baseline</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="n">functions</span> <span class="o">=</span> <span class="n">compile_bls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">pn</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">5</span> <span class="ow">or</span> <span class="p">((</span><span class="n">pn</span> <span class="o">-</span> <span class="n">p0</span><span class="p">)</span> <span class="o">/</span> <span class="n">p0</span> <span class="o">&gt;</span> <span class="n">stop</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">max_iter</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">pn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">p0</span> <span class="o">=</span> <span class="n">pn</span>
+
+        <span class="n">fmin</span><span class="p">,</span> <span class="n">fmax</span> <span class="o">=</span> <span class="n">f</span> <span class="o">-</span> <span class="mi">25</span> <span class="o">*</span> <span class="n">df</span><span class="p">,</span> <span class="n">f</span> <span class="o">+</span> <span class="mi">25</span> <span class="o">*</span> <span class="n">df</span>
+        <span class="n">qmin</span> <span class="o">=</span> <span class="n">q</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">dlogq</span><span class="p">)</span>
+        <span class="n">qmax</span> <span class="o">=</span> <span class="n">q</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">dlogq</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">*=</span> <span class="mf">0.1</span>
+        <span class="n">dlogq</span> <span class="o">*=</span> <span class="mf">0.25</span>
+
+        <span class="n">nq</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">qmax</span><span class="o">/</span><span class="n">qmin</span><span class="p">)</span><span class="o">/</span><span class="n">dlogq</span><span class="p">))</span>
+        <span class="n">q_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">qmin</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">qmax</span><span class="p">),</span> <span class="n">num</span><span class="o">=</span><span class="n">nq</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">e</span><span class="p">)</span>
+        <span class="n">dphi</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">((</span><span class="n">fmax</span> <span class="o">-</span> <span class="n">fmin</span><span class="p">)</span> <span class="o">*</span> <span class="n">baseline</span> <span class="o">*</span> <span class="n">samples_per_peak</span> <span class="o">+</span> <span class="n">dlogq</span> <span class="o">*</span> <span class="n">q</span><span class="p">)</span>
+
+        <span class="n">phimin</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">phimax</span> <span class="o">=</span> <span class="mf">1.</span>
+        <span class="k">if</span> <span class="n">dphi</span> <span class="o">&lt;</span> <span class="mf">0.25</span><span class="p">:</span>
+            <span class="n">phimin</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">-</span> <span class="n">dphi</span>
+            <span class="n">phimax</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">+</span> <span class="n">dphi</span>
+
+        <span class="n">nphi</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mi">10</span> <span class="o">*</span> <span class="nb">min</span><span class="p">([</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dphi</span><span class="p">,</span> <span class="mf">1.</span><span class="p">])</span> <span class="o">/</span> <span class="n">qmin</span><span class="p">))])</span>
+        <span class="n">phi_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">phimin</span><span class="p">,</span> <span class="n">phimax</span><span class="p">,</span> <span class="n">nphi</span><span class="p">)</span>
+        <span class="n">nf</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">fmax</span> <span class="o">-</span> <span class="n">fmin</span><span class="p">)</span><span class="o">/</span><span class="n">df</span><span class="p">)</span>
+        <span class="n">freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">fmin</span><span class="p">,</span> <span class="n">fmax</span> <span class="o">+</span> <span class="n">df</span><span class="p">,</span> <span class="n">nf</span><span class="p">)</span>
+
+        <span class="n">powers</span><span class="p">,</span> <span class="n">sols</span> <span class="o">=</span> <span class="n">eebls_gpu_custom</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">q_values</span><span class="p">,</span> <span class="n">phi_values</span><span class="p">,</span>
+                                        <span class="n">batch_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">nstreams</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                                        <span class="n">functions</span><span class="o">=</span><span class="n">functions</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">ibest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">powers</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[</span><span class="n">ibest</span><span class="p">]</span>
+        <span class="n">q</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">sols</span><span class="p">[</span><span class="n">ibest</span><span class="p">]</span>
+        <span class="n">pn</span> <span class="o">=</span> <span class="n">powers</span><span class="p">[</span><span class="n">ibest</span><span class="p">]</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">f</span><span class="p">,</span> <span class="n">pn</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="eebls_transit_gpu"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.bls.eebls_transit_gpu">[docs]</a><span class="k">def</span> <span class="nf">eebls_transit_gpu</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">fmax_frac</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">fmin_frac</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                      <span class="n">qmin_fac</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">qmax_fac</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">fmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                      <span class="n">fmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">qvals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute BLS for timeseries assuming edge-on keplerian</span>
+<span class="sd">    orbit of a planet with Mp/Ms &lt;&lt; 1, Rp/Rs &lt; 1, Lp/Ls &lt;&lt; 1 and</span>
+<span class="sd">    negligible eccentricity.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    t: array_like, float</span>
+<span class="sd">        Observation times</span>
+<span class="sd">    y: array_like, float</span>
+<span class="sd">        Observations</span>
+<span class="sd">    dy: array_like, float</span>
+<span class="sd">        Observation uncertainties</span>
+<span class="sd">    fmax_frac: float, optional (default: 1.0)</span>
+<span class="sd">        Maximum frequency is `fmax_frac * fmax`, where</span>
+<span class="sd">        `fmax` is automatically selected by `fmax_transit`.</span>
+<span class="sd">    fmin_frac: float, optional (default: 1.5)</span>
+<span class="sd">        Minimum frequency is `fmin_frac * fmin`, where</span>
+<span class="sd">        `fmin` is automatically selected by `fmin_transit`.</span>
+<span class="sd">    fmin: float, optional (default: None)</span>
+<span class="sd">        Overrides automatic frequency minimum with this value</span>
+<span class="sd">    fmax: float, optional (default: None)</span>
+<span class="sd">        Overrides automatic frequency maximum with this value</span>
+<span class="sd">    qmin_fac: float, optional (default: 0.5)</span>
+<span class="sd">        Fraction of the fiducial q value to search</span>
+<span class="sd">        at each frequency (minimum)</span>
+<span class="sd">    qmax_fac: float, optional (default: 2.0)</span>
+<span class="sd">        Fraction of the fiducial q value to search</span>
+<span class="sd">        at each frequency (maximum)</span>
+<span class="sd">    freqs: array_like, optional (default: None)</span>
+<span class="sd">        Overrides the auto-generated frequency grid</span>
+<span class="sd">    qvals: array_like, optional (default: None)</span>
+<span class="sd">        Overrides the keplerian q values</span>
+<span class="sd">    functions: tuple, optional (default=None)</span>
+<span class="sd">        result of ``compile_bls(**kwargs)``.</span>
+<span class="sd">    **kwargs:</span>
+<span class="sd">        passed to `eebls_gpu`, `compile_bls`, `fmax_transit`,</span>
+<span class="sd">        `fmin_transit`, and `transit_autofreq`</span>
+
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    freqs: array_like, float</span>
+<span class="sd">        Frequencies where BLS is evaluated</span>
+<span class="sd">    bls: array_like, float</span>
+<span class="sd">        BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`</span>
+<span class="sd">    solutions: list of ``(q, phi)`` tuples</span>
+<span class="sd">        Best ``(q, phi)`` solution at each frequency</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">freqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">qvals</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;qvals must be None if freqs is None&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fmin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fmin</span> <span class="o">=</span> <span class="n">fmin_transit</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">fmin_frac</span>
+        <span class="k">if</span> <span class="n">fmax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fmax</span> <span class="o">=</span> <span class="n">fmax_transit</span><span class="p">(</span><span class="n">qmax</span><span class="o">=</span><span class="mf">0.5</span> <span class="o">/</span> <span class="n">qmax_fac</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">fmax_frac</span>
+        <span class="n">freqs</span><span class="p">,</span> <span class="n">qvals</span> <span class="o">=</span> <span class="n">transit_autofreq</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">fmin</span><span class="o">=</span><span class="n">fmin</span><span class="p">,</span> <span class="n">fmax</span><span class="o">=</span><span class="n">fmax</span><span class="p">,</span>
+                                        <span class="n">qmin_fac</span><span class="o">=</span><span class="n">qmin_fac</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">qvals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">qvals</span> <span class="o">=</span> <span class="n">q_transit</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="n">qmins</span> <span class="o">=</span> <span class="n">qvals</span> <span class="o">*</span> <span class="n">qmin_fac</span>
+    <span class="n">qmaxes</span> <span class="o">=</span> <span class="n">qvals</span> <span class="o">*</span> <span class="n">qmax_fac</span>
+
+    <span class="n">powers</span><span class="p">,</span> <span class="n">sols</span> <span class="o">=</span> <span class="n">eebls_gpu</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span>
+                             <span class="n">qmin</span><span class="o">=</span><span class="n">qmins</span><span class="p">,</span> <span class="n">qmax</span><span class="o">=</span><span class="n">qmaxes</span><span class="p">,</span>
+                             <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">powers</span><span class="p">,</span> <span class="n">sols</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">cuvarbase</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../whatsnew.html">What’s new in cuvarbase</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Install instructions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ce.html">Conditional Entropy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../lomb.html">Lomb-Scargle periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bls.html">Box least squares (BLS) periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, John Hoffman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

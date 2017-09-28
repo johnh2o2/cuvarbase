@@ -1,0 +1,219 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>cuvarbase.utils &#8212; cuvarbase 0.1.9 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for cuvarbase.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+
+
+<div class="viewcode-block" id="weights"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.utils.weights">[docs]</a><span class="k">def</span> <span class="nf">weights</span><span class="p">(</span><span class="n">err</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; generate observation weights from uncertainties &quot;&quot;&quot;</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">w</span><span class="o">/</span><span class="nb">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="find_kernel"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.utils.find_kernel">[docs]</a><span class="k">def</span> <span class="nf">find_kernel</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span><span class="s1">&#39;cuvarbase&#39;</span><span class="p">,</span>
+                                           <span class="s1">&#39;kernels/</span><span class="si">%s</span><span class="s1">.cu&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">))</span></div>
+
+
+<span class="k">def</span> <span class="nf">_module_reader</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="n">cpp_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">txt</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">cpp_defs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">txt</span>
+
+    <span class="n">preamble</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#define </span><span class="si">{key}</span><span class="s1"> </span><span class="si">{value}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                                               <span class="n">value</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;&#39;</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span>
+                                                      <span class="k">else</span> <span class="n">value</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">cpp_defs</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+    <span class="n">txt</span> <span class="o">=</span> <span class="n">txt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;//</span><span class="si">{CPP_DEFS}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">preamble</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">txt</span>
+
+
+<div class="viewcode-block" id="tophat_window"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.utils.tophat_window">[docs]</a><span class="k">def</span> <span class="nf">tophat_window</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">t0</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+    <span class="n">w_window</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">w_window</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">d</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">1.</span>
+    <span class="k">return</span> <span class="n">w_window</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">w_window</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="gaussian_window"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.utils.gaussian_window">[docs]</a><span class="k">def</span> <span class="nf">gaussian_window</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">t0</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+    <span class="n">w_window</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">t0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">d</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">w_window</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w_window</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="n">w_window</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="autofrequency"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.utils.autofrequency">[docs]</a><span class="k">def</span> <span class="nf">autofrequency</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">nyquist_factor</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">samples_per_peak</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                  <span class="n">minimum_frequency</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">maximum_frequency</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine a suitable frequency grid for data.</span>
+
+<span class="sd">    Note that this assumes the peak width is driven by the observational</span>
+<span class="sd">    baseline, which is generally a good assumption when the baseline is</span>
+<span class="sd">    much larger than the oscillation period.</span>
+<span class="sd">    If you are searching for periods longer than the baseline of your</span>
+<span class="sd">    observations, this may not perform well.</span>
+
+<span class="sd">    Even with a large baseline, be aware that the maximum frequency</span>
+<span class="sd">    returned is based on the concept of &quot;average Nyquist frequency&quot;, which</span>
+<span class="sd">    may not be useful for irregularly-sampled data. The maximum frequency</span>
+<span class="sd">    can be adjusted via the nyquist_factor argument, or through the</span>
+<span class="sd">    maximum_frequency argument.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    samples_per_peak : float (optional, default=5)</span>
+<span class="sd">        The approximate number of desired samples across the typical peak</span>
+<span class="sd">    nyquist_factor : float (optional, default=5)</span>
+<span class="sd">        The multiple of the average nyquist frequency used to choose the</span>
+<span class="sd">        maximum frequency if maximum_frequency is not provided.</span>
+<span class="sd">    minimum_frequency : float (optional)</span>
+<span class="sd">        If specified, then use this minimum frequency rather than one</span>
+<span class="sd">        chosen based on the size of the baseline.</span>
+<span class="sd">    maximum_frequency : float (optional)</span>
+<span class="sd">        If specified, then use this maximum frequency rather than one</span>
+<span class="sd">        chosen based on the average nyquist frequency.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    frequency : ndarray or Quantity</span>
+<span class="sd">        The heuristically-determined optimal frequency bin</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">baseline</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">baseline</span> <span class="o">*</span> <span class="n">samples_per_peak</span><span class="p">)</span>
+
+    <span class="n">nf0</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">minimum_frequency</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">nf0</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">nf0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">minimum_frequency</span> <span class="o">/</span> <span class="n">df</span><span class="p">)])</span>
+
+    <span class="k">if</span> <span class="n">maximum_frequency</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">Nf</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">maximum_frequency</span> <span class="o">/</span> <span class="n">df</span><span class="p">)</span> <span class="o">-</span> <span class="n">nf0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Nf</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">samples_per_peak</span> <span class="o">*</span> <span class="n">nyquist_factor</span> <span class="o">*</span> <span class="n">n_samples</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">df</span> <span class="o">*</span> <span class="p">(</span><span class="n">nf0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">Nf</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="dphase"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.utils.dphase">[docs]</a><span class="k">def</span> <span class="nf">dphase</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">freq</span><span class="p">):</span>
+    <span class="n">dph</span> <span class="o">=</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">freq</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">dt</span> <span class="o">*</span> <span class="n">freq</span><span class="p">)</span>
+    <span class="n">dph_final</span> <span class="o">=</span> <span class="n">dph</span> <span class="k">if</span> <span class="n">dph</span> <span class="o">&lt;</span> <span class="mf">0.5</span> <span class="k">else</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">dph</span>
+    <span class="k">return</span> <span class="n">dph_final</span></div>
+
+
+<div class="viewcode-block" id="get_autofreqs"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.utils.get_autofreqs">[docs]</a><span class="k">def</span> <span class="nf">get_autofreqs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">autofreqs_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="n">var</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">var</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;minimum_frequency&#39;</span><span class="p">,</span> <span class="s1">&#39;maximum_frequency&#39;</span><span class="p">,</span>
+                                   <span class="s1">&#39;nyquist_factor&#39;</span><span class="p">,</span> <span class="s1">&#39;samples_per_peak&#39;</span><span class="p">]}</span>
+    <span class="k">return</span> <span class="n">autofrequency</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="o">**</span><span class="n">autofreqs_kwargs</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">cuvarbase</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../whatsnew.html">What’s new in cuvarbase</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Install instructions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ce.html">Conditional Entropy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../lomb.html">Lomb-Scargle periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bls.html">Box least squares (BLS) periodogram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API documentation</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, John Hoffman.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
