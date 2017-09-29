@@ -329,8 +329,12 @@ class LombScargleMemory(object):
             if x is not None:
                 x[:] = 0.
 
-        for mem in [self.nfft_mem_yw, self.nfft_mem_w]:
-            mem.ghat_g.fill(self.real_type(0), stream=self.stream)
+        if hasattr(self, 'nfft_mem_yw'):
+            self.nfft_mem_yw.ghat_g.fill(self.complex_type(0),
+                                         stream=self.stream)
+        if hasattr(self, 'nfft_mem_w'):
+            self.nfft_mem_w.ghat_g.fill(self.complex_type(0),
+                                        stream=self.stream)
 
 
 def mhdirect_sums(t, yw, w, freq, YY, nharms=1):

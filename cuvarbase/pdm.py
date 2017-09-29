@@ -171,7 +171,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
         return gpu_data, pow_cpus
 
     def run(self, data, gpu_data=None, pow_cpus=None,
-            kind='binned_linterp', nbins=30, **pdm_kwargs):
+            kind='binned_linterp', nbins=10, **pdm_kwargs):
         function = 'pdm_%s_%dbins' % (kind, nbins)
 
         if function not in self.prepared_functions:
