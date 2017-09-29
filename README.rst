@@ -1,6 +1,9 @@
 cuvarbase 0.2.0
 ===============
 
+.. image:: https://badge.fury.io/py/cuvarbase.svg
+    :target: https://badge.fury.io/py/cuvarbase
+
 John Hoffman
 (c) 2017
 

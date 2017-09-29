@@ -14,11 +14,6 @@
 	#define FLT float
 #endif
 
-//#define MAX_SHARED_FLT_SIZE (int) floor(((FLT) MAX_SHARED_MEM_SIZE) / sizeof(FLT))
-//#define LOCAL_HIST_SIZE \
-//      NMAG * NPHASE > MAX_SHARED_FLT_SIZE ? MAX_SHARED_FLT_SIZE - 1 : NMAG * NPHASE
-
-
 __device__ double atomicAddDouble(double* address, double val)
 {
     unsigned long long int* address_as_ull =
@@ -47,20 +42,20 @@ __device__ int posmod(int n, int N){
 
 __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, 
 	                                    FLT *bin, FLT *freqs,
-	                                    int nfreq, int ndata, 
+	                                    unsigned int nfreq, unsigned int ndata, 
 	                                    FLT max_phi){
 
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-	int i_freq = i / ndata;
-	int j_data = i % ndata;
+	unsigned int i_freq = i / ndata;
+	unsigned int j_data = i % ndata;
 
-	if (i_freq < nfreq && j_data < ndata){
+	if (i_freq < nfreq){
 		FLT Y = y[j_data];
 		FLT DY = dy[j_data];
 		
 		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
-		int offset = i_freq * (NMAG * NPHASE);
+		unsigned int offset = i_freq * (NMAG * NPHASE);
 
 		int m0 = (int) (Y * NMAG);
 
@@ -71,8 +66,6 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy,
 			FLT zmax = z + (1 + MAG_OVERLAP) / ((FLT) NMAG);
 			FLT wtot = normcdf(zmax / DY) - normcdf(z / DY);
 
-			//if (wtot > 1E-2)
-			//	printf("%e %e %e %e %e\n", wtot, z, zmax, Y, DY);
 			for(int n = n0; n >= n0 - PHASE_OVERLAP; n--)
 				ATOMIC_ADD(&(bin[offset + posmod(n, NPHASE) * NMAG + m]), wtot);
 			
@@ -90,7 +83,7 @@ __global__ void histogram_data_count(FLT *t, unsigned int *y,
 
 	unsigned int i_freq = i / ndata;
 	unsigned int j_data = i % ndata;
-	if (i_freq < nfreq && j_data < ndata){
+	if (i_freq < nfreq){
 		unsigned int offset = i_freq * (NMAG * NPHASE);
 		unsigned int m0 = y[j_data];
 		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
@@ -105,15 +98,15 @@ __global__ void histogram_data_count(FLT *t, unsigned int *y,
 }
 
 
-__global__ void weighted_ce(FLT *bins, int nfreq, FLT *ce){
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
+__global__ void weighted_ce(FLT *bins, unsigned int nfreq, FLT *ce){
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (i < nfreq){
 		FLT Hc = 0.f;
 		FLT bin_tot = 0.f;
 		FLT dm = ((FLT)(MAG_OVERLAP + 1)) / NMAG;
 		for(int n=0; n < NPHASE; n++){
-			int offset = i * (NMAG * NPHASE) + n * NMAG;
+			unsigned int offset = i * (NMAG * NPHASE) + n * NMAG;
 
 			FLT p_phi_n = 0.f;
 			for (int m=0; m < NMAG; m++)
@@ -131,16 +124,16 @@ __global__ void weighted_ce(FLT *bins, int nfreq, FLT *ce){
 	}
 }
 
-__global__ void standard_ce(unsigned int *bins, int nfreq,
+__global__ void standard_ce(unsigned int *bins, unsigned int nfreq,
                             FLT *ce){
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (i < nfreq){
 		FLT Hc = 0.f;
 		FLT dm = ((FLT)(MAG_OVERLAP + 1)) / NMAG;
 		unsigned int bin_tot = 0;
 		for(int n=0; n < NPHASE; n++){
-			int offset = i * (NMAG * NPHASE) + n * NMAG;
+			unsigned int offset = i * (NMAG * NPHASE) + n * NMAG;
 
 			unsigned int Nphi = 0;
 			for (int m=0; m < NMAG; m++)
@@ -164,15 +157,15 @@ __global__ void standard_ce(unsigned int *bins, int nfreq,
 	}
 }
 
-__global__ void constdpdm_ce(unsigned int *bins, int nfreq,
+__global__ void constdpdm_ce(unsigned int *bins, unsigned int nfreq,
                              FLT *ce, FLT *mag_bwf){
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (i < nfreq){
 		FLT Hc = 0.f;
 		unsigned int bin_tot = 0;
 		for(int n=0; n < NPHASE; n++){
-			int offset = i * (NMAG * NPHASE) + n * NMAG;
+			unsigned int offset = i * (NMAG * NPHASE) + n * NMAG;
 
 			unsigned int Nphi = 0;
 			for (int m=0; m < NMAG; m++)
@@ -196,14 +189,14 @@ __global__ void constdpdm_ce(unsigned int *bins, int nfreq,
 	}
 }
 
-__global__ void log_prob(unsigned int *bins, int nfreq,
+__global__ void log_prob(unsigned int *bins, unsigned int nfreq,
                          FLT *log_proba, FLT *mag_bin_fracs){
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (i < nfreq){
 		FLT logP = 0.f;
 		for(int n=0; n < NPHASE; n++){
-			int offset = i * (NMAG * NPHASE) + n * NMAG;
+			unsigned int offset = i * (NMAG * NPHASE) + n * NMAG;
 
 			unsigned int Nphi = 0;
 			for (int m=0; m < NMAG; m++)

@@ -13,7 +13,7 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 import pycuda.autoinit
 
-from .core import GPUAsyncProcess, BaseSpectrogram
+from .core import GPUAsyncProcess
 from .utils import weights, find_kernel
 
 
@@ -186,26 +186,3 @@ class PDMAsyncProcess(GPUAsyncProcess):
                    zip(streams, data, gpu_data, pow_cpus)]
 
         return results
-
-
-class PDMSpectrogram(BaseSpectrogram):
-    def __init__(self, t, y, w, dphi=0.05, nbins=25,
-                 block_size=256, kind='binned_linterp', **kwargs):
-
-        pdm_kwargs = dict(dphi=dphi, block_size=block_size,
-                          kind=kind, nbins=nbins)
-
-        super(PDMSpectrogram, self).__init__(t, y, w, **kwargs)
-
-        self.proc_kwargs.update(pdm_kwargs)
-        if self.proc is None:
-            self.proc = PDMAsyncProcess()
-
-    def model(self, freq, time=None):
-        t, y, w = self.t, self.y, self.w
-        if time is not None:
-            t, y, w = self.weighted_local_data(time)
-
-        linterp = (self.proc_kwargs['kind'] == 'binned_linterp')
-        return binned_pdm_model(t, y, w, freq, self.proc_kwargs['nbins'],
-                                linterp=linterp)

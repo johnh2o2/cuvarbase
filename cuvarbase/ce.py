@@ -230,7 +230,7 @@ class ConditionalEntropyMemory(object):
 
         t = np.asarray(t).astype(self.real_type)
         y = np.asarray(y).astype(self.real_type)
-        
+
         yscale = max(y[:self.n0]) - min(y[:self.n0])
         y0 = min(y[:self.n0])
         if self.weighted:
@@ -296,41 +296,31 @@ class ConditionalEntropyMemory(object):
 
 def conditional_entropy(memory, functions, block_size=256,
                         transfer_to_host=True,
-                        transfer_to_device=True, debug=False,
+                        transfer_to_device=True,
                         **kwargs):
     block = (block_size, 1, 1)
     grid = (int(np.ceil((memory.n0 * memory.nf) / float(block_size))), 1)
     ce_dpdm, hist_count, hist_weight, ce_logp, ce_std, ce_wt = functions
 
-    if debug:
-            memory.stream.synchronize()
     if transfer_to_device:
         memory.transfer_data_to_gpu()
-        if debug:
-            memory.stream.synchronize()
 
     if memory.weighted:
         args = (grid, block, memory.stream)
         args += (memory.t_g.ptr, memory.y_g.ptr, memory.dy_g.ptr)
         args += (memory.bins_g.ptr, memory.freqs_g.ptr)
-        args += (np.int32(memory.nf), np.int32(memory.n0))
+        args += (np.uint32(memory.nf), np.uint32(memory.n0))
         args += (memory.real_type(memory.max_phi),)
         hist_weight.prepared_async_call(*args)
-        if debug:
-            memory.stream.synchronize()
 
         grid = (int(np.ceil(memory.nf / float(block_size))), 1)
 
         args = (grid, block, memory.stream)
-        args += (memory.bins_g.ptr, np.int32(memory.nf), memory.ce_g.ptr)
+        args += (memory.bins_g.ptr, np.uint32(memory.nf), memory.ce_g.ptr)
         ce_wt.prepared_async_call(*args)
-        if debug:
-            memory.stream.synchronize()
 
         if transfer_to_host:
             memory.transfer_ce_to_cpu()
-            if debug:
-                memory.stream.synchronize()
         return memory.ce_c
 
     args = (grid, block, memory.stream)
@@ -338,12 +328,10 @@ def conditional_entropy(memory, functions, block_size=256,
     args += (memory.bins_g.ptr, memory.freqs_g.ptr)
     args += (np.uint32(memory.nf), np.uint32(memory.n0))
     hist_count.prepared_async_call(*args)
-    if debug:
-            memory.stream.synchronize()
 
     grid = (int(np.ceil(memory.nf / float(block_size))), 1)
     args = (grid, block, memory.stream)
-    args += (memory.bins_g.ptr, np.int32(memory.nf), memory.ce_g.ptr)
+    args += (memory.bins_g.ptr, np.uint32(memory.nf), memory.ce_g.ptr)
 
     if memory.balanced_magbins:
         args += (memory.mag_bwf_g.ptr,)
@@ -354,14 +342,8 @@ def conditional_entropy(memory, functions, block_size=256,
     else:
         ce_std.prepared_async_call(*args)
 
-    if debug:
-        memory.stream.synchronize()
-
     if transfer_to_host:
         memory.transfer_ce_to_cpu()
-
-    if debug:
-        memory.stream.synchronize()
 
     return memory.ce_c
 
@@ -440,7 +422,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         if self.use_double:
             cpp_defs['DOUBLE_PRECISION'] = None
 
-        # Read kernel
+        # Read kernel & replace with
         kernel_txt = _module_reader(find_kernel('ce'),
                                     cpp_defs=cpp_defs)
 
@@ -450,13 +432,13 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.dtypes = dict(
             constdpdm_ce=[np.intp, np.int32, np.intp, np.intp],
             histogram_data_weighted=[np.intp, np.intp, np.intp, np.intp,
-                                     np.intp, np.int32, np.int32,
+                                     np.intp, np.uint32, np.uint32,
                                      self.real_type],
             histogram_data_count=[np.intp, np.intp, np.intp, np.intp,
-                                  np.int32, np.int32],
-            log_prob=[np.intp, np.int32, np.intp, np.intp],
-            standard_ce=[np.intp, np.int32, np.intp],
-            weighted_ce=[np.intp, np.int32, np.intp]
+                                  np.uint32, np.uint32],
+            log_prob=[np.intp, np.uint32, np.intp, np.intp],
+            standard_ce=[np.intp, np.uint32, np.intp],
+            weighted_ce=[np.intp, np.uint32, np.intp]
         )
         for fname, dtype in self.dtypes.items():
             func = self.module.get_function(fname)
@@ -465,7 +447,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                                     for fname in sorted(self.dtypes.keys()))
 
     def memory_requirement(self, data, **kwargs):
-        """ return an approximate GPU memory requirement in bytes """
+        """
+        Return an approximate GPU memory requirement in bytes.
+        Will throw a ``NotImplementedError`` if called, so ... don't call it.
+        """
         raise NotImplementedError()
 
     def allocate_for_single_lc(self, t, y, freqs, dy=None,
@@ -508,13 +493,13 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         return mem
 
     def autofrequency(self, *args, **kwargs):
+        """ calls :func:`cuvarbase.utils.autofrequency` """
         return utils_autofreq(*args, **kwargs)
 
     def _nfreqs(self, *args, **kwargs):
         return len(self.autofrequency(*args, **kwargs))
 
     def allocate(self, data, freqs=None, **kwargs):
-
         """
         Allocate GPU memory for Conditional Entropy computations
 
@@ -560,6 +545,25 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
     def preallocate(self, max_nobs, freqs,
                     nlcs=1, streams=None, **kwargs):
+        """
+        Preallocate memory for future runs.
+
+        Parameters
+        ----------
+        max_nobs: int
+            Upper limit for the number of observations
+        freqs: array_like
+            Frequency array to be used by future ``run`` calls
+        nlcs: int, optional (default: 1)
+            Maximum batch size for ``run`` calls
+        streams: list of ``pycuda.driver.Stream``
+            Length of list must be ``>= nlcs``
+
+        Returns
+        -------
+        self.memory: list
+            List of ``ConditionalEntropyMemory`` objects
+        """
         kw = dict(phase_bins=self.phase_bins,
                   mag_bins=self.mag_bins,
                   max_phi=self.max_phi,
