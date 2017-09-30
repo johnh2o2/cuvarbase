@@ -218,3 +218,38 @@ __global__ void lomb(pycuda::complex<FLT>  *sw,
         lsp[i] = lspow(C, S, C2, S2, YCh, YSh, YY, Y, reg, mode);
 	}
 }
+
+
+__global__ void lomb_mh(pycuda::complex<FLT>  *sw,
+					    pycuda::complex<FLT>  *syw,
+					    FLT *lsp,
+					    FLT *reg,
+					    int nfreq, 
+					    int nharmonics,
+					    FLT YY, 
+					    FLT Y, 
+					    int k0, 
+					    int mode){
+
+	// least squares (lomb scargle with FLTing mean)
+
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+	// reg = (lambda_a, lambda_b, lambda_c)
+	if (i < nfreq){
+		pycuda::complex<FLT> SW, SW2, SYW;
+		SW = sw[i];
+		SW2 = sw[2 * i + k0];
+		SYW = syw[i];
+
+		FLT C = SW.real();
+		FLT S = SW.imag();
+
+		FLT C2 = SW2.real();
+		FLT S2 = SW2.imag();
+
+		FLT YCh = SYW.real();
+		FLT YSh = SYW.imag();
+
+        lsp[i] = lspow(C, S, C2, S2, YCh, YSh, YY, Y, reg, mode);
+	}
+}

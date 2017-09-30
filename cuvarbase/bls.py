@@ -22,7 +22,7 @@ import resource
 import numpy as np
 
 _default_block_size = 256
-
+_all_function_names = ['']
 
 def _reduction_max(max_func, arr, arr_args, nfreq, nbins,
                    stream, final_arr, final_argmax_arr,
@@ -168,6 +168,7 @@ def compile_bls(block_size=_default_block_size, **kwargs):
     module = SourceModule(kernel_txt, options=['--use_fast_math'])
 
     # get functions
+    function_names = kwargs.get('function_names', _all_function_names)
     gpu_bls = module.get_function('binned_bls_bst')
     gpu_max = module.get_function('reduction_max')
     gpu_bin = module.get_function('bin_and_phase_fold_bst_multifreq')

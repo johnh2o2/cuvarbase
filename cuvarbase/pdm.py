@@ -7,6 +7,7 @@ from builtins import range
 
 import numpy as np
 import resource
+import warnings
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
@@ -128,6 +129,12 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
 
 
 class PDMAsyncProcess(GPUAsyncProcess):
+
+    def __init__(self, *args, **kwargs):
+        super(PDMAsyncProcess, self).__init__(*args, **kwargs)
+        warnings.warn("PDM is experimental at this point. "
+                      "Use with great caution.")
+
     def _compile_and_prepare_functions(self, nbins=10):
         pdm2_txt = open(find_kernel('pdm'), 'r').read()
         pdm2_txt = pdm2_txt.replace('//INSERT_NBINS_HERE',
