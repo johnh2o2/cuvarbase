@@ -11,7 +11,7 @@ from numpy.testing import assert_allclose
 from pycuda.tools import mark_cuda_test
 from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
-                  single_bls, eebls_gpu_custom
+                  single_bls, eebls_gpu_custom, eebls_gpu_fast
 
 ntests = 3
 
@@ -344,7 +344,7 @@ class TestBLS(object):
             ax.plot(freqs, power)
 
             pows, diffs = list(zip(*sorted(zip(power_cpu, power - power_cpu),
-                              key=lambda x: -abs(x[1]))))
+                               key=lambda x: -abs(x[1]))))
             print(list(zip(pows[:10], diffs[:10])))
             plt.show()
 
@@ -355,3 +355,50 @@ class TestBLS(object):
 
         print(max(diffs))
         assert mostly_ok and not_too_bad
+
+    def fast_eebls(self, plot=True, seed=100, **kwargs):
+        rand = np.random.RandomState(seed)
+        freq = 1.0 + 0.1 * rand.rand()
+        q = 0.1
+        phi0 = rand.rand()
+        dlogq = 0.3
+        samples_per_peak = 2
+        noverlap = 2
+
+        outstr = "freq={freq}, q={q}, phi0={phi0}, "\
+                 "dlogq={dlogq}"
+        print(outstr.format(freq=freq,
+                            q=q, phi0=phi0, dlogq=dlogq))
+        t, y, err = data(snr=50, q=q, phi0=phi0, freq=freq, ndata=300,
+                         baseline=365.)
+
+        df = 0.25 * q / (max(t) - min(t))
+        fmin = 0.5
+        fmax = 1.5
+
+        nf = int(np.ceil((fmax - fmin) / df))
+
+        kw = dict(qmin=1e-2, qmax=0.5, noverlap=3, dlogq=0.2,
+                  batch_size=1)
+
+        kw.update(kwargs)
+
+        freqs = fmin + df * np.arange(nf)
+        power = eebls_gpu_fast(t, y, err, freqs, **kw)
+
+        power0, sols = eebls_gpu(t, y, err, freqs, **kw)
+        if plot:
+            import matplotlib.pyplot as plt
+            f, ax = plt.subplots()
+            ax.plot(freqs, power, alpha=0.5)
+            ax.axvline(freq, ls=':', color='k')
+            ax.plot(freqs, power0, alpha=0.5)
+            ax.set_yscale('log')
+            plt.show()
+        assert_allclose(power, power0)
+
+    def test_fast_eebls_no_sma(self, **kwargs):
+        self.fast_eebls(use_sma=False, **kwargs)
+
+    def test_fast_eebls_with_sma(self, **kwargs):
+        self.fast_eebls(use_sma=True, **kwargs)
