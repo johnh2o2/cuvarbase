@@ -279,6 +279,11 @@ __global__ void full_bls_no_sol_fast(
 	}
 }
 
+__device__ unsigned int dnbins(unsigned int nbins, float dlogq){
+	unsigned int n = (unsigned int) floorf(dlogq * nbins);
+	return (n == 0) ? 1 : n;
+}
+
 // needs as many threads as we can get. Each block works on a single frequency
 // and then moves on to another frequency
 //
@@ -312,9 +317,9 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 	float *best_bls = (float *)&sh[2 * hist_size];
 
 	__shared__ float f0;
-	__shared__ int nb0, nbf;
+	__shared__ int nb0, nbf, max_bin_width;
 
-	unsigned int s, nbtot;
+	unsigned int s;
 	int b;
 	float phi, bls1, bls2, thread_max_bls, thread_yw, thread_w;
 
@@ -332,12 +337,11 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 			nb0 = nbins0[i_freq + freq_offset];
 			nbf = nbinsf[i_freq + freq_offset];
 
+			max_bin_width = divrndup(nbf, nb0);
 		}
 
 		// wait for broadcasting to finish
 		__syncthreads();
-
-		//assert(hist_size >= nbf);
 
 		// intialize bins to 0 (synchronization is necessary here...)
 		for(unsigned int k = threadIdx.x; k < nbf; k += blockDim.x){
@@ -362,14 +366,14 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 		// wait for everyone to finish adding data to the histogram
 		__syncthreads();
 
-		// get max bls (for this THREAD)
+		// get max bls for this THREAD
 		for (unsigned int n = threadIdx.x; n < nbf; n += blockDim.x){
 			
-			thread_yw = block_bins[2 * n];
-			thread_w = block_bins[2 * n + 1];
+			thread_yw = 0.f;
+			thread_w = 0.f;
 			unsigned int m0 = 0;
 
-			for (unsigned int m = 1; m < nbf/nb0; m += (unsigned int)(ceilf(dlogq * m))){
+			for (unsigned int m = 1; m < max_bin_width; m += dnbins(m, dlogq)){
 				for (s = m0; s < m; s++){
 					thread_yw += block_bins[2 * ((n + s) % nbf)];
 					thread_w += block_bins[2 * ((n + s) % nbf) + 1];
@@ -384,7 +388,7 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 
 		best_bls[threadIdx.x] = thread_max_bls;
 
-		// finish threadmax
+		// wait for everyone to finish
 		__syncthreads();
 
 		// get max bls for this BLOCK

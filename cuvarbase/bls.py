@@ -24,6 +24,7 @@ import numpy as np
 _default_block_size = 256
 _all_function_names = ['full_bls_no_sol_fast',
                        'full_bls_no_sol_fast_sma',
+                       'full_bls_no_sol_fast_sma_linbins',
                        'bin_and_phase_fold_custom',
                        'reduction_max',
                        'store_best_sols',
@@ -404,14 +405,12 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                        **kwargs)
     float_size = 4
     block_size = kwargs.get('block_size', _default_block_size)
-    nblocks = int(max_shmem / ((2 * block_size + 1) * float_size))
 
     if batch_size is None:
         batch_size = len(freqs)
 
     nbatches = int(np.ceil(len(freqs) / batch_size))
     block = (block_size, 1, 1)
-    grid = (nblocks, 1)
     i_freq = 0
 
     while(i_freq < len(freqs)):
@@ -419,7 +418,11 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         nfreqs = j_freq - i_freq
 
         max_nbins = max(memory.nbinsf[i_freq:j_freq])
-        mem_req = (block_size + 2 * max_nbins) * 4
+
+        mem_req = (block_size + 2 * max_nbins) * float_size
+        nblocks = int(max_shmem / (mem_req + 4 * float_size))
+
+        grid = (nblocks, 1)
         args = (grid, block, stream)
         args += (memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr)
         args += (memory.bls_g.ptr, memory.freqs_g.ptr)
