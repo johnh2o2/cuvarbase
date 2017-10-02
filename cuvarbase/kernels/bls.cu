@@ -182,7 +182,11 @@ __global__ void full_bls_no_sol(
 	float *best_bls = (float *)&sh[2 * hist_size];
 
 	__shared__ float f0;
-	__shared__ int nb0, nbf, max_bin_width, tot_nbins;
+	__shared__ int nb0, nbf, max_bin_width;
+
+#ifdef USE_LOG_BIN_SPACING
+	__shared__ int tot_nbins;
+#endif
 
 	unsigned int s;
 	int b;
@@ -203,8 +207,10 @@ __global__ void full_bls_no_sol(
 			nbf = nbinsf[i_freq + freq_offset];
 
 			max_bin_width = divrndup(nbf, nb0);
-			tot_nbins = count_tot_nbins(nb0, nbf, dlogq);
 
+#ifdef USE_LOG_BIN_SPACING
+			tot_nbins = count_tot_nbins(nb0, nbf, dlogq);
+#endif
 		}
 
 		// wait for broadcasting to finish
@@ -232,28 +238,9 @@ __global__ void full_bls_no_sol(
 
 		// wait for everyone to finish adding data to the histogram
 		__syncthreads();
-		/*
+		
 		// get max bls for this THREAD
-		for (unsigned int n = threadIdx.x; n < nbf; n += blockDim.x){
-			
-			thread_yw = 0.f;
-			thread_w = 0.f;
-			unsigned int m0 = 0;
-
-			for (unsigned int m = 1; m < max_bin_width; m += dnbins(m, dlogq)){
-				for (s = m0; s < m; s++){
-					thread_yw += block_bins[2 * ((n + s) % nbf)];
-					thread_w += block_bins[2 * ((n + s) % nbf) + 1];
-				}
-				m0 = m;
-
-				bls1 = bls_value(thread_yw, thread_w);
-				if (bls1 > thread_max_bls)
-					thread_max_bls = bls1;
-			}
-		}*/
-
-		// get max bls for this THREAD
+#ifdef USE_LOG_BIN_SPACING
 		for (unsigned int n = threadIdx.x; n < tot_nbins; n += blockDim.x){
 
 			unsigned int bin_offset = 0;
@@ -279,6 +266,27 @@ __global__ void full_bls_no_sol(
 			if (bls1 > thread_max_bls)
 				thread_max_bls = bls1;
 		}
+
+#else
+		for (unsigned int n = threadIdx.x; n < nbf; n += blockDim.x){
+			
+			thread_yw = 0.f;
+			thread_w = 0.f;
+			unsigned int m0 = 0;
+
+			for (unsigned int m = 1; m < max_bin_width; m += dnbins(m, dlogq)){
+				for (s = m0; s < m; s++){
+					thread_yw += block_bins[2 * ((n + s) % nbf)];
+					thread_w += block_bins[2 * ((n + s) % nbf) + 1];
+				}
+				m0 = m;
+
+				bls1 = bls_value(thread_yw, thread_w);
+				if (bls1 > thread_max_bls)
+					thread_max_bls = bls1;
+			}
+		}
+#endif
 
 		best_bls[threadIdx.x] = thread_max_bls;
 
