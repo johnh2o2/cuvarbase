@@ -41,6 +41,10 @@ _function_signatures = {
                                  np.intp, np.intp, np.intp,
                                  np.intp, np.int32, np.int32,
                                  np.int32, np.int32, np.float32],
+    'full_bls_no_sol_fast_sma_linbins': [np.intp, np.intp, np.intp,
+                                         np.intp, np.intp, np.intp,
+                                         np.intp, np.int32, np.int32,
+                                         np.int32, np.int32, np.float32],
     'bin_and_phase_fold_custom': [np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.int32,
@@ -186,6 +190,7 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
 def compile_bls(block_size=_default_block_size,
                 function_names=_all_function_names,
                 prepare=True,
+                hist_size=4000,
                 **kwargs):
     """
     Compile BLS kernel
@@ -207,7 +212,7 @@ def compile_bls(block_size=_default_block_size,
 
     """
     # Read kernel
-    cppd = dict(BLOCK_SIZE=block_size)
+    cppd = dict(BLOCK_SIZE=block_size, BLOCK_HIST_SIZE=hist_size)
     kernel_txt = _module_reader(find_kernel('bls'),
                                 cpp_defs=cppd)
 
@@ -373,12 +378,14 @@ class BLSMemory(object):
 
 def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    functions=None, stream=None, dlogq=0.3,
-                   memory=None, use_sma=False, noverlap=2,
+                   memory=None, use_sma=False, use_linbins=True, noverlap=2,
                    max_shmem=int(4.8e4), batch_size=None, **kwargs):
 
     fname = 'full_bls_no_sol_fast'
     if use_sma:
         fname = '{fname}_sma'.format(fname=fname)
+    elif use_linbins:
+        fname = 'full_bls_no_sol_fast_sma_linbins'
 
     if functions is None:
         functions = compile_bls(function_names=[fname], **kwargs)
@@ -405,18 +412,32 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     nbatches = int(np.ceil(len(freqs) / batch_size))
     block = (block_size, 1, 1)
     grid = (nblocks, 1)
-    for i in range(nbatches):
+    i_freq = 0
 
+    while(i_freq < len(freqs)):
+        j_freq = min([i_freq + batch_size, len(freqs)])
+        nfreqs = j_freq - i_freq
+
+        max_nbins = max(memory.nbinsf[i_freq:j_freq])
+        mem_req = (block_size + 2 * max_nbins) * 4
         args = (grid, block, stream)
         args += (memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr)
         args += (memory.bls_g.ptr, memory.freqs_g.ptr)
         args += (memory.nbins0_g.ptr, memory.nbinsf_g.ptr)
-        args += (np.uint32(len(t)), np.uint32(batch_size),
-                 np.uint32(i * batch_size))
-        args += (np.uint32(noverlap), np.float32(dlogq))
-        #print(args)
-        func.prepared_async_call(*args)
+        args += (np.uint32(len(t)), np.uint32(nfreqs),
+                 np.uint32(i_freq))
 
+        if use_linbins:
+            args += (np.uint32(max_nbins), )
+        else:
+            args += (np.uint32(noverlap), )
+
+        args += (np.float32(dlogq), )
+
+        #print(args)
+        func.prepared_async_call(*args, shared_size=mem_req)
+
+        i_freq = j_freq
     memory.transfer_data_to_cpu()
 
     #print(memory.bls_g.get() / memory.yy, memory.yy)

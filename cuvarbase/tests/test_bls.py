@@ -400,5 +400,5 @@ class TestBLS(object):
     def test_fast_eebls_no_sma(self, **kwargs):
         self.fast_eebls(use_sma=False, **kwargs)
 
-    def test_fast_eebls_with_sma(self, **kwargs):
-        self.fast_eebls(use_sma=True, **kwargs)
+    #def test_fast_eebls_with_sma(self, **kwargs):
+    #    self.fast_eebls(use_sma=True, **kwargs)
