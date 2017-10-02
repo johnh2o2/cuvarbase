@@ -385,7 +385,9 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     while (i_freq < memory.nf):
         j_freq = min([i_freq + batch_size, memory.nf])
 
-        grid = (int(np.ceil((j_freq - i_freq) / float(block_size))), 1)
+        grid = (int(np.floor(float(max_shmem) / shmem)), 1)
+
+        assert(grid[0] > 0)
 
         args = (grid, block, None)
         args += (memory.t_g.ptr, memory.y_g.ptr)

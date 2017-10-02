@@ -129,8 +129,8 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 	// each block works on a single frequency.
 	unsigned int i_freq = blockIdx.x;
 
-	unsigned int i, m0, n0, N, Nphi;
-	int m, n;
+	unsigned int i, N, Nphi;
+	int m, n, m0, n0;
 
 	FLT dm0 = (((FLT) mag_overlap) + 1.f) / nmag;
 	while (i_freq < nfreq){
@@ -153,10 +153,10 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 		// make 2d histogram
 		for(i = threadIdx.x; i < ndata; i += blockDim.x){
 			m0 = y[i];
-			n0 = (unsigned int) floor(nphase * mod1(t[i] * f0));
+			n0 = (int) floor(nphase * mod1(t[i] * f0));
 
-			for (n = n0; n >= n0 - phase_overlap; n--){
-				for (m = m0; m >= 0 && m >= m0 - mag_overlap; m--)
+			for (n = n0; n >= n0 - ((int) phase_overlap); n--){
+				for (m = m0; m >= 0 && m >= m0 - ((int) mag_overlap); m--)
 					atomicInc(&(block_bin[posmod(n, nphase) * nmag + m]), 
 					      (phase_overlap + 1) * (mag_overlap + 1) * ndata);
 				
@@ -166,22 +166,18 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 		__syncthreads();
 
 		// Get the total number of data points across phi bins
-		for(n=threadIdx.x; n < nmag * nphase; n+=blockDim.x){
-			n0 = n % nphase;
-			m0 = n / nmag;
-
-			atomicAdd(&(block_bin_phi[n0]), block_bin[n0 * nmag + m0]);
-		}
+		for(n=threadIdx.x; n < nmag * nphase; n+=blockDim.x)
+			atomicAdd(&(block_bin_phi[n / nmag]), block_bin[n]);
 
 		__syncthreads();
 
 		// Convert to dH
 		for(n=threadIdx.x; n < nmag * nphase; n+=blockDim.x){
-			n0 = n % nphase;
-			m0 = n / nmag;
+			m0 = n % nmag;
+			n0 = n / nmag;
 
 			// adjust mag bin width for overlapping mag bins (phase bins are periodic)
-			FLT dm = (m0 + mag_overlap > nmag) ? (((int) nmag) - ((int) m0)) * dm0 / mag_overlap : dm0;
+			FLT dm = (m0 + mag_overlap > nmag) ? (((int) nmag) -  m0) * dm0 / mag_overlap : dm0;
 
 			N = block_bin[n0 * nmag + m0];
 			Nphi = block_bin_phi[n0];
@@ -195,16 +191,15 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 		for(n=(nmag * nphase) / 2; n > 0; n/=2){
 			for (m = threadIdx.x; m < n; m += blockDim.x)
 				Hc[m] += Hc[m + n];
+			__syncthreads();
 		}
 
 		// add up total bin counts
 		for(n = nphase / 2; n > 0; n/=2){
 			for (m = threadIdx.x; m < n; m += blockDim.x)
 				block_bin_phi[m] += block_bin_phi[m + n];
+			__syncthreads();
 		}
-
-		__syncthreads();
-
 
 		// write result to global memory
 		if (threadIdx.x == 0)
