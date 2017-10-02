@@ -188,6 +188,9 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 			N = block_bin[n];
 			Nphi = block_bin_phi[n0];
 
+			if (Nphi == 0 || N == 0)
+				continue;
+
 			Hc[n] = N * log((dm * Nphi) / N);
 		}
 
