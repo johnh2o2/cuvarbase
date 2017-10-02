@@ -146,6 +146,7 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 				block_bin_phi[i] = 0;
 			
 			block_bin[i] = 0;
+			Hc[i] = 0.f;
 		}
 
 		__syncthreads();
@@ -164,6 +165,11 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 		}	
 
 		__syncthreads();
+		/*
+		if (threadIdx.x == 0){
+			for (int i = 0; i < nphase * nmag; i++)
+				printf("block_bin[%d] = %d\n", i, block_bin[i]);
+		}*/
 
 		// Get the total number of data points across phi bins
 		for(n=threadIdx.x; n < nmag * nphase; n+=blockDim.x)
@@ -179,10 +185,10 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 			// adjust mag bin width for overlapping mag bins (phase bins are periodic)
 			FLT dm = (m0 + mag_overlap > nmag) ? (((int) nmag) -  m0) * dm0 / mag_overlap : dm0;
 
-			N = block_bin[n0 * nmag + m0];
+			N = block_bin[n];
 			Nphi = block_bin_phi[n0];
 
-			Hc[n0 * nmag + m0] = N * log((dm * Nphi) / N);
+			Hc[n] = N * log((dm * Nphi) / N);
 		}
 
 		__syncthreads();
