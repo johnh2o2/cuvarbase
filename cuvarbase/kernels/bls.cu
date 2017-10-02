@@ -157,8 +157,6 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 }
 
 
-
-
 __global__ void full_bls_no_sol(
 	                    const float* __restrict__ t, 
 	                    const float* __restrict__ yw, 

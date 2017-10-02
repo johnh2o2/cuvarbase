@@ -27,6 +27,9 @@ class ConditionalEntropyMemory(object):
     def __init__(self, **kwargs):
         self.phase_bins = kwargs.get('phase_bins', 10)
         self.mag_bins = kwargs.get('mag_bins', 5)
+        self.phase_overlap = kwargs.get('phase_overlap', 0)
+        self.mag_overlap = kwargs.get('mag_overlap', 0)
+
         self.max_phi = kwargs.get('max_phi', 3.)
         self.stream = kwargs.get('stream', None)
         self.weighted = kwargs.get('weighted', False)
@@ -300,7 +303,8 @@ def conditional_entropy(memory, functions, block_size=256,
                         **kwargs):
     block = (block_size, 1, 1)
     grid = (int(np.ceil((memory.n0 * memory.nf) / float(block_size))), 1)
-    ce_dpdm, hist_count, hist_weight, ce_logp, ce_std, ce_wt = functions
+    fast_ce, ce_dpdm, hist_count, hist_weight,\
+        ce_logp, ce_std, ce_wt = functions
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
@@ -341,6 +345,60 @@ def conditional_entropy(memory, functions, block_size=256,
         ce_logp.prepared_async_call(*args)
     else:
         ce_std.prepared_async_call(*args)
+
+    if transfer_to_host:
+        memory.transfer_ce_to_cpu()
+
+    return memory.ce_c
+
+
+def conditional_entropy_fast(memory, functions, block_size=256,
+                             transfer_to_host=True,
+                             transfer_to_device=True,
+                             batch_size=1,
+                             shmem_lim=int(4.8e4),
+                             **kwargs):
+    fast_ce, ce_dpdm, hist_count, hist_weight,\
+        ce_logp, ce_std, ce_wt = functions
+
+    if transfer_to_device:
+        memory.transfer_data_to_gpu()
+
+    i_freq = 0
+    if batch_size is None:
+        batch_size = int(memory.nf)
+
+    block = (block_size, 1, 1)
+    grid = (int(np.ceil(batch_size / float(block_size))), 1)
+
+    r = memory.real_type(1).nbytes
+    u = np.uint32(1).nbytes
+    shmem = (r + u) * memory.phase_bins * memory.mag_bins
+    shmem += u * memory.phase_bins
+    data_mem = (r + u) * len(memory.t)
+
+    #if shmem + data_mem < shmem_lim:
+    #    max_ndata = ((shmem_lim - shmem) / (r + u))
+    #    print("CAN USE SHARED MEMORY FOR"
+    #          " DATA READING! (up to %d points)" % max_ndata)
+
+    while (i_freq < memory.nf):
+        j_freq = min([i_freq + batch_size, memory.nf])
+
+        args = (grid, block, None)
+        args += (memory.t_g.ptr, memory.y_g.ptr)
+        args += (memory.freqs_g.ptr, memory.ce_g.ptr)
+        args += (np.uint32(j_freq - i_freq), np.uint32(i_freq),
+                 np.uint32(memory.n0))
+        args += (np.uint32(memory.phase_bins), np.uint32(memory.mag_bins))
+        args += (np.uint32(memory.phase_overlap),
+                 np.uint32(memory.mag_overlap))
+
+        print(args)
+
+        fast_ce.prepared_async_call(*args, shared_size=shmem)
+
+        i_freq += j_freq - i_freq
 
     if transfer_to_host:
         memory.transfer_ce_to_cpu()
@@ -410,6 +468,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         if self.use_double:
             self.real_type = np.float64
 
+        self.call_func = conditional_entropy
+        if kwargs.get('use_fast', False):
+            self.call_func = conditional_entropy_fast
+
         self.memory = kwargs.get('memory', None)
 
     def _compile_and_prepare_functions(self, **kwargs):
@@ -438,7 +500,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                                   np.uint32, np.uint32],
             log_prob=[np.intp, np.uint32, np.intp, np.intp],
             standard_ce=[np.intp, np.uint32, np.intp],
-            weighted_ce=[np.intp, np.uint32, np.intp]
+            weighted_ce=[np.intp, np.uint32, np.intp],
+            ce_classical_fast=[np.intp, np.intp, np.intp,
+                               np.intp, np.uint32,
+                               np.uint32, np.uint32, np.uint32,
+                               np.uint32, np.uint32, np.uint32]
         )
         for fname, dtype in self.dtypes.items():
             func = self.module.get_function(fname)
@@ -480,6 +546,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         kw = dict(phase_bins=self.phase_bins,
                   mag_bins=self.mag_bins,
+                  mag_overlap=self.mag_overlap,
+                  phase_overlap=self.phase_overlap,
                   max_phi=self.max_phi,
                   stream=stream,
                   weighted=self.weighted,
@@ -566,6 +634,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         """
         kw = dict(phase_bins=self.phase_bins,
                   mag_bins=self.mag_bins,
+                  mag_overlap=self.mag_overlap,
+                  phase_overlap=self.phase_overlap,
                   max_phi=self.max_phi,
                   weighted=self.weighted,
                   use_double=self.use_double,
@@ -648,7 +718,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         kw = dict(block_size=self.block_size)
         kw.update(kwargs)
-        results = [conditional_entropy(memory[i], self.function_tuple, **kw)
+        results = [self.call_func(memory[i], self.function_tuple, **kw)
                    for i in range(len(data))]
 
         results = [(f, r) for f, r in zip(frqs, results)]
@@ -767,7 +837,14 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         # set up memory containers for gpu and cpu (pinned) memory
         kwargs_mem = dict(buffered_transfer=True,
-                          n0_buffer=max_ndata)
+                          n0_buffer=max_ndata,
+                          mag_overlap=self.mag_overlap,
+                          phase_overlap=self.phase_overlap,
+                          phase_bins=self.phase_bins,
+                          mag_bins=self.mag_bins,
+                          weighted=self.weighted,
+                          max_phi=self.max_phi,
+                          use_double=self.use_double)
         kwargs_mem.update(kwargs)
         memory = [ConditionalEntropyMemory(stream=stream, **kwargs_mem)
                   for stream in streams]

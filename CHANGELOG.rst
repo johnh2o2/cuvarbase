@@ -1,6 +1,11 @@
 What's new in cuvarbase
 ***********************
 * **0.2.0**
+  * BLS
+  	* Now several orders of magnitude faster!
+  * CE
+    * Now several orders of magnitude faster!
+  * 
 * **0.1.9**
 
   * Added Sphinx documentation

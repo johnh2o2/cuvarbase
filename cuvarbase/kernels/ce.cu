@@ -40,6 +40,10 @@ __device__ int posmod(int n, int N){
 	return (nmodN < 0) ? nmodN + N : nmodN;
 }
 
+__device__ FLT mod1(FLT x){
+	return x - floor(x);
+}
+
 __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, 
 	                                    FLT *bin, FLT *freqs,
 	                                    unsigned int nfreq, unsigned int ndata, 
@@ -96,6 +100,120 @@ __global__ void histogram_data_count(FLT *t, unsigned int *y,
 		}	
 	}
 }
+
+
+__global__ void ce_classical_fast(const FLT * __restrict__ t, 
+	                              const unsigned int * __restrict__ y,
+	                              const FLT * __restrict__ freqs, 
+	                              FLT * __restrict__ ce, 
+	                              unsigned int nfreq,
+	                              unsigned int freq_offset,
+	                              unsigned int ndata,
+	                              unsigned int nphase,
+	                              unsigned int nmag,
+	                              unsigned int phase_overlap,
+	                              unsigned int mag_overlap){
+
+	extern __shared__ unsigned int sh[];
+
+	// (unsigned int + FLT) * nmag * nphase + nphase * (unsigned int) 
+	//__shared__ float *t_sh = sh;
+	//__shared__ unsigned int *y_sh = (unsigned int *)&t_sh[ndata];
+	//__shared__ unsigned int *bin = (unsigned int *)&y_sh[ndata];
+
+	unsigned int * block_bin = (unsigned int *)sh;
+	unsigned int * block_bin_phi = (unsigned int *)&block_bin[nmag * nphase];
+	FLT * Hc = (FLT *)&block_bin_phi[nphase];
+	__shared__ FLT f0;
+
+	// each block works on a single frequency.
+	unsigned int i_freq = blockIdx.x;
+
+	unsigned int i, m0, n0, N, Nphi;
+	int m, n;
+
+	FLT dm0 = (((FLT) mag_overlap) + 1.f) / nmag;
+	while (i_freq < nfreq){
+
+		// read frequency from global data
+		if (threadIdx.x == 0){
+			f0 = freqs[i_freq + freq_offset];
+		}
+
+		// initialise blocks to zero
+		for(i = threadIdx.x; i < nmag * nphase; i += blockDim.x){
+			if (i < nphase)
+				block_bin_phi[i] = 0;
+			
+			block_bin[i] = 0;
+		}
+
+		__syncthreads();
+
+		// make 2d histogram
+		for(i = threadIdx.x; i < ndata; i += blockDim.x){
+			m0 = y[i];
+			n0 = (unsigned int) floor(nphase * mod1(t[i] * f0));
+
+			for (n = n0; n >= n0 - phase_overlap; n--){
+				for (m = m0; m >= 0 && m >= m0 - mag_overlap; m--)
+					atomicInc(&(block_bin[posmod(n, nphase) * nmag + m]), 
+					      (phase_overlap + 1) * (mag_overlap + 1) * ndata);
+				
+			}
+		}	
+
+		__syncthreads();
+
+		// Get the total number of data points across phi bins
+		for(n=threadIdx.x; n < nmag * nphase; n+=blockDim.x){
+			n0 = n % nphase;
+			m0 = n / nmag;
+
+			atomicAdd(&(block_bin_phi[n0]), block_bin[n0 * nmag + m0]);
+		}
+
+		__syncthreads();
+
+		// Convert to dH
+		for(n=threadIdx.x; n < nmag * nphase; n+=blockDim.x){
+			n0 = n % nphase;
+			m0 = n / nmag;
+
+			// adjust mag bin width for overlapping mag bins (phase bins are periodic)
+			FLT dm = (m0 + mag_overlap > nmag) ? (((int) nmag) - ((int) m0)) * dm0 / mag_overlap : dm0;
+
+			N = block_bin[n0 * nmag + m0];
+			Nphi = block_bin_phi[n0];
+
+			Hc[n0 * nmag + m0] = N * log((dm * Nphi) / N);
+		}
+
+		__syncthreads();
+
+		//add up contributions
+		for(n=(nmag * nphase) / 2; n > 0; n/=2){
+			for (m = threadIdx.x; m < n; m += blockDim.x)
+				Hc[m] += Hc[m + n];
+		}
+
+		// add up total bin counts
+		for(n = nphase / 2; n > 0; n/=2){
+			for (m = threadIdx.x; m < n; m += blockDim.x)
+				block_bin_phi[m] += block_bin_phi[m + n];
+		}
+
+		__syncthreads();
+
+
+		// write result to global memory
+		if (threadIdx.x == 0)
+			ce[i_freq + freq_offset] = Hc[0] / block_bin_phi[0];
+		
+		i_freq += gridDim.x;
+	}
+}
+
 
 
 __global__ void weighted_ce(FLT *bins, unsigned int nfreq, FLT *ce){

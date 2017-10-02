@@ -278,3 +278,39 @@ class TestCE(object):
             assert(not any(np.isnan(p)))
             assert(not any(np.isnan(p1)))
             assert_allclose(p, p1, rtol=1e-3)
+
+    def test_fast(self, make_plot=True,
+                  use_double=True, **kwargs):
+        proc = ConditionalEntropyAsyncProcess(use_double=use_double,
+                                              use_fast=True, **kwargs)
+        freq = 10.
+        for t0 in [-1e4, 1e4]:
+            t, y, err = data(seed=100, sigma=0.01, ndata=200, freq=freq)
+
+            df = 0.001
+            max_freq = 100.
+            min_freq = df
+            nf = int((max_freq - min_freq) / df)
+            freqs = min_freq + df * np.arange(nf)
+            results = proc.run([(t, y, err)], freqs=freqs)
+            proc.finish()
+            frq, p = results[0]
+
+            results1 = proc.run([(t + t0, y, err)], freqs=freqs)
+            frq1, p1 = results1[0]
+
+            best_freq = frq[np.argmin(p)]
+
+            if make_plot:
+                import matplotlib.pyplot as plt
+                f, ax = plt.subplots()
+                ax.plot(frq, p)
+                ax.plot(frq1, p1)
+                ax.axvline(freq, ls='-', color='k')
+                ax.axvline(best_freq, ls=':', color='r')
+                plt.show()
+
+            # print best_freq, freq, abs(best_freq - freq) / freq
+            assert(not any(np.isnan(p)))
+            assert(not any(np.isnan(p1)))
+            assert_allclose(p, p1, rtol=1e-3)
