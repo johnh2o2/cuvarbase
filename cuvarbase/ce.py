@@ -303,7 +303,7 @@ def conditional_entropy(memory, functions, block_size=256,
                         **kwargs):
     block = (block_size, 1, 1)
     grid = (int(np.ceil((memory.n0 * memory.nf) / float(block_size))), 1)
-    fast_ce, ce_dpdm, hist_count, hist_weight,\
+    fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight,\
         ce_logp, ce_std, ce_wt = functions
 
     if transfer_to_device:
@@ -356,6 +356,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
                              transfer_to_host=True,
                              transfer_to_device=True,
                              batch_size=None,
+                             load_data_into_shared_memory=True,
                              shmem_lim=int(4.8e4),
                              **kwargs):
     fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight,\
@@ -378,7 +379,9 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     data_mem = (r + u) * len(memory.t)
 
     func = fast_ce
-    data_in_shared_mem = shmem + data_mem < shmem_lim
+    data_in_shared_mem = False
+    if load_data_into_shared_memory:
+        data_in_shared_mem = shmem + data_mem < shmem_lim
 
     if data_in_shared_mem:
         shmem += data_mem
@@ -392,7 +395,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     while (i_freq < memory.nf):
         j_freq = min([i_freq + batch_size, memory.nf])
 
-        grid = (int(np.floor(float(shmem_lim) / shmem)), 1)
+        grid = (int(np.floor(float(j_freq - i_freq) / block_size)), 1)
 
         assert(grid[0] > 0)
 
@@ -405,7 +408,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         args += (np.uint32(memory.phase_overlap),
                  np.uint32(memory.mag_overlap))
 
-        print(args)
+        #print(args)
 
         func.prepared_async_call(*args, shared_size=shmem)
 
