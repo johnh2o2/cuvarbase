@@ -355,7 +355,7 @@ def conditional_entropy(memory, functions, block_size=256,
 def conditional_entropy_fast(memory, functions, block_size=256,
                              transfer_to_host=True,
                              transfer_to_device=True,
-                             batch_size=1,
+                             batch_size=None,
                              shmem_lim=int(4.8e4),
                              **kwargs):
     fast_ce, ce_dpdm, hist_count, hist_weight,\
@@ -384,6 +384,8 @@ def conditional_entropy_fast(memory, functions, block_size=256,
 
     while (i_freq < memory.nf):
         j_freq = min([i_freq + batch_size, memory.nf])
+
+        grid = (int(np.ceil((j_freq - i_freq) / float(block_size))), 1)
 
         args = (grid, block, None)
         args += (memory.t_g.ptr, memory.y_g.ptr)
