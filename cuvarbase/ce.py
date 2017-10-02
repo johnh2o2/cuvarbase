@@ -358,7 +358,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
                              batch_size=None,
                              shmem_lim=int(4.8e4),
                              **kwargs):
-    fast_ce, ce_dpdm, hist_count, hist_weight,\
+    fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight,\
         ce_logp, ce_std, ce_wt = functions
 
     if transfer_to_device:
@@ -376,6 +376,13 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     shmem = (r + u) * memory.phase_bins * memory.mag_bins
     shmem += u * memory.phase_bins
     data_mem = (r + u) * len(memory.t)
+
+    func = fast_ce
+    data_in_shared_mem = shmem + data_mem < shmem_lim
+
+    if data_in_shared_mem:
+        shmem += data_mem
+        func = faster_ce
 
     #if shmem + data_mem < shmem_lim:
     #    max_ndata = ((shmem_lim - shmem) / (r + u))
@@ -400,7 +407,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
 
         print(args)
 
-        fast_ce.prepared_async_call(*args, shared_size=shmem)
+        func.prepared_async_call(*args, shared_size=shmem)
 
         i_freq += j_freq - i_freq
 
@@ -508,7 +515,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             ce_classical_fast=[np.intp, np.intp, np.intp,
                                np.intp, np.uint32,
                                np.uint32, np.uint32, np.uint32,
-                               np.uint32, np.uint32, np.uint32]
+                               np.uint32, np.uint32, np.uint32],
+            ce_classical_faster=[np.intp, np.intp, np.intp,
+                                 np.intp, np.uint32,
+                                 np.uint32, np.uint32, np.uint32,
+                                 np.uint32, np.uint32, np.uint32]
         )
         for fname, dtype in self.dtypes.items():
             func = self.module.get_function(fname)
