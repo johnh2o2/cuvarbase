@@ -280,7 +280,12 @@ __global__ void full_bls_no_sol_fast(
 }
 
 __device__ unsigned int dnbins(unsigned int nbins, float dlogq){
+
+	if (dlogq < 0)
+		return 1;
+
 	unsigned int n = (unsigned int) floorf(dlogq * nbins);
+
 	return (n == 0) ? 1 : n;
 }
 

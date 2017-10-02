@@ -383,10 +383,15 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    max_shmem=int(4.8e4), batch_size=None, **kwargs):
 
     fname = 'full_bls_no_sol_fast'
+    qmfac = 1
     if use_sma:
         fname = '{fname}_sma'.format(fname=fname)
     elif use_linbins:
         fname = 'full_bls_no_sol_fast_sma_linbins'
+
+        # fudge factor to make sure there are enough overlaps
+        # for the smallest bins
+        qmfac = 1./noverlap
 
     if functions is None:
         functions = compile_bls(function_names=[fname], **kwargs)
@@ -394,12 +399,12 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     func = functions[fname]
 
     if memory is None:
-        memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
+        memory = BLSMemory.fromdata(t, y, dy, qmin=qmfac * qmin, qmax=qmax,
                                     freqs=freqs, stream=stream,
                                     transfer=True,
                                     **kwargs)
     else:
-        memory.setdata(t, y, dy, qmin=qmin, qmax=qmax,
+        memory.setdata(t, y, dy, qmin=qmfac * qmin, qmax=qmax,
                        freqs=freqs, stream=stream,
                        transfer=True,
                        **kwargs)
