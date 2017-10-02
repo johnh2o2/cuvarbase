@@ -22,9 +22,7 @@ import resource
 import numpy as np
 
 _default_block_size = 256
-_all_function_names = ['full_bls_no_sol_fast',
-                       'full_bls_no_sol_fast_sma',
-                       'full_bls_no_sol_fast_sma_linbins',
+_all_function_names = ['full_bls_no_sol',
                        'bin_and_phase_fold_custom',
                        'reduction_max',
                        'store_best_sols',
@@ -34,19 +32,11 @@ _all_function_names = ['full_bls_no_sol_fast',
 
 
 _function_signatures = {
-    'full_bls_no_sol_fast': [np.intp, np.intp, np.intp,
-                             np.intp, np.intp, np.intp,
-                             np.intp, np.int32, np.int32,
-                             np.int32, np.int32, np.float32],
-    'full_bls_no_sol_fast_sma': [np.intp, np.intp, np.intp,
-                                 np.intp, np.intp, np.intp,
-                                 np.intp, np.int32, np.int32,
-                                 np.int32, np.int32, np.float32],
-    'full_bls_no_sol_fast_sma_linbins': [np.intp, np.intp, np.intp,
-                                         np.intp, np.intp, np.intp,
-                                         np.intp, np.int32, np.int32,
-                                         np.int32, np.int32, np.float32,
-                                         np.float32],
+    'full_bls_no_sol': [np.intp, np.intp, np.intp,
+                        np.intp, np.intp, np.intp,
+                        np.intp, np.uint32, np.uint32,
+                        np.uint32, np.uint32, np.uint32,
+                        np.float32],
     'bin_and_phase_fold_custom': [np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.int32,
@@ -192,7 +182,6 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
 def compile_bls(block_size=_default_block_size,
                 function_names=_all_function_names,
                 prepare=True,
-                hist_size=4000,
                 **kwargs):
     """
     Compile BLS kernel
@@ -214,7 +203,7 @@ def compile_bls(block_size=_default_block_size,
 
     """
     # Read kernel
-    cppd = dict(BLOCK_SIZE=block_size, BLOCK_HIST_SIZE=hist_size)
+    cppd = dict(BLOCK_SIZE=block_size)
     kernel_txt = _module_reader(find_kernel('bls'),
                                 cpp_defs=cppd)
 
@@ -380,14 +369,10 @@ class BLSMemory(object):
 
 def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    functions=None, stream=None, dlogq=0.3,
-                   memory=None, use_sma=False, use_linbins=True, noverlap=2,
-                   dphi=0.0, max_shmem=int(4.8e4), batch_size=None, **kwargs):
+                   memory=None, noverlap=2,
+                   max_shmem=int(4.8e4), batch_size=None, **kwargs):
 
-    fname = 'full_bls_no_sol_fast'
-    if use_sma:
-        fname = '{fname}_sma'.format(fname=fname)
-    elif use_linbins:
-        fname = 'full_bls_no_sol_fast_sma_linbins'
+    fname = 'full_bls_no_sol'
 
     if functions is None:
         functions = compile_bls(function_names=[fname], **kwargs)
@@ -430,22 +415,12 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args += (memory.nbins0_g.ptr, memory.nbinsf_g.ptr)
         args += (np.uint32(len(t)), np.uint32(nfreqs),
                  np.uint32(i_freq))
+        args += (np.uint32(max_nbins), np.uint32(noverlap), np.float32(dlogq))
 
-        if use_linbins:
-            args += (np.uint32(max_nbins), np.float32(dphi))
-        else:
-            args += (np.uint32(noverlap), )
-
-        args += (np.float32(dlogq), )
-
-        #print(args)
         func.prepared_async_call(*args, shared_size=mem_req)
 
         i_freq = j_freq
     memory.transfer_data_to_cpu()
-
-    #print(memory.bls_g.get() / memory.yy, memory.yy)
-
     return memory.bls
 
 

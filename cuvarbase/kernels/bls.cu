@@ -30,6 +30,34 @@ __global__ void binned_bls_bst(float *yw, float *w, float *bls, int n){
 }
 
 
+__device__ unsigned int dnbins(unsigned int nbins, float dlogq){
+
+	if (dlogq < 0)
+		return 1;
+
+	unsigned int n = (unsigned int) floorf(dlogq * nbins);
+
+	return (n == 0) ? 1 : n;
+}
+
+__device__ unsigned int nbins_iter(unsigned int i, unsigned int nb0, float dlogq){
+	unsigned int nb = nb0;
+	for(int j = 0; j < i; j++)
+		nb += dnbins(nb, dlogq);
+
+	return nb;
+}
+
+__device__ unsigned int count_tot_nbins(unsigned int nbins0, unsigned int nbinsf, float dlogq){
+	unsigned int ntot = 0;
+
+	for(int i = 0; nbins_iter(i, nbins0, dlogq) <= nbinsf; i++)
+		ntot += nbins_iter(i, nbins0, dlogq);
+	return ntot;
+}
+
+
+
 __global__ void store_best_sols_custom(int *argmaxes, float *best_phi, 
 	                            float *best_q, float *q_values,
 	                            float *phi_values, int nq, int nphi,
@@ -50,21 +78,6 @@ __device__ int divrndup(int a, int b){
 	return (a % b > 0) ? a/b + 1 : a/b;
 }
 
-__device__ int nbins_iter(int i, int nb0, float dlogq){
-	int nb = nb0;
-	for(int j = 0; j < i; j++)
-		nb += (int) ceilf(dlogq * nb);
-
-	return nb;
-}
-
-__device__ int count_tot_nbins(int nbins0, int nbinsf, float dlogq){
-	int ntot = 0;
-
-	for(int i = 0; nbins_iter(i, nbins0, dlogq) <= nbinsf; i++)
-		ntot += nbins_iter(i, nbins0, dlogq);
-	return ntot;
-}
 
 
 
@@ -143,164 +156,10 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 	}
 }
 
-// needs as many threads as we can get. Each block works on a single frequency
-// and then moves on to another frequency
-//
-// NO ATOMICS! The best solution is not kept to save memory. Requires multiple
-// passes through the data at each frequency, which may slow things down considerably.
-// 
-// npasses: (nbins_tot * noverlap) / BLOCK_SIZE ~ 1e5 * 2 / 256 = 781
-// bigger block sizes are BETTER!
-//
-// limited by shared memory = (2 * block_size + 1) * sizeof(float), means
-// a maximum of MAX_SHARED_MEMORY * block_size / ((2 * block_size + 1) * sizeof(float))
-// ~ (48KB / 4 B) * (1 / (2 + 1/block_size)) ~ 48 / 8 * 1000 = 6000 threads
-__global__ void full_bls_no_sol_fast(
-	                    float *t, float *yw, float *w,
-						float *bls, float *freqs,
-						unsigned int *nbins0, unsigned int *nbinsf, 
-						unsigned int ndata, unsigned int nfreq,
-						unsigned int freq_offset, unsigned int noverlap,
-						float dlogq){
-	
-	unsigned int i = get_id();
 
-	__shared__ float block_yw_bin[BLOCK_SIZE];
-	__shared__ float block_w_bin[BLOCK_SIZE];
-	__shared__ float block_max_bls;
 
-	unsigned int nb, nb0, nbf, nbins_tot, nrounds, i_bin, j_bin, 
-	             bin_offset, s;
-	int b;
-	float f0, bls1, bls2;
 
-	// this will be inefficient for block sizes >> number of bins per frequency
-	unsigned int i_freq = blockIdx.x;
-
-	float dphi = 1.f/noverlap;
-
-	while (i_freq < nfreq){
-		if (threadIdx.x == 0){
-
-			// initialize block max
-			block_max_bls = 0.f;
-
-			// read frequency from global memory
-			f0 = freqs[i_freq + freq_offset];
-
-			// read nbins from global memory
-			nb0 = nbins0[i_freq + freq_offset];
-			nbf = nbinsf[i_freq + freq_offset];
-
-		}
-
-		__syncthreads();
-
-		// read frequency from global memory
-		f0 = freqs[i_freq + freq_offset];
-
-		// read nbins from global memory
-		nb0 = nbins0[i_freq + freq_offset];
-		nbf = nbinsf[i_freq + freq_offset];
-
-		// total bins for this frequency
-		nbins_tot = count_tot_nbins(nb0, nbf, dlogq);
-
-		// number of bins per thread
-		nrounds = divrndup(nbins_tot * noverlap, BLOCK_SIZE);
-
-		for (unsigned int j = 0; j < nrounds; j++){
-			i_bin = j * blockDim.x + threadIdx.x;
-
-			// intialize bins to 0 (no synchronization necessary)
-			block_yw_bin[threadIdx.x] = 0.f;
-			block_w_bin[threadIdx.x] = 0.f;
-
-			// get our bearings
-			//  - nb: number of bins
-			//  - bin_offset: sum(nb, bin < this bin)
-			//  - s: overlap number
-			//  - j_bin: bin number
-			bin_offset = 0;
-			nb = nb0;
-			for (unsigned int i_iter = 0; (bin_offset + nb) * noverlap < i_bin; i_iter++){
-				bin_offset += nb;
-				nb = nbins_iter(i_iter + 1, nb0, dlogq);
-			}
-
-			s = (i_bin - bin_offset * noverlap) / nb;
-			j_bin = (i_bin - bin_offset * noverlap) % nb;
-
-			for (unsigned int k = 0; k < ndata; k++){
-
-				// get bin number for this datapoint
-				b = (int) floorf(nb * mod1(t[k] * f0) - s * dphi);
-				b += (b < 0) ? nb : 0;
-
-				// write to your bin
-				if (b == j_bin){
-					block_yw_bin[threadIdx.x] += yw[k];
-					block_w_bin[threadIdx.x] += w[k];
-				}
-			}
-
-			// convert to bls
-			block_yw_bin[threadIdx.x] = bls_value(block_yw_bin[threadIdx.x], 
-				                                  block_w_bin[threadIdx.x]);
-
-			// wait for everyone in this block to finish binning the data
-			__syncthreads();
-			
-			// find the max_bls value in this block
-			for(unsigned int k = (blockDim.x / 2); k > 0; k /= 2){
-				if(threadIdx.x < k){
-					bls1 = block_yw_bin[threadIdx.x];
-					bls2 = block_yw_bin[threadIdx.x + k];
-					
-					block_yw_bin[threadIdx.x] = (bls1 > bls2) ? bls1 : bls2;
-				}
-				__syncthreads();
-			}
-
-			// store block max if it's greater than the running max value
-			if (threadIdx.x == 0 && block_yw_bin[0] > block_max_bls)
-				block_max_bls = block_yw_bin[0];
-
-			// wait until we've finished storing the block_max
-			__syncthreads();
-
-		}
-		
-		// write max_bls for frequency to global memory!
-		if (threadIdx.x == 0)
-			bls[i_freq + freq_offset] = block_max_bls;
-		
-		i_freq += gridDim.x;
-	}
-}
-
-__device__ unsigned int dnbins(unsigned int nbins, float dlogq){
-
-	if (dlogq < 0)
-		return 1;
-
-	unsigned int n = (unsigned int) floorf(dlogq * nbins);
-
-	return (n == 0) ? 1 : n;
-}
-
-// needs as many threads as we can get. Each block works on a single frequency
-// and then moves on to another frequency
-//
-// Uses shared memory atomics to parallelize data reads
-// bigger block sizes are BETTER!
-//
-// limited by shared memory = (2 * block_size + 1) * sizeof(float), means
-// a maximum of MAX_SHARED_MEMORY * block_size / ((2 * block_size + 1) * sizeof(float))
-// ~ (48KB / 4B) * (1 / (2 + 1/block_size)) ~ 48 / 8 * 1000 = 6000 threads
-//
-// requires (block_size + 2 * hist_size) extra shared memory
-__global__ void full_bls_no_sol_fast_sma_linbins(
+__global__ void full_bls_no_sol(
 	                    const float* __restrict__ t, 
 	                    const float* __restrict__ yw, 
 	                    const float* __restrict__ w,
@@ -312,7 +171,7 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 						unsigned int nfreq,
 						unsigned int freq_offset,
 						unsigned int hist_size,
-						float dphi,
+						unsigned int noverlap,
 						float dlogq){
 	
 	unsigned int i = get_id();
@@ -323,7 +182,7 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 	float *best_bls = (float *)&sh[2 * hist_size];
 
 	__shared__ float f0;
-	__shared__ int nb0, nbf, max_bin_width;
+	__shared__ int nb0, nbf, max_bin_width, tot_nbins;
 
 	unsigned int s;
 	int b;
@@ -344,6 +203,8 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 			nbf = nbinsf[i_freq + freq_offset];
 
 			max_bin_width = divrndup(nbf, nb0);
+			tot_nbins = count_tot_nbins(nb0, nbf, dlogq);
+
 		}
 
 		// wait for broadcasting to finish
@@ -362,7 +223,7 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 		for (unsigned int k = threadIdx.x; k < ndata; k += blockDim.x){
 			phi = mod1(t[k] * f0);
 
-			b = mod((int) floorf(nbf * phi - dphi), nbf);
+			b = mod((int) floorf(nbf * phi), nbf);
 
 			// shared memory atomics should (hopefully) be faster.
 			atomicAdd(&(block_bins[2 * b]), yw[k]);
@@ -371,7 +232,7 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 
 		// wait for everyone to finish adding data to the histogram
 		__syncthreads();
-
+		/*
 		// get max bls for this THREAD
 		for (unsigned int n = threadIdx.x; n < nbf; n += blockDim.x){
 			
@@ -390,6 +251,33 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 				if (bls1 > thread_max_bls)
 					thread_max_bls = bls1;
 			}
+		}*/
+
+		// get max bls for this THREAD
+		for (unsigned int n = threadIdx.x; n < tot_nbins; n += blockDim.x){
+
+			unsigned int bin_offset = 0;
+			unsigned int nb = nb0;
+			while ((bin_offset + nb) * noverlap < n){
+				bin_offset += nb;
+				nb += dnbins(nb, dlogq);
+			}
+			
+			b = (n - bin_offset * noverlap) % nb;
+			s = (n - bin_offset * noverlap) / nb;
+
+			thread_yw = 0.f;
+			thread_w = 0.f;
+			unsigned int m0 = 0;
+
+			for (unsigned int m = b; m < b + nb; m ++){
+				thread_yw += block_bins[2 * (m % nbf)];
+				thread_w += block_bins[2 * (m % nbf) + 1];
+			}
+
+			bls1 = bls_value(thread_yw, thread_w);
+			if (bls1 > thread_max_bls)
+				thread_max_bls = bls1;
 		}
 
 		best_bls[threadIdx.x] = thread_max_bls;
@@ -417,161 +305,6 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 	}
 }
 
-
-// needs as many threads as we can get. Each block works on a single frequency
-// and then moves on to another frequency
-//
-// Uses shared memory atomics to parallelize data reads
-// bigger block sizes are BETTER!
-//
-// limited by shared memory = (2 * block_size + 1) * sizeof(float), means
-// a maximum of MAX_SHARED_MEMORY * block_size / ((2 * block_size + 1) * sizeof(float))
-// ~ (48KB / 4B) * (1 / (2 + 1/block_size)) ~ 48 / 8 * 1000 = 6000 threads
-__global__ void full_bls_no_sol_fast_sma(
-	                    const float* __restrict__ t, 
-	                    const float* __restrict__ yw, 
-	                    const float* __restrict__ w,
-						float * __restrict__ bls, 
-						const float* __restrict__ freqs,
-						const unsigned int * __restrict__ nbins0, 
-						const unsigned int * __restrict__ nbinsf, 
-						unsigned int ndata, 
-						unsigned int nfreq,
-						unsigned int freq_offset, 
-						unsigned int noverlap, 
-						float dlogq){
-	
-	unsigned int i = get_id();
-
-	__shared__ float block_bins[2 * BLOCK_HIST_SIZE];
-	__shared__ float block_max_bls, f0;
-	__shared__ unsigned int nb0, nbf;
-
-	unsigned int nb, nbins_tot, nrounds, i_bin, 
-	             s, nbtot;
-	int b;
-	float phi, bls1, bls2;
-
-	// this will be inefficient for block sizes >> number of bins per frequency
-	unsigned int i_freq = blockIdx.x;
-	float dphi = 1.f/noverlap;
-	while (i_freq < nfreq){
-
-		
-		if (threadIdx.x == 0){
-			// make sure block_max_bls is stored as zero
-			block_max_bls = 0.f;
-
-			// read frequency from global memory
-			f0 = freqs[i_freq + freq_offset];
-
-			// read nbins from global memory
-			nb0 = nbins0[i_freq + freq_offset];
-			nbf = nbinsf[i_freq + freq_offset];
-		}
-
-		__syncthreads();
-
-		// total bins for this frequency
-		nbins_tot = count_tot_nbins(nb0, nbf, dlogq);
-
-		// number of bins per thread
-		nrounds = divrndup(nbins_tot * noverlap, BLOCK_HIST_SIZE);
-
-		for (unsigned int j = 0; j < nrounds; j++){
-			i_bin = j * BLOCK_HIST_SIZE;
-
-			int K = (BLOCK_HIST_SIZE > nbins_tot - i_bin) ? BLOCK_HIST_SIZE : nbins_tot - i_bin;
-
-			// intialize bins to 0 (synchronization is necessary here...)
-			for(unsigned int k = threadIdx.x; k < K; k += blockDim.x){
-				block_bins[2 * k] = 0.f;
-				block_bins[2 * k + 1] = 0.f;
-			}
-
-			// wait for initialization to finish
-			__syncthreads();
-
-			for (unsigned int k = threadIdx.x; k < ndata; k += blockDim.x){
-				phi = mod1(t[k] * f0);
-				
-				nbtot = 0;
-
-				// iterate through bins (logarithmically spaced)
-				for(unsigned int m = 0; nbins_iter(m, nb0, dlogq) <= nbf; m++){
-					nb = nbins_iter(m, nb0, dlogq);
-
-					// skip all bins below range
-					// max_bin_index = nbtot * noverlap + nb * noverlap - i_bin
-					if (nbtot * noverlap + nb * noverlap < i_bin)
-						continue;
-
-					// quit once we've reached the maximum number of bins in this round
-					// min_bin_index = nbtot * noverlap - i_bin
-					if (nbtot * noverlap > i_bin + BLOCK_HIST_SIZE)
-						break;
-
-					// iterate through offsets [ 0, 1./sigma, ..., 
-					//                           (sigma - 1) / sigma ]
-					for (s = 0; s < noverlap; s++){
-						// get the histogram index for this datapoint given
-						// overlap number and bin size
-						b = (int) floorf(nb * phi - s * dphi);
-						b = mod(b, nb) + s * nb + noverlap * nbtot;
-
-						if (b - i_bin < BLOCK_HIST_SIZE && b >= i_bin){
-							// shared memory atomics should (hopefully) be faster.
-							atomicAdd(&(block_bins[2 * (b - i_bin)]), yw[k]);
-							atomicAdd(&(block_bins[2 * (b - i_bin) + 1]), w[k]);
-						}
-					}
-					nbtot += nb;
-				}
-			}
-
-			// wait for everyone to finish adding data to the histogram
-			__syncthreads();
-
-			// convert to bls
-			for(unsigned int k = threadIdx.x; k < BLOCK_HIST_SIZE; k+=blockDim.x){
-				block_bins[2 * k] = bls_value(block_bins[2 * k], 
-				                              block_bins[2 * k + 1]);
-			}
-
-			// wait for everyone to convert binned data to BLS
-			__syncthreads();
-
-
-			// find the max_bls value in this block
-			for(unsigned int k = 0; k < divrndup(BLOCK_HIST_SIZE, blockDim.x); k++){
-				for(unsigned int m = (blockDim.x / 2); m > 0; m /= 2){
-					if(threadIdx.x < m){
-						bls1 = block_bins[2 * (threadIdx.x + k * blockDim.x)];
-						bls2 = block_bins[2 * (threadIdx.x + k * blockDim.x + m)];
-						
-						block_bins[2 * (threadIdx.x + k * blockDim.x)] = (bls1 > bls2) ? bls1 : bls2;
-					}
-					__syncthreads();
-				}
-			}
-
-			// store block max if it's greater than the running max value
-			if (threadIdx.x == 0 && block_bins[0] > block_max_bls)
-				block_max_bls = block_bins[0];
-
-			// wait until we've finished storing max BLS for the block
-			__syncthreads();
-
-		}
-		
-		// write (global) bls max for this frequency to global memory!
-		if (threadIdx.x == 0)
-			bls[i_freq + freq_offset] = block_max_bls;
-
-		// increment frequency
-		i_freq += gridDim.x;
-	}
-}
 
 // needs ndata * nfreq threads
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)
