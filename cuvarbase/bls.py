@@ -45,7 +45,8 @@ _function_signatures = {
     'full_bls_no_sol_fast_sma_linbins': [np.intp, np.intp, np.intp,
                                          np.intp, np.intp, np.intp,
                                          np.intp, np.int32, np.int32,
-                                         np.int32, np.int32, np.float32],
+                                         np.int32, np.int32, np.float32,
+                                         np.float32],
     'bin_and_phase_fold_custom': [np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.int32,
@@ -380,18 +381,13 @@ class BLSMemory(object):
 def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    functions=None, stream=None, dlogq=0.3,
                    memory=None, use_sma=False, use_linbins=True, noverlap=2,
-                   max_shmem=int(4.8e4), batch_size=None, **kwargs):
+                   dphi=0.0, max_shmem=int(4.8e4), batch_size=None, **kwargs):
 
     fname = 'full_bls_no_sol_fast'
-    qmfac = 1
     if use_sma:
         fname = '{fname}_sma'.format(fname=fname)
     elif use_linbins:
         fname = 'full_bls_no_sol_fast_sma_linbins'
-
-        # fudge factor to make sure there are enough overlaps
-        # for the smallest bins
-        qmfac = 1./noverlap
 
     if functions is None:
         functions = compile_bls(function_names=[fname], **kwargs)
@@ -399,12 +395,12 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     func = functions[fname]
 
     if memory is None:
-        memory = BLSMemory.fromdata(t, y, dy, qmin=qmfac * qmin, qmax=qmax,
+        memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
                                     freqs=freqs, stream=stream,
                                     transfer=True,
                                     **kwargs)
     else:
-        memory.setdata(t, y, dy, qmin=qmfac * qmin, qmax=qmax,
+        memory.setdata(t, y, dy, qmin=qmin, qmax=qmax,
                        freqs=freqs, stream=stream,
                        transfer=True,
                        **kwargs)
@@ -436,7 +432,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                  np.uint32(i_freq))
 
         if use_linbins:
-            args += (np.uint32(max_nbins), )
+            args += (np.uint32(max_nbins), np.float32(dphi))
         else:
             args += (np.uint32(noverlap), )
 

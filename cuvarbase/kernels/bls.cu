@@ -312,6 +312,7 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 						unsigned int nfreq,
 						unsigned int freq_offset,
 						unsigned int hist_size,
+						float dphi,
 						float dlogq){
 	
 	unsigned int i = get_id();
@@ -361,7 +362,7 @@ __global__ void full_bls_no_sol_fast_sma_linbins(
 		for (unsigned int k = threadIdx.x; k < ndata; k += blockDim.x){
 			phi = mod1(t[k] * f0);
 
-			b = mod((int) floorf(nbf * phi), nbf);
+			b = mod((int) floorf(nbf * phi - dphi), nbf);
 
 			// shared memory atomics should (hopefully) be faster.
 			atomicAdd(&(block_bins[2 * b]), yw[k]);
