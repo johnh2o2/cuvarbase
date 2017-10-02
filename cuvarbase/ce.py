@@ -358,6 +358,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
                              batch_size=None,
                              load_data_into_shared_memory=True,
                              shmem_lim=int(4.8e4),
+                             max_nblocks=200,
                              **kwargs):
     fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight,\
         ce_logp, ce_std, ce_wt = functions
@@ -387,15 +388,12 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         shmem += data_mem
         func = faster_ce
 
-    #if shmem + data_mem < shmem_lim:
-    #    max_ndata = ((shmem_lim - shmem) / (r + u))
-    #    print("CAN USE SHARED MEMORY FOR"
-    #          " DATA READING! (up to %d points)" % max_ndata)
-
     while (i_freq < memory.nf):
         j_freq = min([i_freq + batch_size, memory.nf])
 
-        grid = (int(np.floor(2 * float(shmem_lim) / shmem)), 1)
+        grid = min([j_freq - i_freq, max_nblocks])
+        if data_in_shared_mem:
+            grid = (int(np.floor(2 * float(shmem_lim) / shmem)), 1)
 
         assert(grid[0] > 0)
 
@@ -407,8 +405,6 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         args += (np.uint32(memory.phase_bins), np.uint32(memory.mag_bins))
         args += (np.uint32(memory.phase_overlap),
                  np.uint32(memory.mag_overlap))
-
-        #print(args)
 
         func.prepared_async_call(*args, shared_size=shmem)
 
