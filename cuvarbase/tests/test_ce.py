@@ -259,12 +259,9 @@ class TestCE(object):
 
         f0, p0 = r0[0]
         f1, p1 = r1[0]
-        #import matplotlib.pyplot as plt
-        #plt.plot(p0)
-        #plt.plot(p1)
-        #plt.show()
 
-        print(max(np.absolute(p0 - p1)), max(np.absolute(p0 - p1)) / np.median(np.absolute(p0)))
+        rel_err = max(np.absolute(p0 - p1)) / np.median(np.absolute(p0))
+        print(max(np.absolute(p0 - p1)), rel_err)
         assert_allclose(p0, p1, rtol=1e-4, atol=1e-2)
 
     @pytest.mark.parametrize('use_double', [True, False])

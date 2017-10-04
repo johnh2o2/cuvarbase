@@ -12,7 +12,7 @@
 set -x
 
 # Decide which python version to test
-PYTHON_VERSION=3.5
+PYTHON_VERSION=3.6
 
 # Put your cuda installation directory here
 export CUDA_ROOT=/usr/local/cuda

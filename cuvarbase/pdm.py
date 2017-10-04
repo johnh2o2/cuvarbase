@@ -12,7 +12,7 @@ import warnings
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import pycuda.autoinit
+# import pycuda.autoinit
 
 from .core import GPUAsyncProcess
 from .utils import weights, find_kernel

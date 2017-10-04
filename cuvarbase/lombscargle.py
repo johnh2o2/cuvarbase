@@ -14,7 +14,7 @@ from scipy.special import gamma, gammaln
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import pycuda.autoinit
+# import pycuda.autoinit
 
 from .core import GPUAsyncProcess
 from .utils import weights, find_kernel, _module_reader
@@ -770,12 +770,16 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # final result
         mem += nf
 
+        rsize = self.real_type(1).nbytes
+        csize = self.complex_type(1).nbytes
+        c = int(np.ceil(float(csize) / rsize))
+
         if kwargs.get('use_fft', True):
             # yw grid / fft (doubled because complex)
-            mem = 2 * sigma * (fft_size - k0)
+            mem = c * sigma * (fft_size - k0)
 
             # w grid / fft (doubled because complex)
-            mem += 2 * sigma * (2 * fft_size - k0)
+            mem += c * sigma * (2 * fft_size - k0)
 
             # precomputation (q1 = n0, q2 = n0, q3 = 2m + 1)
             mem += 2 * n0 + 2 * m + 1
@@ -789,12 +793,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             # vector b (Ax = b)
             mem += nbatch
 
-        # double everything if we're using double precision!
-        if self.use_double:
-            mem *= 2
-
-        # size of 32 bit float
-        mem *= 4
+        # size of float
+        mem *= rsize
 
         return mem
 

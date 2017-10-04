@@ -152,16 +152,16 @@ class TestBLS(object):
     @pytest.mark.parametrize("phi0", [0.0, 0.5])
     @pytest.mark.parametrize("dlogq", [0.2, -1])
     @pytest.mark.parametrize("nstreams", [1, 3])
-    @pytest.mark.parametrize("batch_size", [1, 3, None])
+    @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
     def test_transit_parameter_consistency(self, freq, phi0, dlogq, nstreams,
-                                           batch_size):
+                                           freq_batch_size):
         q = q_transit(freq)
 
         t, y, dy = data(snr=30, q=q, phi0=phi0, freq=freq, baseline=365.)
 
         freqs, power, sols = eebls_transit_gpu(t, y, dy,
                                                samples_per_peak=2,
-                                               batch_size=batch_size,
+                                               freq_batch_size=freq_batch_size,
                                                nstreams=nstreams,
                                                dlogq=dlogq,
                                                fmin=freq * 0.99,
@@ -202,8 +202,8 @@ class TestBLS(object):
     @pytest.mark.parametrize("phi_index", [0, 10, -1])
     @pytest.mark.parametrize("q_index", [0, 5, -1])
     @pytest.mark.parametrize("nstreams", [1, 3])
-    @pytest.mark.parametrize("batch_size", [1, 3, None])
-    def test_custom(self, freq, q_index, phi_index, batch_size, nstreams):
+    @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
+    def test_custom(self, freq, q_index, phi_index, freq_batch_size, nstreams):
         q_values = np.logspace(-1.1, -0.8, num=10)
         phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
 
@@ -218,7 +218,7 @@ class TestBLS(object):
 
         power, gsols = eebls_gpu_custom(t, y, dy, freqs,
                                         q_values, phi_values,
-                                        batch_size=batch_size,
+                                        freq_batch_size=freq_batch_size,
                                         nstreams=nstreams)
 
         # Now get CPU values
@@ -285,8 +285,8 @@ class TestBLS(object):
     @pytest.mark.parametrize("phi_index", [0, 10, -1])
     @pytest.mark.parametrize("q_index", [0, 5, -1])
     @pytest.mark.parametrize("nstreams", [1, 3])
-    @pytest.mark.parametrize("batch_size", [1, 3, None])
-    def test_standard(self, freq, q_index, phi_index, nstreams, batch_size):
+    @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
+    def test_standard(self, freq, q_index, phi_index, nstreams, freq_batch_size):
 
         q_values = np.logspace(-1.5, np.log10(0.1), num=100)
         phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
@@ -306,7 +306,7 @@ class TestBLS(object):
         power, gsols = eebls_gpu(t, y, dy, freqs,
                                  qmin=0.1 * q, qmax=2.0 * q,
                                  nstreams=nstreams, noverlap=2, dlogq=0.5,
-                                 batch_size=batch_size)
+                                 freq_batch_size=freq_batch_size)
 
         bls_c = [single_bls(t, y, dy, x[0], *x[1]) for x in zip(freqs, gsols)]
         if self.plot:
@@ -342,11 +342,11 @@ class TestBLS(object):
 
     @pytest.mark.parametrize("freq", [1.0])
     @pytest.mark.parametrize("dlogq", [0.5, -1.0])
-    @pytest.mark.parametrize("batch_size", [1, 10, None])
+    @pytest.mark.parametrize("freq_batch_size", [1, 10, None])
     @pytest.mark.parametrize("phi0", [0.0])
     @pytest.mark.parametrize("use_fast", [True, False])
     @pytest.mark.parametrize("nstreams", [1, 4])
-    def test_transit(self, freq, use_fast, batch_size, nstreams, phi0, dlogq):
+    def test_transit(self, freq, use_fast, freq_batch_size, nstreams, phi0, dlogq):
         q = q_transit(freq)
         samples_per_peak = 2
         noverlap = 2
@@ -355,7 +355,7 @@ class TestBLS(object):
                          baseline=365.)
 
         kw = dict(samples_per_peak=samples_per_peak,
-                  batch_size=batch_size, dlogq=dlogq,
+                  freq_batch_size=freq_batch_size, dlogq=dlogq,
                   nstreams=nstreams, noverlap=noverlap,
                   fmin=0.9 * freq, fmax=1.1 * freq,
                   use_fast=use_fast)
@@ -403,19 +403,22 @@ class TestBLS(object):
     @pytest.mark.parametrize("freq", [1.0])
     @pytest.mark.parametrize("q", [0.1])
     @pytest.mark.parametrize("phi0", [0.0])
-    @pytest.mark.parametrize("batch_size", [1, 10, None])
+    @pytest.mark.parametrize("dphi", [0.0, 1.0])
+    @pytest.mark.parametrize("freq_batch_size", [None, 100])
     @pytest.mark.parametrize("dlogq", [0.5, -1.0])
-    def test_fast_eebls(self, freq, q, phi0, batch_size, dlogq, **kwargs):
+    def test_fast_eebls(self, freq, q, phi0, freq_batch_size, dlogq, dphi,
+                        **kwargs):
         t, y, err = data(snr=50, q=q, phi0=phi0, freq=freq,
                          baseline=365.)
 
         df = 0.25 * q / (max(t) - min(t))
-        fmin = 0.5 * freq
-        fmax = 2 * freq
+        fmin = 0.9 * freq
+        fmax = 1.1 * freq
         nf = int(np.ceil((fmax - fmin) / df))
         freqs = fmin + df * np.arange(nf)
 
-        kw = dict(qmin=1e-2, qmax=0.5, batch_size=batch_size, dlogq=dlogq)
+        kw = dict(qmin=1e-2, qmax=0.5, dphi=dphi,
+                  freq_batch_size=freq_batch_size, dlogq=dlogq)
 
         kw.update(kwargs)
 

@@ -11,6 +11,7 @@ from builtins import zip
 from builtins import range
 import sys
 
+import pycuda.autoinit
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
@@ -214,8 +215,9 @@ def compile_bls(block_size=_default_block_size,
 
     # prepare functions
     if prepare:
-        [func.prepare(_function_signatures[name])
-         for name, func in functions.items()]
+        for name in functions.keys():
+            sig = _function_signatures[name]
+            functions[name] = functions[name].prepare(sig)
 
     return functions
 
@@ -251,9 +253,9 @@ class BLSMemory(object):
 
     def allocate_pinned_arrays(self, nfreqs=None, ndata=None):
         if nfreqs is None:
-            nfreqs = self.max_nfreqs
+            nfreqs = int(self.max_nfreqs)
         if ndata is None:
-            ndata = self.max_ndata
+            ndata = int(self.max_ndata)
 
         self.bls = cuda.aligned_zeros(shape=(nfreqs,),
                                       dtype=self.rtype,
@@ -288,6 +290,7 @@ class BLSMemory(object):
     def allocate_freqs(self, nfreqs=None):
         if nfreqs is None:
             nfreqs = self.max_nfreqs
+
         self.freqs_g = gpuarray.zeros(nfreqs, dtype=self.rtype)
         self.bls_g = gpuarray.zeros(nfreqs, dtype=self.rtype)
         self.nbins0_g = gpuarray.zeros(nfreqs, dtype=np.uint32)
@@ -339,13 +342,16 @@ class BLSMemory(object):
         self.ybar = sum(y * w)
         self.yy = np.dot(w, np.power(y - self.ybar, 2))
 
-        self.yw[:len(t)] = np.asarray((y - self.ybar) * w).astype(self.rtype)[:]
+        u = (y - self.ybar) * w
+        self.yw[:len(t)] = np.asarray(u).astype(self.rtype)[:]
 
         if any([x is None for x in [self.t_g, self.yw_g, self.w_g]]):
             self.allocate_data()
 
         if self.freqs_g is None:
-            self.allocate_freqs(nfreqs=len(freqs))
+            if nf is None:
+                nf = len(freqs)
+            self.allocate_freqs(nfreqs=nf)
 
         if transfer:
             self.transfer_data_to_gpu(transfer_freqs=(freqs is not None))
@@ -354,7 +360,7 @@ class BLSMemory(object):
 
     @classmethod
     def fromdata(cls, t, y, dy, qmin=None, qmax=None,
-                 freqs=None, nf=1e6, transfer=True,
+                 freqs=None, nf=None, transfer=True,
                  **kwargs):
 
         max_ndata = kwargs.get('max_ndata', len(t))
@@ -371,7 +377,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    functions=None, stream=None, dlogq=0.3,
                    memory=None, noverlap=2, max_nblocks=200,
                    force_nblocks=None, dphi=0.0,
-                   shmem_lim=int(4.8e4), batch_size=None,
+                   shmem_lim=None, freq_batch_size=None,
                    transfer_to_device=True,
                    transfer_to_host=True, **kwargs):
     """
@@ -388,8 +394,9 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
         If you are running on a single-GPU machine, there may be a
         kernel time limit set by your OS. If running this function
-        produces a timeout error, try setting ``batch_size`` to a reasonable
-        number (~10). That will split up the computations by frequency.
+        produces a timeout error, try setting ``freq_batch_size`` to a
+        reasonable number (~10). That will split up the computations by
+        frequency.
 
     .. note::
 
@@ -428,13 +435,14 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         the q values increase by ``dq = qmin``.
     functions: dict
         Dictionary of compiled functions (see :func:`compile_bls`)
-    batch_size: int, optional (default: None)
+    freq_batch_size: int, optional (default: None)
         Number of frequencies to compute in a single batch; if
         ``None`` this will run a single batch for all frequencies
         simultaneously
-    shmem_lim: int, optional (default: 48000)
+    shmem_lim: int, optional (default: None)
         Maximum amount of shared memory to use per block in bytes.
-        This is GPU-dependent but usually around 48KB.
+        This is GPU-dependent but usually around 48KB. If ``None``,
+        uses device information provided by PyCUDA (recommended).
     max_nblocks: int, optional (default: 200)
         Maximum grid size to use
     force_nblocks: int, optional (default: None)
@@ -451,7 +459,8 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     Returns
     -------
     bls: array_like, float
-        BLS periodogram, normalized to 1 - chi2(best_fit) / chi2(constant)
+        BLS periodogram, normalized to
+        :math:`1 - \chi_2(\omega) / \chi_2(constant)`
 
     """
     fname = 'full_bls_no_sol'
@@ -461,6 +470,14 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     func = functions[fname]
 
+    if stream is None:
+        stream = cuda.Stream()
+
+    if shmem_lim is None:
+        dev = pycuda.autoinit.device
+        att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
+        shmem_lim = pycuda.autoinit.device.get_attribute(att)
+
     if memory is None:
         memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
                                     freqs=freqs, stream=stream,
@@ -468,24 +485,23 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                                     **kwargs)
     elif transfer_to_device:
         memory.setdata(t, y, dy, qmin=qmin, qmax=qmax,
-                       freqs=freqs, stream=stream,
-                       transfer=True,
+                       freqs=freqs, transfer=True,
                        **kwargs)
 
     float_size = np.float32(1).nbytes
     block_size = kwargs.get('block_size', _default_block_size)
 
-    if batch_size is None:
-        batch_size = len(freqs)
+    if freq_batch_size is None:
+        freq_batch_size = len(freqs)
 
-    nbatches = int(np.ceil(len(freqs) / batch_size))
+    nbatches = int(np.ceil(len(freqs) / freq_batch_size))
     block = (block_size, 1, 1)
 
     # minimum q value that we can handle with the shared memory limit
     qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
     i_freq = 0
     while(i_freq < len(freqs)):
-        j_freq = min([i_freq + batch_size, len(freqs)])
+        j_freq = min([i_freq + freq_batch_size, len(freqs)])
         nfreqs = j_freq - i_freq
 
         max_nbins = max(memory.nbinsf[i_freq:j_freq])
@@ -493,7 +509,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         mem_req = (block_size + 2 * max_nbins) * float_size
 
         if mem_req > shmem_lim:
-            s = "qmin = %.2e requires too much memory." % (1./max_nbins)
+            s = "qmin = %.2e requires too much shared memory." % (1./max_nbins)
             s += " Either try a larger value of qmin (> %e)" % (qmin_min)
             s += " or avoid using eebls_gpu_fast."
             raise Exception(s)
@@ -528,7 +544,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
 
 def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
-                     batch_size=None, nstreams=5, max_memory=1e8,
+                     freq_batch_size=None, nstreams=5, max_memory=None,
                      functions=None, **kwargs):
     """
     Box-Least Squares, with custom q and phi values. Useful
@@ -551,17 +567,17 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         Set of phi values to search at each trial frequency
     nstreams: int, optional (default: 5)
         Number of CUDA streams to utilize.
-    batch_size: int, optional (default: None)
+    freq_batch_size: int, optional (default: None)
         Number of frequencies to compute in a single batch; determines
         this automatically by default based on ``max_memory``
-    max_memory: float, optional (default: 1e8)
+    max_memory: float, optional (default: None)
         Maximum memory to use in bytes. Will ignore this if
-        ``batch_size`` is specified.
+        ``freq_batch_size`` is specified. If ``None``, will use the
+        free memory given by ``pycuda.driver.mem_get_info()``
     functions: tuple of CUDA functions
-        gpu_bls, gpu_max, gpu_bin, gpu_store functions;
-        returned by `compile_bls`
+        Dictionary of prepared functions from :func:`compile_bls`.
     **kwargs:
-        passed to `compile_bls`
+        passed to :func:`compile_bls`
 
     Returns
     -------
@@ -578,7 +594,12 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     block_size = kwargs.get('block_size', _default_block_size)
     ndata = len(t)
 
-    if batch_size is None:
+    # read max_memory as total free memory available from driver
+    if max_memory is None:
+        free, total = cuda.mem_get_info()
+        max_memory = int(0.9 * free)
+
+    if freq_batch_size is None:
         # compute memory
         real_type_size = 4
 
@@ -597,12 +618,12 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         # yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32)
         mem_per_f = 4 * nstreams * nq * nphi * real_type_size
 
-        batch_size = int(float(max_memory - mem0) / (mem_per_f))
+        freq_batch_size = int(float(max_memory - mem0) / (mem_per_f))
 
-        if batch_size == 0:
-            raise Exception("Not enough memory (batch_size = 0)")
+        if freq_batch_size == 0:
+            raise Exception("Not enough memory (freq_batch_size = 0)")
 
-    nbtot = len(q_values) * len(phi_values) * batch_size
+    nbtot = len(q_values) * len(phi_values) * freq_batch_size
 
     grid_size = int(np.ceil(float(nbtot) / block_size))
 
@@ -640,7 +661,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
     grid = (grid_size, 1)
 
-    nbatches = int(np.ceil(float(len(freqs)) / batch_size))
+    nbatches = int(np.ceil(float(len(freqs)) / freq_batch_size))
 
     bls = np.zeros(len(freqs))
     bin_func = functions['bin_and_phase_fold_custom']
@@ -649,8 +670,8 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     store_func = functions['store_best_sols_custom']
 
     for batch in range(nbatches):
-        imin = batch_size * batch
-        imax = min([len(freqs), batch_size * (batch + 1)])
+        imin = freq_batch_size * batch
+        imax = min([len(freqs), freq_batch_size * (batch + 1)])
 
         nf = imax - imin
         j = batch % nstreams
@@ -674,7 +695,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         args += (q_values_g.ptr, phi_values_g.ptr)
         args += (np.uint32(len(q_values)), np.uint32(len(phi_values)))
         args += (np.uint32(len(t)), np.uint32(nf))
-        args += (np.uint32(batch_size * batch),)
+        args += (np.uint32(freq_batch_size * batch),)
         bin_func.prepared_async_call(*args)
 
         nb = len(q_values) * len(phi_values)
@@ -687,7 +708,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
         args = (max_func, bls_tmp_g, bls_tmp_sol_g)
         args += (nf, nb, stream, bls_g, bls_sol_g)
-        args += (batch * batch_size, block_size)
+        args += (batch * freq_batch_size, block_size)
         _reduction_max(*args)
 
         store_grid = (int(np.ceil(float(nf) / block_size)), 1)
@@ -695,7 +716,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         args += (bls_sol_g.ptr, bls_best_phi.ptr, bls_best_q.ptr)
         args += (q_values_g.ptr, phi_values_g.ptr)
         args += (np.uint32(len(q_values)), np.uint32(len(phi_values)))
-        args += (np.uint32(nf), np.uint32(batch * batch_size))
+        args += (np.uint32(nf), np.uint32(batch * freq_batch_size))
         store_func.prepared_async_call(*args)
 
     best_q = bls_best_q.get()
@@ -734,8 +755,8 @@ def count_tot_nbins(nbins0, nbinsf, dlogq):
 
 
 def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
-              nstreams=5, noverlap=3, dlogq=0.2, max_memory=1e8,
-              batch_size=None, functions=None, **kwargs):
+              nstreams=5, noverlap=3, dlogq=0.2, max_memory=None,
+              freq_batch_size=None, functions=None, **kwargs):
 
     """
     Box-Least Squares, accelerated with PyCUDA
@@ -760,12 +781,13 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         Number of overlapping q bins to use
     dlogq: float, optional, (default: 0.5)
         logarithmic spacing of :math:`q` values, where :math:`d\log q = dq / q`
-    batch_size: int, optional (default: None)
+    freq_batch_size: int, optional (default: None)
         Number of frequencies to compute in a single batch; determines
         this automatically based on ``max_memory``
-    max_memory: float, optional (default: 1e8)
+    max_memory: float, optional (default: None)
         Maximum memory to use in bytes. Will ignore this if
-        batch_size is specified
+        ``freq_batch_size`` is specified, and will use the total free memory
+        as returned by ``pycuda.driver.mem_get_info`` if this is ``None``.
     functions: tuple of CUDA functions
         returned by ``compile_bls``
 
@@ -786,6 +808,10 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     functions = functions if functions is not None \
         else compile_bls(**kwargs)
 
+    if max_memory is None:
+        free, total = cuda.mem_get_info()
+        max_memory = int(0.9 * free)
+
     # smallest and largest number of bins
     nbins0_max = 1
     nbinsf_max = 1
@@ -801,9 +827,9 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     nbins_tot_max = count_tot_nbins(nbins0_max, nbinsf_max, dlogq)
 
-    if batch_size is None:
+    if freq_batch_size is None:
         # compute memory
-        real_type_size = 4
+        real_type_size = np.float32(1).nbytes
 
         # data
         mem0 = ndata * 3 * real_type_size
@@ -814,12 +840,12 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         # yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32)
         mem_per_f = 4 * nstreams * nbins_tot_max * noverlap * real_type_size
 
-        batch_size = int(float(max_memory - mem0) / (mem_per_f))
+        freq_batch_size = int(float(max_memory - mem0) / (mem_per_f))
 
-        if batch_size == 0:
-            raise Exception("Not enough memory (batch_size = 0)")
+        if freq_batch_size == 0:
+            raise Exception("Not enough memory (freq_batch_size = 0)")
 
-    gs = batch_size * nbins_tot_max * noverlap
+    gs = freq_batch_size * nbins_tot_max * noverlap
 
     grid_size = int(np.ceil(float(gs) / block_size))
 
@@ -854,7 +880,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     grid = (grid_size, 1)
 
-    nbatches = int(np.ceil(float(len(freqs)) / batch_size))
+    nbatches = int(np.ceil(float(len(freqs)) / freq_batch_size))
 
     bls = np.zeros(len(freqs))
     bin_func = functions['bin_and_phase_fold_bst_multifreq']
@@ -864,8 +890,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     for batch in range(nbatches):
 
-        imin = batch_size * batch
-        imax = min([len(freqs), batch_size * (batch + 1)])
+        imin = freq_batch_size * batch
+        imax = min([len(freqs), freq_batch_size * (batch + 1)])
 
         minq = locext(min, qmin, imin, imax)
         maxq = locext(max, qmax, imin, imax)
@@ -897,7 +923,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args += (yw_g_bin.ptr, w_g_bin.ptr, freqs_g.ptr)
         args += (np.int32(ndata), np.int32(nf))
         args += (np.int32(nbins0), np.int32(nbinsf))
-        args += (np.int32(batch_size * batch), np.int32(noverlap))
+        args += (np.int32(freq_batch_size * batch), np.int32(noverlap))
         args += (np.float32(dlogq), np.int32(nbins_tot))
         bin_func.prepared_async_call(*args)
 
@@ -911,7 +937,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
         args = (max_func, bls_tmp_g, bls_tmp_sol_g)
         args += (nf, nbins_tot * noverlap, stream, bls_g, bls_sol_g)
-        args += (batch * batch_size, block_size)
+        args += (batch * freq_batch_size, block_size)
         _reduction_max(*args)
 
         store_grid = (int(np.ceil(float(nf) / block_size)), 1)
@@ -919,7 +945,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args += (bls_sol_g.ptr, bls_best_phi.ptr, bls_best_q.ptr)
         args += (np.uint32(nbins0), np.uint32(nbinsf), np.uint32(noverlap))
         args += (np.float32(dlogq), np.uint32(nf))
-        args += (np.uint32(batch * batch_size),)
+        args += (np.uint32(batch * freq_batch_size),)
         store_func.prepared_async_call(*args)
 
     best_q = bls_best_q.get()
@@ -1020,7 +1046,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
         freqs = np.linspace(fmin, fmax + df, nf)
 
         powers, sols = eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
-                                        batch_size=5, nstreams=5,
+                                        freq_batch_size=5, nstreams=5,
                                         functions=functions, **kwargs)
 
         ibest = np.argmax(powers)

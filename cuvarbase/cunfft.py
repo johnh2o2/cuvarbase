@@ -12,7 +12,7 @@ import numpy as np
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-import pycuda.autoinit
+# import pycuda.autoinit
 
 import skcuda.fft as cufft
 

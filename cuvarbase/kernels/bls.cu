@@ -180,7 +180,6 @@ __global__ void full_bls_no_sol(
 						unsigned int noverlap,
 						float dlogq,
 						float dphi){
-	
 	unsigned int i = get_id();
 
 	extern __shared__ float sh[];
@@ -236,7 +235,7 @@ __global__ void full_bls_no_sol(
 		for (unsigned int k = threadIdx.x; k < ndata; k += blockDim.x){
 			phi = mod1(t[k] * f0);
 
-			b = mod((int) floorf(nbf * phi - dphi), nbf);
+			b = mod((int) floorf(((float) nbf) * phi - dphi), (int) nbf);
 
 			// shared memory atomics should (hopefully) be faster.
 			atomicAdd(&(block_bins[2 * b]), yw[k]);
@@ -257,8 +256,8 @@ __global__ void full_bls_no_sol(
 				nb += dnbins(nb, dlogq);
 			}
 			
-			b = (n - bin_offset * noverlap) % nb;
-			s = (n - bin_offset * noverlap) / nb;
+			b = (((int) n) - ((int) (bin_offset * noverlap))) % nb;
+			s = (((int) n) - ((int) (bin_offset * noverlap))) / nb;
 
 			thread_yw = 0.f;
 			thread_w = 0.f;

@@ -357,13 +357,18 @@ def conditional_entropy_fast(memory, functions, block_size=256,
                              transfer_to_device=True,
                              freq_batch_size=None,
                              shmem_lc=True,
-                             shmem_lim=int(4.8e4),
+                             shmem_lim=None,
                              max_nblocks=200,
                              force_nblocks=None,
                              stream=None,
                              **kwargs):
     fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight,\
         ce_logp, ce_std, ce_wt = functions
+
+    if shmem_lim is None:
+        dev = pycuda.autoinit.device
+        att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
+        shmem_lim = pycuda.autoinit.device.get_attribute(att)
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
@@ -755,7 +760,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
     def large_run(self, data,
                   freqs=None,
-                  max_memory=1e9,
+                  max_memory=None,
                   **kwargs):
         """
         Run Conditional Entropy on a large frequency grid
@@ -770,8 +775,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         freqs: optional, list of ``np.ndarray`` frequencies
             List of custom frequencies. If not specified, calls
             ``autofrequency`` with default arguments
-        max_memory: float, optional (default: 1e9)
-            Maximum memory per batch in bytes.
+        max_memory: float, optional (default: None)
+            Maximum memory per batch in bytes. If ``None``, it
+            will use 90% of the total free memory available as specified by
+            ``pycuda.driver.mem_get_info()``
         **kwargs
 
         Returns
@@ -788,6 +795,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                      ['ce_wt']]):
             self._compile_and_prepare_functions(**kwargs)
 
+        if max_memory is None:
+            free, total = cuda.mem_get_info()
+            max_memory = 0.9 * free
+
         # create and/or check frequencies
         frqs = freqs
         if frqs is None:
@@ -800,9 +811,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         cpers = []
         for d, f in zip(data, frqs):
-            size_of_real = 4
-            if self.use_double:
-                size_of_real *= 2
+            size_of_real = self.real_type(1).nbytes
 
             # subtract of lc memory
             fmem = max_memory - len(d[0]) * size_of_real * 3
