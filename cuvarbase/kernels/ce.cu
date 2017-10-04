@@ -14,8 +14,6 @@
 	#define FLT float
 #endif
 
-#define is_aligned(POINTER, BYTE_COUNT) \
-    (((uintptr_t)(const void *)(POINTER)) % (BYTE_COUNT) == 0)
 
 __device__ double atomicAddDouble(double* address, double val)
 {
@@ -142,11 +140,9 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 	unsigned int * block_bin = (unsigned int *)sh;
 	unsigned int * block_bin_phi = (unsigned int *)&block_bin[nmag * nphase];
 
-	FLT * Hc;
-	if (!is_aligned(&block_bin_phi[nphase], sizeof(FLT)))
-		Hc = (FLT *)&block_bin_phi[nphase + 1];
-	else
-		Hc = (FLT *)&block_bin_phi[nphase];
+	// align!
+	unsigned int r = ((nmag * nphase + nphase) * sizeof(unsigned int)) % sizeof(FLT);
+	Hc = (FLT *)&block_bin_phi[nphase + r];
 	__shared__ FLT f0;
 
 	// each block works on a single frequency.
@@ -260,12 +256,9 @@ __global__ void ce_classical_faster(const FLT * __restrict__ t,
 	unsigned int * block_bin = (unsigned int *)sh;
 	unsigned int * block_bin_phi = (unsigned int *)&block_bin[nmag * nphase];
 
-	FLT * Hc;
-	if (!is_aligned(&block_bin_phi[nphase], sizeof(FLT)))
-		Hc = (FLT *)&block_bin_phi[nphase + 1];
-	else
-		Hc = (FLT *)&block_bin_phi[nphase];
-
+	// align!
+	unsigned int r = ((nmag * nphase + nphase) * sizeof(unsigned int)) % sizeof(FLT);
+	FLT * Hc = (FLT *)&block_bin_phi[nphase + r];
 	FLT * t_sh = (FLT *)&Hc[nmag * nphase];
 	unsigned int * y_sh = (unsigned int *)&t_sh[ndata];
 	__shared__ FLT f0;

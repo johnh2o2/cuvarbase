@@ -503,7 +503,9 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
             nblocks = force_nblocks
 
         grid = (nblocks, 1)
-        args = (grid, block, stream)
+        args = (grid, block)
+        if stream is not None:
+            args += (stream,)
         args += (memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr)
         args += (memory.bls_g.ptr, memory.freqs_g.ptr)
         args += (memory.nbins0_g.ptr, memory.nbinsf_g.ptr)
@@ -512,7 +514,10 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args += (np.uint32(max_nbins), np.uint32(noverlap))
         args += (np.float32(dlogq), np.float32(dphi))
 
-        func.prepared_async_call(*args, shared_size=mem_req)
+        if stream is not None:
+            func.prepared_async_call(*args, shared_size=mem_req)
+        else:
+            func.prepared_call(*args, shared_size=mem_req)
 
         i_freq = j_freq
 

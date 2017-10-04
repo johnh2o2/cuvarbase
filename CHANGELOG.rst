@@ -1,13 +1,13 @@
 What's new in cuvarbase
 ***********************
 * **0.2.0**
+  * Many more unit tests for BLS and CE.
   * BLS
-  	* Now several orders of magnitude faster!
+  	* Now several orders of magnitude faster! Use ``use_fast=True`` in ``eebls_transit_gpu`` or use ``eebls_gpu_fast``.
   * CE
-    * Now several orders of magnitude faster!
-  * 
+  	* New ``use_fast`` parameter in ``ConditionalEntropyAsyncProcess``; if selected will use a kernel that should be substantially more efficient and that requires no memory overhead. If selected, you should use the ``run`` function and not the ``large_run`` function. Currently the ``weighted`` option is not supported when ``use_fast`` is ``True``.
+  	* Bug-fix for ``mag_overlap > 0``.
 * **0.1.9**
-
   * Added Sphinx documentation
   * **Now Python 3 compatible!**
   * Miscillaneous bug fixes
@@ -22,11 +22,9 @@ What's new in cuvarbase
 	* ``eebls_gpu``, ``eebls_transit_gpu``, and ``eebls_custom_gpu`` now have a ``max_memory`` option that allows you to automatically set the ``batch_size`` without worrying about memory allocation errors.
 	* ``eebls_transit_gpu`` now allows for a ``freqs`` argument and a ``qvals`` argument for customizing the frequencies and the fiducial ``q`` values
 	* Fixed a small bug in ``fmin_transit`` that miscalculated the minimum frequency.
-
 * **0.1.8**
     * Removed gamma function usage from baluev 2008 false alarm probability (``use_gamma=True`` will override this)
     * Fixed a bug in the GLS notebook
-
 * **0.1.6/0.1.7**
     * Some bug fixes for GLS
     * ``large_run`` function for Conditional Entropy period finder allows large frequency grids
