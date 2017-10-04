@@ -142,7 +142,7 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 
 	// align!
 	unsigned int r = ((nmag * nphase + nphase) * sizeof(unsigned int)) % sizeof(FLT);
-	Hc = (FLT *)&block_bin_phi[nphase + r];
+	FLT * Hc = (FLT *)&block_bin_phi[nphase + r];
 	__shared__ FLT f0;
 
 	// each block works on a single frequency.
