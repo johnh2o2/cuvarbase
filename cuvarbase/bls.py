@@ -470,9 +470,6 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     func = functions[fname]
 
-    if stream is None:
-        stream = cuda.Stream()
-
     if shmem_lim is None:
         dev = pycuda.autoinit.device
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
@@ -539,6 +536,8 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     if transfer_to_host:
         memory.transfer_data_to_cpu()
+        if stream is not None:
+            stream.synchronize()
 
     return memory.bls
 
