@@ -10,7 +10,7 @@
 # Just ``cd docs && make html``. Then open docs/build/html/index.html.
 set -x
 
-DOC_BRANCH=devel
+DOC_BRANCH=master
 NEEDED="cuvarbase docs/Makefile docs/source README.rst INSTALL.rst CHANGELOG.rst"
 
 # We need to grab hidden files with mv...
