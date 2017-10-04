@@ -13,8 +13,6 @@ from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
                   single_bls, eebls_gpu_custom, eebls_gpu_fast
 
-ntests = 3
-
 
 def transit_model(phi0, q, delta, q1=0.):
     def model(t, freq, q=q, phi0=phi0, delta=delta):
@@ -67,7 +65,7 @@ def plot_bls_sol(t, y, dy, freq, q, phi0):
 
 
 @pytest.fixture
-def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=500, freq=10.,
+def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
          q=0.01, phi0=None, baseline=1.):
 
     rand = np.random.RandomState(seed)
@@ -144,199 +142,245 @@ def manual_binning(t, y, dy, freqs, nbins0, nbinsf, dlogq,
 
 
 class TestBLS(object):
-    def test_transit_parameter_consistency(self, seed=100, plot=False):
-        rand = np.random.RandomState(seed)
-        for test in range(ntests):
-            freq = 0.1 + 0.1 * rand.rand()
-            q = q_transit(freq)
-            phi0 = rand.rand()
-            dlogq = 0.1
+    seed = 100
+    rand = np.random.RandomState(seed)
+    plot = False
+    rtol = 1e-3
+    atol = 1e-5
 
-            outstr = "TEST {test} / {ntests}: freq={freq}, q={q}, "\
-                     "phi0={phi0}, dlogq={dlogq}"
-            print(outstr.format(test=test, ntests=ntests, freq=freq,
-                                q=q, phi0=phi0, dlogq=dlogq))
-            t, y, dy = data(snr=30, q=q, phi0=phi0, freq=freq, baseline=365.)
+    @pytest.mark.parametrize("freq", [0.3])
+    @pytest.mark.parametrize("phi0", [0.0, 0.5])
+    @pytest.mark.parametrize("dlogq", [0.2, -1])
+    @pytest.mark.parametrize("nstreams", [1, 3])
+    @pytest.mark.parametrize("batch_size", [1, 3, None])
+    def test_transit_parameter_consistency(self, freq, phi0, dlogq, nstreams,
+                                           batch_size):
+        q = q_transit(freq)
 
-            freqs, power, sols = eebls_transit_gpu(t, y, dy,
-                                                   samples_per_peak=2,
-                                                   batch_size=1, nstreams=1,
-                                                   dlogq=dlogq,
-                                                   fmin=freq * 0.99,
-                                                   fmax=freq * 1.01)
+        t, y, dy = data(snr=30, q=q, phi0=phi0, freq=freq, baseline=365.)
 
-            pcpu = [single_bls(t, y, dy, x[0], *x[1]) for x in zip(freqs, sols)]
-            pcpu = np.asarray(pcpu)
+        freqs, power, sols = eebls_transit_gpu(t, y, dy,
+                                               samples_per_peak=2,
+                                               batch_size=batch_size,
+                                               nstreams=nstreams,
+                                               dlogq=dlogq,
+                                               fmin=freq * 0.99,
+                                               fmax=freq * 1.01)
+        pcpu = [single_bls(t, y, dy, x[0], *x[1])
+                for x in zip(freqs, sols)]
+        pcpu = np.asarray(pcpu)
 
-            sorted_results = sorted(zip(pcpu, power, freqs, sols),
-                                    key=lambda x: -abs(x[1] - x[0]))
+        if self.plot:
+            import matplotlib.pyplot as plt
+            f, ax = plt.subplots()
+            ax.plot(freqs, pcpu)
+            ax.plot(freqs, power)
+            plt.show()
 
-            for i, (pcs, pgs, freq, (qs, phs)) in enumerate(sorted_results):
-                if i > 10:
-                    break
+        sorted_results = sorted(zip(pcpu, power, freqs, sols),
+                                key=lambda x: -abs(x[1] - x[0]))
 
-                print(pcs, pgs)
-                if plot:
-                    plot_bls_sol(t, y, dy, freq, qs, phs)
+        for i, (pcs, pgs, freq, (qs, phs)) in enumerate(sorted_results):
+            if i > 10:
+                break
+            print(pcs, pgs, (qs, phs))
+            if self.plot:
+                plot_bls_sol(t, y, dy, freq, qs, phs)
 
-            pows, diffs = list(zip(*sorted(zip(pcpu, np.absolute(power - pcpu)),
-                                      key=lambda x: -x[1])))
+        pows, diffs = list(zip(*sorted(zip(pcpu,
+                                           np.absolute(power - pcpu)),
+                                       key=lambda x: -x[1])))
 
-            upper_bound = 1e-3 * np.array(pows) + 1e-5
-            mostly_ok = sum(np.array(diffs) > upper_bound) / len(pows) < 1e-2
-            not_too_bad = max(diffs) < 1e-1
+        upper_bound = self.rtol * np.array(pows) + self.atol
+        mostly_ok = sum(np.array(diffs) > upper_bound) / len(pows) < 1e-2
+        not_too_bad = max(diffs) < 1e-1
 
-            print(max(diffs))
-            assert mostly_ok and not_too_bad
-            # assert_allclose(pcpu, power, atol=1e-5, rtol=1e-3)
+        print(max(diffs))
+        assert mostly_ok and not_too_bad
 
-    def test_custom(self, seed=100, plot=False):
-        rand = np.random.RandomState(seed)
-        for ntest in range(ntests):
-            freq = 0.1 + rand.rand()
+    @pytest.mark.parametrize("freq", [1.0])
+    @pytest.mark.parametrize("phi_index", [0, 10, -1])
+    @pytest.mark.parametrize("q_index", [0, 5, -1])
+    @pytest.mark.parametrize("nstreams", [1, 3])
+    @pytest.mark.parametrize("batch_size", [1, 3, None])
+    def test_custom(self, freq, q_index, phi_index, batch_size, nstreams):
+        q_values = np.logspace(-1.1, -0.8, num=10)
+        phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
 
-            q_values = np.logspace(-1.1, -0.8, num=10)
-            phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
+        q = q_values[q_index]
+        phi = phi_values[phi_index]
 
-            q = q_values[rand.randint(len(q_values))]
-            phi = phi_values[rand.randint(len(phi_values))]
+        t, y, dy = data(snr=10, q=q, phi0=phi, freq=freq,
+                        baseline=365.)
 
-            t, y, dy = data(snr=10, q=q, phi0=phi, freq=freq, ndata=300,
-                            baseline=365.)
+        df = min(q_values) / (10 * (max(t) - min(t)))
+        freqs = np.linspace(freq - 10 * df, freq + 10 * df, 20)
 
-            df = min(q_values) / (10 * (max(t) - min(t)))
+        power, gsols = eebls_gpu_custom(t, y, dy, freqs,
+                                        q_values, phi_values,
+                                        batch_size=batch_size,
+                                        nstreams=nstreams)
 
-            freqs = np.linspace(freq - 10 * df, freq + 10 * df, 20)
-            power, gsols = eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
-                                            batch_size=100, nstreams=5)
+        # Now get CPU values
+        qgrid, phigrid = np.meshgrid(q_values, phi_values)
+        bls = np.vectorize(single_bls, excluded=set([0, 1, 2, 3]))
 
-            qgrid, phigrid = np.meshgrid(q_values, phi_values)
+        blses = []
 
-            bls = np.vectorize(single_bls, excluded=set([0, 1, 2, 3]))
+        max_bls = []
+        cpu_bls = []
+        sols = []
+        for freq, (qg, phg) in zip(freqs, gsols):
+            p = bls(t, y, dy, freq, qgrid, phigrid)
+            pc = single_bls(t, y, dy, freq, qg, phg)
+            mind = np.unravel_index(p.argmax(), p.shape)
+            qsol = qgrid[mind]
+            phisol = phigrid[mind]
 
-            blses = []
+            max_bls.append(p[mind])
+            cpu_bls.append(pc)
+            sols.append((qsol, phisol))
+            blses.append(p)
+        qsg, phsg = list(zip(*gsols))
+        qs, phs = list(zip(*sols))
+        if self.plot:
+            import matplotlib.pyplot as plt
+            f, ax = plt.subplots()
 
-            max_bls = []
-            cpu_bls = []
-            sols = []
-            for freq, (qg, phg) in zip(freqs, gsols):
-                p = bls(t, y, dy, freq, qgrid, phigrid)
-                pc = single_bls(t, y, dy, freq, qg, phg)
-                mind = np.unravel_index(p.argmax(), p.shape)
-                qsol = qgrid[mind]
-                phisol = phigrid[mind]
+            ax.plot(freqs, max_bls)
+            ax.plot(freqs, power)
 
-                max_bls.append(p[mind])
-                cpu_bls.append(pc)
-                sols.append((qsol, phisol))
-                blses.append(p)
-            qsg, phsg = list(zip(*gsols))
-            qs, phs = list(zip(*sols))
-            if plot:
+            plt.show()
+
+            f, ax = plt.subplots()
+            ax.plot(freqs, qs)
+            ax.plot(freqs, qsg)
+
+            plt.show()
+
+            f, ax = plt.subplots()
+            ax.plot(freqs, phs)
+            ax.plot(freqs, phsg)
+
+            plt.show()
+
+        for bls_arr in [max_bls, cpu_bls]:
+            max_diffs = 0.5 * self.rtol * (bls_arr + power) + self.atol
+            diffs = np.absolute(bls_arr - power)
+            nbad = sum(diffs > max_diffs)
+
+            mostly_ok = nbad / float(len(power)) < 1e-2 or nbad == 1
+            not_too_bad = max(np.absolute(bls_arr - power) / power) < 1e-1
+
+            print(max(diffs) / max_diffs[np.argmax(max_diffs)])
+            if not (mostly_ok and not_too_bad):
+                print(nbad / float(len(power)), not_too_bad)
                 import matplotlib.pyplot as plt
-                f, ax = plt.subplots()
-
-                ax.plot(freqs, max_bls)
-                ax.plot(freqs, power)
-
+                plt.plot(freqs, power)
+                plt.plot(freqs, bls_arr)
                 plt.show()
+            assert(mostly_ok and not_too_bad)
 
-                f, ax = plt.subplots()
-                ax.plot(freqs, qs)
-                ax.plot(freqs, qsg)
+    @pytest.mark.parametrize("freq", [1.0])
+    @pytest.mark.parametrize("phi_index", [0, 10, -1])
+    @pytest.mark.parametrize("q_index", [0, 5, -1])
+    @pytest.mark.parametrize("nstreams", [1, 3])
+    @pytest.mark.parametrize("batch_size", [1, 3, None])
+    def test_standard(self, freq, q_index, phi_index, nstreams, batch_size):
 
-                plt.show()
+        q_values = np.logspace(-1.5, np.log10(0.1), num=100)
+        phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
 
-                f, ax = plt.subplots()
-                ax.plot(freqs, phs)
-                ax.plot(freqs, phsg)
+        q = q_values[q_index]
+        phi = phi_values[phi_index]
 
-                plt.show()
+        t, y, dy = data(snr=10, q=q, phi0=phi, freq=freq,
+                        baseline=365.)
 
-            assert_allclose(max_bls, power, rtol=1e-3, atol=1e-5)
-            assert_allclose(cpu_bls, power, rtol=1e-3, atol=1e-5)
+        df = min(q_values) / (10 * (max(t) - min(t)))
 
-        # assert_allclose(qs, qsg, rtol=1e-1, atol=1e-5)
-        # assert_allclose(phs, phsg, rtol=1e-1, atol=1e-5)
+        delta_f = 5 * df / freq
+        freqs = np.linspace(freq * (1 - delta_f),
+                            (1 + delta_f) * freq,
+                            int(5. * 2 * delta_f * freq / df))
+        power, gsols = eebls_gpu(t, y, dy, freqs,
+                                 qmin=0.1 * q, qmax=2.0 * q,
+                                 nstreams=nstreams, noverlap=2, dlogq=0.5,
+                                 batch_size=batch_size)
 
-    def test_standard(self, seed=100, plot=False):
-        rand = np.random.RandomState(seed)
-        for ntest in range(ntests):
-            freq = 0.1 + rand.rand()
+        bls_c = [single_bls(t, y, dy, x[0], *x[1]) for x in zip(freqs, gsols)]
+        if self.plot:
+            import matplotlib.pyplot as plt
+            f, ax = plt.subplots()
 
-            q_values = np.logspace(-1.5, -0.8, num=5)
-            phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
+            ax.plot(freqs, bls_c)
+            ax.plot(freqs, power)
 
-            q = q_values[rand.randint(len(q_values))]
-            phi = phi_values[rand.randint(len(phi_values))]
+            plt.show()
 
-            t, y, dy = data(snr=10, q=q, phi0=phi, freq=freq, ndata=300,
-                            baseline=365.)
+            inds = sorted(np.arange(len(power)),
+                          key=lambda i: -abs(power[i] - bls_c[i]))
 
-            df = min(q_values) / (10 * (max(t) - min(t)))
+            all_qs, all_phis = zip(*gsols)
 
-            delta_f = 0.02
-            freqs = np.linspace(freq * (1 - delta_f),
-                                (1 + delta_f) * freq,
-                                int(5. * 2 * delta_f * freq / df))
-            power, gsols = eebls_gpu(t, y, dy, freqs, qmin=0.3 * q, qmax=3 * q,
-                                     nstreams=5, noverlap=3, dlogq=0.5,
-                                     batch_size=100)
+            for i in inds[:100]:
+                qs, phis = gsols[i]
+                print(power[i], bls_c[i], abs(power[i] - bls_c[i]),
+                      qs, phis)
+                #plot_bls_sol(t, y, dy, freqs[i], qs, phis)
 
-            bls_c = [single_bls(t, y, dy, x[0], *x[1]) for x in zip(freqs, gsols)]
-            if plot:
-                import matplotlib.pyplot as plt
-                f, ax = plt.subplots()
+        pows, diffs = list(zip(*sorted(zip(bls_c, np.absolute(power - bls_c)),
+                               key=lambda x: -x[1])))
 
-                ax.plot(freqs, bls_c)
-                ax.plot(freqs, power)
+        upper_bound = self.rtol * np.array(pows) + self.atol
+        mostly_ok = sum(np.array(diffs) > upper_bound) / len(pows) < 1e-2
+        not_too_bad = max(diffs) < 1e-1
 
-                plt.show()
-
-                inds = sorted(np.arange(len(power)),
-                              key=lambda i: -abs(power[i] - bls_c[i]))
-
-                for i in inds[:10]:
-                    qs, phis = gsols[i]
-                    print(power[i], bls_c[i])
-                    plot_bls_sol(t, y, dy, freqs[i], qs, phis)
-
-            pows, diffs = list(zip(*sorted(zip(bls_c, np.absolute(power - bls_c)),
-                                      key=lambda x: -x[1])))
-
-            upper_bound = 1e-3 * np.array(pows) + 1e-5
-            mostly_ok = sum(np.array(diffs) > upper_bound) / len(pows) < 1e-2
-            not_too_bad = max(diffs) < 1e-1
-
-            print(diffs[0], pows[0])
-            assert mostly_ok and not_too_bad
+        print(diffs[0], pows[0])
+        assert mostly_ok and not_too_bad
         # assert_allclose(bls_c, power, rtol=1e-3, atol=1e-5)
 
-    def test_transit(self, seed=100, plot=False):
-        rand = np.random.RandomState(seed)
-        freq = 1.0 + 0.1 * rand.rand()
+    @pytest.mark.parametrize("freq", [1.0])
+    @pytest.mark.parametrize("dlogq", [0.5, -1.0])
+    @pytest.mark.parametrize("batch_size", [1, 10, None])
+    @pytest.mark.parametrize("phi0", [0.0])
+    @pytest.mark.parametrize("use_fast", [True, False])
+    @pytest.mark.parametrize("nstreams", [1, 4])
+    def test_transit(self, freq, use_fast, batch_size, nstreams, phi0, dlogq):
         q = q_transit(freq)
-        phi0 = rand.rand()
-        dlogq = 0.3
         samples_per_peak = 2
         noverlap = 2
 
-        outstr = "freq={freq}, q={q}, phi0={phi0}, "\
-                 "dlogq={dlogq}"
-        print(outstr.format(freq=freq,
-                            q=q, phi0=phi0, dlogq=dlogq))
-        t, y, err = data(snr=10, q=q, phi0=phi0, freq=freq, ndata=300,
+        t, y, err = data(snr=10, q=q, phi0=phi0, freq=freq,
                          baseline=365.)
 
         kw = dict(samples_per_peak=samples_per_peak,
-                  batch_size=50, dlogq=dlogq,
-                  nstreams=5, noverlap=noverlap,
-                  fmin=0.75 * freq, fmax=1.25 * freq)
-        freqs, power, sols = eebls_transit_gpu(t, y, err, **kw)
+                  batch_size=batch_size, dlogq=dlogq,
+                  nstreams=nstreams, noverlap=noverlap,
+                  fmin=0.9 * freq, fmax=1.1 * freq,
+                  use_fast=use_fast)
 
+        if use_fast:
+            freqs, power = eebls_transit_gpu(t, y, err, **kw)
+
+            kw['use_fast'] = False
+            freqs, power_slow, sols = eebls_transit_gpu(t, y, err, **kw)
+
+            dfsol = freqs[np.argmax(power)] - freqs[np.argmax(power_slow)]
+            close_enough = abs(dfsol) * (max(t) - min(t)) / q < 3
+            if not close_enough:
+                import matplotlib.pyplot as plt
+                plt.plot(freqs, power, alpha=0.5)
+                plt.plot(freqs, power_slow, alpha=0.5)
+                plt.show()
+
+            assert(close_enough)
+            return
+
+        freqs, power, sols = eebls_transit_gpu(t, y, err, **kw)
         power_cpu = np.array([single_bls(t, y, err, x[0], *x[1]) for x in zip(freqs, sols)])
 
-        if plot:
+        if self.plot:
             import matplotlib.pyplot as plt
             f, ax = plt.subplots()
 
@@ -356,38 +400,29 @@ class TestBLS(object):
         print(max(diffs))
         assert mostly_ok and not_too_bad
 
-    def fast_eebls(self, plot=True, seed=100, **kwargs):
-        rand = np.random.RandomState(seed)
-        freq = 1.0 + 0.1 * rand.rand()
-        q = 0.1
-        phi0 = rand.rand()
-        dlogq = 0.3
-        samples_per_peak = 2
-        noverlap = 2
-
-        outstr = "freq={freq}, q={q}, phi0={phi0}, "\
-                 "dlogq={dlogq}"
-        print(outstr.format(freq=freq,
-                            q=q, phi0=phi0, dlogq=dlogq))
-        t, y, err = data(snr=50, q=q, phi0=phi0, freq=freq, ndata=300,
+    @pytest.mark.parametrize("freq", [1.0])
+    @pytest.mark.parametrize("q", [0.1])
+    @pytest.mark.parametrize("phi0", [0.0])
+    @pytest.mark.parametrize("batch_size", [1, 10, None])
+    @pytest.mark.parametrize("dlogq", [0.5, -1.0])
+    def test_fast_eebls(self, freq, q, phi0, batch_size, dlogq, **kwargs):
+        t, y, err = data(snr=50, q=q, phi0=phi0, freq=freq,
                          baseline=365.)
 
         df = 0.25 * q / (max(t) - min(t))
-        fmin = 0.5
-        fmax = 1.5
-
+        fmin = 0.5 * freq
+        fmax = 2 * freq
         nf = int(np.ceil((fmax - fmin) / df))
+        freqs = fmin + df * np.arange(nf)
 
-        kw = dict(qmin=1e-2, qmax=0.5, noverlap=3, dlogq=0.2,
-                  batch_size=1)
+        kw = dict(qmin=1e-2, qmax=0.5, batch_size=batch_size, dlogq=dlogq)
 
         kw.update(kwargs)
 
-        freqs = fmin + df * np.arange(nf)
         power = eebls_gpu_fast(t, y, err, freqs, **kw)
 
         power0, sols = eebls_gpu(t, y, err, freqs, **kw)
-        if plot:
+        if self.plot:
             import matplotlib.pyplot as plt
             f, ax = plt.subplots()
             ax.plot(freqs, power, alpha=0.5)
@@ -395,10 +430,11 @@ class TestBLS(object):
             ax.plot(freqs, power0, alpha=0.5)
             ax.set_yscale('log')
             plt.show()
-        assert_allclose(power, power0)
 
-    def test_fast_eebls_no_sma(self, **kwargs):
-        self.fast_eebls(use_sma=False, **kwargs)
-
-    #def test_fast_eebls_with_sma(self, **kwargs):
-    #    self.fast_eebls(use_sma=True, **kwargs)
+        # this is janky. Need better test
+        # to ensure we're getting the best results,
+        # but no apples-to-apples comparison is
+        # possible for eebls_gpu and eebls_gpu_fast
+        fmax_fast = freqs[np.argmax(power)]
+        fmax_regular = freqs[np.argmax(power0)]
+        assert(abs(fmax_fast - fmax_regular) * (max(t) - min(t)) / q < 3)

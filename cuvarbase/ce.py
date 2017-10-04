@@ -355,10 +355,12 @@ def conditional_entropy(memory, functions, block_size=256,
 def conditional_entropy_fast(memory, functions, block_size=256,
                              transfer_to_host=True,
                              transfer_to_device=True,
-                             batch_size=None,
-                             load_data_into_shared_memory=True,
+                             freq_batch_size=None,
+                             shmem_lc=True,
                              shmem_lim=int(4.8e4),
                              max_nblocks=200,
+                             force_nblocks=None,
+                             stream=None,
                              **kwargs):
     fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight,\
         ce_logp, ce_std, ce_wt = functions
@@ -366,13 +368,12 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
-    i_freq = 0
-    if batch_size is None:
-        batch_size = int(memory.nf)
+    if freq_batch_size is None:
+        freq_batch_size = int(memory.nf)
 
     block = (block_size, 1, 1)
-    grid = (int(np.ceil(batch_size / float(block_size))), 1)
 
+    # Get the shared memory requirement
     r = memory.real_type(1).nbytes
     u = np.uint32(1).nbytes
     shmem = (r + u) * memory.phase_bins * memory.mag_bins
@@ -380,24 +381,35 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     data_mem = (r + u) * len(memory.t)
 
     func = fast_ce
+
+    # Decide whether or not to use shared memory for
+    # loading the lightcurve. Only if the user
+    # wants and we have enough memory
     data_in_shared_mem = False
-    if load_data_into_shared_memory:
+    if shmem_lc:
         data_in_shared_mem = shmem + data_mem < shmem_lim
 
     if data_in_shared_mem:
         shmem += data_mem
         func = faster_ce
 
-    while (i_freq < memory.nf):
-        j_freq = min([i_freq + batch_size, memory.nf])
+    # Make sure we have extra memory for alignment
+    shmem += shmem % r
 
-        grid = (min([j_freq - i_freq, max_nblocks]), 1)
+    i_freq = 0
+    while (i_freq < memory.nf):
+        j_freq = min([i_freq + freq_batch_size, memory.nf])
+
+        grid = (min([int(np.ceil((j_freq - i_freq) / block_size)),
+                     max_nblocks]), 1)
         if data_in_shared_mem:
             grid = (int(np.floor(2 * float(shmem_lim) / shmem)), 1)
+        if force_nblocks is not None:
+            grid = (force_nblocks, 1)
 
         assert(grid[0] > 0)
 
-        args = (grid, block, None)
+        args = (grid, block, stream)
         args += (memory.t_g.ptr, memory.y_g.ptr)
         args += (memory.freqs_g.ptr, memory.ce_g.ptr)
         args += (np.uint32(j_freq - i_freq), np.uint32(i_freq),
@@ -438,6 +450,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         If > 0, the phase bins are overlapped with each other
     mag_overlap: int, optional (default: 0)
         If > 0, the mag bins are overlapped with each other
+    use_fast: bool, optional (default: False)
+        Use a somewhat experimental function to speed up
+        computations. This is perfect for large Nfreqs and nobs <~ 2000.
+        If True, use :func:`run` and not :func:`large_run` and set
+        ``nstreams = 1``.
 
     Example
     -------
@@ -468,10 +485,6 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 raise Exception("mag_overlap must be zero "
                                 "if balanced_magbins is True")
 
-            warnings.warn("The CE computation does not correctly"
-                          " account for the change in integration"
-                          " area for overlapping magnitude bins."
-                          " Setting mag_overlap > 0 is not recommended.")
         self.use_double = kwargs.get('use_double', False)
 
         self.real_type = np.float32
@@ -483,6 +496,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             self.call_func = conditional_entropy_fast
 
         self.memory = kwargs.get('memory', None)
+        self.shmem_lc = kwargs.get('shmem_lc', True)
 
     def _compile_and_prepare_functions(self, **kwargs):
 
@@ -730,7 +744,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 memory[i].set_gpu_arrays_to_zero(**kwargs)
                 memory[i].setdata(t, y, dy=dy, **kwargs)
 
-        kw = dict(block_size=self.block_size)
+        kw = dict(block_size=self.block_size,
+                  shmem_lc=self.shmem_lc)
         kw.update(kwargs)
         results = [self.call_func(memory[i], self.function_tuple, **kw)
                    for i in range(len(data))]
@@ -818,10 +833,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         Same as ``batched_run`` but is more efficient when the frequencies are
         the same for each lightcurve. Doesn't reallocate memory for each batch.
 
-        Notes
-        -----
-        To get best efficiency, make sure the maximum number of observations
-        is not much larger than the typical number of observations
+        .. note::
+            
+            To get best efficiency, make sure the maximum number of
+            observations is not much larger than the typical number
+            of observations.
         """
 
         # create streams if needed

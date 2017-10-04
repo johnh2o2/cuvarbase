@@ -21,7 +21,7 @@ __device__ float bls_value(float ybar, float w){
 	return (w > 1e-10 && w < 1.f - 1e-10) ? ybar * ybar / (w * (1.f - w)) : 0.f;
 }
 
-__global__ void binned_bls_bst(float *yw, float *w, float *bls, int n){
+__global__ void binned_bls_bst(float *yw, float *w, float *bls, unsigned int n){
 	unsigned int i = get_id();
 
 	if (i < n){
@@ -41,6 +41,11 @@ __device__ unsigned int dnbins(unsigned int nbins, float dlogq){
 }
 
 __device__ unsigned int nbins_iter(unsigned int i, unsigned int nb0, float dlogq){
+	
+
+	if (i == 0)
+		return nb0;
+
 	unsigned int nb = nb0;
 	for(int j = 0; j < i; j++)
 		nb += dnbins(nb, dlogq);
@@ -58,15 +63,15 @@ __device__ unsigned int count_tot_nbins(unsigned int nbins0, unsigned int nbinsf
 
 
 
-__global__ void store_best_sols_custom(int *argmaxes, float *best_phi, 
+__global__ void store_best_sols_custom(unsigned int *argmaxes, float *best_phi, 
 	                            float *best_q, float *q_values,
-	                            float *phi_values, int nq, int nphi,
-	                            int nfreq, int freq_offset){
+	                            float *phi_values, unsigned int nq, unsigned int nphi,
+	                            unsigned int nfreq, unsigned int freq_offset){
 
 	unsigned int i = get_id();
 
 	if (i < nfreq){
-		int imax = argmaxes[i + freq_offset];
+		unsigned int imax = argmaxes[i + freq_offset];
 
 		best_phi[i + freq_offset] = phi_values[imax / nq];
 		best_q[i + freq_offset] = q_values[imax % nq];
@@ -81,29 +86,31 @@ __device__ int divrndup(int a, int b){
 
 
 
-__global__ void store_best_sols(int *argmaxes, float *best_phi, 
+__global__ void store_best_sols(unsigned int *argmaxes, float *best_phi, 
 	                            float *best_q,
-	                            int nbins0, int nbinsf, int noverlap, 
-	                            float dlogq, int nfreq, int freq_offset){
+	                            unsigned int nbins0, unsigned int nbinsf, 
+	                            unsigned int noverlap, 
+	                            float dlogq, unsigned int nfreq, unsigned int freq_offset){
 
 	unsigned int i = get_id();
 
 	if (i < nfreq){
-		int imax = argmaxes[i + freq_offset];
-		float dphi = 1.f / noverlap;
+		unsigned int imax = argmaxes[i + freq_offset];
+		float dphi = 1. / noverlap;
 
-		int nb = 0;
-		int bin_offset = 0;
-		for (int j = 0; (bin_offset + nbins_iter(j, nbins0, dlogq)) * noverlap < imax; j++){
-			nb = nbins_iter(j, nbins0, dlogq);
+		unsigned int nb = nbins0;
+		unsigned int bin_offset = 0;
+		unsigned int i_iter = 0;
+		while ((bin_offset + nb) * noverlap <= imax){
 			bin_offset += nb;
+			nb = nbins_iter(++i_iter, nbins0, dlogq);
 		}
 
-		float q = 1.f / nb;
-		int s = (imax - bin_offset * noverlap) / nb;
-		int jphi = (imax - bin_offset * noverlap) % nb;
+		float q = 1. / nb;
+		int s = (((int) imax) - ((int) (bin_offset * noverlap))) / nb;
+		int jphi = (((int) imax) - ((int) (bin_offset * noverlap))) % nb;
 		
-		float phi = mod1(q * (jphi + s * dphi));
+		float phi = mod1((float) (((double) q) * (((double) jphi) + ((double) s) * ((double) dphi))));
 
 		best_phi[i + freq_offset] = phi;
 		best_q[i + freq_offset] = q;
@@ -118,16 +125,16 @@ __global__ void store_best_sols(int *argmaxes, float *best_phi,
 __global__ void bin_and_phase_fold_bst_multifreq(
 	                    float *t, float *yw, float *w,
 						float *yw_bin, float *w_bin, float *freqs,
-						int ndata, int nfreq, int nbins0, int nbinsf,
-						int freq_offset, int noverlap, float dlogq,
-						int nbins_tot){
+						unsigned int ndata, unsigned int nfreq, unsigned int nbins0, unsigned int nbinsf,
+						unsigned int freq_offset, unsigned int noverlap, float dlogq,
+						unsigned int nbins_tot){
 	unsigned int i = get_id();
 
 	if (i < ndata * nfreq){
-		int i_data = i % ndata;
-		int i_freq = i / ndata;
+		unsigned int i_data = i % ndata;
+		unsigned int i_freq = i / ndata;
 
-		int offset = i_freq * nbins_tot * noverlap;
+		unsigned int offset = i_freq * nbins_tot * noverlap;
 
 		float W = w[i_data];
 		float YW = yw[i_data];
@@ -136,17 +143,18 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 		float phi = mod1(t[i_data] * freqs[i_freq + freq_offset]);
 
 		float dphi = 1.f / noverlap;
-		int nbtot = 0;
+		unsigned int nbtot = 0;
+		unsigned int nb, b;
 
 		// iterate through bins (logarithmically spaced)
 		for(int j = 0; nbins_iter(j, nbins0, dlogq) <= nbinsf; j++){
-			int nb = nbins_iter(j, nbins0, dlogq);
+			nb = nbins_iter(j, nbins0, dlogq);
 
 			// iterate through offsets [ 0, 1./sigma, ..., 
 			//                           (sigma - 1) / sigma ]
 			for (int s = 0; s < noverlap; s++){
-				int b = (int) floorf(nb * phi - s * dphi);
-				b = mod(b, nb) + offset + s * nb + noverlap * nbtot;
+				b = (unsigned int) mod((int) floorf(nb * phi - s * dphi), nb);
+				b += offset + s * nb + noverlap * nbtot;
 
 				atomicAdd(&(yw_bin[b]), YW);
 				atomicAdd(&(w_bin[b]), W);
@@ -170,7 +178,8 @@ __global__ void full_bls_no_sol(
 						unsigned int freq_offset,
 						unsigned int hist_size,
 						unsigned int noverlap,
-						float dlogq){
+						float dlogq,
+						float dphi){
 	
 	unsigned int i = get_id();
 
@@ -227,7 +236,7 @@ __global__ void full_bls_no_sol(
 		for (unsigned int k = threadIdx.x; k < ndata; k += blockDim.x){
 			phi = mod1(t[k] * f0);
 
-			b = mod((int) floorf(nbf * phi), nbf);
+			b = mod((int) floorf(nbf * phi - dphi), nbf);
 
 			// shared memory atomics should (hopefully) be faster.
 			atomicAdd(&(block_bins[2 * b]), yw[k]);
@@ -318,15 +327,15 @@ __global__ void bin_and_phase_fold_custom(
 	                    float *t, float *yw, float *w,
 						float *yw_bin, float *w_bin, float *freqs,
 						float *q_values, float *phi_values, 
-						int nq, int nphi, int ndata, 
-						int nfreq, int freq_offset){
+						unsigned int nq, unsigned int nphi, unsigned int ndata, 
+						unsigned int nfreq, unsigned int freq_offset){
 	unsigned int i = get_id();
 
 	if (i < ndata * nfreq){
-		int i_data = i % ndata;
-		int i_freq = i / ndata;
+		unsigned int i_data = i % ndata;
+		unsigned int i_freq = i / ndata;
 
-		int offset = i_freq * nq * nphi;
+		unsigned int offset = i_freq * nq * nphi;
 
 		float W = w[i_data];
 		float YW = yw[i_data];
@@ -351,18 +360,20 @@ __global__ void bin_and_phase_fold_custom(
 
 
 
-__global__ void reduction_max(float *arr, int *arr_args, int nfreq, 
-	                          int nbins, int stride,
-                              float *block_max, int *block_arg_max, 
-                              int offset, int init){
+__global__ void reduction_max(float *arr, unsigned int *arr_args, unsigned int nfreq, 
+	                          unsigned int nbins, unsigned int stride,
+                              float *block_max, unsigned int *block_arg_max, 
+                              unsigned int offset, unsigned int init){
 
 	__shared__ float partial_max[BLOCK_SIZE];
-	__shared__ int partial_arg_max[BLOCK_SIZE];
+	__shared__ unsigned int partial_arg_max[BLOCK_SIZE];
 
-	int id = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
 
-	int nblocks_per_freq = gridDim.x / nfreq;
-	int nthreads_per_freq = blockDim.x * nblocks_per_freq;
+	unsigned int nblocks_per_freq = gridDim.x / nfreq;
+	unsigned int nthreads_per_freq = blockDim.x * nblocks_per_freq;
+
+
 
 
 	//	freq_no / b
@@ -376,8 +387,8 @@ __global__ void reduction_max(float *arr, int *arr_args, int nfreq,
 	//			---(nf - 1)N ----       --- nf * N ---
 	//   nf - 1 | ..             | ... |             |
 
-	int fno = id / nthreads_per_freq;
-	int b   = id % nthreads_per_freq;
+	unsigned int fno = id / nthreads_per_freq;
+	unsigned int b   = id % nthreads_per_freq;
 
 	// read part of array from global memory into shared memory
 	partial_max[threadIdx.x] = (fno < nfreq && b < nbins) ?
@@ -387,7 +398,7 @@ __global__ void reduction_max(float *arr, int *arr_args, int nfreq,
 									(
 										(init == 1) ?
 											b : arr_args[fno * stride + b]
-									) : -1;
+									) : 0;
 
 	__syncthreads();
 
@@ -411,8 +422,8 @@ __global__ void reduction_max(float *arr, int *arr_args, int nfreq,
 
 	// store partial max back into global memory
 	if (threadIdx.x == 0 && fno < nfreq){
-		int i = (gridDim.x == nfreq) ? 0 :
-			fno * stride - fno * nblocks_per_freq;
+		unsigned int i = (gridDim.x == nfreq) ? 0 :
+			                 fno * stride - fno * nblocks_per_freq;
 
 		i += blockIdx.x + offset;
 

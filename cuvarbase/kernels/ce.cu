@@ -14,6 +14,9 @@
 	#define FLT float
 #endif
 
+#define is_aligned(POINTER, BYTE_COUNT) \
+    (((uintptr_t)(const void *)(POINTER)) % (BYTE_COUNT) == 0)
+
 __device__ double atomicAddDouble(double* address, double val)
 {
     unsigned long long int* address_as_ull =
@@ -29,20 +32,20 @@ __device__ double atomicAddDouble(double* address, double val)
 }
 
 
+__device__ FLT mod1(FLT x){
+	return x - floor(x);
+}
+
 __device__ int phase_ind(FLT ft){
-	FLT phi = ft - floor(ft);
-	int n = (int) (phi * NPHASE);
+	int n = (int) (mod1(ft) * NPHASE);
 	return n % NPHASE;
 }
 
 __device__ int posmod(int n, int N){
-	int nmodN = n % N;
-	return (nmodN < 0) ? nmodN + N : nmodN;
+	return (n < 0) ? n + N : n % N;
 }
 
-__device__ FLT mod1(FLT x){
-	return x - floor(x);
-}
+
 
 __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy, 
 	                                    FLT *bin, FLT *freqs,
@@ -92,14 +95,29 @@ __global__ void histogram_data_count(FLT *t, unsigned int *y,
 		unsigned int m0 = y[j_data];
 		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
 
-		for (int n = n0; n >= n0 - PHASE_OVERLAP; n--){
-			for (int m = m0; m >= 0 && m >= m0 - MAG_OVERLAP; m--) {
+		for (int n = (int) n0; n >= (((int) n0) - PHASE_OVERLAP); n--){
+			for (int m = (int) m0; m >= 0 && m >= (((int) m0) - MAG_OVERLAP); m--) {
 				atomicInc(&(bin[offset + posmod(n, NPHASE) * NMAG + m]), 
-				      (PHASE_OVERLAP + 1) * (MAG_OVERLAP + 1) * ndata);
+				           (PHASE_OVERLAP + 1) * (MAG_OVERLAP + 1) * ndata);
 			}
 		}	
 	}
 }
+
+__device__ unsigned int rnduppow2(unsigned int u){
+	unsigned int v = u;
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v++;
+
+	return v;
+}
+
+
 
 
 __global__ void ce_classical_fast(const FLT * __restrict__ t, 
@@ -123,16 +141,24 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 
 	unsigned int * block_bin = (unsigned int *)sh;
 	unsigned int * block_bin_phi = (unsigned int *)&block_bin[nmag * nphase];
-	FLT * Hc = (FLT *)&block_bin_phi[nphase];
+
+	FLT * Hc;
+	if (!is_aligned(&block_bin_phi[nphase], sizeof(FLT)))
+		Hc = (FLT *)&block_bin_phi[nphase + 1];
+	else
+		Hc = (FLT *)&block_bin_phi[nphase];
 	__shared__ FLT f0;
 
 	// each block works on a single frequency.
 	unsigned int i_freq = blockIdx.x;
 
 	unsigned int i, N, Nphi;
+	unsigned int ntot_2 = rnduppow2(nmag * nphase);
+	unsigned int nphase_2 = rnduppow2(nphase);
 	int m, n, m0, n0;
 
-	FLT dm0 = (((FLT) mag_overlap) + 1.f) / nmag;
+	FLT dm0 = ((FLT) (mag_overlap + 1.f)) / nmag;
+	FLT dm;
 	while (i_freq < nfreq){
 
 		// read frequency from global data
@@ -153,11 +179,11 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 
 		// make 2d histogram
 		for(i = threadIdx.x; i < ndata; i += blockDim.x){
-			m0 = y[i];
-			n0 = (int) floor(nphase * mod1(t[i] * f0));
+			m0 = (int) (y[i]);
+			n0 = ((int) floor(nphase * mod1(t[i] * f0))) % nphase;
 
-			for (n = n0; n >= n0 - ((int) phase_overlap); n--){
-				for (m = m0; m >= 0 && m >= m0 - ((int) mag_overlap); m--)
+			for (n = n0; n >= (((int) n0) - ((int) phase_overlap)); n--){
+				for (m = m0; m >= 0 && m >= (((int) m0) - ((int) mag_overlap)); m--)
 					atomicInc(&(block_bin[posmod(n, nphase) * nmag + m]), 
 					      (phase_overlap + 1) * (mag_overlap + 1) * ndata);
 				
@@ -165,11 +191,6 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 		}	
 
 		__syncthreads();
-		/*
-		if (threadIdx.x == 0){
-			for (int i = 0; i < nphase * nmag; i++)
-				printf("block_bin[%d] = %d\n", i, block_bin[i]);
-		}*/
 
 		// Get the total number of data points across phi bins
 		for(n=threadIdx.x; n < nmag * nphase; n+=blockDim.x)
@@ -182,30 +203,30 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 			m0 = n % nmag;
 			n0 = n / nmag;
 
-			// adjust mag bin width for overlapping mag bins (phase bins are periodic)
-			FLT dm = (m0 + mag_overlap > nmag) ? (((int) nmag) -  m0) * dm0 / mag_overlap : dm0;
-
 			N = block_bin[n];
 			Nphi = block_bin_phi[n0];
 
-			if (Nphi == 0 || N == 0)
+			if (Nphi * N == 0)
 				continue;
 
-			Hc[n] = N * log((dm * Nphi) / N);
+			// adjust mag bin width for overlapping mag bins (phase bins are periodic)
+			dm = (m0 + mag_overlap + 1 > nmag) ? (((int) nmag) -  m0) * dm0 / (1.f + mag_overlap) : dm0;
+
+			Hc[n] = ((FLT) N) * log((dm * ((FLT) Nphi)) / ((FLT) N));
 		}
 
 		__syncthreads();
-
+		
 		//add up contributions
-		for(n=(nmag * nphase) / 2; n > 0; n/=2){
-			for (m = threadIdx.x; m < n; m += blockDim.x)
+		for(n = ntot_2 / 2; n > 0; n/=2){
+			for (m = threadIdx.x; m < n && m + n < nmag * nphase; m += blockDim.x)
 				Hc[m] += Hc[m + n];
 			__syncthreads();
 		}
 
 		// add up total bin counts
-		for(n = nphase / 2; n > 0; n/=2){
-			for (m = threadIdx.x; m < n; m += blockDim.x)
+		for(n = nphase_2 / 2; n > 0; n/=2){
+			for (m = threadIdx.x; m < n && m + n < nphase; m += blockDim.x)
 				block_bin_phi[m] += block_bin_phi[m + n];
 			__syncthreads();
 		}
@@ -238,10 +259,23 @@ __global__ void ce_classical_faster(const FLT * __restrict__ t,
 	// (unsigned int + FLT) * nmag * nphase + nphase * (unsigned int)
 	unsigned int * block_bin = (unsigned int *)sh;
 	unsigned int * block_bin_phi = (unsigned int *)&block_bin[nmag * nphase];
-	FLT * Hc = (FLT *)&block_bin_phi[nphase];
+
+	FLT * Hc;
+	if (!is_aligned(&block_bin_phi[nphase], sizeof(FLT)))
+		Hc = (FLT *)&block_bin_phi[nphase + 1];
+	else
+		Hc = (FLT *)&block_bin_phi[nphase];
+
 	FLT * t_sh = (FLT *)&Hc[nmag * nphase];
 	unsigned int * y_sh = (unsigned int *)&t_sh[ndata];
 	__shared__ FLT f0;
+
+	unsigned int i, N, Nphi;
+	// each block works on a single frequency.
+	unsigned int i_freq = blockIdx.x;
+	unsigned int ntot_2 = rnduppow2(nmag * nphase);
+	unsigned int nphase_2 = rnduppow2(nphase);
+	int m, n, m0, n0;
 
 	// load data into shared memory
 	for (int i = threadIdx.x; i < ndata; i += blockDim.x){
@@ -251,19 +285,15 @@ __global__ void ce_classical_faster(const FLT * __restrict__ t,
 	
 	__syncthreads();
 
-	// each block works on a single frequency.
-	unsigned int i_freq = blockIdx.x;
-
-	unsigned int i, N, Nphi;
-	int m, n, m0, n0;
-
-	FLT dm0 = (((FLT) mag_overlap) + 1.f) / nmag;
+	FLT dm0 = ((FLT) (mag_overlap + 1.f)) / nmag;
+	FLT dm;
 	while (i_freq < nfreq){
 
 		// read frequency from global data
 		if (threadIdx.x == 0){
 			f0 = freqs[i_freq + freq_offset];
 		}
+
 
 		// initialise blocks to zero
 		for(i = threadIdx.x; i < nmag * nphase; i += blockDim.x){
@@ -278,23 +308,18 @@ __global__ void ce_classical_faster(const FLT * __restrict__ t,
 
 		// make 2d histogram
 		for(i = threadIdx.x; i < ndata; i += blockDim.x){
-			m0 = y_sh[i];
-			n0 = (int) floor(nphase * mod1(t_sh[i] * f0));
+			m0 = (int) (y[i]);
+			n0 = ((int) floor(nphase * mod1(t_sh[i] * f0))) % nphase;
 
-			for (n = n0; n >= n0 - ((int) phase_overlap); n--){
-				for (m = m0; m >= 0 && m >= m0 - ((int) mag_overlap); m--)
+			for (n = n0; n >= (((int) n0) - ((int) phase_overlap)); n--){
+				for (m = m0; m >= 0 && m >= (((int) m0) - ((int) mag_overlap)); m--)
 					atomicInc(&(block_bin[posmod(n, nphase) * nmag + m]), 
-					      (phase_overlap + 1) * (mag_overlap + 1) * ndata);
-				
+					          (phase_overlap + 1) * (mag_overlap + 1) * ndata);
 			}
-		}	
+				
+		}
 
 		__syncthreads();
-		/*
-		if (threadIdx.x == 0){
-			for (int i = 0; i < nphase * nmag; i++)
-				printf("block_bin[%d] = %d\n", i, block_bin[i]);
-		}*/
 
 		// Get the total number of data points across phi bins
 		for(n=threadIdx.x; n < nmag * nphase; n+=blockDim.x)
@@ -307,37 +332,36 @@ __global__ void ce_classical_faster(const FLT * __restrict__ t,
 			m0 = n % nmag;
 			n0 = n / nmag;
 
-			// adjust mag bin width for overlapping mag bins (phase bins are periodic)
-			FLT dm = (m0 + mag_overlap > nmag) ? (((int) nmag) -  m0) * dm0 / mag_overlap : dm0;
-
-			N = block_bin[n];
 			Nphi = block_bin_phi[n0];
-
-			if (Nphi == 0 || N == 0)
+			N = block_bin[n];
+			if (Nphi*N == 0)
 				continue;
 
-			Hc[n] = N * log((dm * Nphi) / N);
+			// adjust mag bin width for overlapping mag bins (phase bins are periodic)
+			dm = (m0 + mag_overlap + 1 > ((int) nmag)) ? (((int) nmag) -  m0) * dm0 / (1.f + mag_overlap) : dm0;
+
+			Hc[n] = ((FLT) N) * log((dm * ((FLT) Nphi)) / ((FLT) N));
 		}
 
 		__syncthreads();
 
 		//add up contributions
-		for(n=(nmag * nphase) / 2; n > 0; n/=2){
-			for (m = threadIdx.x; m < n; m += blockDim.x)
+		for(n = ntot_2 / 2; n > 0; n/=2){
+			for (m = threadIdx.x; (m < n) && ((m + n) < nmag * nphase); m += blockDim.x)
 				Hc[m] += Hc[m + n];
 			__syncthreads();
 		}
 
 		// add up total bin counts
-		for(n = nphase / 2; n > 0; n/=2){
-			for (m = threadIdx.x; m < n; m += blockDim.x)
+		for(n = nphase_2 / 2; n > 0; n/=2){
+			for (m = threadIdx.x; (m < n) && ((m + n) < nphase); m += blockDim.x)
 				block_bin_phi[m] += block_bin_phi[m + n];
 			__syncthreads();
 		}
 
 		// write result to global memory
 		if (threadIdx.x == 0)
-			ce[i_freq + freq_offset] = Hc[0] / block_bin_phi[0];
+			ce[i_freq + freq_offset] = Hc[0] / ((FLT) (block_bin_phi[0]));
 		
 		i_freq += gridDim.x;
 	}
@@ -375,15 +399,17 @@ __global__ void weighted_ce(FLT *bins, unsigned int nfreq, FLT *ce){
 __global__ void standard_ce(unsigned int *bins, unsigned int nfreq,
                             FLT *ce){
 	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+	FLT dm, dm0, Hc;
+	unsigned int bin_tot, offset, Nphi, N;
 
 	if (i < nfreq){
-		FLT Hc = 0.f;
-		FLT dm = ((FLT)(MAG_OVERLAP + 1)) / NMAG;
-		unsigned int bin_tot = 0;
+		Hc = 0.f;
+		dm0 = ((FLT)(MAG_OVERLAP + 1)) / NMAG;
+		bin_tot = 0;
 		for(int n=0; n < NPHASE; n++){
-			unsigned int offset = i * (NMAG * NPHASE) + n * NMAG;
+			offset = i * (NMAG * NPHASE) + n * NMAG;
 
-			unsigned int Nphi = 0;
+			Nphi = 0;
 			for (int m=0; m < NMAG; m++)
 				Nphi += bins[offset + m];
 
@@ -391,12 +417,15 @@ __global__ void standard_ce(unsigned int *bins, unsigned int nfreq,
 				continue;
 
 			for (int m=0; m < NMAG; m++){
-				unsigned int N = bins[offset + m];
+				N = bins[offset + m];
 
 				if (N == 0)
 					continue;
 
 				bin_tot += N;
+
+				// adjust mag bin width for overlapping bins
+				dm = (m + MAG_OVERLAP + 1 > NMAG) ? (((FLT) NMAG) -  ((FLT) m)) * dm0 / (1.f + MAG_OVERLAP) : dm0;
 				Hc += N * log((dm * Nphi) / N);
 			}
 		}
