@@ -375,7 +375,7 @@ class BLSMemory(object):
 
 def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    functions=None, stream=None, dlogq=0.3,
-                   memory=None, noverlap=2, max_nblocks=200,
+                   memory=None, noverlap=2, max_nblocks=5000,
                    force_nblocks=None, dphi=0.0,
                    shmem_lim=None, freq_batch_size=None,
                    transfer_to_device=True,
@@ -446,7 +446,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     max_nblocks: int, optional (default: 200)
         Maximum grid size to use
     force_nblocks: int, optional (default: None)
-        If this is set the gridsize is forced to be this balue
+        If this is set the gridsize is forced to be this value
     memory: :class:`BLSMemory` instance, optional (default: None)
         See :class:`BLSMemory`.
     transfer_to_host: bool, optional (default: True)
@@ -1112,7 +1112,7 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
 
         .. note::
 
-            Only returned when :param:`use_fast` is ``False``.
+            Only returned when ``use_fast=False``.
 
     """
 

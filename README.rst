@@ -1,5 +1,5 @@
-cuvarbase 0.2.0
-===============
+cuvarbase
+=========
 
 .. image:: https://badge.fury.io/py/cuvarbase.svg
     :target: https://badge.fury.io/py/cuvarbase
