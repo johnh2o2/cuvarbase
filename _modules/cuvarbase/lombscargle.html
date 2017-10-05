@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>cuvarbase.lombscargle &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>cuvarbase.lombscargle &#8212; cuvarbase 0.2.0 documentation</title>
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.1.9',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -56,6 +56,7 @@
 <span class="kn">import</span> <span class="nn">pycuda.driver</span> <span class="k">as</span> <span class="nn">cuda</span>
 <span class="kn">import</span> <span class="nn">pycuda.gpuarray</span> <span class="k">as</span> <span class="nn">gpuarray</span>
 <span class="kn">from</span> <span class="nn">pycuda.compiler</span> <span class="k">import</span> <span class="n">SourceModule</span>
+<span class="c1"># import pycuda.autoinit</span>
 
 <span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">weights</span><span class="p">,</span> <span class="n">find_kernel</span><span class="p">,</span> <span class="n">_module_reader</span>
@@ -370,8 +371,12 @@
             <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">x</span><span class="p">[:]</span> <span class="o">=</span> <span class="mf">0.</span>
 
-        <span class="k">for</span> <span class="n">mem</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="p">]:</span>
-            <span class="n">mem</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div></div>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;nfft_mem_yw&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_yw</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                                         <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;nfft_mem_w&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nfft_mem_w</span><span class="o">.</span><span class="n">ghat_g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                                        <span class="n">stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="mhdirect_sums"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.lombscargle.mhdirect_sums">[docs]</a><span class="k">def</span> <span class="nf">mhdirect_sums</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">yw</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">YY</span><span class="p">,</span> <span class="n">nharms</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
@@ -807,12 +812,16 @@
         <span class="c1"># final result</span>
         <span class="n">mem</span> <span class="o">+=</span> <span class="n">nf</span>
 
+        <span class="n">rsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nbytes</span>
+        <span class="n">csize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_type</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nbytes</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">csize</span><span class="p">)</span> <span class="o">/</span> <span class="n">rsize</span><span class="p">))</span>
+
         <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_fft&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
             <span class="c1"># yw grid / fft (doubled because complex)</span>
-            <span class="n">mem</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="p">(</span><span class="n">fft_size</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span>
+            <span class="n">mem</span> <span class="o">=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="p">(</span><span class="n">fft_size</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span>
 
             <span class="c1"># w grid / fft (doubled because complex)</span>
-            <span class="n">mem</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">fft_size</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span>
+            <span class="n">mem</span> <span class="o">+=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">fft_size</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span>
 
             <span class="c1"># precomputation (q1 = n0, q2 = n0, q3 = 2m + 1)</span>
             <span class="n">mem</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n0</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">m</span> <span class="o">+</span> <span class="mi">1</span>
@@ -826,12 +835,8 @@
             <span class="c1"># vector b (Ax = b)</span>
             <span class="n">mem</span> <span class="o">+=</span> <span class="n">nbatch</span>
 
-        <span class="c1"># double everything if we&#39;re using double precision!</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
-            <span class="n">mem</span> <span class="o">*=</span> <span class="mi">2</span>
-
-        <span class="c1"># size of 32 bit float</span>
-        <span class="n">mem</span> <span class="o">*=</span> <span class="mi">4</span>
+        <span class="c1"># size of float</span>
+        <span class="n">mem</span> <span class="o">*=</span> <span class="n">rsize</span>
 
         <span class="k">return</span> <span class="n">mem</span></div>
 

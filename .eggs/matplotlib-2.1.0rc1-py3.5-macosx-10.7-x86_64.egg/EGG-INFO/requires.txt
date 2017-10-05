@@ -1,0 +1,6 @@
+numpy>=1.7.1
+six>=1.10
+python-dateutil>=2.0
+pytz
+cycler>=0.10
+pyparsing!=2.0.4,!=2.1.2,!=2.1.6,>=2.0.1

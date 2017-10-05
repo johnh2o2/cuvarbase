@@ -1,0 +1,17 @@
+astropy/_compiler.so
+astropy/_erfa/_core.so
+astropy/convolution/boundary_extend.so
+astropy/convolution/boundary_fill.so
+astropy/convolution/boundary_none.so
+astropy/convolution/boundary_wrap.so
+astropy/cosmology/scalar_inv_efuncs.so
+astropy/io/ascii/cparser.so
+astropy/io/fits/compression.so
+astropy/io/votable/tablewriter.so
+astropy/modeling/_projections.so
+astropy/stats/lombscargle/implementations/cython_impl.so
+astropy/table/_column_mixins.so
+astropy/table/_np_utils.so
+astropy/utils/_compiler.so
+astropy/utils/xml/_iterparser.so
+astropy/wcs/_wcs.so

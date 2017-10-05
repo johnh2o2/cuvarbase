@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>cuvarbase.tests.test_pdm &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>cuvarbase.tests.test_pdm &#8212; cuvarbase 0.2.0 documentation</title>
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '0.1.9',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -67,8 +67,7 @@
     <span class="k">return</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span></div>
 
 
-<span class="nd">@mark_cuda_test</span>
-<span class="k">def</span> <span class="nf">test_cuda_pdm</span><span class="p">():</span>
+<div class="viewcode-block" id="test_cuda_pdm"><a class="viewcode-back" href="../../../cuvarbase.tests.html#cuvarbase.tests.test_pdm.test_cuda_pdm">[docs]</a><span class="k">def</span> <span class="nf">test_cuda_pdm</span><span class="p">():</span>
 
     <span class="n">kind</span> <span class="o">=</span> <span class="s1">&#39;binned_linterp&#39;</span>
     <span class="n">nbins</span> <span class="o">=</span> <span class="mi">10</span>
@@ -92,7 +91,7 @@
 
     <span class="n">pow_gpu</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-    <span class="n">assert_allclose</span><span class="p">(</span><span class="n">pow_cpu</span><span class="p">,</span> <span class="n">pow_gpu</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1E-2</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">assert_allclose</span><span class="p">(</span><span class="n">pow_cpu</span><span class="p">,</span> <span class="n">pow_gpu</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1E-2</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
 </pre></div>
 
           </div>

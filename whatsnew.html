@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>What’s new in cuvarbase &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>What’s new in cuvarbase &#8212; cuvarbase 0.2.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.9',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -25,7 +25,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Install instructions" href="install.html" />
-    <link rel="prev" title="cuvarbase 0.1.9" href="index.html" />
+    <link rel="prev" title="cuvarbase" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -44,7 +44,35 @@
   <div class="section" id="what-s-new-in-cuvarbase">
 <h1>What’s new in cuvarbase<a class="headerlink" href="#what-s-new-in-cuvarbase" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><strong>0.1.9</strong><ul>
+<li><dl class="first docutils">
+<dt><strong>0.2.0</strong></dt>
+<dd><ul class="first last">
+<li>Many more unit tests for BLS and CE.</li>
+<li><dl class="first docutils">
+<dt>BLS</dt>
+<dd><ul class="first last">
+<li>Now several orders of magnitude faster! Use <code class="docutils literal"><span class="pre">use_fast=True</span></code> in <code class="docutils literal"><span class="pre">eebls_transit_gpu</span></code> or use <code class="docutils literal"><span class="pre">eebls_gpu_fast</span></code>.</li>
+<li>Bug-fix for boost-python error when calling <code class="docutils literal"><span class="pre">eebls_gpu_fast</span></code>.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>CE</dt>
+<dd><ul class="first last">
+<li>New <code class="docutils literal"><span class="pre">use_fast</span></code> parameter in <code class="docutils literal"><span class="pre">ConditionalEntropyAsyncProcess</span></code>; if selected will use a kernel that should be substantially more efficient and that requires no memory overhead. If selected, you should use the <code class="docutils literal"><span class="pre">run</span></code> function and not the <code class="docutils literal"><span class="pre">large_run</span></code> function. Currently the <code class="docutils literal"><span class="pre">weighted</span></code> option is not supported when <code class="docutils literal"><span class="pre">use_fast</span></code> is <code class="docutils literal"><span class="pre">True</span></code>.</li>
+<li>Bug-fix for <code class="docutils literal"><span class="pre">mag_overlap</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>.</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><strong>0.1.9</strong></dt>
+<dd><ul class="first last">
 <li>Added Sphinx documentation</li>
 <li><strong>Now Python 3 compatible!</strong></li>
 <li>Miscillaneous bug fixes</li>
@@ -78,6 +106,8 @@
 </dl>
 </li>
 </ul>
+</dd>
+</dl>
 </li>
 <li><dl class="first docutils">
 <dt><strong>0.1.8</strong></dt>
@@ -183,7 +213,7 @@ that’s important</li>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="index.html" title="previous chapter">cuvarbase 0.1.9</a></li>
+      <li>Previous: <a href="index.html" title="previous chapter">cuvarbase</a></li>
       <li>Next: <a href="install.html" title="next chapter">Install instructions</a></li>
   </ul></li>
 </ul>

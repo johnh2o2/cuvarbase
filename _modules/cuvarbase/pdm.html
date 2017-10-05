@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>cuvarbase.pdm &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>cuvarbase.pdm &#8212; cuvarbase 0.2.0 documentation</title>
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.1.9',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -46,12 +46,17 @@
 
 <span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">zip</span>
 <span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">range</span>
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">resource</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
 <span class="kn">import</span> <span class="nn">pycuda.driver</span> <span class="k">as</span> <span class="nn">cuda</span>
 <span class="kn">import</span> <span class="nn">pycuda.gpuarray</span> <span class="k">as</span> <span class="nn">gpuarray</span>
 <span class="kn">from</span> <span class="nn">pycuda.compiler</span> <span class="k">import</span> <span class="n">SourceModule</span>
-<span class="kn">import</span> <span class="nn">resource</span>
-<span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span><span class="p">,</span> <span class="n">BaseSpectrogram</span>
+<span class="c1"># import pycuda.autoinit</span>
+
+<span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">weights</span><span class="p">,</span> <span class="n">find_kernel</span>
 
 
@@ -151,20 +156,27 @@
     <span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="n">ybar</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
 
     <span class="c1"># transfer data</span>
-    <span class="n">w_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
-    <span class="n">t_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
-    <span class="n">y_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+    <span class="n">w_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+    <span class="n">t_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+    <span class="n">y_g</span><span class="o">.</span><span class="n">set_async</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
 
     <span class="n">function</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span>
-                                 <span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">w_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">pow_g</span><span class="p">,</span>
+                                 <span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">w_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>
+                                 <span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">pow_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span>
                                  <span class="n">ndata</span><span class="p">,</span> <span class="n">nfreqs</span><span class="p">,</span> <span class="n">dphi</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span>
 
-    <span class="n">cuda</span><span class="o">.</span><span class="n">memcpy_dtoh_async</span><span class="p">(</span><span class="n">pow_cpu</span><span class="p">,</span> <span class="n">pow_g</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+    <span class="n">pow_g</span><span class="o">.</span><span class="n">get_async</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span> <span class="n">ary</span><span class="o">=</span><span class="n">pow_cpu</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">pow_cpu</span></div>
 
 
 <div class="viewcode-block" id="PDMAsyncProcess"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.pdm.PDMAsyncProcess">[docs]</a><span class="k">class</span> <span class="nc">PDMAsyncProcess</span><span class="p">(</span><span class="n">GPUAsyncProcess</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PDMAsyncProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;PDM is experimental at this point. &quot;</span>
+                      <span class="s2">&quot;Use with great caution.&quot;</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">_compile_and_prepare_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
         <span class="n">pdm2_txt</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">find_kernel</span><span class="p">(</span><span class="s1">&#39;pdm&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
         <span class="n">pdm2_txt</span> <span class="o">=</span> <span class="n">pdm2_txt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;//INSERT_NBINS_HERE&#39;</span><span class="p">,</span>
@@ -200,7 +212,7 @@
                 <span class="n">t_g</span><span class="p">,</span> <span class="n">y_g</span><span class="p">,</span> <span class="n">w_g</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
                                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span>
 
-            <span class="n">pow_g</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">mem_alloc</span><span class="p">(</span><span class="n">pow_cpu</span><span class="o">.</span><span class="n">nbytes</span><span class="p">)</span>
+            <span class="n">pow_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pow_cpu</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">pow_cpu</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
             <span class="n">freqs_g</span> <span class="o">=</span> <span class="n">gpuarray</span><span class="o">.</span><span class="n">to_gpu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
 
             <span class="n">gpu_data</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">t_g</span><span class="p">,</span> <span class="n">y_g</span><span class="p">,</span> <span class="n">w_g</span><span class="p">,</span> <span class="n">freqs_g</span><span class="p">,</span> <span class="n">pow_g</span><span class="p">))</span>
@@ -208,7 +220,7 @@
         <span class="k">return</span> <span class="n">gpu_data</span><span class="p">,</span> <span class="n">pow_cpus</span></div>
 
 <div class="viewcode-block" id="PDMAsyncProcess.run"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.pdm.PDMAsyncProcess.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">gpu_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pow_cpus</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;binned_linterp&#39;</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="o">**</span><span class="n">pdm_kwargs</span><span class="p">):</span>
+            <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;binned_linterp&#39;</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="o">**</span><span class="n">pdm_kwargs</span><span class="p">):</span>
         <span class="n">function</span> <span class="o">=</span> <span class="s1">&#39;pdm_</span><span class="si">%s</span><span class="s1">_</span><span class="si">%d</span><span class="s1">bins&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">nbins</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">function</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepared_functions</span><span class="p">:</span>
@@ -223,29 +235,6 @@
                    <span class="nb">zip</span><span class="p">(</span><span class="n">streams</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">gpu_data</span><span class="p">,</span> <span class="n">pow_cpus</span><span class="p">)]</span>
 
         <span class="k">return</span> <span class="n">results</span></div></div>
-
-
-<div class="viewcode-block" id="PDMSpectrogram"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.pdm.PDMSpectrogram">[docs]</a><span class="k">class</span> <span class="nc">PDMSpectrogram</span><span class="p">(</span><span class="n">BaseSpectrogram</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">dphi</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
-                 <span class="n">block_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;binned_linterp&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="n">pdm_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dphi</span><span class="o">=</span><span class="n">dphi</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="n">block_size</span><span class="p">,</span>
-                          <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="n">nbins</span><span class="p">)</span>
-
-        <span class="nb">super</span><span class="p">(</span><span class="n">PDMSpectrogram</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">proc_kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pdm_kwargs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="n">PDMAsyncProcess</span><span class="p">()</span>
-
-<div class="viewcode-block" id="PDMSpectrogram.model"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.pdm.PDMSpectrogram.model">[docs]</a>    <span class="k">def</span> <span class="nf">model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
-        <span class="k">if</span> <span class="n">time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighted_local_data</span><span class="p">(</span><span class="n">time</span><span class="p">)</span>
-
-        <span class="n">linterp</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc_kwargs</span><span class="p">[</span><span class="s1">&#39;kind&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;binned_linterp&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">binned_pdm_model</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_kwargs</span><span class="p">[</span><span class="s1">&#39;nbins&#39;</span><span class="p">],</span>
-                                <span class="n">linterp</span><span class="o">=</span><span class="n">linterp</span><span class="p">)</span></div></div>
 </pre></div>
 
           </div>

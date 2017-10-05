@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>cuvarbase.cunfft &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>cuvarbase.cunfft &#8212; cuvarbase 0.2.0 documentation</title>
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.1.9',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -46,17 +46,20 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
 
 <span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">object</span>
+
 <span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">resource</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
 <span class="kn">import</span> <span class="nn">pycuda.driver</span> <span class="k">as</span> <span class="nn">cuda</span>
 <span class="kn">import</span> <span class="nn">pycuda.gpuarray</span> <span class="k">as</span> <span class="nn">gpuarray</span>
 <span class="kn">from</span> <span class="nn">pycuda.compiler</span> <span class="k">import</span> <span class="n">SourceModule</span>
+<span class="c1"># import pycuda.autoinit</span>
+
+<span class="kn">import</span> <span class="nn">skcuda.fft</span> <span class="k">as</span> <span class="nn">cufft</span>
 
 <span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">find_kernel</span><span class="p">,</span> <span class="n">_module_reader</span>
-<span class="kn">import</span> <span class="nn">resource</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">ctypes</span>
-<span class="kn">import</span> <span class="nn">skcuda.fft</span> <span class="k">as</span> <span class="nn">cufft</span>
 
 
 <div class="viewcode-block" id="NFFTMemory"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.cunfft.NFFTMemory">[docs]</a><span class="k">class</span> <span class="nc">NFFTMemory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>

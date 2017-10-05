@@ -1,0 +1,12 @@
+matplotlib/_cntr.so
+matplotlib/_contour.so
+matplotlib/_image.so
+matplotlib/_path.so
+matplotlib/_png.so
+matplotlib/_qhull.so
+matplotlib/_tri.so
+matplotlib/ft2font.so
+matplotlib/ttconv.so
+matplotlib/backends/_backend_agg.so
+matplotlib/backends/_macosx.so
+matplotlib/backends/_tkagg.so

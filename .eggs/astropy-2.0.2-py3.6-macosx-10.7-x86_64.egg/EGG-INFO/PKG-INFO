@@ -1,0 +1,30 @@
+Metadata-Version: 1.2
+Name: astropy
+Version: 2.0.2
+Summary: Community-developed python astronomy tools
+Home-page: http://astropy.org
+Author: The Astropy Developers
+Author-email: astropy.team@gmail.com
+License: BSD
+Description-Content-Type: UNKNOWN
+Description: 
+        Astropy is a package intended to contain core functionality and some
+        common tools needed for performing astronomy and astrophysics research with
+        Python. It also provides an index for other astronomy packages and tools for
+        managing them.
+        
+Keywords: astronomy,astrophysics,cosmology,space,science,units,table,wcs,vo,samp,coordinate,fits,modeling,models,fitting,ascii
+Platform: UNKNOWN
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: C
+Classifier: Programming Language :: Cython
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Topic :: Scientific/Engineering :: Astronomy
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires: numpy
+Provides: astropy
+Requires-Python: >=2.7

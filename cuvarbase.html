@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>cuvarbase package &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>cuvarbase package &#8212; cuvarbase 0.2.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.9',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -73,27 +73,86 @@ and variants.</p>
 <tr><td class="label"><a class="fn-backref" href="#id1">[K2002]</a></td><td><a class="reference external" href="http://adsabs.harvard.edu/abs/2002A%26A...391..369K">Kovacs et al. 2002</a></td></tr>
 </tbody>
 </table>
+<dl class="class">
+<dt id="cuvarbase.bls.BLSMemory">
+<em class="property">class </em><code class="descclassname">cuvarbase.bls.</code><code class="descname">BLSMemory</code><span class="sig-paren">(</span><em>max_ndata</em>, <em>max_nfreqs</em>, <em>stream=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#BLSMemory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.BLSMemory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="cuvarbase.bls.BLSMemory.allocate_data">
+<code class="descname">allocate_data</code><span class="sig-paren">(</span><em>ndata=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#BLSMemory.allocate_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.BLSMemory.allocate_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.bls.BLSMemory.allocate_freqs">
+<code class="descname">allocate_freqs</code><span class="sig-paren">(</span><em>nfreqs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#BLSMemory.allocate_freqs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.BLSMemory.allocate_freqs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.bls.BLSMemory.allocate_pinned_arrays">
+<code class="descname">allocate_pinned_arrays</code><span class="sig-paren">(</span><em>nfreqs=None</em>, <em>ndata=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#BLSMemory.allocate_pinned_arrays"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.BLSMemory.allocate_pinned_arrays" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="cuvarbase.bls.BLSMemory.fromdata">
+<em class="property">classmethod </em><code class="descname">fromdata</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>qmin=None</em>, <em>qmax=None</em>, <em>freqs=None</em>, <em>nf=None</em>, <em>transfer=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#BLSMemory.fromdata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.BLSMemory.fromdata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.bls.BLSMemory.setdata">
+<code class="descname">setdata</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>qmin=None</em>, <em>qmax=None</em>, <em>freqs=None</em>, <em>nf=None</em>, <em>transfer=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#BLSMemory.setdata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.BLSMemory.setdata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.bls.BLSMemory.transfer_data_to_cpu">
+<code class="descname">transfer_data_to_cpu</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#BLSMemory.transfer_data_to_cpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.BLSMemory.transfer_data_to_cpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.bls.BLSMemory.transfer_data_to_gpu">
+<code class="descname">transfer_data_to_gpu</code><span class="sig-paren">(</span><em>transfer_freqs=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#BLSMemory.transfer_data_to_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.BLSMemory.transfer_data_to_gpu" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 <dl class="function">
 <dt id="cuvarbase.bls.compile_bls">
-<code class="descclassname">cuvarbase.bls.</code><code class="descname">compile_bls</code><span class="sig-paren">(</span><em>block_size=256</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#compile_bls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.compile_bls" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">compile_bls</code><span class="sig-paren">(</span><em>block_size=256, function_names=['full_bls_no_sol', 'bin_and_phase_fold_custom', 'reduction_max', 'store_best_sols', 'store_best_sols_custom', 'bin_and_phase_fold_bst_multifreq', 'binned_bls_bst'], prepare=True, **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#compile_bls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.compile_bls" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compile BLS kernel</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>block_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: _default_block_size</em><em>)</em>) – CUDA threads per CUDA block.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>block_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: _default_block_size</em><em>)</em>) – CUDA threads per CUDA block.</li>
+<li><strong>function_names</strong> (<em>list</em><em>, </em><em>optional</em><em> (</em><em>default: _all_function_names</em><em>)</em>) – Function names to load and prepare</li>
+<li><strong>prepare</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – Whether or not to prepare functions (for slightly faster
+kernel launching)</li>
+</ul>
+</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">gpu_bin_custom, gpu_store, gpu_store_custom)</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>functions</strong> – Dictionary of (function name, PyCUDA function object) pairs</p>
+</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">(gpu_bls, gpu_max, gpu_bin,</td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
 </tr>
 </tbody>
 </table>
 </dd></dl>
 
 <dl class="function">
+<dt id="cuvarbase.bls.count_tot_nbins">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">count_tot_nbins</code><span class="sig-paren">(</span><em>nbins0</em>, <em>nbinsf</em>, <em>dlogq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#count_tot_nbins"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.count_tot_nbins" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.dnbins">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">dnbins</code><span class="sig-paren">(</span><em>nbins</em>, <em>dlogq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#dnbins"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.dnbins" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
 <dt id="cuvarbase.bls.eebls_gpu">
-<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_gpu</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>freqs</em>, <em>qmin=0.01</em>, <em>qmax=0.5</em>, <em>nstreams=5</em>, <em>noverlap=3</em>, <em>dlogq=0.2</em>, <em>max_memory=100000000.0</em>, <em>batch_size=None</em>, <em>functions=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_gpu" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_gpu</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>freqs</em>, <em>qmin=0.01</em>, <em>qmax=0.5</em>, <em>nstreams=5</em>, <em>noverlap=3</em>, <em>dlogq=0.2</em>, <em>max_memory=None</em>, <em>freq_batch_size=None</em>, <em>functions=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_gpu" title="Permalink to this definition">¶</a></dt>
 <dd><p>Box-Least Squares, accelerated with PyCUDA</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -109,10 +168,11 @@ and variants.</p>
 <li><strong>nstreams</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 5</em><em>)</em>) – Number of CUDA streams to utilize.</li>
 <li><strong>noverlap</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 3</em><em>)</em>) – Number of overlapping q bins to use</li>
 <li><strong>dlogq</strong> (<em>float</em><em>, </em><em>optional</em><em>, </em><em>(</em><em>default: 0.5</em><em>)</em>) – logarithmic spacing of <span class="math">\(q\)</span> values, where <span class="math">\(d\log q = dq / q\)</span></li>
-<li><strong>batch_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Number of frequencies to compute in a single batch; determines
+<li><strong>freq_batch_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Number of frequencies to compute in a single batch; determines
 this automatically based on <code class="docutils literal"><span class="pre">max_memory</span></code></li>
-<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1e8</em><em>)</em>) – Maximum memory to use in bytes. Will ignore this if
-batch_size is specified</li>
+<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Maximum memory to use in bytes. Will ignore this if
+<code class="docutils literal"><span class="pre">freq_batch_size</span></code> is specified, and will use the total free memory
+as returned by <code class="docutils literal"><span class="pre">pycuda.driver.mem_get_info</span></code> if this is <code class="docutils literal"><span class="pre">None</span></code>.</li>
 <li><strong>functions</strong> (<em>tuple of CUDA functions</em>) – returned by <code class="docutils literal"><span class="pre">compile_bls</span></code></li>
 </ul>
 </td>
@@ -130,7 +190,7 @@ batch_size is specified</li>
 
 <dl class="function">
 <dt id="cuvarbase.bls.eebls_gpu_custom">
-<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_gpu_custom</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>freqs</em>, <em>q_values</em>, <em>phi_values</em>, <em>batch_size=None</em>, <em>nstreams=5</em>, <em>max_memory=100000000.0</em>, <em>functions=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_gpu_custom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_gpu_custom" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_gpu_custom</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>freqs</em>, <em>q_values</em>, <em>phi_values</em>, <em>freq_batch_size=None</em>, <em>nstreams=5</em>, <em>max_memory=None</em>, <em>functions=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_gpu_custom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_gpu_custom" title="Permalink to this definition">¶</a></dt>
 <dd><p>Box-Least Squares, with custom q and phi values. Useful
 if you’re honing the initial solution or testing between
 a relatively small number of possible solutions.</p>
@@ -146,13 +206,13 @@ a relatively small number of possible solutions.</p>
 <li><strong>q_values</strong> (<em>array_like</em>) – Set of q values to search at each trial frequency</li>
 <li><strong>phi_values</strong> (<em>float</em><em> or </em><em>array_like</em>) – Set of phi values to search at each trial frequency</li>
 <li><strong>nstreams</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 5</em><em>)</em>) – Number of CUDA streams to utilize.</li>
-<li><strong>batch_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Number of frequencies to compute in a single batch; determines
+<li><strong>freq_batch_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Number of frequencies to compute in a single batch; determines
 this automatically by default based on <code class="docutils literal"><span class="pre">max_memory</span></code></li>
-<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1e8</em><em>)</em>) – Maximum memory to use in bytes. Will ignore this if
-<code class="docutils literal"><span class="pre">batch_size</span></code> is specified.</li>
-<li><strong>functions</strong> (<em>tuple of CUDA functions</em>) – gpu_bls, gpu_max, gpu_bin, gpu_store functions;
-returned by <cite>compile_bls</cite></li>
-<li><strong>**kwargs</strong> – passed to <cite>compile_bls</cite></li>
+<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Maximum memory to use in bytes. Will ignore this if
+<code class="docutils literal"><span class="pre">freq_batch_size</span></code> is specified. If <code class="docutils literal"><span class="pre">None</span></code>, will use the
+free memory given by <code class="docutils literal"><span class="pre">pycuda.driver.mem_get_info()</span></code></li>
+<li><strong>functions</strong> (<em>tuple of CUDA functions</em>) – Dictionary of prepared functions from <a class="reference internal" href="#cuvarbase.bls.compile_bls" title="cuvarbase.bls.compile_bls"><code class="xref py py-func docutils literal"><span class="pre">compile_bls()</span></code></a>.</li>
+<li><strong>**kwargs</strong> – passed to <a class="reference internal" href="#cuvarbase.bls.compile_bls" title="cuvarbase.bls.compile_bls"><code class="xref py py-func docutils literal"><span class="pre">compile_bls()</span></code></a></li>
 </ul>
 </td>
 </tr>
@@ -168,8 +228,83 @@ returned by <cite>compile_bls</cite></li>
 </dd></dl>
 
 <dl class="function">
+<dt id="cuvarbase.bls.eebls_gpu_fast">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_gpu_fast</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>freqs</em>, <em>qmin=0.01</em>, <em>qmax=0.5</em>, <em>functions=None</em>, <em>stream=None</em>, <em>dlogq=0.3</em>, <em>memory=None</em>, <em>noverlap=2</em>, <em>max_nblocks=5000</em>, <em>force_nblocks=None</em>, <em>dphi=0.0</em>, <em>shmem_lim=None</em>, <em>freq_batch_size=None</em>, <em>transfer_to_device=True</em>, <em>transfer_to_host=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_gpu_fast"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_gpu_fast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Box-Least Squares with PyCUDA but about 2-3 orders of magnitude
+faster than eebls_gpu. Uses shared memory for the binned data,
+which means that there is a lower limit on the q values that
+this function can handle.</p>
+<p>To save memory and improve speed, the best solution is not
+kept. To get the best solution, run <code class="docutils literal"><span class="pre">eebls_gpu</span></code> at the
+optimal frequency.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">If you are running on a single-GPU machine, there may be a
+kernel time limit set by your OS. If running this function
+produces a timeout error, try setting <code class="docutils literal"><span class="pre">freq_batch_size</span></code> to a
+reasonable number (~10). That will split up the computations by
+frequency.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">No extra global memory is needed, meaning you likely do <em>not</em> need
+to use <code class="docutils literal"><span class="pre">large_run</span></code> with this function.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">There is no <code class="docutils literal"><span class="pre">noverlap</span></code> parameter here yet. This is only a problem
+if the optimal <code class="docutils literal"><span class="pre">q</span></code> value is close to <code class="docutils literal"><span class="pre">qmin</span></code>. To alleviate this,
+you can run this function <code class="docutils literal"><span class="pre">noverlap</span></code> times with
+<code class="docutils literal"><span class="pre">dphi</span> <span class="pre">=</span> <span class="pre">i/noverlap</span></code> for the <code class="docutils literal"><span class="pre">i</span></code>-th run. Then take the best solution
+of all runs.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation times</li>
+<li><strong>y</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observations</li>
+<li><strong>dy</strong> (<em>array_like</em><em>, </em><em>float</em>) – Observation uncertainties</li>
+<li><strong>freqs</strong> (<em>array_like</em><em>, </em><em>float</em>) – Frequencies</li>
+<li><strong>qmin</strong> (<em>float</em><em> or </em><em>array_like</em><em>, </em><em>optional</em><em> (</em><em>default: 1e-2</em><em>)</em>) – minimum q values to search at each frequency</li>
+<li><strong>qmax</strong> (<em>float</em><em> or </em><em>array_like</em><em> (</em><em>default: 0.5</em><em>)</em>) – maximum q values to search at each frequency</li>
+<li><strong>dphi</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.</em><em>)</em>) – Phase offset (in units of the finest grid spacing). If you
+want <code class="docutils literal"><span class="pre">noverlap</span></code> bins at the smallest <code class="docutils literal"><span class="pre">q</span></code> value, run this
+function <code class="docutils literal"><span class="pre">noverlap</span></code> times, with <code class="docutils literal"><span class="pre">dphi</span> <span class="pre">=</span> <span class="pre">i</span> <span class="pre">/</span> <span class="pre">noverlap</span></code>
+for the <code class="docutils literal"><span class="pre">i</span></code>-th run and take the best solution for all the runs.</li>
+<li><strong>dlogq</strong> (<em>float</em>) – The logarithmic spacing of the q values to use. If negative,
+the q values increase by <code class="docutils literal"><span class="pre">dq</span> <span class="pre">=</span> <span class="pre">qmin</span></code>.</li>
+<li><strong>functions</strong> (<em>dict</em>) – Dictionary of compiled functions (see <a class="reference internal" href="#cuvarbase.bls.compile_bls" title="cuvarbase.bls.compile_bls"><code class="xref py py-func docutils literal"><span class="pre">compile_bls()</span></code></a>)</li>
+<li><strong>freq_batch_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Number of frequencies to compute in a single batch; if
+<code class="docutils literal"><span class="pre">None</span></code> this will run a single batch for all frequencies
+simultaneously</li>
+<li><strong>shmem_lim</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Maximum amount of shared memory to use per block in bytes.
+This is GPU-dependent but usually around 48KB. If <code class="docutils literal"><span class="pre">None</span></code>,
+uses device information provided by PyCUDA (recommended).</li>
+<li><strong>max_nblocks</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 200</em><em>)</em>) – Maximum grid size to use</li>
+<li><strong>force_nblocks</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – If this is set the gridsize is forced to be this value</li>
+<li><strong>memory</strong> (<a class="reference internal" href="#cuvarbase.bls.BLSMemory" title="cuvarbase.bls.BLSMemory"><code class="xref py py-class docutils literal"><span class="pre">BLSMemory</span></code></a> instance, optional (default: None)) – See <a class="reference internal" href="#cuvarbase.bls.BLSMemory" title="cuvarbase.bls.BLSMemory"><code class="xref py py-class docutils literal"><span class="pre">BLSMemory</span></code></a>.</li>
+<li><strong>transfer_to_host</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – Transfer BLS back to CPU.</li>
+<li><strong>transfer_to_device</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – Transfer data to GPU</li>
+<li><strong>**kwargs</strong> – passed to <cite>compile_bls</cite></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>bls</strong> – BLS periodogram, normalized to
+<span class="math">\(1 - \chi_2(\omega) / \chi_2(constant)\)</span></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array_like, float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="cuvarbase.bls.eebls_transit_gpu">
-<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_transit_gpu</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>fmax_frac=1.0</em>, <em>fmin_frac=1.0</em>, <em>qmin_fac=0.5</em>, <em>qmax_fac=2.0</em>, <em>fmin=None</em>, <em>fmax=None</em>, <em>freqs=None</em>, <em>qvals=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_transit_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_transit_gpu" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">eebls_transit_gpu</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>fmax_frac=1.0</em>, <em>fmin_frac=1.0</em>, <em>qmin_fac=0.5</em>, <em>qmax_fac=2.0</em>, <em>fmin=None</em>, <em>fmax=None</em>, <em>freqs=None</em>, <em>qvals=None</em>, <em>use_fast=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#eebls_transit_gpu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.eebls_transit_gpu" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute BLS for timeseries assuming edge-on keplerian
 orbit of a planet with Mp/Ms &lt;&lt; 1, Rp/Rs &lt; 1, Lp/Ls &lt;&lt; 1 and
 negligible eccentricity.</p>
@@ -194,15 +329,23 @@ at each frequency (maximum)</li>
 <li><strong>freqs</strong> (<em>array_like</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Overrides the auto-generated frequency grid</li>
 <li><strong>qvals</strong> (<em>array_like</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Overrides the keplerian q values</li>
 <li><strong>functions</strong> (<em>tuple</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – result of <code class="docutils literal"><span class="pre">compile_bls(**kwargs)</span></code>.</li>
+<li><strong>use_fast</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: False</em><em>)</em>) – </li>
 <li><strong>**kwargs</strong> – passed to <cite>eebls_gpu</cite>, <cite>compile_bls</cite>, <cite>fmax_transit</cite>,
 <cite>fmin_transit</cite>, and <cite>transit_autofreq</cite></li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
-<li><strong>freqs</strong> (<em>array_like, float</em>) – Frequencies where BLS is evaluated</li>
-<li><strong>bls</strong> (<em>array_like, float</em>) – BLS periodogram, normalized to <span class="math">\(1 - \chi^2(f) / \chi^2_0\)</span></li>
-<li><strong>solutions</strong> (list of <code class="docutils literal"><span class="pre">(q,</span> <span class="pre">phi)</span></code> tuples) – Best <code class="docutils literal"><span class="pre">(q,</span> <span class="pre">phi)</span></code> solution at each frequency</li>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul>
+<li><p class="first"><strong>freqs</strong> (<em>array_like, float</em>) – Frequencies where BLS is evaluated</p>
+</li>
+<li><p class="first"><strong>bls</strong> (<em>array_like, float</em>) – BLS periodogram, normalized to <span class="math">\(1 - \chi^2(f) / \chi^2_0\)</span></p>
+</li>
+<li><p class="first"><strong>solutions</strong> (list of <code class="docutils literal"><span class="pre">(q,</span> <span class="pre">phi)</span></code> tuples) – Best <code class="docutils literal"><span class="pre">(q,</span> <span class="pre">phi)</span></code> solution at each frequency</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Only returned when <code class="docutils literal"><span class="pre">use_fast=False</span></code>.</p>
+</div>
+</li>
 </ul>
 </p>
 </td>
@@ -236,6 +379,11 @@ at each frequency (maximum)</li>
 <code class="descclassname">cuvarbase.bls.</code><code class="descname">hone_solution</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>dy</em>, <em>f0</em>, <em>df0</em>, <em>q0</em>, <em>dlogq0</em>, <em>phi0</em>, <em>stop=1e-05</em>, <em>samples_per_peak=5</em>, <em>max_iter=50</em>, <em>noverlap=3</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#hone_solution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.hone_solution" title="Permalink to this definition">¶</a></dt>
 <dd><p>Experimental!</p>
 </dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.bls.nbins_iter">
+<code class="descclassname">cuvarbase.bls.</code><code class="descname">nbins_iter</code><span class="sig-paren">(</span><em>i</em>, <em>nb0</em>, <em>dlogq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/bls.html#nbins_iter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.bls.nbins_iter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="function">
 <dt id="cuvarbase.bls.q_transit">
@@ -332,6 +480,10 @@ accounts for data uncertainties.</li>
 <li><strong>block_size</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 256</em><em>)</em>) – Number of CUDA threads per CUDA block.</li>
 <li><strong>phase_overlap</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 0</em><em>)</em>) – If &gt; 0, the phase bins are overlapped with each other</li>
 <li><strong>mag_overlap</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 0</em><em>)</em>) – If &gt; 0, the mag bins are overlapped with each other</li>
+<li><strong>use_fast</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: False</em><em>)</em>) – Use a somewhat experimental function to speed up
+computations. This is perfect for large Nfreqs and nobs &lt;~ 2000.
+If True, use <a class="reference internal" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.run" title="cuvarbase.ce.ConditionalEntropyAsyncProcess.run"><code class="xref py py-func docutils literal"><span class="pre">run()</span></code></a> and not <a class="reference internal" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run" title="cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run"><code class="xref py py-func docutils literal"><span class="pre">large_run()</span></code></a> and set
+<code class="docutils literal"><span class="pre">nstreams</span> <span class="pre">=</span> <span class="pre">1</span></code>.</li>
 </ul>
 </td>
 </tr>
@@ -410,21 +562,25 @@ list being a list of frequencies for the <code class="docutils literal"><span cl
 <dl class="method">
 <dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.autofrequency">
 <code class="descname">autofrequency</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.autofrequency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.autofrequency" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>calls <a class="reference internal" href="#cuvarbase.utils.autofrequency" title="cuvarbase.utils.autofrequency"><code class="xref py py-func docutils literal"><span class="pre">cuvarbase.utils.autofrequency()</span></code></a></p>
+</dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.batched_run_const_nfreq">
 <code class="descname">batched_run_const_nfreq</code><span class="sig-paren">(</span><em>data</em>, <em>batch_size=10</em>, <em>freqs=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.batched_run_const_nfreq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.batched_run_const_nfreq" title="Permalink to this definition">¶</a></dt>
 <dd><p>Same as <code class="docutils literal"><span class="pre">batched_run</span></code> but is more efficient when the frequencies are
 the same for each lightcurve. Doesn’t reallocate memory for each batch.</p>
-<p class="rubric">Notes</p>
-<p>To get best efficiency, make sure the maximum number of observations
-is not much larger than the typical number of observations</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">To get best efficiency, make sure the maximum number of
+observations is not much larger than the typical number
+of observations.</p>
+</div>
 </dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run">
-<code class="descname">large_run</code><span class="sig-paren">(</span><em>data</em>, <em>freqs=None</em>, <em>max_memory=1000000000.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.large_run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run" title="Permalink to this definition">¶</a></dt>
+<code class="descname">large_run</code><span class="sig-paren">(</span><em>data</em>, <em>freqs=None</em>, <em>max_memory=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.large_run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run Conditional Entropy on a large frequency grid</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -437,7 +593,9 @@ is not much larger than the typical number of observations</p>
 * <code class="docutils literal"><span class="pre">dy</span></code>: observation uncertainties</li>
 <li><strong>freqs</strong> (optional, list of <code class="docutils literal"><span class="pre">np.ndarray</span></code> frequencies) – List of custom frequencies. If not specified, calls
 <code class="docutils literal"><span class="pre">autofrequency</span></code> with default arguments</li>
-<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1e9</em><em>)</em>) – Maximum memory per batch in bytes.</li>
+<li><strong>max_memory</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – Maximum memory per batch in bytes. If <code class="docutils literal"><span class="pre">None</span></code>, it
+will use 90% of the total free memory available as specified by
+<code class="docutils literal"><span class="pre">pycuda.driver.mem_get_info()</span></code></li>
 <li><strong>**kwargs</strong> – </li>
 </ul>
 </td>
@@ -456,13 +614,35 @@ the <code class="docutils literal"><span class="pre">data</span></code> array</p
 <dl class="method">
 <dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.memory_requirement">
 <code class="descname">memory_requirement</code><span class="sig-paren">(</span><em>data</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.memory_requirement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.memory_requirement" title="Permalink to this definition">¶</a></dt>
-<dd><p>return an approximate GPU memory requirement in bytes</p>
+<dd><p>Return an approximate GPU memory requirement in bytes.
+Will throw a <code class="docutils literal"><span class="pre">NotImplementedError</span></code> if called, so … don’t call it.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.preallocate">
 <code class="descname">preallocate</code><span class="sig-paren">(</span><em>max_nobs</em>, <em>freqs</em>, <em>nlcs=1</em>, <em>streams=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#ConditionalEntropyAsyncProcess.preallocate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.ConditionalEntropyAsyncProcess.preallocate" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Preallocate memory for future runs.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>max_nobs</strong> (<em>int</em>) – Upper limit for the number of observations</li>
+<li><strong>freqs</strong> (<em>array_like</em>) – Frequency array to be used by future <code class="docutils literal"><span class="pre">run</span></code> calls</li>
+<li><strong>nlcs</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 1</em><em>)</em>) – Maximum batch size for <code class="docutils literal"><span class="pre">run</span></code> calls</li>
+<li><strong>streams</strong> (list of <code class="docutils literal"><span class="pre">pycuda.driver.Stream</span></code>) – Length of list must be <code class="docutils literal"><span class="pre">&gt;=</span> <span class="pre">nlcs</span></code></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>self.memory</strong> – List of <code class="docutils literal"><span class="pre">ConditionalEntropyMemory</span></code> objects</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.ce.ConditionalEntropyAsyncProcess.run">
@@ -579,45 +759,14 @@ the <code class="docutils literal"><span class="pre">data</span></code> array</p
 <code class="descclassname">cuvarbase.ce.</code><code class="descname">conditional_entropy</code><span class="sig-paren">(</span><em>memory</em>, <em>functions</em>, <em>block_size=256</em>, <em>transfer_to_host=True</em>, <em>transfer_to_device=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#conditional_entropy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.conditional_entropy" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="function">
+<dt id="cuvarbase.ce.conditional_entropy_fast">
+<code class="descclassname">cuvarbase.ce.</code><code class="descname">conditional_entropy_fast</code><span class="sig-paren">(</span><em>memory</em>, <em>functions</em>, <em>block_size=256</em>, <em>transfer_to_host=True</em>, <em>transfer_to_device=True</em>, <em>freq_batch_size=None</em>, <em>shmem_lc=True</em>, <em>shmem_lim=None</em>, <em>max_nblocks=200</em>, <em>force_nblocks=None</em>, <em>stream=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/ce.html#conditional_entropy_fast"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.ce.conditional_entropy_fast" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
 <div class="section" id="module-cuvarbase.core">
 <span id="cuvarbase-core-module"></span><h2>cuvarbase.core module<a class="headerlink" href="#module-cuvarbase.core" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="cuvarbase.core.BaseSpectrogram">
-<em class="property">class </em><code class="descclassname">cuvarbase.core.</code><code class="descname">BaseSpectrogram</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>times=None</em>, <em>freqs=None</em>, <em>window='gaussian'</em>, <em>window_length=None</em>, <em>batch_size=10</em>, <em>block_size=128</em>, <em>truncate=True</em>, <em>truncate_limit=0.001</em>, <em>proc=None</em>, <em>proc_kwargs=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">future.types.newobject.newobject</span></code></p>
-<dl class="method">
-<dt id="cuvarbase.core.BaseSpectrogram.auto_time_split">
-<code class="descname">auto_time_split</code><span class="sig-paren">(</span><em>nsplits=100</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.auto_time_split"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.auto_time_split" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="cuvarbase.core.BaseSpectrogram.localized_spectrum">
-<code class="descname">localized_spectrum</code><span class="sig-paren">(</span><em>time=None</em>, <em>freqs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.localized_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.localized_spectrum" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="cuvarbase.core.BaseSpectrogram.model">
-<code class="descname">model</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.model" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="cuvarbase.core.BaseSpectrogram.spectrogram">
-<code class="descname">spectrogram</code><span class="sig-paren">(</span><em>times=None</em>, <em>freqs=None</em>, <em>nsplits=100</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.spectrogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.spectrogram" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="cuvarbase.core.BaseSpectrogram.split_data">
-<code class="descname">split_data</code><span class="sig-paren">(</span><em>times</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.split_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.split_data" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="cuvarbase.core.BaseSpectrogram.weighted_local_data">
-<code class="descname">weighted_local_data</code><span class="sig-paren">(</span><em>time</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#BaseSpectrogram.weighted_local_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.BaseSpectrogram.weighted_local_data" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
 <dl class="class">
 <dt id="cuvarbase.core.GPUAsyncProcess">
 <em class="property">class </em><code class="descclassname">cuvarbase.core.</code><code class="descname">GPUAsyncProcess</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/core.html#GPUAsyncProcess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.core.GPUAsyncProcess" title="Permalink to this definition">¶</a></dt>
@@ -1407,18 +1556,7 @@ is the weighted mean and <cite>y</cite> are the observations</li>
 
 <dl class="method">
 <dt id="cuvarbase.pdm.PDMAsyncProcess.run">
-<code class="descname">run</code><span class="sig-paren">(</span><em>data</em>, <em>gpu_data=None</em>, <em>pow_cpus=None</em>, <em>kind='binned_linterp'</em>, <em>nbins=30</em>, <em>**pdm_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMAsyncProcess.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMAsyncProcess.run" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="cuvarbase.pdm.PDMSpectrogram">
-<em class="property">class </em><code class="descclassname">cuvarbase.pdm.</code><code class="descname">PDMSpectrogram</code><span class="sig-paren">(</span><em>t</em>, <em>y</em>, <em>w</em>, <em>dphi=0.05</em>, <em>nbins=25</em>, <em>block_size=256</em>, <em>kind='binned_linterp'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMSpectrogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMSpectrogram" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#cuvarbase.core.BaseSpectrogram" title="cuvarbase.core.BaseSpectrogram"><code class="xref py py-class docutils literal"><span class="pre">cuvarbase.core.BaseSpectrogram</span></code></a></p>
-<dl class="method">
-<dt id="cuvarbase.pdm.PDMSpectrogram.model">
-<code class="descname">model</code><span class="sig-paren">(</span><em>freq</em>, <em>time=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMSpectrogram.model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMSpectrogram.model" title="Permalink to this definition">¶</a></dt>
+<code class="descname">run</code><span class="sig-paren">(</span><em>data</em>, <em>gpu_data=None</em>, <em>pow_cpus=None</em>, <em>kind='binned_linterp'</em>, <em>nbins=10</em>, <em>**pdm_kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/pdm.html#PDMAsyncProcess.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.pdm.PDMAsyncProcess.run" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

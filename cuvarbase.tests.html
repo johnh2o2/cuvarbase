@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>cuvarbase.tests package &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>cuvarbase.tests package &#8212; cuvarbase 0.2.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.9',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -51,31 +51,61 @@
 <dt id="cuvarbase.tests.test_bls.TestBLS">
 <em class="property">class </em><code class="descclassname">cuvarbase.tests.test_bls.</code><code class="descname">TestBLS</code><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">future.types.newobject.newobject</span></code></p>
+<dl class="attribute">
+<dt id="cuvarbase.tests.test_bls.TestBLS.atol">
+<code class="descname">atol</code><em class="property"> = 1e-05</em><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.atol" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cuvarbase.tests.test_bls.TestBLS.plot">
+<code class="descname">plot</code><em class="property"> = False</em><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cuvarbase.tests.test_bls.TestBLS.rand">
+<code class="descname">rand</code><em class="property"> = &lt;mtrand.RandomState object&gt;</em><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.rand" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cuvarbase.tests.test_bls.TestBLS.rtol">
+<code class="descname">rtol</code><em class="property"> = 0.001</em><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.rtol" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cuvarbase.tests.test_bls.TestBLS.seed">
+<code class="descname">seed</code><em class="property"> = 100</em><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.seed" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="cuvarbase.tests.test_bls.TestBLS.test_custom">
-<code class="descname">test_custom</code><span class="sig-paren">(</span><em>seed=100</em>, <em>plot=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_custom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_custom" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_custom</code><span class="sig-paren">(</span><em>freq</em>, <em>q_index</em>, <em>phi_index</em>, <em>freq_batch_size</em>, <em>nstreams</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_custom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_custom" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cuvarbase.tests.test_bls.TestBLS.test_fast_eebls">
+<code class="descname">test_fast_eebls</code><span class="sig-paren">(</span><em>freq</em>, <em>q</em>, <em>phi0</em>, <em>freq_batch_size</em>, <em>dlogq</em>, <em>dphi</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_fast_eebls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_fast_eebls" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.tests.test_bls.TestBLS.test_standard">
-<code class="descname">test_standard</code><span class="sig-paren">(</span><em>seed=100</em>, <em>plot=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_standard"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_standard" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_standard</code><span class="sig-paren">(</span><em>freq</em>, <em>q_index</em>, <em>phi_index</em>, <em>nstreams</em>, <em>freq_batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_standard"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_standard" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.tests.test_bls.TestBLS.test_transit">
-<code class="descname">test_transit</code><span class="sig-paren">(</span><em>seed=100</em>, <em>plot=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_transit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_transit" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_transit</code><span class="sig-paren">(</span><em>freq</em>, <em>use_fast</em>, <em>freq_batch_size</em>, <em>nstreams</em>, <em>phi0</em>, <em>dlogq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_transit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_transit" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.tests.test_bls.TestBLS.test_transit_parameter_consistency">
-<code class="descname">test_transit_parameter_consistency</code><span class="sig-paren">(</span><em>seed=100</em>, <em>plot=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_transit_parameter_consistency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_transit_parameter_consistency" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_transit_parameter_consistency</code><span class="sig-paren">(</span><em>freq</em>, <em>phi0</em>, <em>dlogq</em>, <em>nstreams</em>, <em>freq_batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#TestBLS.test_transit_parameter_consistency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.TestBLS.test_transit_parameter_consistency" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="function">
 <dt id="cuvarbase.tests.test_bls.data">
-<code class="descclassname">cuvarbase.tests.test_bls.</code><code class="descname">data</code><span class="sig-paren">(</span><em>seed=100</em>, <em>sigma=0.1</em>, <em>ybar=12.0</em>, <em>snr=10</em>, <em>ndata=500</em>, <em>freq=10.0</em>, <em>q=0.01</em>, <em>phi0=None</em>, <em>baseline=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.data" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cuvarbase.tests.test_bls.</code><code class="descname">data</code><span class="sig-paren">(</span><em>seed=100</em>, <em>sigma=0.1</em>, <em>ybar=12.0</em>, <em>snr=10</em>, <em>ndata=200</em>, <em>freq=10.0</em>, <em>q=0.01</em>, <em>phi0=None</em>, <em>baseline=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_bls.html#data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_bls.data" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
@@ -112,39 +142,29 @@ method has <em>not</em> been tested!</p>
 <dt id="cuvarbase.tests.test_ce.TestCE">
 <em class="property">class </em><code class="descclassname">cuvarbase.tests.test_ce.</code><code class="descname">TestCE</code><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">future.types.newobject.newobject</span></code></p>
-<dl class="method">
-<dt id="cuvarbase.tests.test_ce.TestCE.test_balanced_magbins">
-<code class="descname">test_balanced_magbins</code><span class="sig-paren">(</span><em>make_plot=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_balanced_magbins"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_balanced_magbins" title="Permalink to this definition">¶</a></dt>
+<dl class="attribute">
+<dt id="cuvarbase.tests.test_ce.TestCE.plot">
+<code class="descname">plot</code><em class="property"> = False</em><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.plot" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.tests.test_ce.TestCE.test_batched_run">
-<code class="descname">test_batched_run</code><span class="sig-paren">(</span><em>ndatas=7</em>, <em>batch_size=3</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_batched_run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_batched_run" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_batched_run</code><span class="sig-paren">(</span><em>ndatas</em>, <em>batch_size</em>, <em>use_double</em>, <em>mag_bins</em>, <em>phase_bins</em>, <em>mag_overlap</em>, <em>phase_overlap</em>, <em>use_fast</em>, <em>shmem_lc</em>, <em>weighted</em>, <em>freq_batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_batched_run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_batched_run" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.tests.test_ce.TestCE.test_batched_run_const_nfreq">
-<code class="descname">test_batched_run_const_nfreq</code><span class="sig-paren">(</span><em>make_plot=False</em>, <em>ndatas=7</em>, <em>batch_size=3</em>, <em>seed=100</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_batched_run_const_nfreq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_batched_run_const_nfreq" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_batched_run_const_nfreq</code><span class="sig-paren">(</span><em>ndatas</em>, <em>batch_size</em>, <em>use_double</em>, <em>mag_bins</em>, <em>phase_bins</em>, <em>mag_overlap</em>, <em>phase_overlap</em>, <em>use_fast</em>, <em>weighted</em>, <em>shmem_lc</em>, <em>freq_batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_batched_run_const_nfreq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_batched_run_const_nfreq" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="cuvarbase.tests.test_ce.TestCE.test_double">
-<code class="descname">test_double</code><span class="sig-paren">(</span><em>make_plot=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_double"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_double" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="cuvarbase.tests.test_ce.TestCE.test_double_weighted">
-<code class="descname">test_double_weighted</code><span class="sig-paren">(</span><em>make_plot=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_double_weighted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_double_weighted" title="Permalink to this definition">¶</a></dt>
+<dt id="cuvarbase.tests.test_ce.TestCE.test_fast">
+<code class="descname">test_fast</code><span class="sig-paren">(</span><em>freq</em>, <em>use_double</em>, <em>mag_bins</em>, <em>phase_bins</em>, <em>mag_overlap</em>, <em>phase_overlap</em>, <em>t0</em>, <em>balanced_magbins</em>, <em>weighted</em>, <em>shmem_lc</em>, <em>freq_batch_size</em>, <em>force_nblocks</em>, <em>ndata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_fast"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_fast" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.tests.test_ce.TestCE.test_inject_and_recover">
-<code class="descname">test_inject_and_recover</code><span class="sig-paren">(</span><em>make_plot=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_inject_and_recover"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_inject_and_recover" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="cuvarbase.tests.test_ce.TestCE.test_inject_and_recover_weighted">
-<code class="descname">test_inject_and_recover_weighted</code><span class="sig-paren">(</span><em>make_plot=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_inject_and_recover_weighted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_inject_and_recover_weighted" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_inject_and_recover</code><span class="sig-paren">(</span><em>freq</em>, <em>use_double</em>, <em>mag_bins</em>, <em>phase_bins</em>, <em>mag_overlap</em>, <em>phase_overlap</em>, <em>use_fast</em>, <em>t0</em>, <em>balanced_magbins</em>, <em>weighted</em>, <em>shmem_lc</em>, <em>freq_batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_inject_and_recover"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_inject_and_recover" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -154,12 +174,12 @@ method has <em>not</em> been tested!</p>
 
 <dl class="method">
 <dt id="cuvarbase.tests.test_ce.TestCE.test_multiple_datasets">
-<code class="descname">test_multiple_datasets</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_multiple_datasets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_multiple_datasets" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_multiple_datasets</code><span class="sig-paren">(</span><em>ndatas</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_multiple_datasets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_multiple_datasets" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="cuvarbase.tests.test_ce.TestCE.test_time_shift_invariance">
-<code class="descname">test_time_shift_invariance</code><span class="sig-paren">(</span><em>make_plot=False</em>, <em>use_double=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_time_shift_invariance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_time_shift_invariance" title="Permalink to this definition">¶</a></dt>
+<code class="descname">test_time_shift_invariance</code><span class="sig-paren">(</span><em>freq</em>, <em>use_double</em>, <em>mag_bins</em>, <em>phase_bins</em>, <em>mag_overlap</em>, <em>phase_overlap</em>, <em>use_fast</em>, <em>balanced_magbins</em>, <em>weighted</em>, <em>shmem_lc</em>, <em>freq_batch_size</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#TestCE.test_time_shift_invariance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.TestCE.test_time_shift_invariance" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -171,7 +191,7 @@ method has <em>not</em> been tested!</p>
 
 <dl class="function">
 <dt id="cuvarbase.tests.test_ce.data">
-<code class="descclassname">cuvarbase.tests.test_ce.</code><code class="descname">data</code><span class="sig-paren">(</span><em>seed=100</em>, <em>sigma=0.1</em>, <em>ndata=100</em>, <em>freq=3.0</em>, <em>snr=10</em>, <em>t0=0.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.data" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cuvarbase.tests.test_ce.</code><code class="descname">data</code><span class="sig-paren">(</span><em>sigma=0.1</em>, <em>ndata=500</em>, <em>freq=3.0</em>, <em>snr=1000</em>, <em>t0=0.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_ce.html#data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_ce.data" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </div>
@@ -353,6 +373,11 @@ method has <em>not</em> been tested!</p>
 <dl class="function">
 <dt id="cuvarbase.tests.test_pdm.data">
 <code class="descclassname">cuvarbase.tests.test_pdm.</code><code class="descname">data</code><span class="sig-paren">(</span><em>seed=100</em>, <em>sigma=0.1</em>, <em>ndata=250</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_pdm.html#data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_pdm.data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cuvarbase.tests.test_pdm.test_cuda_pdm">
+<code class="descclassname">cuvarbase.tests.test_pdm.</code><code class="descname">test_cuda_pdm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cuvarbase/tests/test_pdm.html#test_cuda_pdm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cuvarbase.tests.test_pdm.test_cuda_pdm" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </div>

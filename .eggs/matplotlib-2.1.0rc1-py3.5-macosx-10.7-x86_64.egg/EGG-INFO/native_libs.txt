@@ -1,0 +1,12 @@
+matplotlib/_cntr.cpython-35m-darwin.so
+matplotlib/_contour.cpython-35m-darwin.so
+matplotlib/_image.cpython-35m-darwin.so
+matplotlib/_path.cpython-35m-darwin.so
+matplotlib/_png.cpython-35m-darwin.so
+matplotlib/_qhull.cpython-35m-darwin.so
+matplotlib/_tri.cpython-35m-darwin.so
+matplotlib/ft2font.cpython-35m-darwin.so
+matplotlib/ttconv.cpython-35m-darwin.so
+matplotlib/backends/_backend_agg.cpython-35m-darwin.so
+matplotlib/backends/_macosx.cpython-35m-darwin.so
+matplotlib/backends/_tkagg.cpython-35m-darwin.so

@@ -1,0 +1,17 @@
+astropy/_compiler.cpython-35m-darwin.so
+astropy/_erfa/_core.cpython-35m-darwin.so
+astropy/convolution/boundary_extend.cpython-35m-darwin.so
+astropy/convolution/boundary_fill.cpython-35m-darwin.so
+astropy/convolution/boundary_none.cpython-35m-darwin.so
+astropy/convolution/boundary_wrap.cpython-35m-darwin.so
+astropy/cosmology/scalar_inv_efuncs.cpython-35m-darwin.so
+astropy/io/ascii/cparser.cpython-35m-darwin.so
+astropy/io/fits/compression.cpython-35m-darwin.so
+astropy/io/votable/tablewriter.cpython-35m-darwin.so
+astropy/modeling/_projections.cpython-35m-darwin.so
+astropy/stats/lombscargle/implementations/cython_impl.cpython-35m-darwin.so
+astropy/table/_column_mixins.cpython-35m-darwin.so
+astropy/table/_np_utils.cpython-35m-darwin.so
+astropy/utils/_compiler.cpython-35m-darwin.so
+astropy/utils/xml/_iterparser.cpython-35m-darwin.so
+astropy/wcs/_wcs.cpython-35m-darwin.so

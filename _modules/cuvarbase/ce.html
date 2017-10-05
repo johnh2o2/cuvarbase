@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>cuvarbase.ce &#8212; cuvarbase 0.1.9 documentation</title>
+    <title>cuvarbase.ce &#8212; cuvarbase 0.2.0 documentation</title>
     <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.1.9',
+        VERSION:     '0.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -49,14 +49,18 @@
 <span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">zip</span>
 <span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">range</span>
 <span class="kn">from</span> <span class="nn">builtins</span> <span class="k">import</span> <span class="nb">object</span>
-<span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
 <span class="kn">import</span> <span class="nn">pycuda.driver</span> <span class="k">as</span> <span class="nn">cuda</span>
 <span class="kn">import</span> <span class="nn">pycuda.gpuarray</span> <span class="k">as</span> <span class="nn">gpuarray</span>
+<span class="kn">import</span> <span class="nn">pycuda.autoinit</span>
 <span class="kn">from</span> <span class="nn">pycuda.compiler</span> <span class="k">import</span> <span class="n">SourceModule</span>
+
+<span class="kn">from</span> <span class="nn">.core</span> <span class="k">import</span> <span class="n">GPUAsyncProcess</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">_module_reader</span><span class="p">,</span> <span class="n">find_kernel</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">autofrequency</span> <span class="k">as</span> <span class="n">utils_autofreq</span>
-<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">time</span>
+
 <span class="kn">import</span> <span class="nn">resource</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 
@@ -65,6 +69,9 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;phase_bins&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mag_bins&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phase_overlap</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;phase_overlap&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mag_overlap</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mag_overlap&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;max_phi&#39;</span><span class="p">,</span> <span class="mf">3.</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;stream&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">weighted</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;weighted&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
@@ -338,7 +345,8 @@
                         <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">block</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
     <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span> <span class="o">*</span> <span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">block_size</span><span class="p">))),</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="n">ce_dpdm</span><span class="p">,</span> <span class="n">hist_count</span><span class="p">,</span> <span class="n">hist_weight</span><span class="p">,</span> <span class="n">ce_logp</span><span class="p">,</span> <span class="n">ce_std</span><span class="p">,</span> <span class="n">ce_wt</span> <span class="o">=</span> <span class="n">functions</span>
+    <span class="n">fast_ce</span><span class="p">,</span> <span class="n">faster_ce</span><span class="p">,</span> <span class="n">ce_dpdm</span><span class="p">,</span> <span class="n">hist_count</span><span class="p">,</span> <span class="n">hist_weight</span><span class="p">,</span>\
+        <span class="n">ce_logp</span><span class="p">,</span> <span class="n">ce_std</span><span class="p">,</span> <span class="n">ce_wt</span> <span class="o">=</span> <span class="n">functions</span>
 
     <span class="k">if</span> <span class="n">transfer_to_device</span><span class="p">:</span>
         <span class="n">memory</span><span class="o">.</span><span class="n">transfer_data_to_gpu</span><span class="p">()</span>
@@ -347,14 +355,14 @@
         <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
         <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">dy_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
         <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
-        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">))</span>
         <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">max_phi</span><span class="p">),)</span>
         <span class="n">hist_weight</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
 
         <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">block_size</span><span class="p">))),</span> <span class="mi">1</span><span class="p">)</span>
 
         <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
-        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
         <span class="n">ce_wt</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">transfer_to_host</span><span class="p">:</span>
@@ -364,12 +372,12 @@
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
     <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
     <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
-    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">))</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">))</span>
     <span class="n">hist_count</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
 
     <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">block_size</span><span class="p">))),</span> <span class="mi">1</span><span class="p">)</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span>
-    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">bins_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">),</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">memory</span><span class="o">.</span><span class="n">balanced_magbins</span><span class="p">:</span>
         <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">mag_bwf_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,)</span>
@@ -379,6 +387,87 @@
         <span class="n">ce_logp</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">ce_std</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">transfer_to_host</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">transfer_ce_to_cpu</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_c</span></div>
+
+
+<div class="viewcode-block" id="conditional_entropy_fast"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.conditional_entropy_fast">[docs]</a><span class="k">def</span> <span class="nf">conditional_entropy_fast</span><span class="p">(</span><span class="n">memory</span><span class="p">,</span> <span class="n">functions</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+                             <span class="n">transfer_to_host</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                             <span class="n">transfer_to_device</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                             <span class="n">freq_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">shmem_lc</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                             <span class="n">shmem_lim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">max_nblocks</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+                             <span class="n">force_nblocks</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">stream</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">fast_ce</span><span class="p">,</span> <span class="n">faster_ce</span><span class="p">,</span> <span class="n">ce_dpdm</span><span class="p">,</span> <span class="n">hist_count</span><span class="p">,</span> <span class="n">hist_weight</span><span class="p">,</span>\
+        <span class="n">ce_logp</span><span class="p">,</span> <span class="n">ce_std</span><span class="p">,</span> <span class="n">ce_wt</span> <span class="o">=</span> <span class="n">functions</span>
+
+    <span class="k">if</span> <span class="n">shmem_lim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dev</span> <span class="o">=</span> <span class="n">pycuda</span><span class="o">.</span><span class="n">autoinit</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">att</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">device_attribute</span><span class="o">.</span><span class="n">MAX_SHARED_MEMORY_PER_BLOCK</span>
+        <span class="n">shmem_lim</span> <span class="o">=</span> <span class="n">pycuda</span><span class="o">.</span><span class="n">autoinit</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">get_attribute</span><span class="p">(</span><span class="n">att</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">transfer_to_device</span><span class="p">:</span>
+        <span class="n">memory</span><span class="o">.</span><span class="n">transfer_data_to_gpu</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">freq_batch_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">freq_batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+
+    <span class="n">block</span> <span class="o">=</span> <span class="p">(</span><span class="n">block_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Get the shared memory requirement</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">memory</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nbytes</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nbytes</span>
+    <span class="n">shmem</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span> <span class="o">+</span> <span class="n">u</span><span class="p">)</span> <span class="o">*</span> <span class="n">memory</span><span class="o">.</span><span class="n">phase_bins</span> <span class="o">*</span> <span class="n">memory</span><span class="o">.</span><span class="n">mag_bins</span>
+    <span class="n">shmem</span> <span class="o">+=</span> <span class="n">u</span> <span class="o">*</span> <span class="n">memory</span><span class="o">.</span><span class="n">phase_bins</span>
+    <span class="n">data_mem</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span> <span class="o">+</span> <span class="n">u</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t</span><span class="p">)</span>
+
+    <span class="n">func</span> <span class="o">=</span> <span class="n">fast_ce</span>
+
+    <span class="c1"># Decide whether or not to use shared memory for</span>
+    <span class="c1"># loading the lightcurve. Only if the user</span>
+    <span class="c1"># wants and we have enough memory</span>
+    <span class="n">data_in_shared_mem</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">shmem_lc</span><span class="p">:</span>
+        <span class="n">data_in_shared_mem</span> <span class="o">=</span> <span class="n">shmem</span> <span class="o">+</span> <span class="n">data_mem</span> <span class="o">&lt;</span> <span class="n">shmem_lim</span>
+
+    <span class="k">if</span> <span class="n">data_in_shared_mem</span><span class="p">:</span>
+        <span class="n">shmem</span> <span class="o">+=</span> <span class="n">data_mem</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">faster_ce</span>
+
+    <span class="c1"># Make sure we have extra memory for alignment</span>
+    <span class="n">shmem</span> <span class="o">+=</span> <span class="n">shmem</span> <span class="o">%</span> <span class="n">r</span>
+
+    <span class="n">i_freq</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">i_freq</span> <span class="o">&lt;</span> <span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">):</span>
+        <span class="n">j_freq</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">i_freq</span> <span class="o">+</span> <span class="n">freq_batch_size</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">nf</span><span class="p">])</span>
+
+        <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">min</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">j_freq</span> <span class="o">-</span> <span class="n">i_freq</span><span class="p">)</span> <span class="o">/</span> <span class="n">block_size</span><span class="p">)),</span>
+                     <span class="n">max_nblocks</span><span class="p">]),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data_in_shared_mem</span><span class="p">:</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">shmem_lim</span><span class="p">)</span> <span class="o">/</span> <span class="n">shmem</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">force_nblocks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">force_nblocks</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">assert</span><span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">t_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">y_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">freqs_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">,</span> <span class="n">memory</span><span class="o">.</span><span class="n">ce_g</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">j_freq</span> <span class="o">-</span> <span class="n">i_freq</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">i_freq</span><span class="p">),</span>
+                 <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">n0</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">phase_bins</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">))</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">phase_overlap</span><span class="p">),</span>
+                 <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="n">memory</span><span class="o">.</span><span class="n">mag_overlap</span><span class="p">))</span>
+
+        <span class="n">func</span><span class="o">.</span><span class="n">prepared_async_call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">shared_size</span><span class="o">=</span><span class="n">shmem</span><span class="p">)</span>
+
+        <span class="n">i_freq</span> <span class="o">+=</span> <span class="n">j_freq</span> <span class="o">-</span> <span class="n">i_freq</span>
 
     <span class="k">if</span> <span class="n">transfer_to_host</span><span class="p">:</span>
         <span class="n">memory</span><span class="o">.</span><span class="n">transfer_ce_to_cpu</span><span class="p">()</span>
@@ -408,6 +497,11 @@
 <span class="sd">        If &gt; 0, the phase bins are overlapped with each other</span>
 <span class="sd">    mag_overlap: int, optional (default: 0)</span>
 <span class="sd">        If &gt; 0, the mag bins are overlapped with each other</span>
+<span class="sd">    use_fast: bool, optional (default: False)</span>
+<span class="sd">        Use a somewhat experimental function to speed up</span>
+<span class="sd">        computations. This is perfect for large Nfreqs and nobs &lt;~ 2000.</span>
+<span class="sd">        If True, use :func:`run` and not :func:`large_run` and set</span>
+<span class="sd">        ``nstreams = 1``.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -438,17 +532,18 @@
                 <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;mag_overlap must be zero &quot;</span>
                                 <span class="s2">&quot;if balanced_magbins is True&quot;</span><span class="p">)</span>
 
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;The CE computation does not correctly&quot;</span>
-                          <span class="s2">&quot; account for the change in integration&quot;</span>
-                          <span class="s2">&quot; area for overlapping magnitude bins.&quot;</span>
-                          <span class="s2">&quot; Setting mag_overlap &gt; 0 is not recommended.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_double&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">call_func</span> <span class="o">=</span> <span class="n">conditional_entropy</span>
+        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_fast&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">call_func</span> <span class="o">=</span> <span class="n">conditional_entropy_fast</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;memory&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shmem_lc</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;shmem_lc&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_compile_and_prepare_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
@@ -460,7 +555,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
             <span class="n">cpp_defs</span><span class="p">[</span><span class="s1">&#39;DOUBLE_PRECISION&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="c1"># Read kernel</span>
+        <span class="c1"># Read kernel &amp; replace with</span>
         <span class="n">kernel_txt</span> <span class="o">=</span> <span class="n">_module_reader</span><span class="p">(</span><span class="n">find_kernel</span><span class="p">(</span><span class="s1">&#39;ce&#39;</span><span class="p">),</span>
                                     <span class="n">cpp_defs</span><span class="o">=</span><span class="n">cpp_defs</span><span class="p">)</span>
 
@@ -470,13 +565,21 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
             <span class="n">constdpdm_ce</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
             <span class="n">histogram_data_weighted</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
-                                     <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span>
+                                     <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span>
                                      <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">],</span>
             <span class="n">histogram_data_count</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
-                                  <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">],</span>
-            <span class="n">log_prob</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
-            <span class="n">standard_ce</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
-            <span class="n">weighted_ce</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">]</span>
+                                  <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">],</span>
+            <span class="n">log_prob</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
+            <span class="n">standard_ce</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
+            <span class="n">weighted_ce</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">],</span>
+            <span class="n">ce_classical_fast</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                               <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span>
+                               <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span>
+                               <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">],</span>
+            <span class="n">ce_classical_faster</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span>
+                                 <span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span>
+                                 <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span>
+                                 <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">]</span>
         <span class="p">)</span>
         <span class="k">for</span> <span class="n">fname</span><span class="p">,</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="n">get_function</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
@@ -485,7 +588,10 @@
                                     <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
 
 <div class="viewcode-block" id="ConditionalEntropyAsyncProcess.memory_requirement"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.memory_requirement">[docs]</a>    <span class="k">def</span> <span class="nf">memory_requirement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; return an approximate GPU memory requirement in bytes &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return an approximate GPU memory requirement in bytes.</span>
+<span class="sd">        Will throw a ``NotImplementedError`` if called, so ... don&#39;t call it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="ConditionalEntropyAsyncProcess.allocate_for_single_lc"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.allocate_for_single_lc">[docs]</a>    <span class="k">def</span> <span class="nf">allocate_for_single_lc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -515,6 +621,8 @@
 
         <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">phase_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span><span class="p">,</span>
                   <span class="n">mag_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span>
+                  <span class="n">mag_overlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_overlap</span><span class="p">,</span>
+                  <span class="n">phase_overlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_overlap</span><span class="p">,</span>
                   <span class="n">max_phi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span><span class="p">,</span>
                   <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span>
                   <span class="n">weighted</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">,</span>
@@ -528,13 +636,13 @@
         <span class="k">return</span> <span class="n">mem</span></div>
 
 <div class="viewcode-block" id="ConditionalEntropyAsyncProcess.autofrequency"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.autofrequency">[docs]</a>    <span class="k">def</span> <span class="nf">autofrequency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; calls :func:`cuvarbase.utils.autofrequency` &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">utils_autofreq</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_nfreqs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">autofrequency</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
 
 <div class="viewcode-block" id="ConditionalEntropyAsyncProcess.allocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.allocate">[docs]</a>    <span class="k">def</span> <span class="nf">allocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Allocate GPU memory for Conditional Entropy computations</span>
 
@@ -580,8 +688,29 @@
 
 <div class="viewcode-block" id="ConditionalEntropyAsyncProcess.preallocate"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.preallocate">[docs]</a>    <span class="k">def</span> <span class="nf">preallocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_nobs</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span>
                     <span class="n">nlcs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">streams</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Preallocate memory for future runs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        max_nobs: int</span>
+<span class="sd">            Upper limit for the number of observations</span>
+<span class="sd">        freqs: array_like</span>
+<span class="sd">            Frequency array to be used by future ``run`` calls</span>
+<span class="sd">        nlcs: int, optional (default: 1)</span>
+<span class="sd">            Maximum batch size for ``run`` calls</span>
+<span class="sd">        streams: list of ``pycuda.driver.Stream``</span>
+<span class="sd">            Length of list must be ``&gt;= nlcs``</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self.memory: list</span>
+<span class="sd">            List of ``ConditionalEntropyMemory`` objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">phase_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span><span class="p">,</span>
                   <span class="n">mag_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span>
+                  <span class="n">mag_overlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_overlap</span><span class="p">,</span>
+                  <span class="n">phase_overlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_overlap</span><span class="p">,</span>
                   <span class="n">max_phi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span><span class="p">,</span>
                   <span class="n">weighted</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">,</span>
                   <span class="n">use_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">,</span>
@@ -662,9 +791,10 @@
                 <span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_gpu_arrays_to_zero</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
                 <span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">setdata</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">block_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
+        <span class="n">kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">block_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">,</span>
+                  <span class="n">shmem_lc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shmem_lc</span><span class="p">)</span>
         <span class="n">kw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">conditional_entropy</span><span class="p">(</span><span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">call_func</span><span class="p">(</span><span class="n">memory</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">function_tuple</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))]</span>
 
         <span class="n">results</span> <span class="o">=</span> <span class="p">[(</span><span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">frqs</span><span class="p">,</span> <span class="n">results</span><span class="p">)]</span>
@@ -672,7 +802,7 @@
 
 <div class="viewcode-block" id="ConditionalEntropyAsyncProcess.large_run"><a class="viewcode-back" href="../../cuvarbase.html#cuvarbase.ce.ConditionalEntropyAsyncProcess.large_run">[docs]</a>    <span class="k">def</span> <span class="nf">large_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
                   <span class="n">freqs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                  <span class="n">max_memory</span><span class="o">=</span><span class="mf">1e9</span><span class="p">,</span>
+                  <span class="n">max_memory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                   <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Run Conditional Entropy on a large frequency grid</span>
@@ -687,8 +817,10 @@
 <span class="sd">        freqs: optional, list of ``np.ndarray`` frequencies</span>
 <span class="sd">            List of custom frequencies. If not specified, calls</span>
 <span class="sd">            ``autofrequency`` with default arguments</span>
-<span class="sd">        max_memory: float, optional (default: 1e9)</span>
-<span class="sd">            Maximum memory per batch in bytes.</span>
+<span class="sd">        max_memory: float, optional (default: None)</span>
+<span class="sd">            Maximum memory per batch in bytes. If ``None``, it</span>
+<span class="sd">            will use 90% of the total free memory available as specified by</span>
+<span class="sd">            ``pycuda.driver.mem_get_info()``</span>
 <span class="sd">        **kwargs</span>
 
 <span class="sd">        Returns</span>
@@ -705,6 +837,10 @@
                      <span class="p">[</span><span class="s1">&#39;ce_wt&#39;</span><span class="p">]]):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_compile_and_prepare_functions</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
+        <span class="k">if</span> <span class="n">max_memory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">free</span><span class="p">,</span> <span class="n">total</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">mem_get_info</span><span class="p">()</span>
+            <span class="n">max_memory</span> <span class="o">=</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">free</span>
+
         <span class="c1"># create and/or check frequencies</span>
         <span class="n">frqs</span> <span class="o">=</span> <span class="n">freqs</span>
         <span class="k">if</span> <span class="n">frqs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -717,9 +853,7 @@
 
         <span class="n">cpers</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">frqs</span><span class="p">):</span>
-            <span class="n">size_of_real</span> <span class="o">=</span> <span class="mi">4</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">:</span>
-                <span class="n">size_of_real</span> <span class="o">*=</span> <span class="mi">2</span>
+            <span class="n">size_of_real</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_type</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nbytes</span>
 
             <span class="c1"># subtract of lc memory</span>
             <span class="n">fmem</span> <span class="o">=</span> <span class="n">max_memory</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">size_of_real</span> <span class="o">*</span> <span class="mi">3</span>
@@ -750,10 +884,11 @@
 <span class="sd">        Same as ``batched_run`` but is more efficient when the frequencies are</span>
 <span class="sd">        the same for each lightcurve. Doesn&#39;t reallocate memory for each batch.</span>
 
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        To get best efficiency, make sure the maximum number of observations</span>
-<span class="sd">        is not much larger than the typical number of observations</span>
+<span class="sd">        .. note::</span>
+<span class="sd">            </span>
+<span class="sd">            To get best efficiency, make sure the maximum number of</span>
+<span class="sd">            observations is not much larger than the typical number</span>
+<span class="sd">            of observations.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># create streams if needed</span>
@@ -783,7 +918,14 @@
 
         <span class="c1"># set up memory containers for gpu and cpu (pinned) memory</span>
         <span class="n">kwargs_mem</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">buffered_transfer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                          <span class="n">n0_buffer</span><span class="o">=</span><span class="n">max_ndata</span><span class="p">)</span>
+                          <span class="n">n0_buffer</span><span class="o">=</span><span class="n">max_ndata</span><span class="p">,</span>
+                          <span class="n">mag_overlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_overlap</span><span class="p">,</span>
+                          <span class="n">phase_overlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_overlap</span><span class="p">,</span>
+                          <span class="n">phase_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">phase_bins</span><span class="p">,</span>
+                          <span class="n">mag_bins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mag_bins</span><span class="p">,</span>
+                          <span class="n">weighted</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weighted</span><span class="p">,</span>
+                          <span class="n">max_phi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_phi</span><span class="p">,</span>
+                          <span class="n">use_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_double</span><span class="p">)</span>
         <span class="n">kwargs_mem</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">memory</span> <span class="o">=</span> <span class="p">[</span><span class="n">ConditionalEntropyMemory</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs_mem</span><span class="p">)</span>
                   <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">streams</span><span class="p">]</span>
