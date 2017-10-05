@@ -528,9 +528,9 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args += (np.float32(dlogq), np.float32(dphi))
 
         if stream is not None:
-            func.prepared_async_call(*args, shared_size=mem_req)
+            func.prepared_async_call(*args, shared_size=int(mem_req))
         else:
-            func.prepared_call(*args, shared_size=mem_req)
+            func.prepared_call(*args, shared_size=int(mem_req))
 
         i_freq = j_freq
 
