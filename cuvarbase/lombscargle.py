@@ -1091,6 +1091,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         return [(freqs, lsp) for lsp in lsps]
 
+    
+
 
 def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     """

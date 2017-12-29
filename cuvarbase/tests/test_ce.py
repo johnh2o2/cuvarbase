@@ -63,7 +63,66 @@ class TestCE(object):
             sing_results.extend(proc.run([d], freqs=freqs))
             proc.finish()
 
+        print(sing_results)
         for rb, rnb in zip(mult_results, sing_results):
+            fb, pb = rb
+            fnb, pnb = rnb
+
+            print(fb)
+            print(fnb)
+
+            assert(not any(np.isnan(pb)))
+            assert(not any(np.isnan(pnb)))
+
+            assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
+            assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
+
+    @pytest.mark.parametrize('ndatas', [1, 7])
+    @pytest.mark.parametrize('batch_size', [1, 3])
+    @pytest.mark.parametrize('use_double', [True, False])
+    @pytest.mark.parametrize('use_fast,weighted,shmem_lc,freq_batch_size',
+                             [(True, False, False, 1),
+                              (True, False, True, None),
+                              (False, True, False, None),
+                              (False, False, False, None)])
+    @pytest.mark.parametrize('phase_bins,phase_overlap',
+                             [(10, 1)])
+    @pytest.mark.parametrize('mag_bins,mag_overlap',
+                             [(5, 0)])
+    def test_call(self, ndatas, batch_size, use_double,
+                  mag_bins, phase_bins, mag_overlap,
+                  phase_overlap, use_fast,
+                  shmem_lc, weighted,
+                  freq_batch_size):
+
+        datas = [data(ndata=rand.randint(50, 100))
+                 for i in range(ndatas)]
+        kwargs = dict(use_double=use_double,
+                      mag_bins=mag_bins,
+                      phase_bins=phase_bins,
+                      phase_overlap=phase_overlap,
+                      mag_overlap=mag_overlap,
+                      use_fast=use_fast,
+                      weighted=weighted)
+        proc = ConditionalEntropyAsyncProcess(**kwargs)
+        df = 0.02
+        max_freq = 1.1
+        min_freq = 0.9
+        nf = int((max_freq - min_freq) / df)
+        freqs = min_freq + df * np.arange(nf)
+
+        run_kw = dict(shmem_lc=shmem_lc, freqs=freqs,
+                      freq_batch_size=freq_batch_size)
+        batched_results = proc(datas, **run_kw)
+        proc.finish()
+
+        non_batched_results = []
+        for d in datas:
+            r = proc([d], freqs=freqs)
+            proc.finish()
+            non_batched_results.extend(r)
+
+        for rb, rnb in zip(batched_results, non_batched_results):
             fb, pb = rb
             fnb, pnb = rnb
 
@@ -72,6 +131,7 @@ class TestCE(object):
 
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
+
 
     @pytest.mark.parametrize('ndatas', [1, 7])
     @pytest.mark.parametrize('batch_size', [1, 3])

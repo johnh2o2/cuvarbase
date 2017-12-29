@@ -16,6 +16,7 @@ class GPUAsyncProcess(object):
         self.nstreams = kwargs.get('nstreams', None)
         self.function_kwargs = kwargs.get('function_kwargs', {})
         self.device = kwargs.get('device', 0)
+        self.memory = kwargs.get('memory', None)
         self.streams = []
         self.gpu_data = []
         self.results = []
@@ -54,3 +55,20 @@ class GPUAsyncProcess(object):
             results.extend(res)
 
         return results
+
+    def __call__(self, data, freqs=None, batch_size=10,
+                 use_constant_freqs=False, **kwargs):
+
+        # ensure data is [(x, y, dy), ...] format
+        if isinstance(data[0][0], float):
+            data = [data]
+
+        if use_constant_freqs and hasattr(self, 'batched_run_const_nfreq'):
+            assert(freqs is None or not is_list_of_lists(freqs))
+
+            return self.batched_run_const_nfreq(data, freqs=freqs, batch_size=batch_size, **kwargs)
+
+        elif len(data) > batch_size or (self.memory is not None and len(data) > len(self.memory)):
+            return self.batched_run(data, freqs=freqs, batch_size=batch_size, **kwargs)
+
+        return self.run(data, freqs=freqs, batch_size=batch_size, **kwargs)
