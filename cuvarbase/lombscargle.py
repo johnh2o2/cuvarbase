@@ -1094,7 +1094,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
     
 
 
-def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
+def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True, use_log=True):
     """
     False alarm probability for periodogram peak
     based on Baluev (2008) [2008MNRAS.385.1279B]
@@ -1118,6 +1118,9 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
         Use gamma function for computation of numerical
         coefficient; replaced with scipy.special.gammaln
         and should be stable now
+    use_log: bool, optional (default: True)
+        Return (natural) logarithm of false alarm probability
+
     Returns
     -------
     fap: float
@@ -1156,6 +1159,18 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     W = fmax * Teff
     A = (2 * np.pi ** 1.5) * W
 
+    if (0.5 * N_K * np.log10(z) < -2):
+        log_gamma = gammaln(0.5 * N_H) - gammaln(0.5 * (N_K + 1))
+        log_A_fmax = np.log(2) + 1.5 * np.log(np.pi) + np.log(W)
+
+        log_tau = log_gamma - np.log(2 * np.pi) + log_A_fmax
+        
+        log_tau += 0.5 * (d - 1) * np.log(z / np.pi)
+        
+        log_tau += 0.5 * (N_K - 1) * np.log(1 - z)
+
+        return (log_tau if use_log else np.exp(log_tau))
+
     eZ1 = (z / np.pi) ** 0.5 * (d - 1)
     eZ2 = (1 - z) ** (0.5 * (N_K - 1))
 
@@ -1163,7 +1178,9 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
 
     Psing = 1 - (1 - z) ** (0.5 * N_K)
 
-    return 1 - Psing * np.exp(-tau)
+    fap = 1 - Psing * np.exp(-tau)
+
+    return np.log(fap) if use_log else fap
 
 
 def lomb_scargle_simple(t, y, dy, **kwargs):

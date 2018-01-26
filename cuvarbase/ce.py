@@ -9,6 +9,7 @@ from builtins import range
 from builtins import object
 
 import numpy as np
+from time import sleep
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
@@ -202,6 +203,8 @@ class ConditionalEntropyMemory(object):
             self.ce_g.get(ary=self.ce_c, pagelocked=True)
         else:
             self.ce_g.get_async(stream=self.stream, ary=self.ce_c)
+            #sleep(1)
+            #self.stream.synchronize()
 
 
     def compute_mag_bin_fracs(self, y, **kwargs):
@@ -825,17 +828,16 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         results = [self.call_func(memory[i], self.function_tuple, **kw)
                    for i in range(len(data))]
 
-        self.finish()
+        
         if only_keep_best_freq:
-            
-            best_inds = map(np.argmax, results)
-
+            self.finish()
+            best_inds = list(map(np.argmin, results))
             if single_set_of_freqs:
-                sigs = map(lambda r, i: significance_measure(frqs, r, r[i]),
-                           zip(results, best_inds))
+                sigs = list(map(lambda ri: significance_measure(frqs, ri[0], ri[0][ri[1]]),
+                                zip(results, best_inds)))
                 results = [(frqs[i], r[i], s) for r, i, s
                            in zip(results, best_inds, sigs)]
-
+                
             else:
                 sigs = map(lambda f, r, i: significance_measure(f, r, r[i]),
                            zip(frqs, results, best_inds))
@@ -879,6 +881,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         """
 
+        only_keep_best_freq = kwargs.get('only_keep_best_freq', False)
+
         # compile module if not compiled already
         if not hasattr(self, 'prepared_functions') or \
             not all([func in self.prepared_functions for func in
@@ -903,26 +907,43 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         for d, f in zip(data, frqs):
             size_of_real = self.real_type(1).nbytes
 
-            # subtract of lc memory
+            # subtract off lc memory
             fmem = max_memory - len(d[0]) * size_of_real * 3
 
             tot_bins = self.phase_bins * self.mag_bins
             batch_size = int(np.floor(fmem / (size_of_real * (tot_bins + 2))))
             nbatches = int(np.ceil(len(f) / float(batch_size)))
 
-            cper = np.zeros(len(f))
-            for i in range(nbatches):
-                imin = i * batch_size
-                imax = min([len(f), (i + 1) * batch_size])
+            if only_keep_best_freq:
+                partial_sols = []
+                for i in range(nbatches):
+                    imin = i * batch_size
+                    imax = min([len(f), (i + 1) * batch_size])
+                    
+                    partial_sols.extend(self.run([d], freqs=f[slice(imin, imax)], **kwargs))
+                    self.finish()
 
-                r = self.run([d], freqs=f[slice(imin, imax)], **kwargs)
-                self.finish()
+                cpers.append(min(partial_sols, key=lambda p: p[1]))
 
-                cper[imin:imax] = r[0][1][:]
+            else:
+                cper = np.zeros(len(f))
+                for i in range(nbatches):
+                    imin = i * batch_size
+                    imax = min([len(f), (i + 1) * batch_size])
 
-            cpers.append(cper)
+                    r = self.run([d], freqs=f[slice(imin, imax)], **kwargs)
+                    self.finish()
 
-        results = [(f, cper) for f, cper in zip(frqs, cpers)]
+                    cper[imin:imax] = r[0][1][:]
+
+                cpers.append(cper)
+        
+        if only_keep_best_freq:
+            return cpers
+
+        return [(f, cper) for f, cper in zip(frqs, cpers)]
+
+
         return results
 
     def batched_run_const_nfreq(self, data, batch_size=10,
@@ -938,6 +959,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             observations is not much larger than the typical number
             of observations.
         """
+
+        only_keep_best_freq = kwargs.get('only_keep_best_freq', False)
 
         # create streams if needed
         bsize = min([len(data), batch_size])
@@ -987,10 +1010,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         for b, batch in enumerate(batches):
             results = self.run(batch, memory=memory, freqs=freqs, **kwargs)
-            self.finish()
-            #print([(m.ce_g.get(), m.ce_c) for m in memory])
+            #[memory[i].stream.synchronize() for i in range(len(results))]
 
-            for i, (f, ce) in enumerate(results):
-                ces.append(np.copy(ce))
+            for i, r in enumerate(results):
+                if only_keep_best_freq:
+                    ces.append((r[0], np.asscalar(np.copy(r[1])), r[2]))
+                else:
+                    ces.append((freqs, np.copy(r[1])))
 
-        return [(freqs, ce) for ce in ces]
+        return ces

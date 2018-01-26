@@ -191,6 +191,52 @@ class TestCE(object):
     @pytest.mark.parametrize('ndatas', [1, 7])
     @pytest.mark.parametrize('batch_size', [1, 3])
     @pytest.mark.parametrize('use_double', [True, False])
+    @pytest.mark.parametrize('use_fast', [True, False])
+    def test_only_keep_best_freq(self, ndatas, batch_size, use_double,
+                                 use_fast):
+        datas = [data(ndata=rand.randint(50, 100))
+                 for i in range(ndatas)]
+        kwargs = dict(use_double=use_double,
+                      use_fast=use_fast)
+
+        proc = ConditionalEntropyAsyncProcess(**kwargs)
+
+        df = 0.02
+        max_freq = 1.1
+        min_freq = 0.9
+        nf = int((max_freq - min_freq) / df)
+        freqs = min_freq + df * np.arange(nf)
+
+        run_kw = dict(freqs=freqs)
+
+        call_funcs = [proc.run,
+                      proc.batched_run,
+                      proc.batched_run_const_nfreq,
+                      proc.large_run]
+
+        for func in call_funcs:
+            print(func.__name__)
+            full = func(datas, only_keep_best_freq=False, **run_kw)
+            proc.finish()
+
+            best = func(datas, only_keep_best_freq=True, **run_kw)
+            proc.finish()
+
+            for (frqs_all, r_all), (frqs_best, r_best, s_best) in zip(full, best):
+                i = list(frqs_all).index(frqs_best)
+
+                print(i, frqs_all[i], frqs_best, r_all[i], r_best, min(r_all), r_all)
+                assert(abs(r_all[i] - r_best) < 1e-8)
+                assert(min(r_all) - r_best < 1e-8)
+
+                #print(r_all[i], max(r_all), r_best, frqs_all[np.argmax(r_all)], frqs_best)
+                #assert(frqs_all[np.argmax(r_all)] == frqs_best)
+                assert(min(r_all) == r_best)
+
+
+    @pytest.mark.parametrize('ndatas', [1, 7])
+    @pytest.mark.parametrize('batch_size', [1, 3])
+    @pytest.mark.parametrize('use_double', [True, False])
     @pytest.mark.parametrize('use_fast,weighted,shmem_lc,freq_batch_size',
                              [(True, False, False, 1),
                               (True, False, True, None),
