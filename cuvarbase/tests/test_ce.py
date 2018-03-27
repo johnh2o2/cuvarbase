@@ -234,7 +234,7 @@ class TestCE(object):
                 assert(min(r_all) == r_best)
 
 
-    @pytest.mark.parametrize('ndatas', [1, 7])
+    @pytest.mark.parametrize('ndatas', [1, 6, 7])
     @pytest.mark.parametrize('batch_size', [1, 3])
     @pytest.mark.parametrize('use_double', [True, False])
     @pytest.mark.parametrize('use_fast,weighted,shmem_lc,freq_batch_size',
@@ -274,12 +274,10 @@ class TestCE(object):
         batched_results = proc.batched_run_const_nfreq(datas, **run_kw)
         proc.finish()
 
-        procnb = ConditionalEntropyAsyncProcess(**kwargs)
-
         non_batched_results = []
         for d, (frq, p) in zip(datas, batched_results):
-            r = procnb.run([d], **run_kw)
-            procnb.finish()
+            r = proc.run([d], **run_kw)
+            proc.finish()
             non_batched_results.extend(r)
 
         for f0, (fb, pb), (fnb, pnb) in zip(frequencies, batched_results,

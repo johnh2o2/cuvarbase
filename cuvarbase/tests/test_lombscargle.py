@@ -13,7 +13,8 @@ from astropy.stats.lombscargle import LombScargle
 
 from ..lombscargle import LombScargleAsyncProcess
 from pycuda.tools import mark_cuda_test
-import pycuda.autoinit
+#import pycuda.autoinit
+
 spp = 3
 nfac = 3
 lsrtol = 1E-2
@@ -147,8 +148,10 @@ class TestLombScargle(object):
                                  samples_per_peak=spp,
                                  use_fft=False,
                                  python_dir_sums=True)
-        ls_proc.finish()
+        
         fgpu_reg, pgpu_reg = result_reg[0]
+
+        ls_proc.finish()
 
         assert_similar(pgpu_reg, pgpu_ds)
 
@@ -166,6 +169,8 @@ class TestLombScargle(object):
             sing_results.extend(ls_proc.run([d], nyquist_factor=nfac,
                                 samples_per_peak=spp))
             ls_proc.finish()
+
+        ls_proc.finish()
 
         for rb, rnb in zip(mult_results, sing_results):
             fb, pb = rb
@@ -195,12 +200,16 @@ class TestLombScargle(object):
             ls_proc.finish()
             non_batched_results.extend(r)
 
+        
+        ls_proc.finish()
+
         for rb, rnb in zip(batched_results, non_batched_results):
             fb, pb = rb
             fnb, pnb = rnb
 
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
+
 
     def test_batched_run_const_nfreq(self, make_plot=False, ndatas=27,
                                      batch_size=5, sigma=nfft_sigma,
@@ -229,6 +238,7 @@ class TestLombScargle(object):
             ls_procnb.finish()
             non_batched_results.extend(r)
 
+        ls_procnb.finish()
         # for f0, (fb, pb), (fnb, pnb) in zip(frequencies, batched_results,
         #                                    non_batched_results):
         #    print f0, fb[np.argmax(pb)], fnb[np.argmax(pnb)]

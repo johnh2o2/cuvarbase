@@ -16,7 +16,7 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
-from .core import GPUAsyncProcess
+from .core import GPUAsyncProcess, ensure_context_push
 from .utils import weights, find_kernel, _module_reader
 from .utils import autofrequency as utils_autofreq
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async, NFFTMemory
@@ -48,7 +48,7 @@ class LombScargleMemory(object):
         The ``m`` parameter for the NFFT
     """
     def __init__(self, sigma, stream, m, **kwargs):
-
+        self.context = kwargs.get('context', cuda.Context.get_current())
         self.sigma = sigma
         self.stream = stream
         self.m = m
@@ -691,7 +691,7 @@ def lomb_scargle_async(memory, functions, freqs,
 
     return memory.lsp_c
 
-
+@ensure_context_push
 class LombScargleAsyncProcess(GPUAsyncProcess):
     """
     GPUAsyncProcess for the Lomb Scargle periodogram
@@ -713,10 +713,21 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
     >>> ls_freqs, ls_powers = freqs[0], powers[0]
 
     """
+    _runfuncs = ['run',
+                 '_compile_and_prepare_functions',
+                 'batched_run_const_nfreq',
+                 'memory_requirement',
+                 'allocate_for_single_lc',
+                 'preallocate',
+                 'allocate']
+
     def __init__(self, *args, **kwargs):
         super(LombScargleAsyncProcess, self).__init__(*args, **kwargs)
 
-        self.nfft_proc = NFFTAsyncProcess(*args, **kwargs)
+        self.nfft_kwargs = dict(context=self.context)
+        self.nfft_kwargs.update(kwargs)
+
+        self.nfft_proc = NFFTAsyncProcess(*args, **self.nfft_kwargs)
         self._cpp_defs = self.nfft_proc._cpp_defs
 
         self.real_type = self.nfft_proc.real_type

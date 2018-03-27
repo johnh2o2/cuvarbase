@@ -13,10 +13,10 @@ from time import sleep
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
-import pycuda.autoinit
+#import pycuda.autoinit
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess
+from .core import GPUAsyncProcess, ensure_context_push
 from .utils import _module_reader, find_kernel
 from .utils import autofrequency as utils_autofreq
 
@@ -26,6 +26,8 @@ import warnings
 
 class ConditionalEntropyMemory(object):
     def __init__(self, **kwargs):
+
+        self.context = kwargs.get('context', cuda.Context.get_current())
         self.phase_bins = kwargs.get('phase_bins', 10)
         self.mag_bins = kwargs.get('mag_bins', 5)
         self.phase_overlap = kwargs.get('phase_overlap', 0)
@@ -202,10 +204,18 @@ class ConditionalEntropyMemory(object):
         if self.stream is None:
             self.ce_g.get(ary=self.ce_c, pagelocked=True)
         else:
-            self.ce_g.get_async(stream=self.stream, ary=self.ce_c)
-            #sleep(1)
+            #self.ce_g.get_async(stream=self.stream, ary=self.ce_c)
+            #self.context.synchronize()
+            self.ce_g.get(ary=self.ce_c, pagelocked=True)
             #self.stream.synchronize()
+            #ce_c = np.copy(self.ce_c)
+            #ce_c_get = np.copy(self.ce_g.get())
+            #if not (all(ce_c == ce_c_get)):
+            #    print(list(zip(ce_c, ce_c_get)))
 
+            #sleep(1)
+            #self.context.synchronize()
+            #self.context.synchronize()
 
     def compute_mag_bin_fracs(self, y, **kwargs):
         N = float(len(y))
@@ -376,9 +386,9 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         ce_logp, ce_std, ce_wt = functions
 
     if shmem_lim is None:
-        dev = pycuda.autoinit.device
+        dev = memory.context.get_device()
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
-        shmem_lim = pycuda.autoinit.device.get_attribute(att)
+        shmem_lim = dev.get_attribute(att)
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
@@ -500,6 +510,8 @@ def snr_significance(freqs, ce_values, ce_value=None, **kwargs):
 
     return (np.mean(ce_values) - ce_value) / np.std(ce_values)
 
+
+@ensure_context_push
 class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     """
     GPUAsyncProcess for the Conditional Entropy period finder
@@ -541,6 +553,14 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     >>> ce_freqs, ce_powers = results[0]
 
     """
+    _runfuncs = ['run',
+                 'batched_run',
+                 'batched_run_const_nfreq',
+                 'large_run',
+                 '_compile_and_prepare_functions',
+                 'allocate',
+                 'allocate_for_single_lc',
+                 'preallocate']
     def __init__(self, *args, **kwargs):
         super(ConditionalEntropyAsyncProcess, self).__init__(*args, **kwargs)
         self.phase_bins = kwargs.get('phase_bins', 10)
@@ -611,7 +631,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             self.prepared_functions[fname] = func.prepare(dtype)
         self.function_tuple = tuple(self.prepared_functions[fname]
                                     for fname in sorted(self.dtypes.keys()))
-
+    
     def memory_requirement(self, data, **kwargs):
         """
         Return an approximate GPU memory requirement in bytes.
@@ -660,6 +680,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         return mem
 
+    
     def autofrequency(self, *args, **kwargs):
         """ calls :func:`cuvarbase.utils.autofrequency` """
         return utils_autofreq(*args, **kwargs)
@@ -839,8 +860,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                            in zip(results, best_inds, sigs)]
                 
             else:
-                sigs = map(lambda f, r, i: significance_measure(f, r, r[i]),
-                           zip(frqs, results, best_inds))
+                sigs = list(map(lambda fri: significance_measure(fri[0], fri[1], fri[1][fri[2]]),
+                                zip(frqs, results, best_inds)))
                 results = [(f[i], r[i], s) for f, r, i, s
                            in zip(frqs, results, best_inds, sigs)]
         elif single_set_of_freqs:
@@ -986,6 +1007,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             start = len(batches) * batch_size
             finish = start + min([batch_size, len(data) - start])
             batches.append([data[i] for i in range(start, finish)])
+        ntot = sum([len(b) for b in batches])
+        #assert(ntot == len(data))
 
         # set up memory containers for gpu and cpu (pinned) memory
         kwargs_mem = dict(buffered_transfer=True,
@@ -997,7 +1020,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                           weighted=self.weighted,
                           max_phi=self.max_phi,
                           use_double=self.use_double,
-                          freqs=freqs)
+                          freqs=freqs,
+                          context=self.context)
         kwargs_mem.update(kwargs)
         memory = [ConditionalEntropyMemory(stream=stream, **kwargs_mem)
                   for stream in streams]

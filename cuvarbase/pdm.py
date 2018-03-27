@@ -14,7 +14,7 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
-from .core import GPUAsyncProcess
+from .core import GPUAsyncProcess, ensure_context_push
 from .utils import weights, find_kernel
 
 
@@ -128,6 +128,7 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
     return pow_cpu
 
 
+@ensure_context_push
 class PDMAsyncProcess(GPUAsyncProcess):
 
     def __init__(self, *args, **kwargs):
