@@ -836,7 +836,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             for mem in memory:
                 mem.transfer_freqs_to_gpu()
         elif set_data:
-            if len(memory) != len(data):
+            if len(memory) < len(data):
                 raise Exception("Mismatch between len(memory) "
                                 "= %d and len(data) = %d."%(len(memory), len(data)))
             for i, (t, y, dy) in enumerate(data):
