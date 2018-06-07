@@ -1,0 +1,1 @@
+May 31, 2018; not sure what all is going on on this branch but one main problem remains unresolved: if you run the CE period finder, it will occaisionally return one or more 0's in the periodogram. Some sort of syncing error(?).

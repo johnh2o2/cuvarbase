@@ -16,7 +16,7 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
-from .core import GPUAsyncProcess
+from .core import GPUAsyncProcess, ensure_context_push
 from .utils import weights, find_kernel, _module_reader
 from .utils import autofrequency as utils_autofreq
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async, NFFTMemory
@@ -48,7 +48,7 @@ class LombScargleMemory(object):
         The ``m`` parameter for the NFFT
     """
     def __init__(self, sigma, stream, m, **kwargs):
-
+        self.context = kwargs.get('context', cuda.Context.get_current())
         self.sigma = sigma
         self.stream = stream
         self.m = m
@@ -691,7 +691,7 @@ def lomb_scargle_async(memory, functions, freqs,
 
     return memory.lsp_c
 
-
+@ensure_context_push
 class LombScargleAsyncProcess(GPUAsyncProcess):
     """
     GPUAsyncProcess for the Lomb Scargle periodogram
@@ -713,10 +713,21 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
     >>> ls_freqs, ls_powers = freqs[0], powers[0]
 
     """
+    _runfuncs = ['run',
+                 '_compile_and_prepare_functions',
+                 'batched_run_const_nfreq',
+                 'memory_requirement',
+                 'allocate_for_single_lc',
+                 'preallocate',
+                 'allocate']
+
     def __init__(self, *args, **kwargs):
         super(LombScargleAsyncProcess, self).__init__(*args, **kwargs)
 
-        self.nfft_proc = NFFTAsyncProcess(*args, **kwargs)
+        self.nfft_kwargs = dict(context=self.context)
+        self.nfft_kwargs.update(kwargs)
+
+        self.nfft_proc = NFFTAsyncProcess(*args, **self.nfft_kwargs)
         self._cpp_defs = self.nfft_proc._cpp_defs
 
         self.real_type = self.nfft_proc.real_type
@@ -1091,8 +1102,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         return [(freqs, lsp) for lsp in lsps]
 
+    
 
-def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
+
+def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True, use_log=True):
     """
     False alarm probability for periodogram peak
     based on Baluev (2008) [2008MNRAS.385.1279B]
@@ -1116,6 +1129,9 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
         Use gamma function for computation of numerical
         coefficient; replaced with scipy.special.gammaln
         and should be stable now
+    use_log: bool, optional (default: True)
+        Return (natural) logarithm of false alarm probability
+
     Returns
     -------
     fap: float
@@ -1154,6 +1170,18 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     W = fmax * Teff
     A = (2 * np.pi ** 1.5) * W
 
+    if (0.5 * N_K * np.log10(z) < -2):
+        log_gamma = gammaln(0.5 * N_H) - gammaln(0.5 * (N_K + 1))
+        log_A_fmax = np.log(2) + 1.5 * np.log(np.pi) + np.log(W)
+
+        log_tau = log_gamma - np.log(2 * np.pi) + log_A_fmax
+        
+        log_tau += 0.5 * (d - 1) * np.log(z / np.pi)
+        
+        log_tau += 0.5 * (N_K - 1) * np.log(1 - z)
+
+        return (log_tau if use_log else np.exp(log_tau))
+
     eZ1 = (z / np.pi) ** 0.5 * (d - 1)
     eZ2 = (1 - z) ** (0.5 * (N_K - 1))
 
@@ -1161,7 +1189,9 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
 
     Psing = 1 - (1 - z) ** (0.5 * N_K)
 
-    return 1 - Psing * np.exp(-tau)
+    fap = 1 - Psing * np.exp(-tau)
+
+    return np.log(fap) if use_log else fap
 
 
 def lomb_scargle_simple(t, y, dy, **kwargs):

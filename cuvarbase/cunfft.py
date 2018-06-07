@@ -16,7 +16,7 @@ from pycuda.compiler import SourceModule
 
 import skcuda.fft as cufft
 
-from .core import GPUAsyncProcess
+from .core import GPUAsyncProcess, ensure_context_push
 from .utils import find_kernel, _module_reader
 
 
@@ -309,6 +309,8 @@ def nfft_adjoint_async(memory, functions,
     return memory.ghat_c
 
 
+
+@ensure_context_push
 class NFFTAsyncProcess(GPUAsyncProcess):
     """
     `GPUAsyncProcess` for the adjoint NFFT.
@@ -346,7 +348,10 @@ class NFFTAsyncProcess(GPUAsyncProcess):
     >>> nfft_adjoint = proc.run(data)
 
     """
-
+    _runfuncs = ['run',
+                 'batched_run',
+                 '_compile_and_prepare_functions',
+                 'allocate']
     def __init__(self, *args, **kwargs):
         super(NFFTAsyncProcess, self).__init__(*args, **kwargs)
 
@@ -375,6 +380,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
                                'normalize']
 
         self.allocated_memory = []
+
 
     def m_from_C(self, C, sigma):
         """ 

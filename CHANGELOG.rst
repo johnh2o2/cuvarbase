@@ -1,6 +1,7 @@
 What's new in cuvarbase
 ***********************
-
+* **0.2.1**
+	* Added ``__call__`` support for ``ConditionalEntropyAsyncProcess`` and ``LombScargleAsyncProcess``.
 * **0.2.0**
 	* Many more unit tests for BLS and CE.
 	* BLS

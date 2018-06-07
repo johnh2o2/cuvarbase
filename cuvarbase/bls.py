@@ -15,12 +15,16 @@ import pycuda.autoinit
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
+from pycuda.tools import make_default_context
 
 from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader
 
 import resource
 import numpy as np
+import atexit
+
+cuda.init()
 
 _default_block_size = 256
 _all_function_names = ['full_bls_no_sol',
