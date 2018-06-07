@@ -10,6 +10,7 @@ from builtins import object
 
 import numpy as np
 from time import sleep
+from tqdm import tqdm
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
@@ -461,14 +462,14 @@ def is_list_of_lists(thing):
 
 def snr_significance(freqs, ce_values, ce_value=None, **kwargs):
     """
-    Compute a rough significance "statistic" for the CE periodogram 
+    Compute a rough significance "statistic" for the CE periodogram
     (z-score of the minimum CE value)
 
     .. math::
 
         \frac{\bar{p} - {\rm min}_{f}\hat{p}(f)}{\sigma}
 
-    where 
+    where
 
     .. math::
 
@@ -481,7 +482,7 @@ def snr_significance(freqs, ce_values, ce_value=None, **kwargs):
         \bar{p} = \left<\hat{p}(f)\right>_f
 
     is the mean conditional entropy for all trial frequencies
-    
+
     Parameters
     ----------
     freqs: array_like
@@ -631,7 +632,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             self.prepared_functions[fname] = func.prepare(dtype)
         self.function_tuple = tuple(self.prepared_functions[fname]
                                     for fname in sorted(self.dtypes.keys()))
-    
+
     def memory_requirement(self, data, **kwargs):
         """
         Return an approximate GPU memory requirement in bytes.
@@ -680,7 +681,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         return mem
 
-    
+
     def autofrequency(self, *args, **kwargs):
         """ calls :func:`cuvarbase.utils.autofrequency` """
         return utils_autofreq(*args, **kwargs)
@@ -849,7 +850,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         results = [self.call_func(memory[i], self.function_tuple, **kw)
                    for i in range(len(data))]
 
-        
+
         if only_keep_best_freq:
             self.finish()
             best_inds = list(map(np.argmin, results))
@@ -858,7 +859,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                                 zip(results, best_inds)))
                 results = [(frqs[i], r[i], s) for r, i, s
                            in zip(results, best_inds, sigs)]
-                
+
             else:
                 sigs = list(map(lambda fri: significance_measure(fri[0], fri[1], fri[1][fri[2]]),
                                 zip(frqs, results, best_inds)))
@@ -940,7 +941,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 for i in range(nbatches):
                     imin = i * batch_size
                     imax = min([len(f), (i + 1) * batch_size])
-                    
+
                     partial_sols.extend(self.run([d], freqs=f[slice(imin, imax)], **kwargs))
                     self.finish()
 
@@ -958,7 +959,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                     cper[imin:imax] = r[0][1][:]
 
                 cpers.append(cper)
-        
+
         if only_keep_best_freq:
             return cpers
 
@@ -975,12 +976,13 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         the same for each lightcurve. Doesn't reallocate memory for each batch.
 
         .. note::
-            
+
             To get best efficiency, make sure the maximum number of
             observations is not much larger than the typical number
             of observations.
         """
 
+        show_progress = kwargs.get('show_progress', False)
         only_keep_best_freq = kwargs.get('only_keep_best_freq', False)
 
         # create streams if needed
@@ -1032,7 +1034,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         [mem.allocate(freqs=freqs, freqs_g=freqs_g, **kwargs)
          for mem in memory]
 
-        for b, batch in enumerate(batches):
+        iterator = enumerate(batches)
+        if show_progress:
+            iterator = tqdm(iterator,
+                            total=len(batches),
+                            unit='batches')
+        for b, batch in iterator:
             results = self.run(batch, memory=memory, freqs=freqs, **kwargs)
             #[memory[i].stream.synchronize() for i in range(len(results))]
 

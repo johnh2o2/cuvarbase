@@ -1,3 +1,4 @@
+tqdm
 future
 numpy >= 1.6
 scipy
