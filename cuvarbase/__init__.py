@@ -1,6 +1,6 @@
-#import pycuda.autoinit 
+#import pycuda.autoinit
 __all__ = ['bls', 'ce', 'core', 'cunfft', 'lombscargle', 'pdm', 'utils']
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 import atexit
 import pycuda.tools
