@@ -1011,6 +1011,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def batched_run_const_nfreq(self, data, batch_size=10,
                                 use_fft=True, freqs=None,
+                                returnBestFreq=False,
                                 **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are
@@ -1080,6 +1081,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         [mem.allocate(nf=nf, **kwargs) for mem in memory]
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
+        periods_best, significances = [], []
         for b, batch in enumerate(batches):
             results = self.run(batch, memory=memory, freqs=freqs,
                                use_fft=use_fft,
@@ -1087,9 +1089,21 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             self.finish()
 
             for i, (f, p) in enumerate(results):
-                lsps.append(np.copy(p))
+                if returnBestFreq:
+                    powers = np.copy(p)
+                    fap = fap_baluev(batch[i][0], batch[i][1], powers, np.max(freqs))
+                    idx = np.argmin(fap)
+                    significance = 1./fap[idx]
+                    period = 1./freqs[idx]
+                    periods_best.append(period)
+                    significances.append(significance)
+                else:
+                    lsps.append(np.copy(p))
 
-        return [(freqs, lsp) for lsp in lsps]
+        if returnBestFreq:
+            return periods_best, significances
+        else:
+            return [(freqs, lsp) for lsp in lsps]
 
 
 def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
