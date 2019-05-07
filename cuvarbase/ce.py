@@ -897,18 +897,26 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         periods_best, significances = [], []
 
         for b, batch in enumerate(batches):
-            results = self.run(batch, memory=memory, freqs=freqs, **kwargs)
-            self.finish()
+            finishRun = False
+            while not finishRun:
+                results = self.run(batch, memory=memory, freqs=freqs, **kwargs)
+                self.finish()
 
-            for i, (f, ce) in enumerate(results):
-                if returnBestFreq:
+                checkAnalysis = True
+                for i, (f, ce) in enumerate(results):
                     ce = np.copy(ce)
-                    significance = np.abs(np.mean(ce)-np.min(ce))/np.std(ce)
-                    period = periods[np.argmin(ce)]
-                    periods_best.append(period)
-                    significances.append(significance)                    
-                else:
-                    ces.append(np.copy(ce))
+                    print(np.sum(ce))
+                    if np.sum(ce) == 0:
+                        checkAnalysis = False
+                    if returnBestFreq:
+                        significance = np.abs(np.mean(ce)-np.min(ce))/np.std(ce)
+                        period = periods[np.argmin(ce)]
+                        periods_best.append(period)
+                        significances.append(significance)                    
+                    else:
+                        ces.append(ce)
+                if checkAnalysis is True:
+                    finishRun = True
 
         if returnBestFreq:
             return periods_best, significances
