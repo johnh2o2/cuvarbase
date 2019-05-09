@@ -1012,6 +1012,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
     def batched_run_const_nfreq(self, data, batch_size=10,
                                 use_fft=True, freqs=None,
                                 returnBestFreq=False,
+                                doRemoveTerrestrial=False,
                                 **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are
@@ -1082,19 +1083,27 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
         periods_best, significances = [], []
+
+        if doRemoveTerrestrial:
+            idx1 = np.where((freqs < 0.95) | (freqs > 1.05))[0]
+            idx2 = np.where((freqs < 0.48) | (freqs > 0.52))[0]
+            idxterr = np.hstack((idx1,idx2))
+
         for b, batch in enumerate(batches):
+ 
             results = self.run(batch, memory=memory, freqs=freqs,
                                use_fft=use_fft,
                                **kwargs)
             self.finish()
-
+            
             for i, (f, p) in enumerate(results):
                 if returnBestFreq:
-                    powers = np.copy(p)
+                    powers = np.copy(p)[idxterr]
+
                     fap = fap_baluev(batch[i][0], batch[i][2], powers, np.max(freqs))
                     idx = np.argmin(fap)
                     significance = 1./fap[idx]
-                    period = 1./freqs[idx]
+                    period = 1./freqs[idxterr[idx]]
                     periods_best.append(period)
                     significances.append(significance)
                 else:
