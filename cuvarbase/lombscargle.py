@@ -1098,12 +1098,18 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             
             for i, (f, p) in enumerate(results):
                 if returnBestFreq:
-                    powers = np.copy(p)[idxterr]
+                    if doRemoveTerrestrial:
+                        powers = np.copy(p)[idxterr]
+                    else:
+                        powers = np.copy(p)
 
                     fap = fap_baluev(batch[i][0], batch[i][2], powers, np.max(freqs))
                     idx = np.argmin(fap)
                     significance = 1./fap[idx]
-                    period = 1./freqs[idxterr[idx]]
+                    if doRemoveTerrestrial:
+                        period = 1./freqs[idxterr[idx]]
+                    else:
+                        period = 1./freqs[idx]
                     periods_best.append(period)
                     significances.append(significance)
                 else:
