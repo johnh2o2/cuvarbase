@@ -1087,7 +1087,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if doRemoveTerrestrial:
             idx1 = np.where((freqs < 0.95) | (freqs > 1.05))[0]
             idx2 = np.where((freqs < 0.48) | (freqs > 0.52))[0]
-            idxterr = np.hstack((idx1,idx2))
+            idxterr = np.intersect1d(idx1,idx2)
 
         for b, batch in enumerate(batches):
  
