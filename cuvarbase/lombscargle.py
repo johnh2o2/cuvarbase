@@ -1111,7 +1111,6 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                         period = 1./freqs[idxterr[idx]]
                     else:
                         period = 1./freqs[idx]
-                    print(period)
                     periods_best.append(period)
                     significances.append(significance)
                 else:
