@@ -1085,9 +1085,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         periods_best, significances = [], []
 
         if doRemoveTerrestrial:
-            idx1 = np.where((freqs < 0.95) | (freqs > 1.05))[0]
-            idx2 = np.where((freqs < 0.48) | (freqs > 0.52))[0]
-            idxterr = np.intersect1d(idx1,idx2)
+            idx1 = np.where((freqs < 1.98) | (freqs > 2.02))[0]
+            idx2 = np.where((freqs < 0.95) | (freqs > 1.05))[0]
+            idx3 = np.where((freqs < 0.48) | (freqs > 0.52))[0]
+            idxterr = np.intersect1d(np.intersect1d(idx1,idx2),idx3)
 
         for b, batch in enumerate(batches):
  
@@ -1110,6 +1111,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                         period = 1./freqs[idxterr[idx]]
                     else:
                         period = 1./freqs[idx]
+                    print(period)
                     periods_best.append(period)
                     significances.append(significance)
                 else:
