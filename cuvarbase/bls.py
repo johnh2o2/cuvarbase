@@ -264,32 +264,26 @@ class BLSMemory(object):
         self.bls = cuda.aligned_zeros(shape=(nfreqs,),
                                       dtype=self.rtype,
                                       alignment=resource.getpagesize())
-        self.bls = cuda.register_host_memory(self.bls)
 
         self.nbins0 = cuda.aligned_zeros(shape=(nfreqs,),
                                          dtype=np.int32,
                                          alignment=resource.getpagesize())
-        self.nbins0 = cuda.register_host_memory(self.nbins0)
 
         self.nbinsf = cuda.aligned_zeros(shape=(nfreqs,),
                                          dtype=np.int32,
-                                         alignment=resource.getpagesize())
-        self.nbinsf = cuda.register_host_memory(self.nbinsf)
+                                         alignment=resource.getpagesize()) 
 
         self.t = cuda.aligned_zeros(shape=(ndata,),
                                     dtype=self.rtype,
                                     alignment=resource.getpagesize())
-        self.t = cuda.register_host_memory(self.t)
 
         self.yw = cuda.aligned_zeros(shape=(ndata,),
                                      dtype=self.rtype,
                                      alignment=resource.getpagesize())
-        self.yw = cuda.register_host_memory(self.yw)
 
         self.w = cuda.aligned_zeros(shape=(ndata,),
                                     dtype=self.rtype,
                                     alignment=resource.getpagesize())
-        self.w = cuda.register_host_memory(self.w)
 
     def allocate_freqs(self, nfreqs=None):
         if nfreqs is None:
@@ -542,7 +536,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         memory.transfer_data_to_cpu()
         if stream is not None:
             stream.synchronize()
-
+     
     return memory.bls
 
 
