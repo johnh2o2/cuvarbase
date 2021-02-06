@@ -1,5 +1,8 @@
 What's new in cuvarbase
 ***********************
+* **0.2.1** (as yet unreleased)
+    * bugfix for memory leak in BLS
+    * contact email changed in setup
 
 * **0.2.0**
 	* Many more unit tests for BLS and CE.
