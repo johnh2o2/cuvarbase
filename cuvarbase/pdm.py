@@ -195,7 +195,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
         return gpu_data, pow_cpus
 
     def run(self, data, gpu_data=None, pow_cpus=None,
-            kind='binned_linterp', nbins=10, **pdm_kwargs):
+            kind='binned_linterp', nbins=10, dphi=0.05, **pdm_kwargs):
 
         if kind in ['binless_tophat', 'binless_gauss']:
             function = 'pdm_%s' % (kind)
@@ -212,7 +212,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
             gpu_data, pow_cpus = self.allocate(data)
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
         func = self.prepared_functions[function]
-        results = [pdm_async(stream, cdat, gdat, pcpu, func, **pdm_kwargs)
+        results = [pdm_async(stream, cdat, gdat, pcpu, func, dphi=dphi, **pdm_kwargs)
                    for stream, cdat, gdat, pcpu in
                    zip(streams, data, gpu_data, pow_cpus)]
 
