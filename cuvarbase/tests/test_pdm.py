@@ -11,8 +11,8 @@ from pycuda.tools import mark_cuda_test
 
 pytest.nbins = 10
 pytest.seed = 100
-pytest.nfreqs = 1000
-pytest.ndata = 250
+pytest.nfreqs = 100
+pytest.ndata = 10
 pytest.sigma = 0.1
 
 @pytest.fixture(scope="function")
