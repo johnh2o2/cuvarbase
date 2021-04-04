@@ -902,8 +902,6 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             for i, (f, ce) in enumerate(results):
                 ce = np.copy(ce)
                 significance = np.abs(np.mean(ce)-np.min(ce))/np.std(ce)
-                if significance < 1.5:
-                    raise ValueError('CE appears to have memory issues.')
                 if only_return_best_freqs:
                     best_freqs.append(freqs[np.argmin(ce)])
                     best_freq_significances.append(significance)
