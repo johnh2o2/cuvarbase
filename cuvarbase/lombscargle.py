@@ -1011,8 +1011,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def batched_run_const_nfreq(self, data, batch_size=10,
                                 use_fft=True, freqs=None,
-                                returnBestFreq=False,
-                                doRemoveTerrestrial=False,
+                                only_return_best_freqs=False,
+                                ignore_freq_mask=None,
                                 **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are
@@ -1082,14 +1082,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         [mem.allocate(nf=nf, **kwargs) for mem in memory]
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
-        periods_best, significances = [], []
-
-        if doRemoveTerrestrial:
-            idx1 = np.where((freqs < 1.95) | (freqs > 2.05))[0]
-            idx2 = np.where((freqs < 0.95) | (freqs > 1.05))[0]
-            idx3 = np.where((freqs < 0.48) | (freqs > 0.52))[0]
-            idxterr = np.intersect1d(np.intersect1d(idx1,idx2),idx3)
-
+        best_freqs, best_freq_significances = [], []
+        
+        default_mask = np.array([True] * len(freqs))
+        mask = default_mask if ignore_freq_mask is None else ~np.asarray(ignore_freq_mask)
         for b, batch in enumerate(batches):
  
             results = self.run(batch, memory=memory, freqs=freqs,
@@ -1098,26 +1094,17 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             self.finish()
             
             for i, (f, p) in enumerate(results):
-                if returnBestFreq:
-                    if doRemoveTerrestrial:
-                        powers = np.copy(p)[idxterr]
-                    else:
-                        powers = np.copy(p)
-
-                    fap = fap_baluev(batch[i][0], batch[i][2], powers, np.max(freqs))
-                    idx = np.argmin(fap)
-                    significance = 1./fap[idx]
-                    if doRemoveTerrestrial:
-                        period = 1./freqs[idxterr[idx]]
-                    else:
-                        period = 1./freqs[idx]
-                    periods_best.append(period)
-                    significances.append(significance)
+                if only_return_best_freqs:
+                    best_index = np.argmax(p[mask])
+                    fap = fap_baluev(batch[i][0], batch[i][2], p[mask], np.max(freqs[mask]))
+                    significance = 1. - fap[best_index]
+                    best_freqs.append(freqs[mask][best_index])
+                    best_freq_significances.append(significance)
                 else:
                     lsps.append(np.copy(p))
 
-        if returnBestFreq:
-            return periods_best, significances
+        if only_return_best_freqs:
+            return best_freqs, best_freq_significances
         else:
             return [(freqs, lsp) for lsp in lsps]
 
