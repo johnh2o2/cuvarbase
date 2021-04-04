@@ -1011,6 +1011,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def batched_run_const_nfreq(self, data, batch_size=10,
                                 use_fft=True, freqs=None,
+                                only_return_best_freqs=False,
+                                ignore_freq_mask=None,
                                 **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are
@@ -1080,16 +1082,31 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         [mem.allocate(nf=nf, **kwargs) for mem in memory]
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
+        best_freqs, best_freq_significances = [], []
+        
+        default_mask = np.array([True] * len(freqs))
+        mask = default_mask if ignore_freq_mask is None else ~np.asarray(ignore_freq_mask)
         for b, batch in enumerate(batches):
+ 
             results = self.run(batch, memory=memory, freqs=freqs,
                                use_fft=use_fft,
                                **kwargs)
             self.finish()
-
+            
             for i, (f, p) in enumerate(results):
-                lsps.append(np.copy(p))
+                if only_return_best_freqs:
+                    best_index = np.argmax(p[mask])
+                    fap = fap_baluev(batch[i][0], batch[i][2], p[mask], np.max(freqs[mask]))
+                    significance = 1. - fap[best_index]
+                    best_freqs.append(freqs[mask][best_index])
+                    best_freq_significances.append(significance)
+                else:
+                    lsps.append(np.copy(p))
 
-        return [(freqs, lsp) for lsp in lsps]
+        if only_return_best_freqs:
+            return best_freqs, best_freq_significances
+        else:
+            return [(freqs, lsp) for lsp in lsps]
 
 
 def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
