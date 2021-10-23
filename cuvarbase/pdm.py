@@ -87,6 +87,10 @@ def var_binned(t, y, w, freq, nbins, linterp=True):
 
 
 def binless_pdm_cpu(t, y, w, freqs, dphi=0.05, tophat=True):
+    # Prepare data
+    t -= np.mean(t)
+    y -= np.mean(y)
+
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
     if tophat:
@@ -95,6 +99,10 @@ def binless_pdm_cpu(t, y, w, freqs, dphi=0.05, tophat=True):
         return [1 - var_gauss(t, y, w, freq, dphi) / var for freq in freqs]
 
 def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True):
+    # Prepare data
+    t -= np.mean(t)
+    y -= np.mean(y)
+
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
     return [1 - var_binned(t, y, w, freq,
@@ -103,6 +111,10 @@ def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True):
 
 
 def pdm2_single_freq(t, y, w, freq, nbins=30, linterp=True):
+    # Prepare data
+    t -= np.mean(t)
+    y -= np.mean(y)
+
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
     return 1 - var_binned(t, y, w, freq, nbins=nbins, linterp=linterp) / var
@@ -207,6 +219,12 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
         if function not in self.prepared_functions:
             self._compile_and_prepare_functions(nbins=nbins)
+
+        # Prepare data
+        for i,(t, y, w, freqs) in enumerate(data):
+            t -= np.mean(t)
+            y -= np.mean(y)
+            data[i] = t, y, w, freqs
 
         if pow_cpus is None or gpu_data is None:
             gpu_data, pow_cpus = self.allocate(data)
