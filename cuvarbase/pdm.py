@@ -222,6 +222,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
         # Prepare data
         for i,(t, y, w, freqs) in enumerate(data):
+            t, y, w, freqs = t.copy(), y.copy(), w.copy(), freqs.copy()
             t -= np.mean(t)
             y -= np.mean(y)
             data[i] = t, y, w, freqs
