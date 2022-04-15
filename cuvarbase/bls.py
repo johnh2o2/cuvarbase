@@ -368,6 +368,7 @@ class BLSMemory(object):
 
 
 def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
+                   ignore_negative_delta_sols=False,
                    functions=None, stream=None, dlogq=0.3,
                    memory=None, noverlap=2, max_nblocks=5000,
                    force_nblocks=None, dphi=0.0,
@@ -419,6 +420,8 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         minimum q values to search at each frequency
     qmax: float or array_like (default: 0.5)
         maximum q values to search at each frequency
+    ignore_negative_delta_sols: bool
+        Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     dphi: float, optional (default: 0.)
         Phase offset (in units of the finest grid spacing). If you
         want ``noverlap`` bins at the smallest ``q`` value, run this
@@ -520,6 +523,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                  np.uint32(i_freq))
         args += (np.uint32(max_nbins), np.uint32(noverlap))
         args += (np.float32(dlogq), np.float32(dphi))
+        args += (ignore_negative_delta_sols,)
 
         if stream is not None:
             func.prepared_async_call(*args, shared_size=int(mem_req))
@@ -537,6 +541,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
 
 def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
+                     ignore_negative_delta_sols=False,
                      freq_batch_size=None, nstreams=5, max_memory=None,
                      functions=None, **kwargs):
     """
@@ -558,6 +563,8 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         Set of q values to search at each trial frequency
     phi_values: float or array_like
         Set of phi values to search at each trial frequency
+    ignore_negative_delta_sols: bool
+        Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     nstreams: int, optional (default: 5)
         Number of CUDA streams to utilize.
     freq_batch_size: int, optional (default: None)
@@ -697,6 +704,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         args = (bls_grid, block, stream)
         args += (yw_g_bin.ptr, w_g_bin.ptr)
         args += (bls_tmp_g.ptr,  np.uint32(nf * nb))
+        args += (ignore_negative_delta_sols,)
         bls_func.prepared_async_call(*args)
 
         args = (max_func, bls_tmp_g, bls_tmp_sol_g)
@@ -748,6 +756,7 @@ def count_tot_nbins(nbins0, nbinsf, dlogq):
 
 
 def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
+              ignore_negative_delta_sols=False,
               nstreams=5, noverlap=3, dlogq=0.2, max_memory=None,
               freq_batch_size=None, functions=None, **kwargs):
 
@@ -768,6 +777,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         Minimum q value(s) to test for each frequency
     qmax: float or array_like
         Maximum q value(s) to test for each frequency
+    ignore_negative_delta_sols: bool
+        Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     nstreams: int, optional (default: 5)
         Number of CUDA streams to utilize.
     noverlap: int, optional (default: 3)
@@ -926,6 +937,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args = (bls_grid, block, stream)
         args += (yw_g_bin.ptr, w_g_bin.ptr)
         args += (bls_tmp_g.ptr,  np.int32(all_bins))
+        args += (ignore_negative_delta_sols,)
         bls_func.prepared_async_call(*args)
 
         args = (max_func, bls_tmp_g, bls_tmp_sol_g)
@@ -949,7 +961,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     return bls_g.get()/YY, qphi_sols
 
 
-def single_bls(t, y, dy, freq, q, phi0):
+def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     """
     Evaluate BLS power for a single set of (freq, q, phi0)
     parameters.
@@ -968,6 +980,8 @@ def single_bls(t, y, dy, freq, q, phi0):
         Transit duration in phase
     phi0: float
         Phase offset of transit
+    ignore_negative_delta_sols:
+        Whether or not to ignore solutions with negative delta (inverted dips)
 
     Returns
     -------
@@ -990,6 +1004,8 @@ def single_bls(t, y, dy, freq, q, phi0):
     W = np.sum(w[mask])
     YW = np.dot(w[mask], np.asarray(y).astype(np.float32)[mask]) - ybar * W
 
+    if YW > 0 and ignore_negative_delta_sols:
+        return 0
     return 0 if W < 1e-9 else (YW ** 2) / (W * (1 - W)) / YY
 
 
@@ -1053,6 +1069,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
 def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                       qmin_fac=0.5, qmax_fac=2.0, fmin=None,
                       fmax=None, freqs=None, qvals=None, use_fast=False,
+                      ignore_negative_delta_sols=False,
                       **kwargs):
     """
     Compute BLS for timeseries assuming edge-on keplerian
@@ -1090,6 +1107,9 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     functions: tuple, optional (default=None)
         result of ``compile_bls(**kwargs)``.
     use_fast: bool, optional (default: False)
+
+    ignore_negative_delta_sols: bool
+        Whether or not to ignore inverted dips
     **kwargs:
         passed to `eebls_gpu`, `compile_bls`, `fmax_transit`,
         `fmin_transit`, and `transit_autofreq`
@@ -1128,11 +1148,14 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     if use_fast:
         powers = eebls_gpu_fast(t, y, dy, freqs,
                                 qmin=qmins, qmax=qmaxes,
+                                ignore_negative_delta_sols=ignore_negative_delta_sols,
                                 **kwargs)
 
         return freqs, powers
 
     powers, sols = eebls_gpu(t, y, dy, freqs,
                              qmin=qmins, qmax=qmaxes,
+                             ignore_negative_delta_sols=ignore_negative_delta_sols,
                              **kwargs)
     return freqs, powers, sols
+
