@@ -64,7 +64,6 @@ def plot_bls_sol(t, y, dy, freq, q, phi0):
     plt.show()
 
 
-@pytest.fixture
 def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
          q=0.01, phi0=None, baseline=1.):
 
