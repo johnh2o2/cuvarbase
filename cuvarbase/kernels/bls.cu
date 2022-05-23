@@ -22,10 +22,10 @@ __device__ float bls_value(float ybar, float w, bool ignore_negative_delta_sols)
     // the mean amplitude within the transit is _lower_ than the mean amplitude of the source 
     // are considered: it will ignore "inverted dips"
 	float bls = (w > 1e-10 && w < 1.f - 1e-10) ? ybar * ybar / (w * (1.f - w)) : 0.f;
-    return (ignore_negative_delta_sols & (ybar > 0)) ? 0.f : bls;
+    return ((ignore_negative_delta_sols == 1) & (ybar > 0)) ? 0.f : bls;
 }
 
-__global__ void binned_bls_bst(float *yw, float *w, float *bls, unsigned int n, bool ignore_negative_delta_sols){
+__global__ void binned_bls_bst(float *yw, float *w, float *bls, unsigned int n, unsigned int ignore_negative_delta_sols){
 	unsigned int i = get_id();
 
 	if (i < n){
@@ -184,7 +184,7 @@ __global__ void full_bls_no_sol(
 						unsigned int noverlap,
 						float dlogq,
 						float dphi,
-                        bool ignore_negative_delta_sols){
+                        unsigned int ignore_negative_delta_sols){
 	unsigned int i = get_id();
 
 	extern __shared__ float sh[];

@@ -148,6 +148,39 @@ class TestBLS(object):
     atol = 1e-5
 
     @pytest.mark.parametrize("freq", [0.3])
+    @pytest.mark.parametrize("phi0", [0.5])
+    @pytest.mark.parametrize("dlogq", [0.2])
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    def test_ignore_positive_sols(self, freq, phi0, dlogq, ignore_negative_delta_sols):
+        q = q_transit(freq)
+
+        t, y, dy = data(snr=30, q=q, phi0=phi0, freq=freq, baseline=365.)
+
+        freqs, power, sols = eebls_transit_gpu(t, y, dy,
+                                               samples_per_peak=2,
+                                               freq_batch_size=1,
+                                               ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                               nstreams=1,
+                                               dlogq=dlogq,
+                                               fmin=freq * 0.99,
+                                               fmax=freq * 1.01)
+        pcpu = [single_bls(t, y, dy, x[0], *x[1], ignore_negative_delta_sols=ignore_negative_delta_sols)
+                for x in zip(freqs, sols)]
+        pcpu = np.asarray(pcpu)
+
+
+        pows, diffs = list(zip(*sorted(zip(pcpu,
+                                           np.absolute(power - pcpu)),
+                                       key=lambda x: -x[1])))
+
+        upper_bound = self.rtol * np.array(pows) + self.atol
+        mostly_ok = sum(np.array(diffs) > upper_bound) / len(pows) < 1e-2
+        not_too_bad = max(diffs) < 1e-1
+
+        print(max(diffs))
+        assert mostly_ok and not_too_bad
+
+    @pytest.mark.parametrize("freq", [0.3])
     @pytest.mark.parametrize("phi0", [0.0, 0.5])
     @pytest.mark.parametrize("dlogq", [0.2, -1])
     @pytest.mark.parametrize("nstreams", [1, 3])

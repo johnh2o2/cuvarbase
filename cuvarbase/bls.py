@@ -37,7 +37,7 @@ _function_signatures = {
                         np.intp, np.intp, np.intp,
                         np.intp, np.uint32, np.uint32,
                         np.uint32, np.uint32, np.uint32,
-                        np.float32, np.float32],
+                        np.float32, np.float32, np.uint32],
     'bin_and_phase_fold_custom': [np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.int32,
@@ -56,7 +56,7 @@ _function_signatures = {
          np.intp, np.intp, np.uint32, np.uint32,
          np.uint32, np.uint32, np.uint32, np.uint32,
          np.float32, np.uint32],
-    'binned_bls_bst': [np.intp, np.intp, np.intp, np.uint32]
+    'binned_bls_bst': [np.intp, np.intp, np.intp, np.uint32, np.uint32]
 }
 
 
@@ -523,7 +523,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                  np.uint32(i_freq))
         args += (np.uint32(max_nbins), np.uint32(noverlap))
         args += (np.float32(dlogq), np.float32(dphi))
-        args += (ignore_negative_delta_sols,)
+        args += (np.uint32(ignore_negative_delta_sols),)
 
         if stream is not None:
             func.prepared_async_call(*args, shared_size=int(mem_req))
@@ -704,7 +704,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         args = (bls_grid, block, stream)
         args += (yw_g_bin.ptr, w_g_bin.ptr)
         args += (bls_tmp_g.ptr,  np.uint32(nf * nb))
-        args += (ignore_negative_delta_sols,)
+        args += (np.uint32(ignore_negative_delta_sols),)
         bls_func.prepared_async_call(*args)
 
         args = (max_func, bls_tmp_g, bls_tmp_sol_g)
@@ -937,7 +937,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args = (bls_grid, block, stream)
         args += (yw_g_bin.ptr, w_g_bin.ptr)
         args += (bls_tmp_g.ptr,  np.int32(all_bins))
-        args += (ignore_negative_delta_sols,)
+        args += (np.uint32(ignore_negative_delta_sols),)
         bls_func.prepared_async_call(*args)
 
         args = (max_func, bls_tmp_g, bls_tmp_sol_g)
