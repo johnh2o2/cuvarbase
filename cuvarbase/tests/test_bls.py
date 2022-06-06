@@ -5,6 +5,7 @@ from __future__ import print_function
 from builtins import zip
 from builtins import range
 from builtins import object
+from itertools import product 
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -64,9 +65,8 @@ def plot_bls_sol(t, y, dy, freq, q, phi0):
     plt.show()
 
 
-@pytest.fixture
 def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
-         q=0.01, phi0=None, baseline=1.):
+         q=0.01, phi0=None, baseline=1., negative_delta=False):
 
     rand = np.random.RandomState(seed)
 
@@ -74,6 +74,9 @@ def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
         phi0 = rand.rand()
 
     delta = snr * sigma / np.sqrt(ndata * q * (1 - q))
+
+    if negative_delta:
+        delta *= -1
 
     model = transit_model(phi0, q, delta)
 
@@ -148,13 +151,52 @@ class TestBLS(object):
     rtol = 1e-3
     atol = 1e-5
 
+    # TODO: tests that have specific bls values; test single_bls function returns
+    #       what you expect it to for several example problems
+    class SolutionParams(object):
+        def __init__(self, freq, phi0, q, baseline, ybar, snr, negative_delta):
+            self.freq = freq
+            self.phi0 = phi0
+            self.q = q
+            self.baseline = baseline
+            self.ybar = ybar
+            self.snr = snr
+            self.negative_delta = negative_delta
+
+    @pytest.mark.parametrize("args", [(
+            SolutionParams(freq=0.3, phi0=0.5, q=0.2, baseline=365., ybar=0., snr=50.,
+                           negative_delta=True),
+            {'bls0': 0.8902446483898836, 'bls_ignore': 0}
+        )
+    ])
+    def test_ignore_positive_sols(self, args):
+        solution, bls_values = args
+        t, y_neg, dy = data(snr=solution.snr,
+                            q=solution.q,
+                            phi0=solution.phi0,
+                            freq=solution.freq,
+                            baseline=solution.baseline,
+                            ybar=solution.ybar,
+                            negative_delta=solution.negative_delta)
+        
+        freq, q, phi0 = solution.freq, solution.q, solution.phi0
+
+        bls_default = single_bls(t, y_neg, dy, freq, q, phi0)
+        bls0 = single_bls(t, y_neg, dy, freq, q, phi0, ignore_negative_delta_sols=False)
+        bls_ignore = single_bls(t, y_neg, dy, freq, q, phi0, 
+                                ignore_negative_delta_sols=True)
+        assert bls_values['bls0'] == bls0
+        assert bls_values['bls_ignore'] == bls_ignore
+        assert (bls0 == bls_default)
+
     @pytest.mark.parametrize("freq", [0.3])
     @pytest.mark.parametrize("phi0", [0.0, 0.5])
     @pytest.mark.parametrize("dlogq", [0.2, -1])
     @pytest.mark.parametrize("nstreams", [1, 3])
     @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
     def test_transit_parameter_consistency(self, freq, phi0, dlogq, nstreams,
-                                           freq_batch_size):
+                                           freq_batch_size, ignore_negative_delta_sols):
         q = q_transit(freq)
 
         t, y, dy = data(snr=30, q=q, phi0=phi0, freq=freq, baseline=365.)
@@ -164,9 +206,10 @@ class TestBLS(object):
                                                freq_batch_size=freq_batch_size,
                                                nstreams=nstreams,
                                                dlogq=dlogq,
+                                               ignore_negative_delta_sols=ignore_negative_delta_sols,
                                                fmin=freq * 0.99,
                                                fmax=freq * 1.01)
-        pcpu = [single_bls(t, y, dy, x[0], *x[1])
+        pcpu = [single_bls(t, y, dy, x[0], *x[1], ignore_negative_delta_sols=ignore_negative_delta_sols)
                 for x in zip(freqs, sols)]
         pcpu = np.asarray(pcpu)
 
@@ -199,11 +242,13 @@ class TestBLS(object):
         assert mostly_ok and not_too_bad
 
     @pytest.mark.parametrize("freq", [1.0])
-    @pytest.mark.parametrize("phi_index", [0, 10, -1])
-    @pytest.mark.parametrize("q_index", [0, 5, -1])
+    @pytest.mark.parametrize("phi_index", [0, 10])
+    @pytest.mark.parametrize("q_index", [0, 5])
     @pytest.mark.parametrize("nstreams", [1, 3])
     @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
-    def test_custom(self, freq, q_index, phi_index, freq_batch_size, nstreams):
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    def test_custom(self, freq, q_index, phi_index, freq_batch_size, nstreams,
+                    ignore_negative_delta_sols):
         q_values = np.logspace(-1.1, -0.8, num=10)
         phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
 
@@ -211,82 +256,39 @@ class TestBLS(object):
         phi = phi_values[phi_index]
 
         t, y, dy = data(snr=10, q=q, phi0=phi, freq=freq,
-                        baseline=365.)
+                        baseline=365., ndata=500)
 
         df = min(q_values) / (10 * (max(t) - min(t)))
         freqs = np.linspace(freq - 10 * df, freq + 10 * df, 20)
 
         power, gsols = eebls_gpu_custom(t, y, dy, freqs,
                                         q_values, phi_values,
+                                        ignore_negative_delta_sols=ignore_negative_delta_sols,
                                         freq_batch_size=freq_batch_size,
                                         nstreams=nstreams)
 
-        # Now get CPU values
-        qgrid, phigrid = np.meshgrid(q_values, phi_values)
-        bls = np.vectorize(single_bls, excluded=set([0, 1, 2, 3]))
-
-        blses = []
-
-        max_bls = []
-        cpu_bls = []
-        sols = []
-        for freq, (qg, phg) in zip(freqs, gsols):
-            p = bls(t, y, dy, freq, qgrid, phigrid)
-            pc = single_bls(t, y, dy, freq, qg, phg)
-            mind = np.unravel_index(p.argmax(), p.shape)
-            qsol = qgrid[mind]
-            phisol = phigrid[mind]
-
-            max_bls.append(p[mind])
-            cpu_bls.append(pc)
-            sols.append((qsol, phisol))
-            blses.append(p)
-        qsg, phsg = list(zip(*gsols))
-        qs, phs = list(zip(*sols))
-        if self.plot:
-            import matplotlib.pyplot as plt
-            f, ax = plt.subplots()
-
-            ax.plot(freqs, max_bls)
-            ax.plot(freqs, power)
-
-            plt.show()
-
-            f, ax = plt.subplots()
-            ax.plot(freqs, qs)
-            ax.plot(freqs, qsg)
-
-            plt.show()
-
-            f, ax = plt.subplots()
-            ax.plot(freqs, phs)
-            ax.plot(freqs, phsg)
-
-            plt.show()
-
-        for bls_arr in [max_bls, cpu_bls]:
-            max_diffs = 0.5 * self.rtol * (bls_arr + power) + self.atol
-            diffs = np.absolute(bls_arr - power)
-            nbad = sum(diffs > max_diffs)
-
-            mostly_ok = nbad / float(len(power)) < 1e-2 or nbad == 1
-            not_too_bad = max(np.absolute(bls_arr - power) / power) < 1e-1
-
-            print(max(diffs) / max_diffs[np.argmax(max_diffs)])
-            if not (mostly_ok and not_too_bad):
-                print(nbad / float(len(power)), not_too_bad)
-                import matplotlib.pyplot as plt
-                plt.plot(freqs, power)
-                plt.plot(freqs, bls_arr)
-                plt.show()
-            assert(mostly_ok and not_too_bad)
+        for freq, (qg, phg), gpower in zip(freqs, gsols, power):
+            q_and_phis = product(q_values, phi_values)
+            
+            best_q, best_phi, best_p = None, None, None
+            for Q, PHI in q_and_phis:
+                p = single_bls(t, y, dy, freq, Q, PHI,
+                               ignore_negative_delta_sols=ignore_negative_delta_sols)
+                if best_p is None or p > best_p:
+                    best_p = p
+                    best_q = Q
+                    best_phi = PHI
+            
+            assert np.abs(best_p - gpower) < 1e-5
 
     @pytest.mark.parametrize("freq", [1.0])
     @pytest.mark.parametrize("phi_index", [0, 10, -1])
     @pytest.mark.parametrize("q_index", [0, 5, -1])
     @pytest.mark.parametrize("nstreams", [1, 3])
     @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
-    def test_standard(self, freq, q_index, phi_index, nstreams, freq_batch_size):
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    def test_standard(self, freq, q_index, phi_index, nstreams, freq_batch_size,
+                      ignore_negative_delta_sols):
 
         q_values = np.logspace(-1.5, np.log10(0.1), num=100)
         phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
@@ -306,9 +308,12 @@ class TestBLS(object):
         power, gsols = eebls_gpu(t, y, dy, freqs,
                                  qmin=0.1 * q, qmax=2.0 * q,
                                  nstreams=nstreams, noverlap=2, dlogq=0.5,
-                                 freq_batch_size=freq_batch_size)
+                                 freq_batch_size=freq_batch_size,
+                                 ignore_negative_delta_sols=ignore_negative_delta_sols)
 
-        bls_c = [single_bls(t, y, dy, x[0], *x[1]) for x in zip(freqs, gsols)]
+        bls_c = [single_bls(t, y, dy, x[0], *x[1],
+                            ignore_negative_delta_sols=ignore_negative_delta_sols)
+                 for x in zip(freqs, gsols)]
         if self.plot:
             import matplotlib.pyplot as plt
             f, ax = plt.subplots()
@@ -346,7 +351,9 @@ class TestBLS(object):
     @pytest.mark.parametrize("phi0", [0.0])
     @pytest.mark.parametrize("use_fast", [True, False])
     @pytest.mark.parametrize("nstreams", [1, 4])
-    def test_transit(self, freq, use_fast, freq_batch_size, nstreams, phi0, dlogq):
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    def test_transit(self, freq, use_fast, freq_batch_size, nstreams, phi0, dlogq,
+                     ignore_negative_delta_sols):
         q = q_transit(freq)
         samples_per_peak = 2
         noverlap = 2
@@ -356,6 +363,7 @@ class TestBLS(object):
 
         kw = dict(samples_per_peak=samples_per_peak,
                   freq_batch_size=freq_batch_size, dlogq=dlogq,
+                  ignore_negative_delta_sols=ignore_negative_delta_sols,
                   nstreams=nstreams, noverlap=noverlap,
                   fmin=0.9 * freq, fmax=1.1 * freq,
                   use_fast=use_fast)
@@ -365,10 +373,10 @@ class TestBLS(object):
 
             kw['use_fast'] = False
             freqs, power_slow, sols = eebls_transit_gpu(t, y, err, **kw)
-
+            kw['use_fast'] = True
             dfsol = freqs[np.argmax(power)] - freqs[np.argmax(power_slow)]
             close_enough = abs(dfsol) * (max(t) - min(t)) / q < 3
-            if not close_enough:
+            if not close_enough and self.plot:
                 import matplotlib.pyplot as plt
                 plt.plot(freqs, power, alpha=0.5)
                 plt.plot(freqs, power_slow, alpha=0.5)
@@ -378,7 +386,9 @@ class TestBLS(object):
             return
 
         freqs, power, sols = eebls_transit_gpu(t, y, err, **kw)
-        power_cpu = np.array([single_bls(t, y, err, x[0], *x[1]) for x in zip(freqs, sols)])
+        power_cpu = np.array([single_bls(t, y, err, x[0], *x[1],
+                                         ignore_negative_delta_sols=ignore_negative_delta_sols)
+                              for x in zip(freqs, sols)])
 
         if self.plot:
             import matplotlib.pyplot as plt
@@ -406,8 +416,9 @@ class TestBLS(object):
     @pytest.mark.parametrize("dphi", [0.0, 1.0])
     @pytest.mark.parametrize("freq_batch_size", [None, 100])
     @pytest.mark.parametrize("dlogq", [0.5, -1.0])
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
     def test_fast_eebls(self, freq, q, phi0, freq_batch_size, dlogq, dphi,
-                        **kwargs):
+                        ignore_negative_delta_sols, **kwargs):
         t, y, err = data(snr=50, q=q, phi0=phi0, freq=freq,
                          baseline=365.)
 
@@ -418,6 +429,7 @@ class TestBLS(object):
         freqs = fmin + df * np.arange(nf)
 
         kw = dict(qmin=1e-2, qmax=0.5, dphi=dphi,
+                  ignore_negative_delta_sols=ignore_negative_delta_sols,
                   freq_batch_size=freq_batch_size, dlogq=dlogq)
 
         kw.update(kwargs)

@@ -17,15 +17,19 @@ __device__ float mod1(float a){
 	return a - floorf(a);
 }
 
-__device__ float bls_value(float ybar, float w){
-	return (w > 1e-10 && w < 1.f - 1e-10) ? ybar * ybar / (w * (1.f - w)) : 0.f;
+__device__ float bls_value(float ybar, float w, unsigned int ignore_negative_delta_sols){
+    // if ignore negative delta sols is turned on, that means only solutions where
+    // the mean amplitude within the transit is _lower_ than the mean amplitude of the source 
+    // are considered: it will ignore "inverted dips"
+	float bls = (w > 1e-10 && w < 1.f - 1e-10) ? ybar * ybar / (w * (1.f - w)) : 0.f;
+    return ((ignore_negative_delta_sols == 1) & (ybar > 0)) ? 0.f : bls;
 }
 
-__global__ void binned_bls_bst(float *yw, float *w, float *bls, unsigned int n){
+__global__ void binned_bls_bst(float *yw, float *w, float *bls, unsigned int n, unsigned int ignore_negative_delta_sols){
 	unsigned int i = get_id();
 
 	if (i < n){
-		bls[i] = bls_value(yw[i], w[i]);
+		bls[i] = bls_value(yw[i], w[i], ignore_negative_delta_sols);
 	}
 }
 
@@ -179,7 +183,8 @@ __global__ void full_bls_no_sol(
 						unsigned int hist_size,
 						unsigned int noverlap,
 						float dlogq,
-						float dphi){
+						float dphi,
+                        unsigned int ignore_negative_delta_sols){
 	unsigned int i = get_id();
 
 	extern __shared__ float sh[];
@@ -268,7 +273,7 @@ __global__ void full_bls_no_sol(
 				thread_w += block_bins[2 * (m % nbf) + 1];
 			}
 
-			bls1 = bls_value(thread_yw, thread_w);
+			bls1 = bls_value(thread_yw, thread_w, ignore_negative_delta_sols);
 			if (bls1 > thread_max_bls)
 				thread_max_bls = bls1;
 		}
@@ -287,7 +292,7 @@ __global__ void full_bls_no_sol(
 				}
 				m0 = m;
 
-				bls1 = bls_value(thread_yw, thread_w);
+				bls1 = bls_value(thread_yw, thread_w, ignore_negative_delta_sols);
 				if (bls1 > thread_max_bls)
 					thread_max_bls = bls1;
 			}

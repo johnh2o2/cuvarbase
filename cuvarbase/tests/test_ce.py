@@ -17,7 +17,6 @@ seed = 100
 rand = np.random.RandomState(seed)
 
 
-@pytest.fixture
 def data(sigma=0.1, ndata=500, freq=3., snr=1000, t0=0.):
 
     t = np.sort(rand.rand(ndata)) + t0
