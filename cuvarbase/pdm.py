@@ -15,8 +15,7 @@ from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
 from .core import GPUAsyncProcess
-from .utils import weights, find_kernel
-
+from .utils import weights, find_kernel, dphase
 
 def var_tophat(t, y, w, freq, dphi):
     var = 0.
@@ -33,6 +32,22 @@ def var_tophat(t, y, w, freq, dphi):
 
     return var
 
+def var_gauss(t, y, w, freq, dphi):
+    gaussian = lambda x: np.exp(-0.5 *x**2)
+    var = 0.
+    for i, (T, Y, W) in enumerate(zip(t, y, w)):
+        mbar = 0.
+        wtot = 0.
+
+        for j, (T2, Y2, W2) in enumerate(zip(t, y, w)):
+            dph = dphase(abs(T2 - T), freq)
+            wgt   = W2 * gaussian(dph / dphi)
+            mbar += wgt * Y2
+            wtot += wgt
+
+        var += W * (Y - mbar / wtot)**2
+
+    return var
 
 def binned_pdm_model(t, y, w, freq, nbins, linterp=True):
 
@@ -71,13 +86,23 @@ def var_binned(t, y, w, freq, nbins, linterp=True):
     return np.dot(w, np.power(y - ypred, 2))
 
 
-def binless_pdm_cpu(t, y, w, freqs, dphi=0.05):
+def binless_pdm_cpu(t, y, w, freqs, dphi=0.05, tophat=True):
+    # Prepare data
+    t -= np.mean(t)
+    y -= np.mean(y)
+
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
-    return [1 - var_tophat(t, y, w, freq, dphi) / var for freq in freqs]
-
+    if tophat:
+        return [1 - var_tophat(t, y, w, freq, dphi) / var for freq in freqs]
+    else:
+        return [1 - var_gauss(t, y, w, freq, dphi) / var for freq in freqs]
 
 def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True):
+    # Prepare data
+    t -= np.mean(t)
+    y -= np.mean(y)
+
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
     return [1 - var_binned(t, y, w, freq,
@@ -86,6 +111,10 @@ def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True):
 
 
 def pdm2_single_freq(t, y, w, freq, nbins=30, linterp=True):
+    # Prepare data
+    t -= np.mean(t)
+    y -= np.mean(y)
+
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
     return 1 - var_binned(t, y, w, freq, nbins=nbins, linterp=linterp) / var
@@ -178,17 +207,31 @@ class PDMAsyncProcess(GPUAsyncProcess):
         return gpu_data, pow_cpus
 
     def run(self, data, gpu_data=None, pow_cpus=None,
-            kind='binned_linterp', nbins=10, **pdm_kwargs):
-        function = 'pdm_%s_%dbins' % (kind, nbins)
+            kind='binned_linterp', nbins=10, dphi=0.05, **pdm_kwargs):
+
+        if kind in ['binless_tophat', 'binless_gauss']:
+            function = 'pdm_%s' % (kind)
+        elif kind in ['binned_linterp','binned_step']:
+            function = 'pdm_%s_%dbins' % (kind, nbins)
+        else:
+            raise KeyError('Function not available. Please use one of the followings: ' + \
+                            'binless_tophat, binless_gauss, binned_linterp, binned_step')
 
         if function not in self.prepared_functions:
             self._compile_and_prepare_functions(nbins=nbins)
+
+        # Prepare data
+        for i,(t, y, w, freqs) in enumerate(data):
+            t, y, w, freqs = t.copy(), y.copy(), w.copy(), freqs.copy()
+            t -= np.mean(t)
+            y -= np.mean(y)
+            data[i] = t, y, w, freqs
 
         if pow_cpus is None or gpu_data is None:
             gpu_data, pow_cpus = self.allocate(data)
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
         func = self.prepared_functions[function]
-        results = [pdm_async(stream, cdat, gdat, pcpu, func, **pdm_kwargs)
+        results = [pdm_async(stream, cdat, gdat, pcpu, func, dphi=dphi, **pdm_kwargs)
                    for stream, cdat, gdat, pcpu in
                    zip(streams, data, gpu_data, pow_cpus)]
 

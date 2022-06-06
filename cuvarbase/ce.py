@@ -836,7 +836,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         return results
 
     def batched_run_const_nfreq(self, data, batch_size=10,
-                                freqs=None,
+                                freqs=None,only_return_best_freqs=False,
                                 **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are
@@ -893,11 +893,22 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         [mem.transfer_freqs_to_gpu(**kwargs) for mem in memory]
 
+        best_freqs, best_freq_significances = [], []
+
         for b, batch in enumerate(batches):
             results = self.run(batch, memory=memory, freqs=freqs, **kwargs)
             self.finish()
 
             for i, (f, ce) in enumerate(results):
-                ces.append(np.copy(ce))
+                ce = np.copy(ce)
+                significance = np.abs(np.mean(ce)-np.min(ce))/np.std(ce)
+                if only_return_best_freqs:
+                    best_freqs.append(freqs[np.argmin(ce)])
+                    best_freq_significances.append(significance)
+                else:
+                    ces.append(ce)
 
-        return [(freqs, ce) for ce in ces]
+        if only_return_best_freqs:
+            return best_freqs, best_freq_significances
+        else:
+            return [(freqs, ce) for ce in ces]
