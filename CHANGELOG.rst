@@ -1,6 +1,10 @@
 What's new in cuvarbase
 ***********************
-* **0.2.1** (as yet unreleased)
+* **0.2.4**
+    * bugfix for pytest (broke b/c of incorrect fixture usage)
+    * added ``ignore_negative_delta_sols`` option to BLS to ignore inverted dips in the lightcurve
+
+* **0.2.1**
     * bugfix for memory leak in BLS
     * contact email changed in setup
 
