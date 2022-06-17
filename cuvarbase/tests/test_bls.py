@@ -185,7 +185,7 @@ class TestBLS(object):
         bls0 = single_bls(t, y_neg, dy, freq, q, phi0, ignore_negative_delta_sols=False)
         bls_ignore = single_bls(t, y_neg, dy, freq, q, phi0, 
                                 ignore_negative_delta_sols=True)
-        assert bls_values['bls0'] == bls0
+        assert np.allclose(bls_values['bls0'] , bls0)
         assert bls_values['bls_ignore'] == bls_ignore
         assert (bls0 == bls_default)
 
