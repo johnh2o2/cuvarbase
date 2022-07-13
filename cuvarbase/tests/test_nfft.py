@@ -38,7 +38,6 @@ def scale_time(t, samples_per_peak):
     return (t - min(t)) / (samples_per_peak * (max(t) - min(t))) - 0.5
 
 
-@pytest.fixture
 def data(seed=100, sigma=0.1, ndata=100, samples_per_peak=spp):
 
     rand = np.random.RandomState(seed)

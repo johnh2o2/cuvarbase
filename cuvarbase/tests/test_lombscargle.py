@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from numpy.testing import assert_allclose
-from astropy.stats.lombscargle import LombScargle
+from astropy.timeseries import LombScargle
 
 from ..lombscargle import LombScargleAsyncProcess
 from pycuda.tools import mark_cuda_test
@@ -23,7 +23,6 @@ nfft_sigma = 5
 rand = np.random.RandomState(100)
 
 
-@pytest.fixture
 def data(seed=100, sigma=0.1, ndata=100, freq=3.):
     t = np.sort(rand.rand(ndata))
     y = np.cos(2 * np.pi * freq * t)
