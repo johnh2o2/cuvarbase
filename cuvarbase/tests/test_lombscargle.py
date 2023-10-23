@@ -13,7 +13,8 @@ from astropy.timeseries import LombScargle
 
 from ..lombscargle import LombScargleAsyncProcess
 from pycuda.tools import mark_cuda_test
-import pycuda.autoinit
+#import pycuda.autoinit
+import pycuda.autoprimaryctx
 spp = 3
 nfac = 3
 lsrtol = 1E-2
