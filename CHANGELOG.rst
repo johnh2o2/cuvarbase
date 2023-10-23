@@ -1,5 +1,8 @@
 What's new in cuvarbase
 ***********************
+* **0.2.5**
+    * swap out pycuda.autoinit for pycuda.autoprimaryctx to handle "cuFuncSetBlockShape" error
+    
 * **0.2.4**
     * bugfix for pytest (broke b/c of incorrect fixture usage)
     * added ``ignore_negative_delta_sols`` option to BLS to ignore inverted dips in the lightcurve
