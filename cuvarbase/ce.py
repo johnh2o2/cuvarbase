@@ -12,7 +12,8 @@ import numpy as np
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
-import pycuda.autoinit
+#import pycuda.autoinit
+import pycuda.autoprimaryctx
 from pycuda.compiler import SourceModule
 
 from .core import GPUAsyncProcess
@@ -366,9 +367,9 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         ce_logp, ce_std, ce_wt = functions
 
     if shmem_lim is None:
-        dev = pycuda.autoinit.device
+        dev = pycuda.autoprimaryctx.device
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
-        shmem_lim = pycuda.autoinit.device.get_attribute(att)
+        shmem_lim = pycuda.autoprimaryctx.device.get_attribute(att)
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
@@ -843,7 +844,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         the same for each lightcurve. Doesn't reallocate memory for each batch.
 
         .. note::
-            
+
             To get best efficiency, make sure the maximum number of
             observations is not much larger than the typical number
             of observations.

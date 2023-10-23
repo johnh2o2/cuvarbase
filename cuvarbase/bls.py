@@ -11,7 +11,8 @@ from builtins import zip
 from builtins import range
 import sys
 
-import pycuda.autoinit
+#import pycuda.autoinit
+import pycuda.autoprimaryctx
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
@@ -468,9 +469,9 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     func = functions[fname]
 
     if shmem_lim is None:
-        dev = pycuda.autoinit.device
+        dev = pycuda.autoprimaryctx.device
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
-        shmem_lim = pycuda.autoinit.device.get_attribute(att)
+        shmem_lim = pycuda.autoprimaryctx.device.get_attribute(att)
 
     if memory is None:
         memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
