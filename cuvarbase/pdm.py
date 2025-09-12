@@ -161,8 +161,6 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
     def __init__(self, *args, **kwargs):
         super(PDMAsyncProcess, self).__init__(*args, **kwargs)
-        warnings.warn("PDM is experimental at this point. "
-                      "Use with great caution.")
 
     def _compile_and_prepare_functions(self, nbins=10):
         pdm2_txt = open(find_kernel('pdm'), 'r').read()
