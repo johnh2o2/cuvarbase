@@ -192,8 +192,6 @@ class PDMAsyncProcess(GPUAsyncProcess):
                                          dtype=np.float32,
                                          alignment=resource.getpagesize())
 
-            pow_cpu = cuda.register_host_memory(pow_cpu)
-
             t_g, y_g, w_g = None, None, None
             if len(t) > 0:
                 t_g, y_g, w_g = tuple([gpuarray.zeros(len(t), dtype=np.float32)

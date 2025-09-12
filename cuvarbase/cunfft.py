@@ -98,7 +98,6 @@ class NFFTMemory(object):
         self.ghat_c = cuda.aligned_zeros(shape=(self.nf,),
                                          dtype=self.complex_type,
                                          alignment=resource.getpagesize())
-        self.ghat_c = cuda.register_host_memory(self.ghat_c)
 
         return self
 

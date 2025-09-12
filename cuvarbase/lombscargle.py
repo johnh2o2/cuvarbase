@@ -187,7 +187,6 @@ class LombScargleMemory(object):
 
         self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
                                         alignment=resource.getpagesize())
-        self.lsp_c = cuda.register_host_memory(self.lsp_c)
 
         return self
 
@@ -208,17 +207,15 @@ class LombScargleMemory(object):
         self.t = cuda.aligned_zeros(shape=(n0,),
                                     dtype=self.real_type,
                                     alignment=resource.getpagesize())
-        self.t = cuda.register_host_memory(self.t)
 
         self.yw = cuda.aligned_zeros(shape=(n0,),
                                      dtype=self.real_type,
                                      alignment=resource.getpagesize())
-        self.yw = cuda.register_host_memory(self.yw)
 
         self.w = cuda.aligned_zeros(shape=(n0,),
                                     dtype=self.real_type,
                                     alignment=resource.getpagesize())
-        self.w = cuda.register_host_memory(self.w)
+
         return self
 
     def allocate(self, **kwargs):
