@@ -16,7 +16,7 @@ import cuvarbase.bls as bls
 import cuvarbase.ce as ce
 import cuvarbase.lombscargle as ls
 from astrobase.periodbase.kbls import _bls_runner as astrobase_bls
-from astropy.stats.lombscargle import LombScargle as AstropyLombScargle
+from astropy.timeseries import LombScargle as AstropyLombScargle
 from tqdm import tqdm
 
 
