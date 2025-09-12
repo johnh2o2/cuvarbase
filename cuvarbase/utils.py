@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import pkg_resources
+from importlib.resources import files
 
 
 def weights(err):
@@ -13,8 +13,7 @@ def weights(err):
 
 
 def find_kernel(name):
-    return pkg_resources.resource_filename('cuvarbase',
-                                           'kernels/%s.cu' % (name))
+    return files("cuvarbase").joinpath('kernels', f'{name}.cu')
 
 
 def _module_reader(fname, cpp_defs=None):
