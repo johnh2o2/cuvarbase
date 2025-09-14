@@ -75,7 +75,7 @@ def gpu_grid_scalar(t, y, sigma, m, N):
 
     q1, q2, q3 = precomp_psi(t, b, n, m)
 
-    u = (np.floor(n * (t + 0.5) - m)).astype(np.int)
+    u = (np.floor(n * (t + 0.5) - m)).astype(int)
 
     grid = np.zeros(n)
 

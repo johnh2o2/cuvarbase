@@ -86,25 +86,20 @@ class ConditionalEntropyMemory(object):
                   alignment=resource.getpagesize())
 
         self.t = cuda.aligned_zeros(shape=(n0,), **kw)
-        self.t = cuda.register_host_memory(self.t)
 
         self.y = cuda.aligned_zeros(shape=(n0,),
                                     dtype=self.ytype,
                                     alignment=resource.getpagesize())
 
-        self.y = cuda.register_host_memory(self.y)
         if self.weighted:
             self.dy = cuda.aligned_zeros(shape=(n0,), **kw)
-            self.dy = cuda.register_host_memory(self.dy)
 
         if self.balanced_magbins:
             self.mag_bwf = cuda.aligned_zeros(shape=(self.mag_bins,), **kw)
-            self.mag_bwf = cuda.register_host_memory(self.mag_bwf)
 
         if self.compute_log_prob:
             self.mag_bin_fracs = cuda.aligned_zeros(shape=(self.mag_bins,),
                                                     **kw)
-            self.mag_bin_fracs = cuda.register_host_memory(self.mag_bin_fracs)
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
@@ -113,7 +108,6 @@ class ConditionalEntropyMemory(object):
 
         self.ce_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
                                        alignment=resource.getpagesize())
-        self.ce_c = cuda.register_host_memory(self.ce_c)
 
         return self
 
