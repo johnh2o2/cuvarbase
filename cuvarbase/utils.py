@@ -13,7 +13,7 @@ def weights(err):
 
 
 def find_kernel(name):
-    return files("cuvarbase").joinpath('kernels', f'{name}.cu')
+    return str(files("cuvarbase").joinpath('kernels', f'{name}.cu'))
 
 
 def _module_reader(fname, cpp_defs=None):
