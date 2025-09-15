@@ -107,3 +107,36 @@ def get_autofreqs(t, **kwargs):
                         if var in ['minimum_frequency', 'maximum_frequency',
                                    'nyquist_factor', 'samples_per_peak']}
     return autofrequency(t, **autofreqs_kwargs)
+
+
+def normalize_light_curves(data: list[tuple[np.array, ...]]):
+    """
+    Normalize light curves by subtracting the mean from the magnitudes and the observation times.
+
+    Parameters
+    ----------
+    data: list of tuples
+        list of [(t, y, ...), ...] containing
+        * ``t``: observation times
+        * ``y``: observations
+        * ... other columns
+
+    Returns
+    -------
+    data: list of tuples
+        list of [(t, y, dy), ...] containing
+        * ``t``: updated observation times
+        * ``y``: updated observations
+        * ... other columns
+
+    """
+    for i, lc in enumerate(data):
+        updated_lc = []
+        for j in range(len(lc)):
+            if j < 2:
+                updated_lc.append((lc[j] - np.nanmean(lc[j])).copy())
+            else:
+                updated_lc.append(lc[j].copy())
+        data[i] = tuple(updated_lc)
+
+    return data
