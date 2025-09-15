@@ -15,7 +15,8 @@ from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
 from .core import GPUAsyncProcess
-from .utils import weights, find_kernel, dphase
+from .utils import weights, find_kernel, dphase, normalize_light_curves
+
 
 def var_tophat(t, y, w, freq, dphi):
     var = 0.
@@ -217,11 +218,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
             self._compile_and_prepare_functions(nbins=nbins)
 
         # Prepare data
-        for i,(t, y, w, freqs) in enumerate(data):
-            t, y, w, freqs = t.copy(), y.copy(), w.copy(), freqs.copy()
-            t -= np.mean(t)
-            y -= np.mean(y)
-            data[i] = t, y, w, freqs
+        data = normalize_light_curves(data)
 
         if pow_cpus is None or gpu_data is None:
             gpu_data, pow_cpus = self.allocate(data)

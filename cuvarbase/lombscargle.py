@@ -17,7 +17,7 @@ from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
 from .core import GPUAsyncProcess
-from .utils import weights, find_kernel, _module_reader
+from .utils import weights, find_kernel, _module_reader, normalize_light_curves
 from .utils import autofrequency as utils_autofreq
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async, NFFTMemory
 
@@ -966,6 +966,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                      ['lomb', 'lomb_dirsum']]):
             self._compile_and_prepare_functions(**kwargs)
 
+        # Prepare data
+        data = normalize_light_curves(data)
+
         # create and/or check frequencies
         frqs = freqs
         if frqs is None:
@@ -1026,6 +1029,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             not all([func in self.prepared_functions for func in
                      ['lomb', 'lomb_dirsum']]):
             self._compile_and_prepare_functions(**kwargs)
+
+        # Prepare data
+        data = normalize_light_curves(data)
 
         # create streams if needed
         bsize = min([len(data), batch_size])
