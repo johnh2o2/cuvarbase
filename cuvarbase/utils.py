@@ -130,6 +130,7 @@ def normalize_light_curves(data: list[tuple[np.array, ...]]):
         * ... other columns
 
     """
+    data = data.copy()
     for i, lc in enumerate(data):
         updated_lc = []
         for j in range(len(lc)):
