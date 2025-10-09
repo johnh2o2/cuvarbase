@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from copy import deepcopy
 import numpy as np
 from importlib.resources import files
 
@@ -130,7 +131,7 @@ def normalize_light_curves(data: list[tuple[np.array, ...]]):
         * ... other columns (preserved as in input)
 
     """
-    data = data.copy()
+    data = deepcopy(data)
     for i, lc in enumerate(data):
         updated_lc = []
         # Precompute means for the first two elements
