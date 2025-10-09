@@ -8,10 +8,11 @@ from __future__ import absolute_import
 
 from .nfft_memory import NFFTMemory
 from .ce_memory import ConditionalEntropyMemory
-from .lombscargle_memory import LombScargleMemory
+from .lombscargle_memory import LombScargleMemory, weights
 
 __all__ = [
     'NFFTMemory',
     'ConditionalEntropyMemory',
-    'LombScargleMemory'
+    'LombScargleMemory',
+    'weights'
 ]
