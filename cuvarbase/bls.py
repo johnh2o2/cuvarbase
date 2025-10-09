@@ -1113,6 +1113,119 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
     return bls_powers, solutions
 
 
+def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
+                  qmin_fac=0.5, qmax_fac=2.0, fmin=None,
+                  fmax=None, freqs=None, qvals=None, use_fast=False,
+                  use_sparse=None, sparse_threshold=500,
+                  ignore_negative_delta_sols=False,
+                  **kwargs):
+    """
+    Compute BLS for timeseries, automatically selecting between GPU and
+    CPU implementations based on dataset size.
+    
+    For small datasets (ndata < sparse_threshold), uses the sparse BLS
+    algorithm which avoids binning and grid searching. For larger datasets,
+    uses the GPU-accelerated standard BLS.
+    
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times
+    y: array_like, float
+        Observations
+    dy: array_like, float
+        Observation uncertainties
+    fmax_frac: float, optional (default: 1.0)
+        Maximum frequency is `fmax_frac * fmax`, where
+        `fmax` is automatically selected by `fmax_transit`.
+    fmin_frac: float, optional (default: 1.0)
+        Minimum frequency is `fmin_frac * fmin`, where
+        `fmin` is automatically selected by `fmin_transit`.
+    fmin: float, optional (default: None)
+        Overrides automatic frequency minimum with this value
+    fmax: float, optional (default: None)
+        Overrides automatic frequency maximum with this value
+    qmin_fac: float, optional (default: 0.5)
+        Fraction of the fiducial q value to search
+        at each frequency (minimum)
+    qmax_fac: float, optional (default: 2.0)
+        Fraction of the fiducial q value to search
+        at each frequency (maximum)
+    freqs: array_like, optional (default: None)
+        Overrides the auto-generated frequency grid
+    qvals: array_like, optional (default: None)
+        Overrides the keplerian q values
+    use_fast: bool, optional (default: False)
+        Use fast GPU implementation (if not using sparse)
+    use_sparse: bool, optional (default: None)
+        If True, use sparse BLS. If False, use GPU BLS. If None (default),
+        automatically select based on dataset size (sparse_threshold).
+    sparse_threshold: int, optional (default: 500)
+        Threshold for automatically selecting sparse BLS. If ndata < threshold
+        and use_sparse is None, sparse BLS is used.
+    ignore_negative_delta_sols: bool, optional (default: False)
+        Whether or not to ignore inverted dips
+    **kwargs:
+        passed to `eebls_gpu`, `eebls_gpu_fast`, `compile_bls`, 
+        `fmax_transit`, `fmin_transit`, and `transit_autofreq`
+    
+    Returns
+    -------
+    freqs: array_like, float
+        Frequencies where BLS is evaluated
+    bls: array_like, float
+        BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
+    solutions: list of ``(q, phi)`` tuples
+        Best ``(q, phi)`` solution at each frequency
+        
+        .. note::
+        
+            Only returned when ``use_fast=False``.
+    
+    """
+    ndata = len(t)
+    
+    # Determine whether to use sparse BLS
+    if use_sparse is None:
+        use_sparse = ndata < sparse_threshold
+    
+    # Generate frequency grid if not provided
+    if freqs is None:
+        if qvals is not None:
+            raise Exception("qvals must be None if freqs is None")
+        if fmin is None:
+            fmin = fmin_transit(t, **kwargs) * fmin_frac
+        if fmax is None:
+            fmax = fmax_transit(qmax=0.5 / qmax_fac, **kwargs) * fmax_frac
+        freqs, qvals = transit_autofreq(t, fmin=fmin, fmax=fmax,
+                                        qmin_fac=qmin_fac, **kwargs)
+    if qvals is None:
+        qvals = q_transit(freqs, **kwargs)
+    
+    # Use sparse BLS for small datasets
+    if use_sparse:
+        powers, sols = sparse_bls_cpu(t, y, dy, freqs,
+                                       ignore_negative_delta_sols=ignore_negative_delta_sols)
+        return freqs, powers, sols
+    
+    # Use GPU BLS for larger datasets
+    qmins = qvals * qmin_fac
+    qmaxes = qvals * qmax_fac
+    
+    if use_fast:
+        powers = eebls_gpu_fast(t, y, dy, freqs,
+                                qmin=qmins, qmax=qmaxes,
+                                ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                **kwargs)
+        return freqs, powers
+    
+    powers, sols = eebls_gpu(t, y, dy, freqs,
+                             qmin=qmins, qmax=qmaxes,
+                             ignore_negative_delta_sols=ignore_negative_delta_sols,
+                             **kwargs)
+    return freqs, powers, sols
+
+
 def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
                   samples_per_peak=5, max_iter=50, noverlap=3, **kwargs):
     """

@@ -13,7 +13,7 @@ from pycuda.tools import mark_cuda_test
 from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
                   single_bls, eebls_gpu_custom, eebls_gpu_fast, \
-                  sparse_bls_cpu
+                  sparse_bls_cpu, eebls_transit
 
 
 def transit_model(phi0, q, delta, q1=0.):
@@ -487,3 +487,37 @@ class TestBLS(object):
         # The best frequency should be close to the true frequency
         best_freq = freqs[np.argmax(power_sparse)]
         assert np.abs(best_freq - freq) < 3 * df
+
+    @pytest.mark.parametrize("ndata", [50, 100])
+    @pytest.mark.parametrize("use_sparse_override", [None, True, False])
+    def test_eebls_transit_auto_select(self, ndata, use_sparse_override):
+        """Test eebls_transit automatic selection between sparse and standard BLS"""
+        freq_true = 1.0
+        q = 0.05
+        phi0 = 0.3
+        
+        t, y, dy = data(snr=10, q=q, phi0=phi0, freq=freq_true,
+                        baseline=365., ndata=ndata)
+        
+        # Skip GPU tests if use_sparse_override is False (requires PyCUDA)
+        if use_sparse_override is False:
+            pytest.skip("GPU test requires PyCUDA")
+        
+        # Call with automatic selection
+        freqs, powers, sols = eebls_transit(
+            t, y, dy,
+            fmin=freq_true * 0.99,
+            fmax=freq_true * 1.01,
+            use_sparse=use_sparse_override,
+            sparse_threshold=75  # Use sparse for ndata < 75
+        )
+        
+        # Check that we got results
+        assert len(freqs) > 0
+        assert len(powers) == len(freqs)
+        assert len(sols) == len(freqs)
+        
+        # Best frequency should be close to true frequency
+        best_freq = freqs[np.argmax(powers)]
+        T = max(t) - min(t)
+        assert np.abs(best_freq - freq_true) < q / (2 * T)
