@@ -18,6 +18,7 @@ from .ce import ConditionalEntropyAsyncProcess, conditional_entropy, conditional
 from .lombscargle import LombScargleAsyncProcess, lomb_scargle_async
 from .pdm import PDMAsyncProcess
 from .bls import *
+from .nufft_lrt import NUFFTLRTAsyncProcess, NUFFTLRTMemory
 
 __all__ = [
     'GPUAsyncProcess',
@@ -28,4 +29,6 @@ __all__ = [
     'ConditionalEntropyAsyncProcess',
     'LombScargleAsyncProcess',
     'PDMAsyncProcess',
+    'NUFFTLRTAsyncProcess',
+    'NUFFTLRTMemory',
 ]
