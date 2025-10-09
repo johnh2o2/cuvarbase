@@ -17,7 +17,21 @@ from .nfft_memory import NFFTMemory
 
 
 def weights(err):
-    """Generate observation weights from uncertainties."""
+    """
+    Generate observation weights from uncertainties.
+    
+    Note: This function is also available in cuvarbase.utils for backward compatibility.
+    
+    Parameters
+    ----------
+    err : array-like
+        Observation uncertainties
+        
+    Returns
+    -------
+    weights : ndarray
+        Normalized weights (inverse square of errors, normalized to sum to 1)
+    """
     w = np.power(err, -2)
     return w/sum(w)
 
