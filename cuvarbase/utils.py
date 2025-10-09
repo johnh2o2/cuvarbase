@@ -133,9 +133,11 @@ def normalize_light_curves(data: list[tuple[np.array, ...]]):
     data = data.copy()
     for i, lc in enumerate(data):
         updated_lc = []
+        # Precompute means for the first two elements
+        means = [np.nanmean(lc[j]) if j < 2 else None for j in range(len(lc))]
         for j in range(len(lc)):
             if j < 2:
-                updated_lc.append((lc[j] - np.nanmean(lc[j])).copy())
+                updated_lc.append((lc[j] - means[j]).copy())
             else:
                 updated_lc.append(lc[j].copy())
         data[i] = tuple(updated_lc)
