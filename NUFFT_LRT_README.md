@@ -2,9 +2,9 @@
 
 ## Overview
 
-This module implements a GPU-accelerated matched filter approach for detecting periodic transit signals in gappy time-series data. The method is based on the likelihood ratio test described in:
-
-> "Wavelet-based matched filter for detection of known up to parameters signals in unknown correlated Gaussian noise" (IEEE paper)
+This implementation integrates a concept and reference prototype originally developed by
+**Jamila Taaki** ([@xiaziyna](https://github.com/xiaziyna), [website](https://xiazina.github.io)),
+It provides a **GPU-accelerated, non-uniform matched filter** (NUFFT-LRT) for transit/template detection under correlated noise.
 
 The key advantage of this approach is that it naturally handles correlated (non-white) noise through adaptive power spectrum estimation, making it more robust than traditional Box Least Squares (BLS) methods when dealing with red noise.
 
@@ -39,24 +39,30 @@ For gappy (non-uniformly sampled) data, NUFFT is used instead of standard FFT.
 import numpy as np
 from cuvarbase.nufft_lrt import NUFFTLRTAsyncProcess
 
-# Generate or load your lightcurve data
-t = np.array([...])  # observation times
-y = np.array([...])  # flux measurements
+# Lightcurve data
+t = np.array([...], dtype=float)   # observation times
+y = np.array([...], dtype=float)   # flux measurements
 
-# Initialize processor
+# Initialize
 proc = NUFFTLRTAsyncProcess()
 
-# Define search grid
+# 1) Period+duration search (no epoch axis)
 periods = np.linspace(1.0, 10.0, 100)
 durations = np.linspace(0.1, 1.0, 20)
-
-# Run search
-snr = proc.run(t, y, periods, durations=durations)
-
-# Find best match
-best_idx = np.unravel_index(np.argmax(snr), snr.shape)
+snr_pd = proc.run(t, y, periods, durations=durations)
+# snr_pd.shape == (len(periods), len(durations))
+best_idx = np.unravel_index(np.argmax(snr_pd), snr_pd.shape)
 best_period = periods[best_idx[0]]
 best_duration = durations[best_idx[1]]
+
+# 2) Epoch search (adds an epoch axis)
+# For a single candidate period, search epochs in [0, P]
+P = 3.0
+dur = 0.2
+epochs = np.linspace(0.0, P, 50)
+snr_pde = proc.run(t, y, np.array([P]), durations=np.array([dur]), epochs=epochs)
+# snr_pde.shape == (1, 1, len(epochs))
+best_epoch = epochs[np.argmax(snr_pde[0, 0, :])]
 ```
 
 ## Comparison with BLS
@@ -85,9 +91,14 @@ best_duration = durations[best_idx[1]]
 - `y` (array): Flux measurements
 - `periods` (array): Trial periods to search
 - `durations` (array, optional): Trial transit durations
-- `epochs` (array, optional): Trial epochs
+- `epochs` (array, optional): Trial epochs. If provided, an extra axis of
+  length `len(epochs)` is appended to the output. For multi-period searches,
+  supply a common epoch grid (or run separate calls per period).
 - `depth` (float, default=1.0): Template depth (normalized out in statistic)
-- `nf` (int, optional): Number of frequency samples (default: 2*len(t))
+- `nf` (int, optional): Number of frequency samples (default: `2*len(t)`).
+- Returns
+  - If `epochs` is None: array of shape `(len(periods), len(durations))`.
+  - If `epochs` is given: array of shape `(len(periods), len(durations), len(epochs))`.
 - `estimate_psd` (bool, default=True): Estimate power spectrum from data
 - `psd` (array, optional): Custom power spectrum
 - `smooth_window` (int, default=5): Smoothing window for PSD estimation
@@ -101,9 +112,12 @@ https://github.com/star-skelly/code_nova_exoghosts/blob/main/nufft_detector.py
 ## Citation
 
 If you use this implementation, please cite:
-1. The original IEEE paper on the matched filter method
-2. The cuvarbase package: Hoffman et al. (see main README)
-3. The reference implementation repository (if applicable)
+
+1. **cuvarbase** – Hoffman *et al.* (see cuvarbase main README for canonical citation).
+2. **Taaki, J. S., Kamalabadi, F., & Kemball, A. (2020)** – *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization.*
+3. **Reference prototype** — Taaki (@xiaziyna / @hexajonal), `star-skelly`, `tab-h`, `TsigeA`: https://github.com/star-skelly/code_nova_exoghosts
+4. **Kay, S. M. (2002)** – *Adaptive Detection for Unknown Noise Power Spectral Densities.* S. Kay IEEE Trans. Signal Processing.
+
 
 ## Notes
 
