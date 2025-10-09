@@ -12,7 +12,8 @@ from numpy.testing import assert_allclose
 from pycuda.tools import mark_cuda_test
 from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
-                  single_bls, eebls_gpu_custom, eebls_gpu_fast
+                  single_bls, eebls_gpu_custom, eebls_gpu_fast, \
+                  sparse_bls_cpu
 
 
 def transit_model(phi0, q, delta, q1=0.):
@@ -453,3 +454,36 @@ class TestBLS(object):
         fmax_fast = freqs[np.argmax(power)]
         fmax_regular = freqs[np.argmax(power0)]
         assert(abs(fmax_fast - fmax_regular) * (max(t) - min(t)) / q < 3)
+
+    @pytest.mark.parametrize("freq", [1.0, 2.0])
+    @pytest.mark.parametrize("q", [0.02, 0.1])
+    @pytest.mark.parametrize("phi0", [0.0, 0.5])
+    @pytest.mark.parametrize("ndata", [50, 100])
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    def test_sparse_bls(self, freq, q, phi0, ndata, ignore_negative_delta_sols):
+        """Test sparse BLS implementation against single_bls"""
+        t, y, dy = data(snr=10, q=q, phi0=phi0, freq=freq,
+                        baseline=365., ndata=ndata)
+        
+        # Test a few frequencies around the true frequency
+        df = q / (10 * (max(t) - min(t)))
+        freqs = np.linspace(freq - 5 * df, freq + 5 * df, 11)
+        
+        # Run sparse BLS
+        power_sparse, sols_sparse = sparse_bls_cpu(t, y, dy, freqs,
+                                                     ignore_negative_delta_sols=ignore_negative_delta_sols)
+        
+        # Compare with single_bls on the same frequency/q/phi combinations
+        for i, (f, (q_s, phi_s)) in enumerate(zip(freqs, sols_sparse)):
+            # Compute BLS with single_bls using the solution from sparse
+            p_single = single_bls(t, y, dy, f, q_s, phi_s,
+                                 ignore_negative_delta_sols=ignore_negative_delta_sols)
+            
+            # The sparse BLS result should match (or be very close to) single_bls
+            # with the parameters it found
+            assert np.abs(power_sparse[i] - p_single) < 1e-5, \
+                f"Mismatch at freq={f}: sparse={power_sparse[i]}, single={p_single}"
+        
+        # The best frequency should be close to the true frequency
+        best_freq = freqs[np.argmax(power_sparse)]
+        assert np.abs(best_freq - freq) < 3 * df

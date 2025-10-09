@@ -1010,6 +1010,109 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     return 0 if W < 1e-9 else (YW ** 2) / (W * (1 - W)) / YY
 
 
+def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
+    """
+    Sparse BLS implementation for CPU (no binning, tests all pairs of observations).
+    
+    This is more efficient than traditional BLS when the number of observations
+    is small, as it avoids redundant grid searching over finely-grained parameter
+    grids. Based on https://arxiv.org/abs/2103.06193
+    
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times
+    y: array_like, float
+        Observations
+    dy: array_like, float
+        Observation uncertainties
+    freqs: array_like, float
+        Frequencies to test
+    ignore_negative_delta_sols: bool, optional (default: False)
+        Whether or not to ignore solutions with negative delta (inverted dips)
+    
+    Returns
+    -------
+    bls: array_like, float
+        BLS power at each frequency
+    solutions: list of (q, phi0) tuples
+        Best (q, phi0) solution at each frequency
+    """
+    t = np.asarray(t).astype(np.float32)
+    y = np.asarray(y).astype(np.float32)
+    dy = np.asarray(dy).astype(np.float32)
+    freqs = np.asarray(freqs).astype(np.float32)
+    
+    ndata = len(t)
+    nfreqs = len(freqs)
+    
+    # Precompute weights
+    w = np.power(dy, -2).astype(np.float32)
+    w /= np.sum(w)
+    
+    # Precompute normalization
+    ybar = np.dot(w, y)
+    YY = np.dot(w, np.power(y - ybar, 2))
+    
+    bls_powers = np.zeros(nfreqs, dtype=np.float32)
+    best_q = np.zeros(nfreqs, dtype=np.float32)
+    best_phi = np.zeros(nfreqs, dtype=np.float32)
+    
+    # For each frequency
+    for i_freq, freq in enumerate(freqs):
+        # Compute phases
+        phi = (t * freq) % 1.0
+        
+        # Sort by phase
+        sorted_indices = np.argsort(phi)
+        phi_sorted = phi[sorted_indices]
+        y_sorted = y[sorted_indices]
+        w_sorted = w[sorted_indices]
+        
+        max_bls = 0.0
+        best_q_val = 0.0
+        best_phi_val = 0.0
+        
+        # Test all pairs of observations
+        for i in range(ndata):
+            for j in range(i + 1, ndata):
+                # Transit from observation i to observation j
+                phi0 = phi_sorted[i]
+                q = phi_sorted[j] - phi_sorted[i]
+                
+                # Skip if q is too large (more than half the phase)
+                if q > 0.5:
+                    continue
+                    
+                # Observations in transit: indices i through j-1
+                W = np.sum(w_sorted[i:j])
+                
+                # Skip if too few weight in transit
+                if W < 1e-9 or W > 1.0 - 1e-9:
+                    continue
+                
+                YW = np.dot(w_sorted[i:j], y_sorted[i:j]) - ybar * W
+                
+                # Check if we should ignore this solution
+                if YW > 0 and ignore_negative_delta_sols:
+                    continue
+                    
+                # Compute BLS
+                bls = (YW ** 2) / (W * (1 - W)) / YY
+                
+                if bls > max_bls:
+                    max_bls = bls
+                    best_q_val = q
+                    best_phi_val = phi0
+        
+        bls_powers[i_freq] = max_bls
+        best_q[i_freq] = best_q_val
+        best_phi[i_freq] = best_phi_val
+    
+    solutions = list(zip(best_q, best_phi))
+    return bls_powers, solutions
+
+
 def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
                   samples_per_peak=5, max_iter=50, noverlap=3, **kwargs):
     """
