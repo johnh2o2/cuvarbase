@@ -1,5 +1,13 @@
 What's new in cuvarbase
 ***********************
+* **0.2.6** (In Development)
+    * Added Sparse BLS implementation for efficient transit detection with small datasets
+        * New ``sparse_bls_cpu`` function that avoids binning and grid searching by testing all pairs of observations
+        * New ``eebls_transit`` wrapper that automatically selects between sparse (CPU) and standard (GPU) BLS based on dataset size
+        * Based on algorithm from Burdge et al. 2021 (https://arxiv.org/abs/2103.06193)
+        * More efficient for datasets with < 500 observations
+        * Default threshold is 500 observations (configurable with ``sparse_threshold`` parameter)
+
 * **0.2.5**
     * swap out pycuda.autoinit for pycuda.autoprimaryctx to handle "cuFuncSetBlockShape" error
     

@@ -102,4 +102,63 @@ The minimum frequency you could hope to measure a transit period would be :math:
 For a 10 year baseline, this translates to :math:`2.7\times 10^5` trial frequencies. The number of trial frequencies needed to perform Lomb-Scargle over this frequency range is only about :math:`3.1\times 10^4`, so 8-10 times less. However, if we were to search the *entire* range of possible :math:`q` values at each trial frequency instead of making a Keplerian assumption, we would instead require :math:`5.35\times 10^8` trial frequencies, so the Keplerian assumption reduces the number of frequencies by over 1,000.
 
 
+Sparse BLS for small datasets
+------------------------------
+
+For datasets with a small number of observations, the standard BLS algorithm that bins observations and searches over a grid of transit parameters can be inefficient. The "Sparse BLS" algorithm [SparseBLS]_ avoids this redundancy by directly testing all pairs of observations as potential transit boundaries.
+
+At each trial frequency, the observations are sorted by phase. Then, instead of searching over a grid of (phase, duration) parameters, the algorithm considers each pair of consecutive observations (i, j) as defining:
+
+- Transit start phase: :math:`\phi_0 = \phi_i`
+- Transit duration: :math:`q = \phi_j - \phi_i`
+
+This approach has complexity :math:`\mathcal{O}(N_{\rm freq} \times N_{\rm data}^2)` compared to :math:`\mathcal{O}(N_{\rm freq} \times N_{\rm data} \times N_{\rm bins})` for the standard gridded approach. For small datasets (typically :math:`N_{\rm data} < 500`), sparse BLS can be more efficient as it avoids testing redundant parameter combinations.
+
+Using Sparse BLS in ``cuvarbase``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``eebls_transit`` function automatically selects between sparse BLS (for small datasets) and the GPU-accelerated standard BLS (for larger datasets):
+
+.. code-block:: python
+
+    from cuvarbase.bls import eebls_transit
+    import numpy as np
+    
+    # Generate small dataset (e.g., 100 observations)
+    t = np.sort(np.random.rand(100)) * 365  # 1 year baseline
+    # ... (generate y, dy from your data)
+    
+    # Automatically uses sparse BLS for ndata < 500
+    freqs, powers, solutions = eebls_transit(
+        t, y, dy,
+        fmin=0.1,  # minimum frequency
+        fmax=10.0  # maximum frequency
+    )
+    
+    # Or explicitly control the method:
+    freqs, powers, solutions = eebls_transit(
+        t, y, dy,
+        fmin=0.1, fmax=10.0,
+        use_sparse=True  # Force sparse BLS
+    )
+
+You can also use sparse BLS directly with ``sparse_bls_cpu``:
+
+.. code-block:: python
+
+    from cuvarbase.bls import sparse_bls_cpu
+    
+    # Define trial frequencies
+    freqs = np.linspace(0.1, 10.0, 1000)
+    
+    # Run sparse BLS
+    powers, solutions = sparse_bls_cpu(t, y, dy, freqs)
+    
+    # solutions is a list of (q, phi0) tuples for each frequency
+    best_idx = np.argmax(powers)
+    best_freq = freqs[best_idx]
+    best_q, best_phi0 = solutions[best_idx]
+
+
 .. [BLS] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
+.. [SparseBLS] `Burdge et al. 2021 <https://arxiv.org/abs/2103.06193>`_
