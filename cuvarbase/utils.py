@@ -124,10 +124,10 @@ def normalize_light_curves(data: list[tuple[np.array, ...]]):
     Returns
     -------
     data: list of tuples
-        list of [(t, y, dy), ...] containing
+        list of [(t, y, ...), ...] containing
         * ``t``: updated observation times
         * ``y``: updated observations
-        * ... other columns
+        * ... other columns (preserved as in input)
 
     """
     data = data.copy()
