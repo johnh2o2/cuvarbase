@@ -5,7 +5,7 @@ from __future__ import print_function
 from builtins import range
 from builtins import object
 import numpy as np
-from .utils import gaussian_window, tophat_window, get_autofreqs
+from ..utils import gaussian_window, tophat_window, get_autofreqs
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
