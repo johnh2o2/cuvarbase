@@ -2,12 +2,6 @@
 Implementation of Graham et al. 2013's Conditional Entropy
 period finding algorithm
 """
-from __future__ import print_function, division
-
-from builtins import zip
-from builtins import range
-from builtins import object
-
 import numpy as np
 
 import pycuda.driver as cuda
@@ -24,7 +18,7 @@ import resource
 import warnings
 
 
-class ConditionalEntropyMemory(object):
+class ConditionalEntropyMemory:
     def __init__(self, **kwargs):
         self.phase_bins = kwargs.get('phase_bins', 10)
         self.mag_bins = kwargs.get('mag_bins', 5)

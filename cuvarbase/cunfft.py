@@ -1,10 +1,4 @@
 #!/usr/bin/env python
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from builtins import object
-
 import sys
 import resource
 import numpy as np
@@ -20,7 +14,7 @@ from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader
 
 
-class NFFTMemory(object):
+class NFFTMemory:
     def __init__(self, sigma, stream, m, use_double=False,
                  precomp_psi=True, **kwargs):
 

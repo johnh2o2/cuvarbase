@@ -5,10 +5,6 @@ and variants.
 .. [K2002] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
 
 """
-from __future__ import print_function, division
-
-from builtins import zip
-from builtins import range
 import sys
 
 #import pycuda.autoinit
