@@ -1,5 +1,16 @@
 What's new in cuvarbase
 ***********************
+* **0.4.0**
+    * **BREAKING CHANGE:** Dropped Python 2.7 support - now requires Python 3.7+
+    * Removed ``future`` package dependency and all Python 2 compatibility code
+    * Modernized codebase: removed ``__future__`` imports and ``builtins`` compatibility layer
+    * Updated minimum dependency versions: numpy>=1.17, scipy>=1.3
+    * Added modern Python packaging with ``pyproject.toml``
+    * Added Docker support for easier installation with CUDA 11.8
+    * Added GitHub Actions CI/CD for automated testing across Python 3.7-3.11
+    * Updated classifiers to reflect Python 3.7-3.11 support
+    * Cleaner, more maintainable codebase (89 lines of compatibility code removed)
+
 * **0.2.5**
     * swap out pycuda.autoinit for pycuda.autoprimaryctx to handle "cuFuncSetBlockShape" error
     
