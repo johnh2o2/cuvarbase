@@ -10,6 +10,14 @@ What's new in cuvarbase
     * Added GitHub Actions CI/CD for automated testing across Python 3.7-3.11
     * Updated classifiers to reflect Python 3.7-3.11 support
     * Cleaner, more maintainable codebase (89 lines of compatibility code removed)
+    * Includes all features from 0.2.6:
+        * Added Sparse BLS implementation for efficient transit detection with small datasets
+        * New ``sparse_bls_cpu`` function that avoids binning and grid searching
+        * New ``eebls_transit`` wrapper that automatically selects between sparse (CPU) and standard (GPU) BLS
+        * Based on algorithm from Burdge et al. 2021 (https://arxiv.org/abs/2103.06193)
+        * More efficient for datasets with < 500 observations
+        * NUFFT LRT implementation for transit detection
+        * Refactored codebase organization with base/, memory/, and periodograms/ modules
 
 * **0.2.5**
     * swap out pycuda.autoinit for pycuda.autoprimaryctx to handle "cuFuncSetBlockShape" error
