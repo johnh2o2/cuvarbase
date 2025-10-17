@@ -1,12 +1,6 @@
 """
 Memory management for Lomb-Scargle periodogram computations.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from builtins import object
-
 import resource
 import numpy as np
 
@@ -36,7 +30,7 @@ def weights(err):
     return w/sum(w)
 
 
-class LombScargleMemory(object):
+class LombScargleMemory:
     """
     Container class for allocating memory and transferring
     data between the GPU and CPU for Lomb-Scargle computations.

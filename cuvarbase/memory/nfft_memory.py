@@ -1,12 +1,6 @@
 """
 Memory management for NFFT (Non-equispaced Fast Fourier Transform) operations.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from builtins import object
-
 import resource
 import numpy as np
 
@@ -15,7 +9,7 @@ import pycuda.gpuarray as gpuarray
 import skcuda.fft as cufft
 
 
-class NFFTMemory(object):
+class NFFTMemory:
     """
     Container class for managing memory allocation and data transfer
     for NFFT computations on GPU.

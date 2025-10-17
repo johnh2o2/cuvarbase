@@ -1,10 +1,6 @@
 """
 Tests for NUFFT-based Likelihood Ratio Test (LRT) for transit detection.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose

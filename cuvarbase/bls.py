@@ -219,7 +219,7 @@ def compile_bls(block_size=_default_block_size,
     return functions
 
 
-class BLSMemory(object):
+class BLSMemory:
     def __init__(self, max_ndata, max_nfreqs, stream=None, **kwargs):
         self.max_ndata = max_ndata
         self.max_nfreqs = max_nfreqs
