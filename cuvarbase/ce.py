@@ -2,12 +2,6 @@
 Implementation of Graham et al. 2013's Conditional Entropy
 period finding algorithm
 """
-from __future__ import print_function, division
-
-from builtins import zip
-from builtins import range
-from builtins import object
-
 import numpy as np
 
 import pycuda.driver as cuda

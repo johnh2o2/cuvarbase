@@ -2,7 +2,7 @@
 import pycuda.autoprimaryctx
 
 # Version
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 # For backward compatibility, import all main classes
 from .base import GPUAsyncProcess
@@ -32,3 +32,4 @@ __all__ = [
     'NUFFTLRTAsyncProcess',
     'NUFFTLRTMemory',
 ]
+

@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cuvarbase"
+dynamic = ["version"]
+description = "Period-finding and variability on the GPU"
+readme = "README.rst"
+requires-python = ">=3.7"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "John Hoffman", email = "johnh2o2@gmail.com"}
+]
+keywords = ["astronomy", "GPU", "CUDA", "period-finding", "time-series"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: C",
+    "Programming Language :: C++",
+]
+dependencies = [
+    "numpy>=1.17",
+    "scipy>=1.3",
+    "pycuda>=2017.1.1,!=2024.1.2",
+    "scikit-cuda",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "nfft",
+    "matplotlib",
+    "astropy",
+]
+
+[project.urls]
+Homepage = "https://github.com/johnh2o2/cuvarbase"
+Documentation = "https://johnh2o2.github.io/cuvarbase/"
+Repository = "https://github.com/johnh2o2/cuvarbase"
+"Bug Tracker" = "https://github.com/johnh2o2/cuvarbase/issues"
+
+[tool.setuptools]
+packages = ["cuvarbase", "cuvarbase.tests"]
+
+[tool.setuptools.package-data]
+cuvarbase = ["kernels/*.cu"]
+
+[tool.setuptools.dynamic]
+version = {attr = "cuvarbase.__version__"}
