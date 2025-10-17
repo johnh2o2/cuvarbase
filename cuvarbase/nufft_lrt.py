@@ -8,12 +8,6 @@ in unknown correlated Gaussian noise" (IEEE paper)
 
 The method uses NUFFT for gappy data and adaptive noise estimation via power spectrum.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from builtins import object
-
 import sys
 import numpy as np
 
@@ -27,7 +21,7 @@ from .memory import NFFTMemory
 from .utils import find_kernel, _module_reader
 
 
-class NUFFTLRTMemory(object):
+class NUFFTLRTMemory:
     """
     Memory management for NUFFT LRT computations.
     

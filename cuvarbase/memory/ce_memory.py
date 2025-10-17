@@ -1,12 +1,6 @@
 """
 Memory management for Conditional Entropy period-finding operations.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from builtins import object
-
 import resource
 import numpy as np
 
@@ -14,7 +8,7 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 
 
-class ConditionalEntropyMemory(object):
+class ConditionalEntropyMemory:
     """
     Container class for managing memory allocation and data transfer
     for Conditional Entropy computations on GPU.
