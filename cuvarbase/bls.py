@@ -1006,6 +1006,222 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     return 0 if W < 1e-9 else (YW ** 2) / (W * (1 - W)) / YY
 
 
+def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
+    """
+    Sparse BLS implementation for CPU (no binning, tests all pairs of observations).
+    
+    This is more efficient than traditional BLS when the number of observations
+    is small, as it avoids redundant grid searching over finely-grained parameter
+    grids. Based on https://arxiv.org/abs/2103.06193
+    
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times
+    y: array_like, float
+        Observations
+    dy: array_like, float
+        Observation uncertainties
+    freqs: array_like, float
+        Frequencies to test
+    ignore_negative_delta_sols: bool, optional (default: False)
+        Whether or not to ignore solutions with negative delta (inverted dips)
+    
+    Returns
+    -------
+    bls: array_like, float
+        BLS power at each frequency
+    solutions: list of (q, phi0) tuples
+        Best (q, phi0) solution at each frequency
+    """
+    t = np.asarray(t).astype(np.float32)
+    y = np.asarray(y).astype(np.float32)
+    dy = np.asarray(dy).astype(np.float32)
+    freqs = np.asarray(freqs).astype(np.float32)
+    
+    ndata = len(t)
+    nfreqs = len(freqs)
+    
+    # Precompute weights
+    w = np.power(dy, -2).astype(np.float32)
+    w /= np.sum(w)
+    
+    # Precompute normalization
+    ybar = np.dot(w, y)
+    YY = np.dot(w, np.power(y - ybar, 2))
+    
+    bls_powers = np.zeros(nfreqs, dtype=np.float32)
+    best_q = np.zeros(nfreqs, dtype=np.float32)
+    best_phi = np.zeros(nfreqs, dtype=np.float32)
+    
+    # For each frequency
+    for i_freq, freq in enumerate(freqs):
+        # Compute phases
+        phi = (t * freq) % 1.0
+        
+        # Sort by phase
+        sorted_indices = np.argsort(phi)
+        phi_sorted = phi[sorted_indices]
+        y_sorted = y[sorted_indices]
+        w_sorted = w[sorted_indices]
+        
+        max_bls = 0.0
+        best_q_val = 0.0
+        best_phi_val = 0.0
+        
+        # Test all pairs of observations
+        for i in range(ndata):
+            for j in range(i + 1, ndata):
+                # Transit from observation i to observation j
+                phi0 = phi_sorted[i]
+                q = phi_sorted[j] - phi_sorted[i]
+                
+                # Skip if q is too large (more than half the phase)
+                if q > 0.5:
+                    continue
+                    
+                # Observations in transit: indices i through j-1
+                W = np.sum(w_sorted[i:j])
+                
+                # Skip if too few weight in transit
+                if W < 1e-9 or W > 1.0 - 1e-9:
+                    continue
+                
+                YW = np.dot(w_sorted[i:j], y_sorted[i:j]) - ybar * W
+                
+                # Check if we should ignore this solution
+                if YW > 0 and ignore_negative_delta_sols:
+                    continue
+                    
+                # Compute BLS
+                bls = (YW ** 2) / (W * (1 - W)) / YY
+                
+                if bls > max_bls:
+                    max_bls = bls
+                    best_q_val = q
+                    best_phi_val = phi0
+        
+        bls_powers[i_freq] = max_bls
+        best_q[i_freq] = best_q_val
+        best_phi[i_freq] = best_phi_val
+    
+    solutions = list(zip(best_q, best_phi))
+    return bls_powers, solutions
+
+
+def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
+                  qmin_fac=0.5, qmax_fac=2.0, fmin=None,
+                  fmax=None, freqs=None, qvals=None, use_fast=False,
+                  use_sparse=None, sparse_threshold=500,
+                  ignore_negative_delta_sols=False,
+                  **kwargs):
+    """
+    Compute BLS for timeseries, automatically selecting between GPU and
+    CPU implementations based on dataset size.
+    
+    For small datasets (ndata < sparse_threshold), uses the sparse BLS
+    algorithm which avoids binning and grid searching. For larger datasets,
+    uses the GPU-accelerated standard BLS.
+    
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times
+    y: array_like, float
+        Observations
+    dy: array_like, float
+        Observation uncertainties
+    fmax_frac: float, optional (default: 1.0)
+        Maximum frequency is `fmax_frac * fmax`, where
+        `fmax` is automatically selected by `fmax_transit`.
+    fmin_frac: float, optional (default: 1.0)
+        Minimum frequency is `fmin_frac * fmin`, where
+        `fmin` is automatically selected by `fmin_transit`.
+    fmin: float, optional (default: None)
+        Overrides automatic frequency minimum with this value
+    fmax: float, optional (default: None)
+        Overrides automatic frequency maximum with this value
+    qmin_fac: float, optional (default: 0.5)
+        Fraction of the fiducial q value to search
+        at each frequency (minimum)
+    qmax_fac: float, optional (default: 2.0)
+        Fraction of the fiducial q value to search
+        at each frequency (maximum)
+    freqs: array_like, optional (default: None)
+        Overrides the auto-generated frequency grid
+    qvals: array_like, optional (default: None)
+        Overrides the keplerian q values
+    use_fast: bool, optional (default: False)
+        Use fast GPU implementation (if not using sparse)
+    use_sparse: bool, optional (default: None)
+        If True, use sparse BLS. If False, use GPU BLS. If None (default),
+        automatically select based on dataset size (sparse_threshold).
+    sparse_threshold: int, optional (default: 500)
+        Threshold for automatically selecting sparse BLS. If ndata < threshold
+        and use_sparse is None, sparse BLS is used.
+    ignore_negative_delta_sols: bool, optional (default: False)
+        Whether or not to ignore inverted dips
+    **kwargs:
+        passed to `eebls_gpu`, `eebls_gpu_fast`, `compile_bls`, 
+        `fmax_transit`, `fmin_transit`, and `transit_autofreq`
+    
+    Returns
+    -------
+    freqs: array_like, float
+        Frequencies where BLS is evaluated
+    bls: array_like, float
+        BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
+    solutions: list of ``(q, phi)`` tuples
+        Best ``(q, phi)`` solution at each frequency
+        
+        .. note::
+        
+            Only returned when ``use_fast=False``.
+    
+    """
+    ndata = len(t)
+    
+    # Determine whether to use sparse BLS
+    if use_sparse is None:
+        use_sparse = ndata < sparse_threshold
+    
+    # Generate frequency grid if not provided
+    if freqs is None:
+        if qvals is not None:
+            raise Exception("qvals must be None if freqs is None")
+        if fmin is None:
+            fmin = fmin_transit(t, **kwargs) * fmin_frac
+        if fmax is None:
+            fmax = fmax_transit(qmax=0.5 / qmax_fac, **kwargs) * fmax_frac
+        freqs, qvals = transit_autofreq(t, fmin=fmin, fmax=fmax,
+                                        qmin_fac=qmin_fac, **kwargs)
+    if qvals is None:
+        qvals = q_transit(freqs, **kwargs)
+    
+    # Use sparse BLS for small datasets
+    if use_sparse:
+        powers, sols = sparse_bls_cpu(t, y, dy, freqs,
+                                       ignore_negative_delta_sols=ignore_negative_delta_sols)
+        return freqs, powers, sols
+    
+    # Use GPU BLS for larger datasets
+    qmins = qvals * qmin_fac
+    qmaxes = qvals * qmax_fac
+    
+    if use_fast:
+        powers = eebls_gpu_fast(t, y, dy, freqs,
+                                qmin=qmins, qmax=qmaxes,
+                                ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                **kwargs)
+        return freqs, powers
+    
+    powers, sols = eebls_gpu(t, y, dy, freqs,
+                             qmin=qmins, qmax=qmaxes,
+                             ignore_negative_delta_sols=ignore_negative_delta_sols,
+                             **kwargs)
+    return freqs, powers, sols
+
+
 def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
                   samples_per_peak=5, max_iter=50, noverlap=3, **kwargs):
     """
