@@ -1,10 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from builtins import zip
-from builtins import range
-from builtins import object
 import numpy as np
 import pytest
 

@@ -4,12 +4,6 @@ NFFT (Non-equispaced Fast Fourier Transform) implementation.
 
 This module provides GPU-accelerated NFFT functionality for periodogram computation.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from builtins import object
-
 import sys
 import resource
 import numpy as np
