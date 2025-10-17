@@ -4,7 +4,6 @@ Periodogram implementations for cuvarbase.
 This module contains GPU-accelerated implementations of various
 periodogram and period-finding algorithms.
 """
-from __future__ import absolute_import
 
 from .bls import *
 from .ce import ConditionalEntropyAsyncProcess
