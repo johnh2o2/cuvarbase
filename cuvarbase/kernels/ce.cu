@@ -34,8 +34,18 @@ __device__ FLT mod1(FLT x){
 	return x - floor(x);
 }
 
+__device__ FLT mod1_pdot(FLT t, FLT freq, FLT pdot){
+	FLT phase = t * freq + 0.5 * pdot * t * t;
+	return phase - floor(phase);
+}
+
 __device__ int phase_ind(FLT ft){
 	int n = (int) (mod1(ft) * NPHASE);
+	return n % NPHASE;
+}
+
+__device__ int phase_ind_pdot(FLT t, FLT freq, FLT pdot){
+	int n = (int) (mod1_pdot(t, freq, pdot) * NPHASE);
 	return n % NPHASE;
 }
 
