@@ -42,13 +42,16 @@ def var_gauss(t, y, w, freq, dphi):
 
     return var
 
-def binned_pdm_model(t, y, w, freq, nbins, linterp=True):
+def binned_pdm_model(t, y, w, freq, nbins, linterp=True, pdot=0.0):
 
     if len(t) == 0:
         return lambda p, **kwargs: np.zeros_like(p)
 
     bin_means = np.zeros(nbins)
-    phase = (t * freq) % 1.0
+    if pdot == 0.0:
+        phase = (t * freq) % 1.0
+    else:
+        phase = (t * freq + 0.5 * pdot * t * t) % 1.0
     bins = [int(p * nbins) % nbins for p in phase]
 
     for i in range(nbins):
@@ -74,8 +77,12 @@ def binned_pdm_model(t, y, w, freq, nbins, linterp=True):
     return pred_y
 
 
-def var_binned(t, y, w, freq, nbins, linterp=True):
-    ypred = binned_pdm_model(t, y, w, freq, nbins, linterp=linterp)((t * freq) % 1.0)
+def var_binned(t, y, w, freq, nbins, linterp=True, pdot=0.0):
+    if pdot == 0.0:
+        phase = (t * freq) % 1.0
+    else:
+        phase = (t * freq + 0.5 * pdot * t * t) % 1.0
+    ypred = binned_pdm_model(t, y, w, freq, nbins, linterp=linterp, pdot=pdot)(phase)
     return np.dot(w, np.power(y - ypred, 2))
 
 
@@ -91,32 +98,38 @@ def binless_pdm_cpu(t, y, w, freqs, dphi=0.05, tophat=True):
     else:
         return [1 - var_gauss(t, y, w, freq, dphi) / var for freq in freqs]
 
-def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True):
+def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True, pdots=None):
     # Prepare data
     t -= np.mean(t)
     y -= np.mean(y)
 
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
-    return [1 - var_binned(t, y, w, freq,
-                           nbins=nbins, linterp=linterp) / var
-            for freq in freqs]
+    
+    if pdots is None:
+        return [1 - var_binned(t, y, w, freq,
+                               nbins=nbins, linterp=linterp) / var
+                for freq in freqs]
+    else:
+        return [1 - var_binned(t, y, w, freq,
+                               nbins=nbins, linterp=linterp, pdot=pdot) / var
+                for freq, pdot in zip(freqs, pdots)]
 
 
-def pdm2_single_freq(t, y, w, freq, nbins=30, linterp=True):
+def pdm2_single_freq(t, y, w, freq, nbins=30, linterp=True, pdot=0.0):
     # Prepare data
     t -= np.mean(t)
     y -= np.mean(y)
 
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
-    return 1 - var_binned(t, y, w, freq, nbins=nbins, linterp=linterp) / var
+    return 1 - var_binned(t, y, w, freq, nbins=nbins, linterp=linterp, pdot=pdot) / var
 
 
 def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
-              dphi=0.05, block_size=256):
+              dphi=0.05, block_size=256, pdots=None):
     t, y, w, freqs = data_cpu
-    t_g, y_g, w_g, freqs_g, pow_g = data_gpu
+    t_g, y_g, w_g, freqs_g, pow_g, pdots_g = data_gpu
 
     if t_g is None:
         return pow_cpu
@@ -140,10 +153,18 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
     t_g.set_async(np.asarray(t).astype(np.float32), stream=stream)
     y_g.set_async(np.asarray(y).astype(np.float32), stream=stream)
 
-    function.prepared_async_call(grid, block, stream,
-                                 t_g.ptr, y_g.ptr, w_g.ptr,
-                                 freqs_g.ptr, pow_g.ptr,
-                                 ndata, nfreqs, dphi, var)
+    # Check if we're using pdot
+    if pdots is not None and pdots_g is not None:
+        pdots_g.set_async(np.asarray(pdots).astype(np.float32), stream=stream)
+        function.prepared_async_call(grid, block, stream,
+                                     t_g.ptr, y_g.ptr, w_g.ptr,
+                                     freqs_g.ptr, pdots_g.ptr, pow_g.ptr,
+                                     ndata, nfreqs, dphi, var)
+    else:
+        function.prepared_async_call(grid, block, stream,
+                                     t_g.ptr, y_g.ptr, w_g.ptr,
+                                     freqs_g.ptr, pow_g.ptr,
+                                     ndata, nfreqs, dphi, var)
 
     pow_g.get_async(stream=stream, ary=pow_cpu)
 
@@ -164,20 +185,29 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
         self.dtypes = [np.intp, np.intp, np.intp, np.intp, np.intp,
                        np.int32, np.int32, np.float32, np.float32]
+        self.dtypes_pdot = [np.intp, np.intp, np.intp, np.intp, np.intp, np.intp,
+                           np.int32, np.int32, np.float32, np.float32]
+        
         for function in ['pdm_binless_tophat', 'pdm_binless_gauss',
                          'pdm_binned_linterp_%dbins' % (nbins),
                          'pdm_binned_step_%dbins' % (nbins)]:
             func = function.replace('_%dbins' % (nbins), '')
-            func = self.module.get_function(func).prepare(self.dtypes)
-            self.prepared_functions[function] = func
+            func_obj = self.module.get_function(func).prepare(self.dtypes)
+            self.prepared_functions[function] = func_obj
+            
+            # Also prepare pdot versions
+            func_pdot = func + '_pdot'
+            function_pdot = function + '_pdot'
+            func_obj_pdot = self.module.get_function(func_pdot).prepare(self.dtypes_pdot)
+            self.prepared_functions[function_pdot] = func_obj_pdot
 
-    def allocate(self, data):
+    def allocate(self, data, pdots=None):
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
         gpu_data, pow_cpus = [], []
 
-        for t, y, w, freqs in data:
+        for i, (t, y, w, freqs) in enumerate(data):
 
             pow_cpu = cuda.aligned_zeros(shape=(len(freqs),),
                                          dtype=np.float32,
@@ -190,14 +220,27 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
             pow_g = gpuarray.zeros(len(pow_cpu), dtype=pow_cpu.dtype)
             freqs_g = gpuarray.to_gpu(np.asarray(freqs).astype(np.float32))
+            
+            # Allocate pdots if provided
+            pdots_g = None
+            if pdots is not None:
+                if isinstance(pdots[0], (list, np.ndarray)):
+                    # pdots is a list of arrays
+                    pdots_g = gpuarray.to_gpu(np.asarray(pdots[i]).astype(np.float32))
+                else:
+                    # pdots is a single array (same for all data)
+                    pdots_g = gpuarray.to_gpu(np.asarray(pdots).astype(np.float32))
 
-            gpu_data.append((t_g, y_g, w_g, freqs_g, pow_g))
+            gpu_data.append((t_g, y_g, w_g, freqs_g, pow_g, pdots_g))
             pow_cpus.append(pow_cpu)
         return gpu_data, pow_cpus
 
     def run(self, data, gpu_data=None, pow_cpus=None,
-            kind='binned_linterp', nbins=10, dphi=0.05, **pdm_kwargs):
+            kind='binned_linterp', nbins=10, dphi=0.05, pdots=None, **pdm_kwargs):
 
+        # Determine if we're using pdot
+        use_pdot = pdots is not None
+        
         if kind in ['binless_tophat', 'binless_gauss']:
             function = 'pdm_%s' % (kind)
         elif kind in ['binned_linterp','binned_step']:
@@ -205,6 +248,10 @@ class PDMAsyncProcess(GPUAsyncProcess):
         else:
             raise KeyError('Function not available. Please use one of the followings: ' + \
                             'binless_tophat, binless_gauss, binned_linterp, binned_step')
+
+        # Add _pdot suffix if using pdot
+        if use_pdot:
+            function = function + '_pdot'
 
         if function not in self.prepared_functions:
             self._compile_and_prepare_functions(nbins=nbins)
@@ -217,11 +264,23 @@ class PDMAsyncProcess(GPUAsyncProcess):
             data[i] = t, y, w, freqs
 
         if pow_cpus is None or gpu_data is None:
-            gpu_data, pow_cpus = self.allocate(data)
+            gpu_data, pow_cpus = self.allocate(data, pdots=pdots)
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
         func = self.prepared_functions[function]
-        results = [pdm_async(stream, cdat, gdat, pcpu, func, dphi=dphi, **pdm_kwargs)
-                   for stream, cdat, gdat, pcpu in
-                   zip(streams, data, gpu_data, pow_cpus)]
+        
+        # Extract pdots for each dataset if provided
+        pdots_list = None
+        if use_pdot:
+            if isinstance(pdots[0], (list, np.ndarray)):
+                # pdots is a list of arrays
+                pdots_list = pdots
+            else:
+                # pdots is a single array (same for all data)
+                pdots_list = [pdots] * len(data)
+        
+        results = [pdm_async(stream, cdat, gdat, pcpu, func, dphi=dphi, 
+                            pdots=pdots_list[i] if pdots_list else None, **pdm_kwargs)
+                   for i, (stream, cdat, gdat, pcpu) in enumerate(
+                       zip(streams, data, gpu_data, pow_cpus))]
 
         return results
