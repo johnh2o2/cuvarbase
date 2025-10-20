@@ -1,6 +1,17 @@
 """
 Implementation of Graham et al. 2013's Conditional Entropy
 period finding algorithm
+
+Note on pdot (period derivative) support:
+----------------------------------------
+For searching signals with changing periods, the GPU kernels do not currently
+have native pdot support. To search for pdot, you can:
+
+1. Use a grid search approach: test multiple (frequency, pdot) combinations
+2. For a given pdot value, the effective time array can be pre-transformed
+3. Use the PDM algorithm which has full pdot support
+
+See the PDM module (cuvarbase.pdm) for examples of pdot usage.
 """
 import numpy as np
 

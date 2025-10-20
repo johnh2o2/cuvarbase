@@ -958,7 +958,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     return bls_g.get()/YY, qphi_sols
 
 
-def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
+def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False, pdot=0.0):
     """
     Evaluate BLS power for a single set of (freq, q, phi0)
     parameters.
@@ -979,14 +979,22 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
         Phase offset of transit
     ignore_negative_delta_sols:
         Whether or not to ignore solutions with negative delta (inverted dips)
+    pdot: float, optional (default: 0.0)
+        Period derivative parameter. Phase is calculated as:
+        phi = freq * t + 0.5 * pdot * t^2
 
     Returns
     -------
     bls: float
         BLS power for this set of parameters
     """
-
-    phi = np.asarray(t).astype(np.float32) * np.float32(freq)
+    t_arr = np.asarray(t).astype(np.float32)
+    
+    if pdot == 0.0:
+        phi = t_arr * np.float32(freq)
+    else:
+        phi = t_arr * np.float32(freq) + 0.5 * np.float32(pdot) * t_arr * t_arr
+    
     phi -= np.float32(phi0)
     phi -= np.floor(phi)
 
@@ -1006,7 +1014,7 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     return 0 if W < 1e-9 else (YW ** 2) / (W * (1 - W)) / YY
 
 
-def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
+def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False, pdots=None):
     """
     Sparse BLS implementation for CPU (no binning, tests all pairs of observations).
     
@@ -1026,6 +1034,9 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
         Frequencies to test
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore solutions with negative delta (inverted dips)
+    pdots: array_like, float, optional (default: None)
+        Period derivative values (one per frequency). If None, pdot=0 for all frequencies.
+        Phase is calculated as: phi = freq * t + 0.5 * pdot * t^2
     
     Returns
     -------
@@ -1042,6 +1053,14 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
     ndata = len(t)
     nfreqs = len(freqs)
     
+    # Handle pdots
+    if pdots is None:
+        pdots = np.zeros(nfreqs, dtype=np.float32)
+    else:
+        pdots = np.asarray(pdots).astype(np.float32)
+        if len(pdots) != nfreqs:
+            raise ValueError("Length of pdots must match length of freqs")
+    
     # Precompute weights
     w = np.power(dy, -2).astype(np.float32)
     w /= np.sum(w)
@@ -1055,9 +1074,12 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
     best_phi = np.zeros(nfreqs, dtype=np.float32)
     
     # For each frequency
-    for i_freq, freq in enumerate(freqs):
+    for i_freq, (freq, pdot) in enumerate(zip(freqs, pdots)):
         # Compute phases
-        phi = (t * freq) % 1.0
+        if pdot == 0.0:
+            phi = (t * freq) % 1.0
+        else:
+            phi = (t * freq + 0.5 * pdot * t * t) % 1.0
         
         # Sort by phase
         sorted_indices = np.argsort(phi)
@@ -1114,6 +1136,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                   fmax=None, freqs=None, qvals=None, use_fast=False,
                   use_sparse=None, sparse_threshold=500,
                   ignore_negative_delta_sols=False,
+                  pdots=None,
                   **kwargs):
     """
     Compute BLS for timeseries, automatically selecting between GPU and
@@ -1161,6 +1184,11 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         and use_sparse is None, sparse BLS is used.
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore inverted dips
+    pdots: array_like, float, optional (default: None)
+        Period derivative values (one per frequency). If provided, phase is
+        calculated as: phi = freq * t + 0.5 * pdot * t^2.
+        Note: GPU kernels do not currently support pdot; this parameter only
+        works with use_sparse=True or when automatic selection chooses sparse BLS.
     **kwargs:
         passed to `eebls_gpu`, `eebls_gpu_fast`, `compile_bls`, 
         `fmax_transit`, `fmin_transit`, and `transit_autofreq`
@@ -1185,6 +1213,11 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     if use_sparse is None:
         use_sparse = ndata < sparse_threshold
     
+    # Check if pdots is provided with non-sparse mode
+    if pdots is not None and not use_sparse:
+        raise ValueError("pdot parameter is only supported with use_sparse=True or "
+                        "when automatic selection chooses sparse BLS (ndata < sparse_threshold)")
+    
     # Generate frequency grid if not provided
     if freqs is None:
         if qvals is not None:
@@ -1201,7 +1234,8 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     # Use sparse BLS for small datasets
     if use_sparse:
         powers, sols = sparse_bls_cpu(t, y, dy, freqs,
-                                       ignore_negative_delta_sols=ignore_negative_delta_sols)
+                                       ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                       pdots=pdots)
         return freqs, powers, sols
     
     # Use GPU BLS for larger datasets
