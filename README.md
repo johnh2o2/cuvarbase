@@ -35,7 +35,7 @@ Created by John Hoffman, (c) 2017
 
 ### A Personal Note
 
-This project was created as part of a PhD thesis, intended mainly for myself and against the very wise advice of two advisors trying to help me stay on track (including Joel Hartmann -- legendary author of `varbase`, and Gaspar Bakos, who I promised to provide a catalog of variable stars from HAT telescopes -- something that should have taken maybe a month but instead took years due to an irrational and irresponsible level of perfectionism, and even at the end wasn't comprehensive or useful, and which I never published. To both of you, thank you for an incredible amount of patience.).
+This project was created as part of a PhD thesis, intended mainly for myself and against the very wise advice of two advisors trying to help me stay on track (including Joel Hartman -- legendary author of `vartools`, and Gaspar Bakos, who I promised to provide a catalog of variable stars from HAT telescopes -- something that should have taken maybe a month but instead took years due to an irrational and irresponsible level of perfectionism, and even at the end wasn't comprehensive or useful, and which I never published. To both of you, thank you for an incredible amount of patience.).
 
 Much to my absolute delight this repository has -- organically! -- become useful to several people in the astro community; an ADS search reveals 23 papers with ~430 citations as of October 2025 using cuvarbase in some shape or form. The biggest source of pride was seeing the Quick Look Pipeline adopt cuvarbase for TESS ([Kunimoto et al. 2023](https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract)).
 
