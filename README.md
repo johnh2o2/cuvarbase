@@ -53,9 +53,9 @@ It would be nice to incorporate additional capabilities and algorithms (e.g. [Ka
 
 **If you're interested in contributing, please see our [Contributing Guide](CONTRIBUTING.md)!**
 
-## What's New in v1.0 (Branch: copilot/clean-up-markdown-files)
+## What's New in v1.0
 
-This branch represents a major modernization effort compared to the `master` branch:
+This represents a major modernization effort compared to the `master` branch:
 
 ### Breaking Changes
 - **Dropped Python 2.7 support** - now requires Python 3.7+
