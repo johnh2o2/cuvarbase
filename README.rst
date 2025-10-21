@@ -4,7 +4,9 @@ cuvarbase
 .. image:: https://badge.fury.io/py/cuvarbase.svg
     :target: https://badge.fury.io/py/cuvarbase
 
-## Active development: see `v1.0` branch
+
+Active development happening! see `v1.0` branch
+-----------------------------------------------
 
 John Hoffman
 (c) 2017
