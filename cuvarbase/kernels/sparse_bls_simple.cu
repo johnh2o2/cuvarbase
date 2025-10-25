@@ -173,7 +173,7 @@ __global__ void sparse_bls_kernel_simple(
                     float q;
                     if (j < ndata) {
                         // Transit ends before observation j
-                        if (j > 0 && j < ndata) {
+                        if (j < ndata) {
                             q = 0.5f * (sh_phi[j] + sh_phi[j-1]) - phi0;
                         } else {
                             q = sh_phi[j] - phi0;
