@@ -6,7 +6,7 @@ from pycuda.tools import mark_cuda_test
 from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
                   single_bls, eebls_gpu_custom, eebls_gpu_fast, \
-                  sparse_bls_cpu, eebls_transit
+                  sparse_bls_cpu, sparse_bls_gpu, eebls_transit
 
 
 def transit_model(phi0, q, delta, q1=0.):
@@ -480,6 +480,78 @@ class TestBLS(object):
         # The best frequency should be close to the true frequency
         best_freq = freqs[np.argmax(power_sparse)]
         assert np.abs(best_freq - freq) < 10 * df  # Allow more tolerance for sparse
+
+    @pytest.mark.parametrize("freq", [1.0, 2.0])
+    @pytest.mark.parametrize("q", [0.02, 0.1])
+    @pytest.mark.parametrize("phi0", [0.0, 0.5])
+    @pytest.mark.parametrize("ndata", [50, 100, 200])
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    @mark_cuda_test
+    def test_sparse_bls_gpu(self, freq, q, phi0, ndata, ignore_negative_delta_sols):
+        """Test GPU sparse BLS implementation against CPU sparse BLS"""
+        t, y, dy = data(snr=10, q=q, phi0=phi0, freq=freq,
+                        baseline=365., ndata=ndata)
+
+        # Test a few frequencies around the true frequency
+        df = q / (10 * (max(t) - min(t)))
+        freqs = np.linspace(freq - 5 * df, freq + 5 * df, 11)
+
+        # Run CPU sparse BLS
+        power_cpu, sols_cpu = sparse_bls_cpu(t, y, dy, freqs,
+                                              ignore_negative_delta_sols=ignore_negative_delta_sols)
+
+        # Run GPU sparse BLS
+        power_gpu, sols_gpu = sparse_bls_gpu(t, y, dy, freqs,
+                                              ignore_negative_delta_sols=ignore_negative_delta_sols)
+
+        # Compare CPU and GPU results
+        # Powers should match closely
+        assert_allclose(power_cpu, power_gpu, rtol=1e-4, atol=1e-6,
+                       err_msg=f"Power mismatch for freq={freq}, q={q}, phi0={phi0}")
+
+        # Solutions should match closely
+        for i, (f, (q_cpu, phi_cpu), (q_gpu, phi_gpu)) in enumerate(
+                zip(freqs, sols_cpu, sols_gpu)):
+            # q values should match
+            assert np.abs(q_cpu - q_gpu) < 1e-4, \
+                f"q mismatch at freq={f}: cpu={q_cpu}, gpu={q_gpu}"
+
+            # phi values should match (accounting for wrapping)
+            phi_diff = np.abs(phi_cpu - phi_gpu)
+            phi_diff = min(phi_diff, 1.0 - phi_diff)  # Account for phase wrapping
+            assert phi_diff < 1e-4, \
+                f"phi mismatch at freq={f}: cpu={phi_cpu}, gpu={phi_gpu}"
+
+        # Both should find peak near true frequency
+        best_freq_cpu = freqs[np.argmax(power_cpu)]
+        best_freq_gpu = freqs[np.argmax(power_gpu)]
+        assert np.abs(best_freq_cpu - best_freq_gpu) < df, \
+            f"Best freq mismatch: cpu={best_freq_cpu}, gpu={best_freq_gpu}"
+
+    @pytest.mark.parametrize("freq", [1.0])
+    @pytest.mark.parametrize("q", [0.05])
+    @pytest.mark.parametrize("phi0", [0.0, 0.9])  # Test both non-wrapped and wrapped
+    @pytest.mark.parametrize("ndata", [100])
+    @mark_cuda_test
+    def test_sparse_bls_gpu_vs_single(self, freq, q, phi0, ndata):
+        """Test that GPU sparse BLS solutions match single_bls"""
+        t, y, dy = data(snr=20, q=q, phi0=phi0, freq=freq,
+                        baseline=365., ndata=ndata)
+
+        # Test a few frequencies
+        df = q / (10 * (max(t) - min(t)))
+        freqs = np.linspace(freq - 3 * df, freq + 3 * df, 7)
+
+        # Run GPU sparse BLS
+        power_gpu, sols_gpu = sparse_bls_gpu(t, y, dy, freqs)
+
+        # Verify against single_bls
+        for i, (f, (q_gpu, phi_gpu)) in enumerate(zip(freqs, sols_gpu)):
+            p_single = single_bls(t, y, dy, f, q_gpu, phi_gpu)
+
+            # The GPU BLS result should match single_bls with the parameters it found
+            assert np.abs(power_gpu[i] - p_single) < 1e-4, \
+                f"Mismatch at freq={f}: gpu={power_gpu[i]}, single={p_single}"
 
     @pytest.mark.parametrize("ndata", [50, 100])
     @pytest.mark.parametrize("use_sparse_override", [None, True, False])
