@@ -63,7 +63,8 @@ def test_block_sizes():
         power_adaptive = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
 
         # Run standard version with same block size for comparison
-        functions_std = bls.compile_bls(block_size=actual_block_size, use_optimized=True)
+        functions_std = bls.compile_bls(block_size=actual_block_size, use_optimized=True,
+                                        function_names=['full_bls_no_sol_optimized'])
         power_std = bls.eebls_gpu_fast_optimized(t, y, dy, freqs, functions=functions_std,
                                                   block_size=actual_block_size)
 
@@ -89,7 +90,8 @@ def test_block_sizes():
             print(f"  ✓ PASS")
 
         # Also test against fixed block_size=256 baseline
-        functions_256 = bls.compile_bls(block_size=256, use_optimized=True)
+        functions_256 = bls.compile_bls(block_size=256, use_optimized=True,
+                                        function_names=['full_bls_no_sol_optimized'])
         power_256 = bls.eebls_gpu_fast_optimized(t, y, dy, freqs, functions=functions_256,
                                                   block_size=256)
 
