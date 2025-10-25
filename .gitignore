@@ -82,3 +82,6 @@ work/
 *HAT*txt
 testing/*
 custom_test_ce.py
+
+# RunPod configuration (contains credentials)
+.runpod.env
