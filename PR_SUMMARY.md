@@ -14,16 +14,19 @@ This PR implements **adaptive block sizing** for the BLS kernel, providing **5-9
 | **Dense ground-based** | 500 | 734k | 0.283s | 0.082s | **3.4x** | **$95 (71% reduction)** |
 | **Space-based** | 20k | 891k | 0.797s | 0.554s | **1.4x** | **$114 (30% reduction)** |
 
-### Synthetic Benchmarks (nfreq=1000)
+### Keplerian Benchmarks (10-year baseline, auto frequency grid)
 
-| ndata | Baseline | Adaptive | Speedup |
-|-------|----------|----------|---------|
-| 10    | 0.168s   | 0.0018s  | **93x** |
-| 50    | 0.167s   | 0.0018s  | **92x** |
-| 100   | 0.171s   | 0.0024s  | **71x** |
-| 500   | 0.166s   | 0.0366s  | **4.5x** |
-| 1000  | 0.172s   | 0.0708s  | **2.4x** |
-| 10000 | 0.176s   | 0.1747s  | **1.0x** ✓ No regression |
+| ndata | nfreq | Baseline | Adaptive | Speedup |
+|-------|-------|----------|----------|---------|
+| 10    | ~300k | TBD      | TBD      | TBD     |
+| 50    | ~400k | TBD      | TBD      | TBD     |
+| 100   | ~480k | 0.260s   | 0.049s   | **5.3x** |
+| 500   | ~734k | 0.283s   | 0.082s   | **3.4x** |
+| 1000  | ~800k | TBD      | TBD      | TBD     |
+| 10000 | ~880k | TBD      | TBD      | TBD     |
+| 20000 | ~891k | 0.797s   | 0.554s   | **1.4x** |
+
+*Note: All benchmarks use Keplerian frequency grids with `transit_autofreq()` for realistic BLS searches*
 
 ## What Changed
 
