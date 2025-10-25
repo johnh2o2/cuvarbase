@@ -14,7 +14,7 @@ source .runpod.env
 
 # Build SSH connection string
 SSH_OPTS="-p ${RUNPOD_SSH_PORT}"
-if [ ! -z "${RUNPOD_SSH_KEY}" ]; then
+if [ -n "${RUNPOD_SSH_KEY}" ]; then
     SSH_OPTS="${SSH_OPTS} -i ${RUNPOD_SSH_KEY}"
 fi
 
