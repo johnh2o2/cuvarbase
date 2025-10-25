@@ -251,9 +251,8 @@ __global__ void full_bls_no_sol_optimized(
 
 		__syncthreads();
 
-		// OPTIMIZATION: Use warp shuffle for final warp reduction
-		// Standard tree reduction down to warp size
-		for(unsigned int k = (blockDim.x / 2); k > 32; k /= 2){
+		// Standard tree reduction down to single warp (32 threads)
+		for(unsigned int k = (blockDim.x / 2); k >= 32; k /= 2){
 			if(threadIdx.x < k){
 				bls1 = best_bls[threadIdx.x];
 				bls2 = best_bls[threadIdx.x + k];
@@ -264,10 +263,11 @@ __global__ void full_bls_no_sol_optimized(
 		}
 
 		// Final warp reduction using shuffle (no sync needed)
+		// After the loop above, best_bls[0...31] contains the values to reduce
 		if (threadIdx.x < 32){
 			float val = best_bls[threadIdx.x];
 
-			// Warp shuffle reduction (no __syncthreads needed)
+			// Warp shuffle reduction (no __syncthreads needed within a warp)
 			for(int offset = 16; offset > 0; offset /= 2){
 				float other = __shfl_down_sync(0xffffffff, val, offset);
 				val = (val > other) ? val : other;
