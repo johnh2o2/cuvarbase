@@ -308,8 +308,13 @@ __global__ void sparse_bls_kernel(
                 if (q > 0.5f) continue;
 
                 // W and YW = sum from i to end, plus 0 to k-1
-                W = (sh_cumsum_w[ndata - 1] - sh_cumsum_w[i - 1]);
-                YW = (sh_cumsum_yw[ndata - 1] - sh_cumsum_yw[i - 1]);
+                if (i > 0) {
+                    W = (sh_cumsum_w[ndata - 1] - sh_cumsum_w[i - 1]);
+                    YW = (sh_cumsum_yw[ndata - 1] - sh_cumsum_yw[i - 1]);
+                } else {
+                    W = sh_cumsum_w[ndata - 1];
+                    YW = sh_cumsum_yw[ndata - 1];
+                }
 
                 if (k > 0) {
                     W += sh_cumsum_w[k - 1];
