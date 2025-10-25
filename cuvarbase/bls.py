@@ -1038,64 +1038,105 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
     freqs = np.asarray(freqs).astype(np.float32)
-    
+
     ndata = len(t)
     nfreqs = len(freqs)
-    
-    # Precompute weights
+
+    # Precompute weights (constant across all frequencies)
     w = np.power(dy, -2).astype(np.float32)
     w /= np.sum(w)
-    
-    # Precompute normalization
-    ybar = np.dot(w, y)
-    YY = np.dot(w, np.power(y - ybar, 2))
-    
+
     bls_powers = np.zeros(nfreqs, dtype=np.float32)
     best_q = np.zeros(nfreqs, dtype=np.float32)
     best_phi = np.zeros(nfreqs, dtype=np.float32)
-    
+
     # For each frequency
     for i_freq, freq in enumerate(freqs):
         # Compute phases
         phi = (t * freq) % 1.0
-        
+
         # Sort by phase
         sorted_indices = np.argsort(phi)
         phi_sorted = phi[sorted_indices]
         y_sorted = y[sorted_indices]
         w_sorted = w[sorted_indices]
-        
+
+        # Compute normalization (same as unsorted since weights sum to 1)
+        ybar = np.dot(w, y)
+        YY = np.dot(w, np.power(y - ybar, 2))
+
         max_bls = 0.0
         best_q_val = 0.0
         best_phi_val = 0.0
-        
-        # Test all pairs of observations
+
+        # Test all pairs of observations (including phase wrapping)
         for i in range(ndata):
+            # Non-wrapped transits: from i to j (i < j)
             for j in range(i + 1, ndata):
-                # Transit from observation i to observation j
+                # Transit from observation i to just before observation j
                 phi0 = phi_sorted[i]
-                q = phi_sorted[j] - phi_sorted[i]
-                
+                # Set q to be midpoint between phi_sorted[j-1] and phi_sorted[j]
+                # This ensures single_bls selects observations i through j-1 only
+                if j < ndata - 1:
+                    q = 0.5 * (phi_sorted[j] + phi_sorted[j-1]) - phi_sorted[i]
+                else:
+                    # Last observation - use it fully
+                    q = phi_sorted[j] - phi_sorted[i]
+
                 # Skip if q is too large (more than half the phase)
                 if q > 0.5:
                     continue
-                    
+
                 # Observations in transit: indices i through j-1
                 W = np.sum(w_sorted[i:j])
-                
+
                 # Skip if too few weight in transit
                 if W < 1e-9 or W > 1.0 - 1e-9:
                     continue
-                
+
                 YW = np.dot(w_sorted[i:j], y_sorted[i:j]) - ybar * W
-                
+
                 # Check if we should ignore this solution
                 if YW > 0 and ignore_negative_delta_sols:
                     continue
-                    
+
                 # Compute BLS
                 bls = (YW ** 2) / (W * (1 - W)) / YY
-                
+
+                if bls > max_bls:
+                    max_bls = bls
+                    best_q_val = q
+                    best_phi_val = phi0
+
+            # Wrapped transits: from i to end, then wrap to beginning up to k
+            for k in range(i):
+                phi0 = phi_sorted[i]
+                # Observations included: from i to end (i..ndata-1), plus 0 to k-1
+                # Next excluded observation is at index k
+                # Set q to midpoint between last included (k-1) and first excluded (k)
+                if k > 0:
+                    q = (1.0 - phi_sorted[i]) + 0.5 * (phi_sorted[k-1] + phi_sorted[k])
+                else:
+                    # k=0 means no observations at beginning, transit ends at phase 1.0
+                    q = 1.0 - phi_sorted[i]
+
+                # Skip if q is too large
+                if q > 0.5:
+                    continue
+
+                # Observations: from i to end, plus 0 to k-1
+                W = np.sum(w_sorted[i:]) + np.sum(w_sorted[:k])
+
+                if W < 1e-9 or W > 1.0 - 1e-9:
+                    continue
+
+                YW = (np.dot(w_sorted[i:], y_sorted[i:]) + np.dot(w_sorted[:k], y_sorted[:k])) - ybar * W
+
+                if YW > 0 and ignore_negative_delta_sols:
+                    continue
+
+                bls = (YW ** 2) / (W * (1 - W)) / YY
+
                 if bls > max_bls:
                     max_bls = bls
                     best_q_val = q
