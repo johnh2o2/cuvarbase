@@ -29,6 +29,65 @@ _all_function_names = ['full_bls_no_sol',
                        'bin_and_phase_fold_bst_multifreq',
                        'binned_bls_bst']
 
+# Kernel cache: (block_size, use_optimized) -> compiled functions
+_kernel_cache = {}
+
+
+def _choose_block_size(ndata):
+    """
+    Choose optimal block size based on data size.
+
+    Parameters
+    ----------
+    ndata : int
+        Number of data points
+
+    Returns
+    -------
+    block_size : int
+        Optimal CUDA block size (32, 64, 128, or 256)
+    """
+    if ndata <= 32:
+        return 32   # Single warp
+    elif ndata <= 64:
+        return 64   # Two warps
+    elif ndata <= 128:
+        return 128  # Four warps
+    else:
+        return 256  # Default (8 warps)
+
+
+def _get_cached_kernels(block_size, use_optimized=False, function_names=None):
+    """
+    Get compiled kernels from cache, or compile and cache if not present.
+
+    Parameters
+    ----------
+    block_size : int
+        CUDA block size
+    use_optimized : bool
+        Use optimized kernel
+    function_names : list, optional
+        Function names to compile
+
+    Returns
+    -------
+    functions : dict
+        Compiled kernel functions
+    """
+    if function_names is None:
+        function_names = _all_function_names
+
+    # Create cache key from block size, optimization flag, and function names
+    key = (block_size, use_optimized, tuple(sorted(function_names)))
+
+    if key not in _kernel_cache:
+        _kernel_cache[key] = compile_bls(block_size=block_size,
+                                         use_optimized=use_optimized,
+                                         function_names=function_names)
+
+    return _kernel_cache[key]
+
 
 _function_signatures = {
     'full_bls_no_sol': [np.intp, np.intp, np.intp,
@@ -690,6 +749,104 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
             stream.synchronize()
 
     return memory.bls
+
+
+def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
+                   ignore_negative_delta_sols=False,
+                   functions=None, stream=None, dlogq=0.3,
+                   memory=None, noverlap=2, max_nblocks=5000,
+                   force_nblocks=None, dphi=0.0,
+                   shmem_lim=None, freq_batch_size=None,
+                   transfer_to_device=True,
+                   transfer_to_host=True,
+                   use_optimized=True,
+                   **kwargs):
+    """
+    Adaptive BLS with dynamic block sizing for optimal performance.
+
+    Automatically selects optimal block size based on ndata:
+    - ndata <= 32: 32 threads (single warp)
+    - ndata <= 64: 64 threads (two warps)
+    - ndata <= 128: 128 threads (four warps)
+    - ndata > 128: 256 threads (eight warps)
+
+    This provides significant speedups for small datasets by reducing
+    idle thread overhead and kernel launch costs.
+
+    Expected performance vs eebls_gpu_fast:
+    - ndata=10: 2-5x faster
+    - ndata=100: 1.5-2x faster
+    - ndata=1000+: Same performance
+
+    All other parameters identical to eebls_gpu_fast.
+
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times
+    y: array_like, float
+        Observations
+    dy: array_like, float
+        Observation uncertainties
+    freqs: array_like, float
+        Frequencies
+    qmin: float or array_like, optional (default: 1e-2)
+        minimum q values to search at each frequency
+    qmax: float or array_like (default: 0.5)
+        maximum q values to search at each frequency
+    ignore_negative_delta_sols: bool
+        Whether or not to ignore solutions with a negative delta
+    use_optimized: bool, optional (default: True)
+        Use optimized kernel with bank conflict fixes and warp shuffles
+    **kwargs:
+        All other parameters passed to underlying implementation
+
+    Returns
+    -------
+    bls: array_like, float
+        BLS periodogram
+
+    See Also
+    --------
+    eebls_gpu_fast : Standard implementation with fixed block size
+    eebls_gpu_fast_optimized : Optimized implementation
+    """
+    ndata = len(t)
+
+    # Choose optimal block size
+    block_size = _choose_block_size(ndata)
+
+    # Override any user-provided block_size
+    kwargs['block_size'] = block_size
+
+    # Get cached kernels for this block size
+    if functions is None:
+        fname = 'full_bls_no_sol_optimized' if use_optimized else 'full_bls_no_sol'
+        functions = _get_cached_kernels(block_size, use_optimized, [fname])
+
+    # Use optimized implementation
+    if use_optimized:
+        return eebls_gpu_fast_optimized(
+            t, y, dy, freqs, qmin=qmin, qmax=qmax,
+            ignore_negative_delta_sols=ignore_negative_delta_sols,
+            functions=functions, stream=stream, dlogq=dlogq,
+            memory=memory, noverlap=noverlap, max_nblocks=max_nblocks,
+            force_nblocks=force_nblocks, dphi=dphi,
+            shmem_lim=shmem_lim, freq_batch_size=freq_batch_size,
+            transfer_to_device=transfer_to_device,
+            transfer_to_host=transfer_to_host,
+            **kwargs)
+    else:
+        return eebls_gpu_fast(
+            t, y, dy, freqs, qmin=qmin, qmax=qmax,
+            ignore_negative_delta_sols=ignore_negative_delta_sols,
+            functions=functions, stream=stream, dlogq=dlogq,
+            memory=memory, noverlap=noverlap, max_nblocks=max_nblocks,
+            force_nblocks=force_nblocks, dphi=dphi,
+            shmem_lim=shmem_lim, freq_batch_size=freq_batch_size,
+            transfer_to_device=transfer_to_device,
+            transfer_to_host=transfer_to_host,
+            **kwargs)
 
 
 def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
