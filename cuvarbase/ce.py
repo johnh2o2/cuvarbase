@@ -159,6 +159,15 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     """
     GPUAsyncProcess for the Conditional Entropy period finder
 
+    .. warning::
+        This implementation uses a less efficient algorithm than the ``gce``
+        package (Katz et al. 2020). For production CE searches, especially
+        those including period derivatives, we recommend using ``gce`` instead:
+        https://github.com/mikekatz04/gce
+
+        This implementation remains available for backward compatibility and
+        simple exploratory analysis.
+
     Parameters
     ----------
     phase_bins: int, optional (default: 10)
@@ -182,6 +191,31 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         computations. This is perfect for large Nfreqs and nobs <~ 2000.
         If True, use :func:`run` and not :func:`large_run` and set
         ``nstreams = 1``.
+
+    Notes
+    -----
+    Performance Considerations:
+
+    This implementation allocates one GPU block per frequency and stores the
+    full 2D (phase × magnitude) histogram in shared memory. This approach has
+    two limitations:
+
+    1. Memory: Uses ~n_mag more memory per frequency than optimal
+    2. Parallelism: Limited to one block per frequency (lower GPU utilization)
+
+    The ``gce`` package implements a more efficient algorithm that uses one
+    thread per frequency and processes magnitude bins sequentially, requiring
+    only 1D histograms. This enables:
+
+    - Period derivative (Pdot) searches in tractable time
+    - Better GPU utilization even for simple period searches
+    - ~1/n_mag less memory usage
+
+    References
+    ----------
+    Katz, M. L., Larson, S. L., Cohn, J., Vallisneri, M., & Graff, P. B. (2020).
+    "Efficient computation of the Conditional Entropy period search."
+    arXiv:2006.06866
 
     Example
     -------
