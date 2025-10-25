@@ -40,18 +40,23 @@ def generate_test_data(ndata, with_signal=True, period=5.0, depth=0.01):
     return t, y, dy
 
 
-def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
+def benchmark_adaptive(ndata_values, time_baseline_years=10, n_trials=5,
+                       samples_per_peak=2, rho=1.0):
     """
-    Benchmark adaptive BLS across different data sizes.
+    Benchmark adaptive BLS across different data sizes with Keplerian grids.
 
     Parameters
     ----------
     ndata_values : list
         List of ndata values to test
-    nfreq : int
-        Number of frequency points
+    time_baseline_years : float
+        Time baseline in years (default: 10)
     n_trials : int
         Number of trials to average over
+    samples_per_peak : float
+        Frequency oversampling (default: 2)
+    rho : float
+        Stellar density in solar units (default: 1.0)
 
     Returns
     -------
@@ -59,10 +64,11 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
         Benchmark results
     """
     print("=" * 80)
-    print("ADAPTIVE BLS BENCHMARK")
+    print("ADAPTIVE BLS BENCHMARK (KEPLERIAN GRIDS)")
     print("=" * 80)
     print(f"\nConfiguration:")
-    print(f"  nfreq: {nfreq}")
+    print(f"  time baseline: {time_baseline_years} years")
+    print(f"  samples per peak: {samples_per_peak}")
     print(f"  trials per config: {n_trials}")
     print(f"  ndata values: {ndata_values}")
     print()
@@ -73,17 +79,34 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
 
     results = {
         'timestamp': datetime.now().isoformat(),
-        'nfreq': nfreq,
+        'time_baseline_years': time_baseline_years,
+        'samples_per_peak': samples_per_peak,
         'n_trials': n_trials,
         'benchmarks': []
     }
 
-    freqs = np.linspace(0.05, 0.5, nfreq).astype(np.float32)
-
     for ndata in ndata_values:
         print(f"Testing ndata={ndata}...")
 
+        # Generate realistic lightcurve with proper time baseline
         t, y, dy = generate_test_data(ndata)
+
+        # Adjust to proper time baseline
+        t = t * (time_baseline_years * 365.25) / 100.0  # Scale from 100 days to years
+
+        # Generate Keplerian frequency grid
+        fmin = bls.fmin_transit(t, rho=rho)
+        fmax = bls.fmax_transit(rho=rho, qmax=0.25)
+        freqs, q0vals = bls.transit_autofreq(t, fmin=fmin, fmax=fmax,
+                                             samples_per_peak=samples_per_peak,
+                                             qmin_fac=0.5, qmax_fac=2.0,
+                                             rho=rho)
+        qmins = q0vals * 0.5
+        qmaxes = q0vals * 2.0
+
+        nfreq = len(freqs)
+        print(f"  Keplerian grid: {nfreq} frequencies")
+        print(f"  Period range: {1/freqs[-1]:.2f} - {1/freqs[0]:.2f} days")
 
         # Determine block size
         block_size = bls._choose_block_size(ndata)
@@ -91,7 +114,9 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
 
         bench = {
             'ndata': int(ndata),
-            'block_size': int(block_size)
+            'nfreq': int(nfreq),
+            'block_size': int(block_size),
+            'period_range_days': [float(1/freqs[-1]), float(1/freqs[0])]
         }
 
         # Benchmark 1: Standard (baseline, block_size=256)
@@ -100,7 +125,7 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
 
         # Warm-up
         try:
-            _ = bls.eebls_gpu_fast(t, y, dy, freqs)
+            _ = bls.eebls_gpu_fast(t, y, dy, freqs, qmin=qmins, qmax=qmaxes)
         except Exception as e:
             print(f"    ERROR: {e}")
             continue
@@ -108,7 +133,7 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
         # Timed runs
         for trial in range(n_trials):
             start = time.time()
-            power_std = bls.eebls_gpu_fast(t, y, dy, freqs)
+            power_std = bls.eebls_gpu_fast(t, y, dy, freqs, qmin=qmins, qmax=qmaxes)
             elapsed = time.time() - start
             times_std.append(elapsed)
 
@@ -130,7 +155,7 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
 
         # Warm-up
         try:
-            _ = bls.eebls_gpu_fast_optimized(t, y, dy, freqs)
+            _ = bls.eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=qmins, qmax=qmaxes)
         except Exception as e:
             print(f"    ERROR: {e}")
             continue
@@ -138,7 +163,7 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
         # Timed runs
         for trial in range(n_trials):
             start = time.time()
-            power_opt = bls.eebls_gpu_fast_optimized(t, y, dy, freqs)
+            power_opt = bls.eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=qmins, qmax=qmaxes)
             elapsed = time.time() - start
             times_opt.append(elapsed)
 
@@ -160,7 +185,7 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
 
         # Warm-up
         try:
-            _ = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
+            _ = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=qmins, qmax=qmaxes)
         except Exception as e:
             print(f"    ERROR: {e}")
             continue
@@ -168,7 +193,7 @@ def benchmark_adaptive(ndata_values, nfreq=1000, n_trials=5):
         # Timed runs
         for trial in range(n_trials):
             start = time.time()
-            power_adapt = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
+            power_adapt = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=qmins, qmax=qmaxes)
             elapsed = time.time() - start
             times_adapt.append(elapsed)
 
@@ -223,18 +248,18 @@ def print_summary(results):
     print("\n" + "=" * 80)
     print("SUMMARY")
     print("=" * 80)
-    print(f"{'ndata':<8} {'Block':<8} {'Standard':<12} {'Optimized':<12} "
-          f"{'Adaptive':<12} {'vs Std':<10} {'vs Opt':<10}")
-    print("-" * 80)
+    print(f"{'ndata':<8} {'nfreq':<10} {'Block':<8} {'Standard':<12} {'Optimized':<12} "
+          f"{'Adaptive':<12} {'Speedup':<10}")
+    print("-" * 90)
 
     for bench in results['benchmarks']:
         print(f"{bench['ndata']:<8} "
+              f"{bench['nfreq']:<10} "
               f"{bench['block_size']:<8} "
               f"{bench['standard']['mean_time']:<12.4f} "
               f"{bench['optimized']['mean_time']:<12.4f} "
               f"{bench['adaptive']['mean_time']:<12.4f} "
-              f"{bench['speedup_vs_std']:<10.2f}x "
-              f"{bench['speedup_vs_opt']:<10.2f}x")
+              f"{bench['speedup_vs_std']:<10.2f}x")
 
 
 def save_results(results, filename):
@@ -251,12 +276,14 @@ def main():
     """Run benchmark suite."""
     # Extended test range focusing on small ndata where adaptive helps most
     ndata_values = [10, 20, 30, 50, 64, 100, 128, 200, 500, 1000, 5000, 10000]
-    nfreq = 1000
+    time_baseline_years = 10
     n_trials = 5
 
-    results = benchmark_adaptive(ndata_values, nfreq=nfreq, n_trials=n_trials)
+    results = benchmark_adaptive(ndata_values,
+                                 time_baseline_years=time_baseline_years,
+                                 n_trials=n_trials)
     print_summary(results)
-    save_results(results, 'bls_adaptive_benchmark.json')
+    save_results(results, 'bls_adaptive_keplerian_benchmark.json')
 
     print("\n" + "=" * 80)
     print("BENCHMARK COMPLETE")
