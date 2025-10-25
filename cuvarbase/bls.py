@@ -1150,6 +1150,139 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
     return bls_powers, solutions
 
 
+def compile_sparse_bls(block_size=_default_block_size, use_simple=True, **kwargs):
+    """
+    Compile sparse BLS GPU kernel
+
+    Parameters
+    ----------
+    block_size: int, optional (default: _default_block_size)
+        CUDA threads per CUDA block.
+    use_simple: bool, optional (default: True)
+        Use simplified kernel (more reliable, slightly slower)
+
+    Returns
+    -------
+    kernel: PyCUDA function
+        The compiled sparse_bls_kernel function
+    """
+    # Read kernel - use simple version by default (it works!)
+    kernel_name = 'sparse_bls_simple' if use_simple else 'sparse_bls'
+    cppd = dict(BLOCK_SIZE=block_size)
+    kernel_txt = _module_reader(find_kernel(kernel_name),
+                                cpp_defs=cppd)
+
+    # compile kernel
+    module = SourceModule(kernel_txt, options=['--use_fast_math'])
+
+    func_name = 'sparse_bls_kernel_simple' if use_simple else 'sparse_bls_kernel'
+    kernel = module.get_function(func_name)
+
+    # Don't use prepare() - it causes issues with large shared memory
+    return kernel
+
+
+def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
+                   block_size=64, max_ndata=None,
+                   stream=None, kernel=None):
+    """
+    GPU-accelerated sparse BLS implementation.
+
+    Uses a CUDA kernel to test all pairs of observations as potential
+    transit boundaries. More efficient than CPU implementation for datasets
+    with ~100-1000 observations.
+
+    Based on https://arxiv.org/abs/2103.06193
+
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times
+    y: array_like, float
+        Observations
+    dy: array_like, float
+        Observation uncertainties
+    freqs: array_like, float
+        Frequencies to test
+    ignore_negative_delta_sols: bool, optional (default: False)
+        Whether or not to ignore solutions with negative delta (inverted dips)
+    block_size: int, optional (default: 64)
+        CUDA threads per CUDA block (use 32-128 for best performance)
+    max_ndata: int, optional (default: None)
+        Maximum number of data points (for shared memory allocation).
+        If None, uses len(t)
+    stream: pycuda.driver.Stream, optional (default: None)
+        CUDA stream for async execution
+    kernel: PyCUDA function, optional (default: None)
+        Pre-compiled kernel. If None, compiles kernel automatically.
+
+    Returns
+    -------
+    bls_powers: array_like, float
+        BLS power at each frequency
+    solutions: list of (q, phi0) tuples
+        Best (q, phi0) solution at each frequency
+    """
+    # Convert to numpy arrays
+    t = np.asarray(t).astype(np.float32)
+    y = np.asarray(y).astype(np.float32)
+    dy = np.asarray(dy).astype(np.float32)
+    freqs = np.asarray(freqs).astype(np.float32)
+
+    ndata = len(t)
+    nfreqs = len(freqs)
+
+    if max_ndata is None:
+        max_ndata = ndata
+
+    # Compile kernel if not provided
+    if kernel is None:
+        kernel = compile_sparse_bls(block_size=block_size)
+
+    # Allocate GPU memory
+    t_g = gpuarray.to_gpu(t)
+    y_g = gpuarray.to_gpu(y)
+    dy_g = gpuarray.to_gpu(dy)
+    freqs_g = gpuarray.to_gpu(freqs)
+
+    bls_powers_g = gpuarray.zeros(nfreqs, dtype=np.float32)
+    best_q_g = gpuarray.zeros(nfreqs, dtype=np.float32)
+    best_phi_g = gpuarray.zeros(nfreqs, dtype=np.float32)
+
+    # Calculate shared memory size
+    # Simple kernel needs: 3 data arrays (phi, y, w) + 1 temp array for reductions
+    # Allocate for blockDim from function parameter (block_size) to be safe
+    shared_mem_size = (3 * max_ndata + block_size) * 4
+
+    # Launch kernel
+    # Grid: one block per frequency (or fewer if limited by hardware)
+    max_blocks = 65535  # CUDA maximum
+    grid = (min(nfreqs, max_blocks), 1)
+    block = (block_size, 1, 1)
+
+    if stream is None:
+        stream = cuda.Stream()
+
+    # Call kernel without prepare() to avoid resource issues
+    kernel(
+        t_g, y_g, dy_g, freqs_g,
+        np.uint32(ndata), np.uint32(nfreqs),
+        np.uint32(ignore_negative_delta_sols),
+        bls_powers_g, best_q_g, best_phi_g,
+        block=block, grid=grid, stream=stream,
+        shared=shared_mem_size
+    )
+
+    # Copy results back
+    stream.synchronize()
+    bls_powers = bls_powers_g.get()
+    best_q = best_q_g.get()
+    best_phi = best_phi_g.get()
+
+    solutions = list(zip(best_q, best_phi))
+    return bls_powers, solutions
+
+
 def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                   qmin_fac=0.5, qmax_fac=2.0, fmin=None,
                   fmax=None, freqs=None, qvals=None, use_fast=False,
