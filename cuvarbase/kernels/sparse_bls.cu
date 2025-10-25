@@ -272,7 +272,7 @@ __global__ void sparse_bls_kernel(
                 phi0 = sh_phi[i];
 
                 // Compute q as midpoint to next excluded observation
-                if (j < ndata - 1) {
+                if (j < ndata - 1 && j > 0) {
                     q = 0.5f * (sh_phi[j] + sh_phi[j - 1]) - phi0;
                 } else {
                     q = sh_phi[j] - phi0;
