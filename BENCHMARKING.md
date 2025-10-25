@@ -2,6 +2,16 @@
 
 This guide explains how to run comprehensive performance benchmarks for cuvarbase algorithms and interpret the results.
 
+## Example Results
+
+Here are real benchmark results from an RTX 4000 Ada Generation GPU:
+
+![Benchmark Results](examples/benchmark_results/benchmark_sparse_bls_scaling.png)
+
+**Key Finding**: Up to **315x speedup** for sparse BLS with 1000 observations!
+
+See [examples/benchmark_results/report.md](examples/benchmark_results/report.md) for the full report.
+
 ## Quick Start
 
 ```bash
