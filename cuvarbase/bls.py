@@ -6,6 +6,8 @@ and variants.
 
 """
 import sys
+import threading
+from collections import OrderedDict
 
 #import pycuda.autoinit
 import pycuda.autoprimaryctx
@@ -29,8 +31,13 @@ _all_function_names = ['full_bls_no_sol',
                        'bin_and_phase_fold_bst_multifreq',
                        'binned_bls_bst']
 
-# Kernel cache: (block_size, use_optimized) -> compiled functions
-_kernel_cache = {}
+# Kernel cache: (block_size, use_optimized, function_names) -> compiled functions
+# LRU cache with max 20 entries to prevent unbounded memory growth
+# Each entry is ~1-5 MB (compiled CUDA kernels)
+# Expected max memory: ~100 MB for full cache
+_KERNEL_CACHE_MAX_SIZE = 20
+_kernel_cache = OrderedDict()
+_kernel_cache_lock = threading.Lock()
 
 
 def _choose_block_size(ndata):
@@ -61,6 +68,9 @@ def _get_cached_kernels(block_size, use_optimized=False, function_names=None):
     """
     Get compiled kernels from cache, or compile and cache if not present.
 
+    Thread-safe LRU cache implementation. When cache exceeds max size,
+    least recently used entries are evicted.
+
     Parameters
     ----------
     block_size : int
@@ -74,6 +84,12 @@ def _get_cached_kernels(block_size, use_optimized=False, function_names=None):
     -------
     functions : dict
         Compiled kernel functions
+
+    Notes
+    -----
+    Cache size is limited to _KERNEL_CACHE_MAX_SIZE entries (~100 MB max).
+    Each compiled kernel is approximately 1-5 MB in memory.
+    Thread-safe for concurrent access from multiple threads.
     """
     if function_names is None:
         function_names = _all_function_names
@@ -81,12 +97,26 @@ def _get_cached_kernels(block_size, use_optimized=False, function_names=None):
     # Create cache key from block size, optimization flag, and function names
     key = (block_size, use_optimized, tuple(sorted(function_names)))
 
-    if key not in _kernel_cache:
-        _kernel_cache[key] = compile_bls(block_size=block_size,
+    with _kernel_cache_lock:
+        # Check if key exists and move to end (most recently used)
+        if key in _kernel_cache:
+            _kernel_cache.move_to_end(key)
+            return _kernel_cache[key]
+
+        # Compile kernel (done inside lock to prevent duplicate compilation)
+        compiled_functions = compile_bls(block_size=block_size,
                                          use_optimized=use_optimized,
                                          function_names=function_names)
 
-    return _kernel_cache[key]
+        # Add to cache
+        _kernel_cache[key] = compiled_functions
+        _kernel_cache.move_to_end(key)
+
+        # Evict oldest entry if cache is full
+        if len(_kernel_cache) > _KERNEL_CACHE_MAX_SIZE:
+            _kernel_cache.popitem(last=False)  # Remove oldest (FIFO = LRU)
+
+        return compiled_functions
 
 
 _function_signatures = {
