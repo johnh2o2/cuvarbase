@@ -95,6 +95,7 @@ Currently includes implementations of:
   - Particularly effective for gappy data with red/correlated noise
   - See [NUFFT_LRT_README.md](NUFFT_LRT_README.md) for details
 - **Conditional Entropy period finder ([CE](http://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
+  - **Note**: For production CE searches, especially with period derivatives, we recommend the [gce package](https://github.com/mikekatz04/gce) by Katz et al. (2020), which uses a more efficient algorithm. See [Conditional Entropy](#conditional-entropy-note) below.
 - **Phase Dispersion Minimization ([PDM2](http://www.stellingwerf.com/rfs-bin/index.cgi?action=PageView&id=29))** - Statistical period finding method
   - Currently operational but minimal unit testing or documentation
 
@@ -167,12 +168,41 @@ y = np.sin(2 * np.pi * t / 2.5) + np.random.normal(0, 0.1, len(t))
 freqs = np.linspace(0.1, 10, 10000)
 power = lombscargle.lombscargle(t, y, freqs)
 
-# Conditional Entropy
+# Conditional Entropy (see note below about gce for production use)
 ce_power = ce.conditional_entropy(t, y, freqs)
 
 # Box Least Squares (for transit detection)
 bls_power = bls.eebls_gpu(t, y, freqs)
 ```
+
+### Conditional Entropy Note
+
+The Conditional Entropy (CE) implementation in cuvarbase uses a less efficient algorithm than more recent developments. For production CE searches, especially those including period derivatives (Ṗ), we recommend using the [gce package](https://github.com/mikekatz04/gce) by Katz et al. (2020):
+
+```bash
+pip install gce-search
+```
+
+**Why gce is more efficient:**
+- Uses ~1/n_mag less memory per frequency point
+- Better GPU parallelism (1 thread per frequency vs 1 block per frequency)
+- Enables tractable period derivative searches
+- Faster even for simple period-only searches
+
+**When to use cuvarbase CE:**
+- Legacy workflows requiring cuvarbase's API
+- Educational purposes / algorithm exploration
+- Quick exploratory analysis
+
+**When to use gce:**
+- Production period searches at scale
+- Period derivative (Ṗ) searches
+- Performance-critical applications
+
+cuvarbase provides an optional wrapper (`cuvarbase.ce_gce`) for API compatibility if you have gce installed. The cuvarbase CE implementation remains available for backward compatibility.
+
+**References:**
+- Katz, M. L., Larson, S. L., Cohn, J., Vallisneri, M., & Graff, P. B. (2020). "Efficient computation of the Conditional Entropy period search." [arXiv:2006.06866](https://arxiv.org/abs/2006.06866)
 
 ## Using Multiple GPUs
 
