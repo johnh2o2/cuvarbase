@@ -1251,8 +1251,8 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
 
     # Calculate shared memory size
     # Simple kernel needs: 3 data arrays (phi, y, w) + 1 temp array for reductions
-    # Allocate for blockDim from compile time (256) to be safe
-    shared_mem_size = (3 * max_ndata + 256) * 4
+    # Allocate for blockDim from function parameter (block_size) to be safe
+    shared_mem_size = (3 * max_ndata + block_size) * 4
 
     # Launch kernel
     # Grid: one block per frequency (or fewer if limited by hardware)
