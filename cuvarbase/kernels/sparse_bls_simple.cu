@@ -167,7 +167,7 @@ __global__ void sparse_bls_kernel_simple(
 
             // Non-wrapped transits
             for (unsigned int i = 0; i < ndata; i++) {
-                for (unsigned int j = i + 1; j <= ndata; j++) {  // Changed: j <= ndata to include all observations
+                for (unsigned int j = i + 1; j <= ndata; j++) {  // Note: j == ndata is a special case for computing q, not for including observation j (which would be out of bounds)
                     float phi0 = sh_phi[i];
                     // Compute q properly - match CPU implementation
                     float q;
