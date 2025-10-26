@@ -1682,7 +1682,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore inverted dips
     **kwargs:
-        passed to `eebls_gpu`, `eebls_gpu_fast`, `sparse_bls_gpu`, `sparse_bls_cpu`,
+        passed to `eebls_gpu`, `eebls_gpu_fast`, `sparse_bls_gpu`,
         `compile_bls`, `fmax_transit`, `fmin_transit`, and `transit_autofreq`
 
     Returns
