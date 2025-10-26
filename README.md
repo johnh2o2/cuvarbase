@@ -67,11 +67,7 @@ This represents a major modernization effort compared to the `master` branch:
 - **New function**: `eebls_gpu_fast_adaptive()` - drop-in replacement with automatic optimization
 - See [docs/ADAPTIVE_BLS_RESULTS.md](docs/ADAPTIVE_BLS_RESULTS.md) for detailed benchmarks
 
-**Cost Impact**: For processing 5 million lightcurves (TESS scale):
-- Sparse surveys: **$123 → $23** (81% reduction in compute costs)
-- Dense surveys: **$134 → $39** (71% reduction)
-
-This optimization makes large-scale BLS searches affordable and practical for all-sky surveys.
+This optimization makes large-scale BLS searches practical and efficient for all-sky surveys.
 
 ### Breaking Changes
 - **Dropped Python 2.7 support** - now requires Python 3.7+
@@ -92,10 +88,15 @@ This optimization makes large-scale BLS searches affordable and practical for al
 - Taaki, J. S., Kamalabadi, F., & Kemball, A. (2020). *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization.*
 - Reference implementation: https://github.com/star-skelly/code_nova_exoghosts
 
-**Sparse BLS implementation** for efficient transit detection:
-- Based on algorithm from Burdge et al. 2021
-- More efficient for datasets with < 500 observations (CPU-based)
-- New `eebls_transit` wrapper automatically selects optimal algorithm
+**Sparse BLS implementation** for efficient CPU-based transit detection:
+- Based on algorithm from [Panahi & Zucker (2021)](https://arxiv.org/abs/2103.06193)
+- Optimized for small datasets (< 500 observations) using CPU
+- Avoids GPU overhead for sparse time series where CPU is more efficient
+- New `eebls_transit` wrapper automatically selects between sparse (CPU) and standard (GPU) BLS
+- Particularly useful for ground-based surveys with limited phase coverage
+
+**Citation for Sparse BLS**: If you use this method, please cite:
+- Panahi, A., & Zucker, S. (2021). *Sparse BLS: A sparse-modeling approach to the Box-fitting Least Squares periodogram.* [arXiv:2103.06193](https://arxiv.org/abs/2103.06193)
 
 **Refactored codebase organization**:
 - Cleaner module structure: `base/`, `memory/`, and `periodograms/`
@@ -123,7 +124,7 @@ Currently includes implementations of:
 - **Box Least Squares ([BLS](http://adsabs.harvard.edu/abs/2002A%26A...391..369K))** - Transit detection algorithm
   - **Adaptive GPU version** with 5-90x speedup (`eebls_gpu_fast_adaptive()`)
   - Standard GPU-accelerated version (`eebls_gpu_fast()`)
-  - Sparse BLS for small datasets (< 500 observations, CPU-based)
+  - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations, CPU-based)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
 - **NUFFT-based Likelihood Ratio Test (LRT)** - Transit detection with correlated noise (contributed by Jamila Taaki)
   - Matched filter in frequency domain with adaptive noise estimation
