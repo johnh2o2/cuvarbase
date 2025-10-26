@@ -1629,16 +1629,17 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                   qmin_fac=0.5, qmax_fac=2.0, fmin=None,
                   fmax=None, freqs=None, qvals=None, use_fast=False,
                   use_sparse=None, sparse_threshold=500,
+                  use_gpu=True,
                   ignore_negative_delta_sols=False,
                   **kwargs):
     """
     Compute BLS for timeseries, automatically selecting between GPU and
     CPU implementations based on dataset size.
-    
+
     For small datasets (ndata < sparse_threshold), uses the sparse BLS
-    algorithm which avoids binning and grid searching. For larger datasets,
-    uses the GPU-accelerated standard BLS.
-    
+    algorithm (Panahi & Zucker 2021) which avoids binning and grid searching.
+    For larger datasets, uses the standard GPU-accelerated BLS.
+
     Parameters
     ----------
     t: array_like, float
@@ -1670,17 +1671,20 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     use_fast: bool, optional (default: False)
         Use fast GPU implementation (if not using sparse)
     use_sparse: bool, optional (default: None)
-        If True, use sparse BLS. If False, use GPU BLS. If None (default),
+        If True, use sparse BLS. If False, use standard BLS. If None (default),
         automatically select based on dataset size (sparse_threshold).
     sparse_threshold: int, optional (default: 500)
         Threshold for automatically selecting sparse BLS. If ndata < threshold
         and use_sparse is None, sparse BLS is used.
+    use_gpu: bool, optional (default: True)
+        Use GPU implementation. If True, uses GPU for both sparse and standard BLS.
+        If False, uses CPU for sparse BLS. The use_gpu parameter only affects sparse BLS; standard BLS always uses GPU.
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore inverted dips
     **kwargs:
-        passed to `eebls_gpu`, `eebls_gpu_fast`, `compile_bls`, 
-        `fmax_transit`, `fmin_transit`, and `transit_autofreq`
-    
+        passed to `eebls_gpu`, `eebls_gpu_fast`, `sparse_bls_gpu`,
+        `compile_bls`, `fmax_transit`, `fmin_transit`, and `transit_autofreq`
+
     Returns
     -------
     freqs: array_like, float
@@ -1689,18 +1693,18 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
     solutions: list of ``(q, phi)`` tuples
         Best ``(q, phi)`` solution at each frequency
-        
+
         .. note::
-        
+
             Only returned when ``use_fast=False``.
-    
+
     """
     ndata = len(t)
-    
+
     # Determine whether to use sparse BLS
     if use_sparse is None:
         use_sparse = ndata < sparse_threshold
-    
+
     # Generate frequency grid if not provided
     if freqs is None:
         if qvals is not None:
@@ -1713,11 +1717,18 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                                         qmin_fac=qmin_fac, **kwargs)
     if qvals is None:
         qvals = q_transit(freqs, **kwargs)
-    
+
     # Use sparse BLS for small datasets
     if use_sparse:
-        powers, sols = sparse_bls_cpu(t, y, dy, freqs,
-                                       ignore_negative_delta_sols=ignore_negative_delta_sols)
+        if use_gpu:
+            # Use GPU sparse BLS (default)
+            powers, sols = sparse_bls_gpu(t, y, dy, freqs,
+                                          ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                          **kwargs)
+        else:
+            # Use CPU sparse BLS (fallback)
+            powers, sols = sparse_bls_cpu(t, y, dy, freqs,
+                                          ignore_negative_delta_sols=ignore_negative_delta_sols)
         return freqs, powers, sols
     
     # Use GPU BLS for larger datasets

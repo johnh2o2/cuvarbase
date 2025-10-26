@@ -88,11 +88,14 @@ This optimization makes large-scale BLS searches practical and efficient for all
 - Taaki, J. S., Kamalabadi, F., & Kemball, A. (2020). *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization.*
 - Reference implementation: https://github.com/star-skelly/code_nova_exoghosts
 
-**Sparse BLS implementation** for efficient CPU-based transit detection:
+**Sparse BLS implementation** for efficient transit detection on small datasets:
 - Based on algorithm from [Panahi & Zucker (2021)](https://arxiv.org/abs/2103.06193)
-- Optimized for small datasets (< 500 observations) using CPU
-- Avoids GPU overhead for sparse time series where CPU is more efficient
-- New `eebls_transit` wrapper automatically selects between sparse (CPU) and standard (GPU) BLS
+- **Both GPU (`sparse_bls_gpu`) and CPU (`sparse_bls_cpu`) implementations available**
+- Optimized for datasets with < 500 observations
+- Avoids binning and grid searching - directly tests all observation pairs as transit boundaries
+- New `eebls_transit` wrapper automatically selects between sparse and standard BLS
+  - **Default: GPU sparse BLS** for small datasets (use_gpu=True)
+  - CPU fallback available (use_gpu=False)
 - Particularly useful for ground-based surveys with limited phase coverage
 
 **Citation for Sparse BLS**: If you use this method, please cite:
@@ -124,7 +127,9 @@ Currently includes implementations of:
 - **Box Least Squares ([BLS](http://adsabs.harvard.edu/abs/2002A%26A...391..369K))** - Transit detection algorithm
   - **Adaptive GPU version** with 5-90x speedup (`eebls_gpu_fast_adaptive()`)
   - Standard GPU-accelerated version (`eebls_gpu_fast()`)
-  - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations, CPU-based)
+  - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations)
+    - GPU implementation: `sparse_bls_gpu()` (default)
+    - CPU implementation: `sparse_bls_cpu()` (fallback)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
 - **NUFFT-based Likelihood Ratio Test (LRT)** - Transit detection with correlated noise (contributed by Jamila Taaki)
   - Matched filter in frequency domain with adaptive noise estimation
