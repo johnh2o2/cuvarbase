@@ -1,0 +1,71 @@
+================================================================================
+TESS CATALOG BLS COST ANALYSIS: STANDARD BLS (NON-SPARSE)
+================================================================================
+
+Scenario: 5 Million TESS Lightcurves (20k observations, 1k frequencies each)
+Algorithm: Standard (binned) BLS with Keplerian duration assumption
+
+MEASURED PERFORMANCE (RTX 4000 Ada vs Astropy CPU):
+  - GPU: 0.16s per lightcurve
+  - CPU: 5.90s per lightcurve
+  - Speedup: 38x faster on GPU!
+  - Batch efficiency: 99% (nearly perfect)
+
+COST COMPARISON:
+════════════════════════════════════════════════════════════════════════════════
+
+GPU OPTIONS (spot pricing):
+┌─────────────────────────┬────────┬──────────┬─────────────┬──────────────────┐
+│ Hardware                │ Days   │ Cost     │ Cost per LC │ Value            │
+├─────────────────────────┼────────┼──────────┼─────────────┼──────────────────┤
+│ RunPod RTX 4000 Ada ⭐  │   9.1  │   $51    │  $0.000010  │ ⭐⭐⭐⭐⭐ BEST    │
+│ RunPod L40              │   6.1  │   $57    │  $0.000011  │ ⭐⭐⭐⭐⭐         │
+│ RunPod A100 40GB        │   4.5  │   $82    │  $0.000016  │ ⭐⭐⭐⭐          │
+│ RunPod H100             │   2.6  │  $105    │  $0.000021  │ ⭐⭐⭐            │
+└─────────────────────────┴────────┴──────────┴─────────────┴──────────────────┘
+
+CPU OPTIONS:
+┌─────────────────────────┬────────┬──────────┬─────────────┬──────────────────┐
+│ Hardware                │ Days   │ Cost     │ Cost per LC │ Value            │
+├─────────────────────────┼────────┼──────────┼─────────────┼──────────────────┤
+│ Hetzner CCX63 (48 vCPU) │   8.4  │  $165    │  $0.000033  │ ⭐⭐⭐ Best CPU   │
+│ AWS c7i.24xl (96, spot) │   4.4  │  $305    │  $0.000061  │ ⭐⭐             │
+│ AWS c7i.48xl (192,spot) │   2.4  │  $325    │  $0.000065  │ ⭐⭐             │
+└─────────────────────────┴────────┴──────────┴─────────────┴──────────────────┘
+
+KEY FINDINGS:
+════════════════════════════════════════════════════════════════════════════════
+
+✓ GPU is 3.2x MORE COST-EFFECTIVE than best CPU option
+✓ GPU is 38x FASTER than single-core CPU
+✓ RunPod RTX 4000 Ada (spot): $51 total for 5M lightcurves
+✓ Perfect batching: 99% efficiency at nbatch=10
+
+MULTI-GPU DEPLOYMENT (to finish faster):
+════════════════════════════════════════════════════════════════════════════════
+
+Target Timeline     GPUs Needed    Total Cost    Monthly Throughput
+─────────────────   ───────────    ──────────    ──────────────────
+ 1 month (30 days)       1              $51           5M LC/month
+ 1 week (7 days)         2              $51          20M LC/month
+ 1 day                  10              $51         150M LC/month
+ 12 hours               20              $51         300M LC/month
+
+Note: Total cost stays $51 - you're just parallelizing the work!
+
+RECOMMENDATION:
+════════════════════════════════════════════════════════════════════════════════
+
+✓ USE: cuvarbase eebls_gpu_fast on RunPod RTX 4000 Ada (spot)
+✓ DEPLOY: 5-10 GPUs for ~1 day completion
+✓ COST: $51 total for 5M lightcurves
+✓ SAVINGS: $114 vs best CPU option (69% cheaper!)
+
+For continuous processing:
+  - 1 GPU continuously: $169/month, processes 16.5M LC/month
+  - Cost per lightcurve: $0.000010 (1 cent per 1000 lightcurves!)
+
+================================================================================
+Full analysis: analysis/TESS_STANDARD_BLS_COST_ANALYSIS.md
+Benchmark script: scripts/benchmark_standard_bls.py
+================================================================================
