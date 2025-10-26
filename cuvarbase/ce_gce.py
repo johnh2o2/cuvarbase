@@ -58,7 +58,7 @@ With magnitude information for better CE::
 import numpy as np
 import warnings
 
-__all__ = ['ce_gce', 'CE_GCE_AVAILABLE']
+__all__ = ['ce_gce', 'CE_GCE_AVAILABLE', 'check_gce_available']
 
 # Check if gce is available
 try:
