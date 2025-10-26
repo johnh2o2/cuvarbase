@@ -1678,7 +1678,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         and use_sparse is None, sparse BLS is used.
     use_gpu: bool, optional (default: True)
         Use GPU implementation. If True, uses GPU for both sparse and standard BLS.
-        If False, uses CPU for sparse BLS. Standard BLS always uses GPU.
+        If False, uses CPU for sparse BLS. The use_gpu parameter only affects sparse BLS; standard BLS always uses GPU.
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore inverted dips
     **kwargs:
