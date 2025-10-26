@@ -57,20 +57,50 @@ It would be nice to incorporate additional capabilities and algorithms (e.g. [Ka
 
 This represents a major modernization effort compared to the `master` branch:
 
+### ⚡ Performance Improvements (Major Update)
+
+**Dramatically Faster BLS Transit Detection** - Up to **90x speedup** for sparse datasets:
+- Adaptive block sizing automatically optimizes GPU utilization based on dataset size
+- **5-90x faster** depending on number of observations (most dramatic for ndata < 500)
+- Particularly beneficial for ground-based surveys and sparse time series
+- Thread-safe kernel caching with LRU eviction for production environments
+- **New function**: `eebls_gpu_fast_adaptive()` - drop-in replacement with automatic optimization
+- See [docs/ADAPTIVE_BLS_RESULTS.md](docs/ADAPTIVE_BLS_RESULTS.md) for detailed benchmarks
+
+This optimization makes large-scale BLS searches practical and efficient for all-sky surveys.
+
 ### Breaking Changes
 - **Dropped Python 2.7 support** - now requires Python 3.7+
 - Removed `future` package dependency and all Python 2 compatibility code
 - Updated minimum dependency versions: numpy>=1.17, scipy>=1.3
 
 ### New Features
-- **Sparse BLS implementation** for efficient transit detection with small datasets
-  - Based on algorithm from Burdge et al. 2021
-  - More efficient for datasets with < 500 observations
-  - New `eebls_transit` wrapper that automatically selects between sparse (CPU) and standard (GPU) BLS
-- **NUFFT Likelihood Ratio Test (LRT)** implementation for transit detection with correlated noise
-  - See [NUFFT_LRT_README.md](NUFFT_LRT_README.md) for details
-  - Particularly effective for gappy data with red/correlated noise
-- **Refactored codebase organization** with `base/`, `memory/`, and `periodograms/` modules for better maintainability
+
+**NUFFT Likelihood Ratio Test (LRT)** for transit detection with correlated noise:
+- Contributed by **Jamila Taaki** ([@xiaziyna](https://github.com/xiaziyna))
+- GPU-accelerated matched filter in frequency domain with adaptive noise estimation
+- Particularly effective for gappy data with red/correlated noise
+- Naturally handles correlated (non-white) noise through power spectrum estimation
+- More robust than traditional BLS under stellar activity and systematic noise
+- See [docs/NUFFT_LRT_README.md](docs/NUFFT_LRT_README.md) for complete documentation
+
+**Citation for NUFFT-LRT**: If you use this method, please cite:
+- Taaki, J. S., Kamalabadi, F., & Kemball, A. (2020). *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization.*
+- Reference implementation: https://github.com/star-skelly/code_nova_exoghosts
+
+**Sparse BLS implementation** for efficient CPU-based transit detection:
+- Based on algorithm from [Panahi & Zucker (2021)](https://arxiv.org/abs/2103.06193)
+- Optimized for small datasets (< 500 observations) using CPU
+- Avoids GPU overhead for sparse time series where CPU is more efficient
+- New `eebls_transit` wrapper automatically selects between sparse (CPU) and standard (GPU) BLS
+- Particularly useful for ground-based surveys with limited phase coverage
+
+**Citation for Sparse BLS**: If you use this method, please cite:
+- Panahi, A., & Zucker, S. (2021). *Sparse BLS: A sparse-modeling approach to the Box-fitting Least Squares periodogram.* [arXiv:2103.06193](https://arxiv.org/abs/2103.06193)
+
+**Refactored codebase organization**:
+- Cleaner module structure: `base/`, `memory/`, and `periodograms/`
+- Better maintainability and extensibility
 
 ### Improvements
 - Modern Python packaging with `pyproject.toml`
@@ -78,6 +108,11 @@ This represents a major modernization effort compared to the `master` branch:
 - GitHub Actions CI/CD for automated testing across Python 3.7-3.12
 - Cleaner, more maintainable codebase (89 lines of compatibility code removed)
 - Updated documentation and contributing guidelines
+
+### Additional Documentation
+- [Benchmarking Guide](docs/BENCHMARKING.md) - Performance testing methodology
+- [RunPod Development](docs/RUNPOD_DEVELOPMENT.md) - Cloud GPU development setup
+- [Code Quality Fixes](docs/CODE_QUALITY_FIXES.md) - Thread-safety and memory management
 
 For a complete list of changes, see [CHANGELOG.rst](CHANGELOG.rst).
 
@@ -87,13 +122,14 @@ Currently includes implementations of:
 
 - **Generalized [Lomb-Scargle](https://arxiv.org/abs/0901.2573) periodogram** - Fast period finding for unevenly sampled data
 - **Box Least Squares ([BLS](http://adsabs.harvard.edu/abs/2002A%26A...391..369K))** - Transit detection algorithm
-  - Standard GPU-accelerated version
-  - Sparse BLS for small datasets (< 500 observations)
+  - **Adaptive GPU version** with 5-90x speedup (`eebls_gpu_fast_adaptive()`)
+  - Standard GPU-accelerated version (`eebls_gpu_fast()`)
+  - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations, CPU-based)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
-- **NUFFT-based Likelihood Ratio Test (LRT)** - Transit detection with correlated noise
+- **NUFFT-based Likelihood Ratio Test (LRT)** - Transit detection with correlated noise (contributed by Jamila Taaki)
   - Matched filter in frequency domain with adaptive noise estimation
   - Particularly effective for gappy data with red/correlated noise
-  - See [NUFFT_LRT_README.md](NUFFT_LRT_README.md) for details
+  - See [docs/NUFFT_LRT_README.md](docs/NUFFT_LRT_README.md) for details
 - **Conditional Entropy period finder ([CE](http://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
 - **Phase Dispersion Minimization ([PDM2](http://www.stellingwerf.com/rfs-bin/index.cgi?action=PageView&id=29))** - Statistical period finding method
   - Currently operational but minimal unit testing or documentation
@@ -157,22 +193,27 @@ Full documentation is available at: https://johnh2o2.github.io/cuvarbase/
 
 ```python
 import numpy as np
-from cuvarbase import ce, lombscargle, bls
+from cuvarbase import bls
 
-# Generate some sample data
-t = np.sort(np.random.uniform(0, 10, 1000))
+# Generate some sample time series data
+t = np.sort(np.random.uniform(0, 10, 1000)).astype(np.float32)
 y = np.sin(2 * np.pi * t / 2.5) + np.random.normal(0, 0.1, len(t))
+dy = np.ones_like(y) * 0.1  # uncertainties
 
-# Lomb-Scargle periodogram
-freqs = np.linspace(0.1, 10, 10000)
-power = lombscargle.lombscargle(t, y, freqs)
+# Box Least Squares (BLS) - Transit detection
+# Define frequency grid
+freqs = np.linspace(0.1, 2.0, 5000).astype(np.float32)
 
-# Conditional Entropy
-ce_power = ce.conditional_entropy(t, y, freqs)
+# Standard BLS
+power = bls.eebls_gpu(t, y, dy, freqs)
+best_freq = freqs[np.argmax(power)]
+print(f"Best period: {1/best_freq:.2f} (expected: 2.5)")
 
-# Box Least Squares (for transit detection)
-bls_power = bls.eebls_gpu(t, y, freqs)
+# Or use adaptive BLS for automatic optimization (5-90x faster!)
+power_adaptive = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
 ```
+
+For more advanced usage including Lomb-Scargle and Conditional Entropy, see the [full documentation](https://johnh2o2.github.io/cuvarbase/) and [examples/](examples/).
 
 ## Using Multiple GPUs
 
@@ -244,8 +285,10 @@ This project has benefited from contributions and support from many people in th
 - Gaspar Bakos
 - Kevin Burdge
 - Attila Bodi
-- Jamila Taaki
-- All users and contributors
+- **Jamila Taaki** - for contributing the NUFFT-based Likelihood Ratio Test (LRT) implementation for transit detection with correlated noise. Her work on adaptive matched filtering in the frequency domain has significantly expanded cuvarbase's capabilities for handling realistic astrophysical noise. See [docs/NUFFT_LRT_README.md](docs/NUFFT_LRT_README.md) and her papers:
+  - Taaki, J. S., Kamalabadi, F., & Kemball, A. (2020). *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization.*
+  - Reference implementation: https://github.com/star-skelly/code_nova_exoghosts
+- All users and contributors who have helped make cuvarbase useful to the astronomy community
 
 ## Contact
 
