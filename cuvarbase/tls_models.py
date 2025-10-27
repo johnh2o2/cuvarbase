@@ -348,6 +348,10 @@ def validate_limb_darkening_coeffs(u, limb_dark='quadratic'):
         # Physical constraints: 0 < u1 + u2 < 1, u1 > 0, u1 + 2*u2 > 0
         if not (0 < u[0] + u[1] < 1):
             raise ValueError(f"u1 + u2 = {u[0] + u[1]} must be in (0, 1)")
+        if not (u[0] > 0):
+            raise ValueError(f"u1 = {u[0]} must be > 0")
+        if not (u[0] + 2*u[1] > 0):
+            raise ValueError(f"u1 + 2*u2 = {u[0] + 2*u[1]} must be > 0")
 
     elif limb_dark == 'linear':
         if len(u) != 1:
