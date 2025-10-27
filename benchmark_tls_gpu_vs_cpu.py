@@ -91,7 +91,6 @@ def run_gpu_tls(t, y, dy, periods, R_star=1.0, M_star=1.0):
         periods=periods,
         R_star=R_star,
         M_star=M_star,
-        use_simple=True,  # Always use simple kernel (optimized/Thrust kernel is broken)
         block_size=128
     )
     t1 = time.time()

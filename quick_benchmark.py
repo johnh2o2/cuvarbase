@@ -33,8 +33,7 @@ for ndata in ndata_values:
     gpu_result = gpu_tls.tls_search_gpu(
         t, y, dy,
         period_min=5.0,
-        period_max=20.0,
-        use_simple=True
+        period_max=20.0
     )
     t1_gpu = time.time()
     gpu_time = t1_gpu - t0_gpu

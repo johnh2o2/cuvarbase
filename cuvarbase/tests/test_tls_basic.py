@@ -194,11 +194,11 @@ class TestTLSKernel:
         from cuvarbase import tls
 
         # First call - compiles
-        kernel1 = tls._get_cached_kernels(128, use_optimized=False)
+        kernel1 = tls._get_cached_kernels(128)
         assert kernel1 is not None
 
         # Second call - should use cache
-        kernel2 = tls._get_cached_kernels(128, use_optimized=False)
+        kernel2 = tls._get_cached_kernels(128)
         assert kernel2 is kernel1
 
     def test_block_size_selection(self):

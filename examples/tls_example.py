@@ -155,8 +155,7 @@ def run_tls_example(use_gpu=True):
                 t, y, dy,
                 periods=periods,
                 R_star=1.0,
-                M_star=1.0,
-                use_simple=True  # Use simple kernel for this dataset size
+                M_star=1.0
             )
             print("   ✓ GPU search completed")
         except Exception as e:

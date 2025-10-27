@@ -52,8 +52,8 @@ except Exception as e:
 print("\n5. Testing TLS kernel compilation...")
 try:
     from cuvarbase import tls
-    kernel = tls.compile_tls(block_size=128, use_simple=True)
-    print(f"   ✓ Simple kernel compiled successfully")
+    kernel = tls.compile_tls(block_size=128)
+    print(f"   ✓ Kernel compiled successfully")
 except Exception as e:
     print(f"   ✗ Kernel compilation error: {e}")
     import traceback
@@ -81,7 +81,6 @@ try:
     results = tls.tls_search_gpu(
         t, y, dy,
         periods=periods_test,
-        use_simple=True,
         block_size=64
     )
 
