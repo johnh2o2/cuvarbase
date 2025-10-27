@@ -30,7 +30,7 @@ print(f"Period grid: {len(periods)} periods from {periods[0]:.2f} to {periods[-1
 
 # Run TLS
 print("Running TLS...")
-results = tls.tls_search_gpu(t, y, dy, periods=periods, use_simple=len(t) < 500)
+results = tls.tls_search_gpu(t, y, dy, periods=periods, use_simple=True)
 
 print(f"\nResults:")
 print(f"  Period: {results['period']:.4f} (true: {period_true:.1f})")
