@@ -17,13 +17,73 @@
 #define BLOCK_SIZE 128
 #endif
 
-#define MAX_NDATA 10000
+#define MAX_NDATA 100000  // Increased from 10000 to support larger datasets
 #define PI 3.141592653589793f
 #define WARP_SIZE 32
 
 // Device utility functions
 __device__ inline float mod1(float x) {
     return x - floorf(x);
+}
+
+/**
+ * Bitonic sort for phase-folded data
+ * More scalable than insertion sort - O(N log^2 N) instead of O(N^2)
+ * Can handle datasets up to MAX_NDATA points
+ */
+__device__ void bitonic_sort_phases(
+    float* phases,
+    float* y_sorted,
+    float* dy_sorted,
+    int ndata)
+{
+    int tid = threadIdx.x;
+    int stride = blockDim.x;
+
+    // Bitonic sort: works for any array size
+    for (int k = 2; k <= ndata; k *= 2) {
+        for (int j = k / 2; j > 0; j /= 2) {
+            for (int i = tid; i < ndata; i += stride) {
+                int ixj = i ^ j;
+                if (ixj > i) {
+                    if ((i & k) == 0) {
+                        // Ascending
+                        if (phases[i] > phases[ixj]) {
+                            // Swap phases
+                            float temp = phases[i];
+                            phases[i] = phases[ixj];
+                            phases[ixj] = temp;
+                            // Swap y
+                            temp = y_sorted[i];
+                            y_sorted[i] = y_sorted[ixj];
+                            y_sorted[ixj] = temp;
+                            // Swap dy
+                            temp = dy_sorted[i];
+                            dy_sorted[i] = dy_sorted[ixj];
+                            dy_sorted[ixj] = temp;
+                        }
+                    } else {
+                        // Descending
+                        if (phases[i] < phases[ixj]) {
+                            // Swap phases
+                            float temp = phases[i];
+                            phases[i] = phases[ixj];
+                            phases[ixj] = temp;
+                            // Swap y
+                            temp = y_sorted[i];
+                            y_sorted[i] = y_sorted[ixj];
+                            y_sorted[ixj] = temp;
+                            // Swap dy
+                            temp = dy_sorted[i];
+                            dy_sorted[i] = dy_sorted[ixj];
+                            dy_sorted[ixj] = temp;
+                        }
+                    }
+                }
+            }
+            __syncthreads();
+        }
+    }
 }
 
 /**
@@ -130,41 +190,15 @@ extern "C" __global__ void tls_search_kernel_keplerian(
     }
     __syncthreads();
 
-    // Insertion sort (works for ndata < 5000)
-    // For larger datasets, kernel will return NaN to signal error
-    if (threadIdx.x == 0) {
-        if (ndata >= 5000) {
-            // Signal error: dataset too large for insertion sort
-            // Return NaN values to indicate failure
-            chi2_out[period_idx] = nanf("");
-            best_t0_out[period_idx] = nanf("");
-            best_duration_out[period_idx] = nanf("");
-            best_depth_out[period_idx] = nanf("");
-            return;  // Early exit - don't process this period
-        }
-
-        // Perform insertion sort
-        for (int i = 0; i < ndata; i++) {
-            y_sorted[i] = y[i];
-            dy_sorted[i] = dy[i];
-        }
-        for (int i = 1; i < ndata; i++) {
-            float key_phase = phases[i];
-            float key_y = y_sorted[i];
-            float key_dy = dy_sorted[i];
-            int j = i - 1;
-            while (j >= 0 && phases[j] > key_phase) {
-                phases[j + 1] = phases[j];
-                y_sorted[j + 1] = y_sorted[j];
-                dy_sorted[j + 1] = dy_sorted[j];
-                j--;
-            }
-            phases[j + 1] = key_phase;
-            y_sorted[j + 1] = key_y;
-            dy_sorted[j + 1] = key_dy;
-        }
+    // Initialize y_sorted and dy_sorted arrays
+    for (int i = threadIdx.x; i < ndata; i += blockDim.x) {
+        y_sorted[i] = y[i];
+        dy_sorted[i] = dy[i];
     }
     __syncthreads();
+
+    // Sort by phase using bitonic sort (works for any ndata up to MAX_NDATA)
+    bitonic_sort_phases(phases, y_sorted, dy_sorted, ndata);
 
     // Search over durations and T0 using Keplerian constraints
     float thread_min_chi2 = 1e30f;
@@ -278,41 +312,15 @@ extern "C" __global__ void tls_search_kernel(
     }
     __syncthreads();
 
-    // Insertion sort (works for ndata < 5000)
-    // For larger datasets, kernel will return NaN to signal error
-    if (threadIdx.x == 0) {
-        if (ndata >= 5000) {
-            // Signal error: dataset too large for insertion sort
-            // Return NaN values to indicate failure
-            chi2_out[period_idx] = nanf("");
-            best_t0_out[period_idx] = nanf("");
-            best_duration_out[period_idx] = nanf("");
-            best_depth_out[period_idx] = nanf("");
-            return;  // Early exit - don't process this period
-        }
-
-        // Perform insertion sort
-        for (int i = 0; i < ndata; i++) {
-            y_sorted[i] = y[i];
-            dy_sorted[i] = dy[i];
-        }
-        for (int i = 1; i < ndata; i++) {
-            float key_phase = phases[i];
-            float key_y = y_sorted[i];
-            float key_dy = dy_sorted[i];
-            int j = i - 1;
-            while (j >= 0 && phases[j] > key_phase) {
-                phases[j + 1] = phases[j];
-                y_sorted[j + 1] = y_sorted[j];
-                dy_sorted[j + 1] = dy_sorted[j];
-                j--;
-            }
-            phases[j + 1] = key_phase;
-            y_sorted[j + 1] = key_y;
-            dy_sorted[j + 1] = key_dy;
-        }
+    // Initialize y_sorted and dy_sorted arrays
+    for (int i = threadIdx.x; i < ndata; i += blockDim.x) {
+        y_sorted[i] = y[i];
+        dy_sorted[i] = dy[i];
     }
     __syncthreads();
+
+    // Sort by phase using bitonic sort (works for any ndata up to MAX_NDATA)
+    bitonic_sort_phases(phases, y_sorted, dy_sorted, ndata);
 
     // Search over durations and T0
     float thread_min_chi2 = 1e30f;

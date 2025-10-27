@@ -135,7 +135,7 @@ Currently includes implementations of:
   - Keplerian-aware duration constraints (`tls_transit()`) - searches physically plausible transit durations
   - Standard mode (`tls_search_gpu()`) for custom period/duration grids
   - Optimal period grid sampling (Ofir 2014)
-  - Designed for datasets with 500-5000 observations
+  - Supports datasets up to ~100,000 observations (optimal: 500-20,000)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
 - **NUFFT-based Likelihood Ratio Test (LRT)** - Transit detection with correlated noise (contributed by Jamila Taaki)
   - Matched filter in frequency domain with adaptive noise estimation
