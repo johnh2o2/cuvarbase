@@ -236,18 +236,18 @@ extern "C" __global__ void tls_search_kernel_optimized(
 
     // Test different transit durations
     int n_durations = 15;  // More durations than Phase 1
-    float duration_min = 0.005f;  // 0.5% of period (min)
-    float duration_max = 0.15f;   // 15% of period (max)
+    float duration_phase_min = 0.005f;  // 0.5% of period (min)
+    float duration_phase_max = 0.15f;   // 15% of period (max)
 
     int config_idx = 0;
 
     for (int d_idx = 0; d_idx < n_durations; d_idx++) {
-        // Logarithmic spacing for durations
-        float log_dur_min = logf(duration_min);
-        float log_dur_max = logf(duration_max);
+        // Logarithmic spacing for duration fractions
+        float log_dur_min = logf(duration_phase_min);
+        float log_dur_max = logf(duration_phase_max);
         float log_duration = log_dur_min + (log_dur_max - log_dur_min) * d_idx / (n_durations - 1);
-        float duration = expf(log_duration);
-        float duration_phase = duration / period;
+        float duration_phase = expf(log_duration);
+        float duration = duration_phase * period;
 
         // Test different T0 positions (stride over threads)
         int n_t0 = 30;  // More T0 positions than Phase 1
@@ -379,7 +379,8 @@ extern "C" __global__ void tls_search_kernel_simple(
     __syncthreads();
 
     // Simple insertion sort (better than bubble sort, still simple)
-    if (threadIdx.x == 0 && ndata < 500) {
+    // Increased limit since Thrust sorting doesn't work from device code
+    if (threadIdx.x == 0 && ndata < 5000) {
         // Copy y and dy
         for (int i = 0; i < ndata; i++) {
             y_sorted[i] = y[i];
@@ -413,15 +414,15 @@ extern "C" __global__ void tls_search_kernel_simple(
     float thread_best_depth = 0.0f;
 
     int n_durations = 15;
-    float duration_min = 0.005f;
-    float duration_max = 0.15f;
+    float duration_phase_min = 0.005f;
+    float duration_phase_max = 0.15f;
 
     for (int d_idx = 0; d_idx < n_durations; d_idx++) {
-        float log_dur_min = logf(duration_min);
-        float log_dur_max = logf(duration_max);
+        float log_dur_min = logf(duration_phase_min);
+        float log_dur_max = logf(duration_phase_max);
         float log_duration = log_dur_min + (log_dur_max - log_dur_min) * d_idx / (n_durations - 1);
-        float duration = expf(log_duration);
-        float duration_phase = duration / period;
+        float duration_phase = expf(log_duration);
+        float duration = duration_phase * period;
 
         int n_t0 = 30;
 

@@ -467,7 +467,9 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
 
     # Auto-select kernel variant based on dataset size
     if use_simple is None:
-        use_simple = (ndata < 500)  # Use simple kernel for small datasets
+        # FIXME: Thrust sorting from device code doesn't work properly
+        # Always use simple kernel for now until we implement proper sorting
+        use_simple = True  # (ndata < 500)  # Use simple kernel for small datasets
 
     # Choose block size
     if block_size is None:
