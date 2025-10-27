@@ -141,7 +141,11 @@ def signal_to_noise(depth, depth_err=None, n_transits=1):
     depth : float
         Transit depth
     depth_err : float, optional
-        Uncertainty in depth. If None, estimated from Poisson statistics
+        Uncertainty in depth. If None, estimated from Poisson statistics.
+        **WARNING**: The default Poisson approximation is overly simplified
+        and may not be accurate for real data with systematic noise, correlated
+        errors, or stellar activity. Users should provide actual depth_err values
+        computed from their data for more accurate SNR calculations.
     n_transits : int, optional
         Number of transits (default: 1)
 
@@ -153,9 +157,19 @@ def signal_to_noise(depth, depth_err=None, n_transits=1):
     Notes
     -----
     SNR improves as sqrt(n_transits) for independent transits.
+
+    The default depth_err estimation (depth / sqrt(n_transits)) assumes:
+    - Pure Poisson (photon) noise
+    - No systematic errors
+    - Independent transits
+    - White noise
+
+    For realistic astrophysical data, these assumptions are rarely valid.
+    Always provide depth_err when available for accurate results.
     """
     if depth_err is None:
         # Rough estimate from Poisson statistics
+        # WARNING: This is a simplified approximation - see docstring
         depth_err = depth / np.sqrt(n_transits)
 
     if depth_err < 1e-10:
