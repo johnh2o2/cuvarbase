@@ -145,7 +145,8 @@ def compile_tls(block_size=_default_block_size, use_optimized=False, use_simple=
     kernel_txt = _module_reader(find_kernel(kernel_name), cpp_defs=cppd)
 
     # Compile with fast math
-    module = SourceModule(kernel_txt, options=['--use_fast_math'])
+    # no_extern_c=True needed for C++ code (Thrust, etc.)
+    module = SourceModule(kernel_txt, options=['--use_fast_math'], no_extern_c=True)
 
     # Get kernel function
     kernel = module.get_function(function_name)

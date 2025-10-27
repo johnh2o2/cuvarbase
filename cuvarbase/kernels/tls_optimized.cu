@@ -155,7 +155,7 @@ __device__ float calculate_chi2_optimized(
  * Grid: (nperiods, 1, 1)
  * Block: (BLOCK_SIZE, 1, 1)
  */
-__global__ void tls_search_kernel_optimized(
+extern "C" __global__ void tls_search_kernel_optimized(
     const float* __restrict__ t,
     const float* __restrict__ y,
     const float* __restrict__ dy,
@@ -329,7 +329,7 @@ __global__ void tls_search_kernel_optimized(
     // Thread 0 writes final result
     if (threadIdx.x == 0) {
         chi2_out[period_idx] = thread_chi2[0];
-        best_t0_out[period_idx] = thread_best_t0[0];
+        best_t0_out[period_idx] = thread_t0[0];
         best_duration_out[period_idx] = thread_duration[0];
         best_depth_out[period_idx] = thread_depth[0];
     }
@@ -339,7 +339,7 @@ __global__ void tls_search_kernel_optimized(
  * Simpler kernel for small datasets that doesn't use Thrust
  * (for compatibility and when Thrust overhead is not worth it)
  */
-__global__ void tls_search_kernel_simple(
+extern "C" __global__ void tls_search_kernel_simple(
     const float* __restrict__ t,
     const float* __restrict__ y,
     const float* __restrict__ dy,
