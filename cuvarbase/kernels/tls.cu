@@ -207,7 +207,7 @@ __device__ void bubble_sort_phases(
  * Grid: (nperiods, 1, 1)
  * Block: (BLOCK_SIZE, 1, 1)
  */
-__global__ void tls_search_kernel(
+extern "C" __global__ void tls_search_kernel(
     const float* __restrict__ t,           // Time array [ndata]
     const float* __restrict__ y,           // Flux array [ndata]
     const float* __restrict__ dy,          // Uncertainty array [ndata]
