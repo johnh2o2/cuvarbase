@@ -115,14 +115,13 @@ def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,
         period_max = T_span / 2.0
 
     if period_min is None:
-        # Minimum from requiring n_transits_min transits
-        period_from_transits = T_span / n_transits_min
-
         # Minimum from Roche limit (rough approximation)
         # P_roche ≈ 0.5 days for Sun-like star
         roche_period = 0.5 * (R_star**(3.0/2.0)) / np.sqrt(M_star)
 
-        period_min = max(roche_period, period_from_transits)
+        # Also consider minimum from practical observability
+        # Shorter periods need fewer observations per transit
+        period_min = roche_period
 
     # Convert to frequencies
     f_min = 1.0 / period_max
@@ -151,7 +150,7 @@ def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,
     # Transform to frequency space
     freqs = (A / 3.0 * x + C)**3
 
-    # Convert to periods
+    # Convert to periods (will be in decreasing order since freqs is increasing)
     periods = 1.0 / freqs
 
     # Ensure periods are in correct range
@@ -160,6 +159,9 @@ def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,
     # If we somehow got no periods, use simple linear grid
     if len(periods) == 0:
         periods = np.linspace(period_min, period_max, 100)
+
+    # Sort in increasing order (standard convention)
+    periods = np.sort(periods)
 
     return periods
 
