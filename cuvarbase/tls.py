@@ -97,7 +97,7 @@ def _get_cached_kernels(block_size):
 
 def compile_tls(block_size=_default_block_size):
     """
-    Compile TLS CUDA kernel.
+    Compile TLS CUDA kernels.
 
     Parameters
     ----------
@@ -106,30 +106,34 @@ def compile_tls(block_size=_default_block_size):
 
     Returns
     -------
-    kernel : PyCUDA function
-        Compiled TLS kernel
+    kernels : dict
+        Dictionary with 'standard' and 'keplerian' kernel functions
 
     Notes
     -----
-    The kernel uses insertion sort for phase sorting, which is efficient
+    The kernels use insertion sort for phase sorting, which is efficient
     for nearly-sorted data (common after phase folding sorted time series).
     Works well for datasets up to ~5000 points.
+
+    The 'keplerian' kernel variant accepts per-period qmin/qmax arrays
+    to focus the duration search on physically plausible values.
     """
     cppd = dict(BLOCK_SIZE=block_size)
 
     kernel_name = 'tls'
-    function_name = 'tls_search_kernel'
-
     kernel_txt = _module_reader(find_kernel(kernel_name), cpp_defs=cppd)
 
     # Compile with fast math
     # no_extern_c=True needed for proper extern "C" handling
     module = SourceModule(kernel_txt, options=['--use_fast_math'], no_extern_c=True)
 
-    # Get kernel function
-    kernel = module.get_function(function_name)
+    # Get both kernel functions
+    kernels = {
+        'standard': module.get_function('tls_search_kernel'),
+        'keplerian': module.get_function('tls_search_kernel_keplerian')
+    }
 
-    return kernel
+    return kernels
 
 
 class TLSMemory:
@@ -176,6 +180,8 @@ class TLSMemory:
         self.y_g = None
         self.dy_g = None
         self.periods_g = None
+        self.qmin_g = None  # Keplerian duration constraints
+        self.qmax_g = None  # Keplerian duration constraints
         self.chi2_g = None
         self.best_t0_g = None
         self.best_duration_g = None
@@ -219,6 +225,15 @@ class TLSMemory:
                                             dtype=self.rtype,
                                             alignment=pagesize)
 
+        # Keplerian duration constraints
+        self.qmin = cuda.aligned_zeros(shape=(self.max_nperiods,),
+                                      dtype=self.rtype,
+                                      alignment=pagesize)
+
+        self.qmax = cuda.aligned_zeros(shape=(self.max_nperiods,),
+                                      dtype=self.rtype,
+                                      alignment=pagesize)
+
     def allocate_gpu_arrays(self, ndata=None, nperiods=None):
         """Allocate GPU memory."""
         if ndata is None:
@@ -230,12 +245,14 @@ class TLSMemory:
         self.y_g = gpuarray.zeros(ndata, dtype=self.rtype)
         self.dy_g = gpuarray.zeros(ndata, dtype=self.rtype)
         self.periods_g = gpuarray.zeros(nperiods, dtype=self.rtype)
+        self.qmin_g = gpuarray.zeros(nperiods, dtype=self.rtype)
+        self.qmax_g = gpuarray.zeros(nperiods, dtype=self.rtype)
         self.chi2_g = gpuarray.zeros(nperiods, dtype=self.rtype)
         self.best_t0_g = gpuarray.zeros(nperiods, dtype=self.rtype)
         self.best_duration_g = gpuarray.zeros(nperiods, dtype=self.rtype)
         self.best_depth_g = gpuarray.zeros(nperiods, dtype=self.rtype)
 
-    def setdata(self, t, y, dy, periods=None, transfer=True):
+    def setdata(self, t, y, dy, periods=None, qmin=None, qmax=None, transfer=True):
         """
         Set data for TLS computation.
 
@@ -249,6 +266,10 @@ class TLSMemory:
             Flux uncertainties
         periods : array_like, optional
             Trial periods
+        qmin : array_like, optional
+            Minimum fractional duration per period (for Keplerian search)
+        qmax : array_like, optional
+            Maximum fractional duration per period (for Keplerian search)
         transfer : bool, optional
             Transfer to GPU immediately (default: True)
         """
@@ -263,15 +284,24 @@ class TLSMemory:
             nperiods = len(periods)
             self.periods[:nperiods] = np.asarray(periods).astype(self.rtype)
 
+        if qmin is not None:
+            nperiods = len(qmin)
+            self.qmin[:nperiods] = np.asarray(qmin).astype(self.rtype)
+
+        if qmax is not None:
+            nperiods = len(qmax)
+            self.qmax[:nperiods] = np.asarray(qmax).astype(self.rtype)
+
         # Allocate GPU memory if needed
         if self.t_g is None or len(self.t_g) < ndata:
             self.allocate_gpu_arrays(ndata, len(periods) if periods is not None else self.max_nperiods)
 
         # Transfer to GPU
         if transfer:
-            self.transfer_to_gpu(ndata, len(periods) if periods is not None else None)
+            self.transfer_to_gpu(ndata, len(periods) if periods is not None else None,
+                               qmin is not None, qmax is not None)
 
-    def transfer_to_gpu(self, ndata, nperiods=None):
+    def transfer_to_gpu(self, ndata, nperiods=None, has_qmin=False, has_qmax=False):
         """Transfer data from CPU to GPU."""
         if self.stream is None:
             self.t_g.set(self.t[:ndata])
@@ -279,12 +309,20 @@ class TLSMemory:
             self.dy_g.set(self.dy[:ndata])
             if nperiods is not None:
                 self.periods_g.set(self.periods[:nperiods])
+            if has_qmin:
+                self.qmin_g.set(self.qmin[:nperiods])
+            if has_qmax:
+                self.qmax_g.set(self.qmax[:nperiods])
         else:
             self.t_g.set_async(self.t[:ndata], stream=self.stream)
             self.y_g.set_async(self.y[:ndata], stream=self.stream)
             self.dy_g.set_async(self.dy[:ndata], stream=self.stream)
             if nperiods is not None:
                 self.periods_g.set_async(self.periods[:nperiods], stream=self.stream)
+            if has_qmin:
+                self.qmin_g.set_async(self.qmin[:nperiods], stream=self.stream)
+            if has_qmax:
+                self.qmax_g.set_async(self.qmax[:nperiods], stream=self.stream)
 
     def transfer_from_gpu(self, nperiods):
         """Transfer results from GPU to CPU."""
@@ -329,6 +367,7 @@ class TLSMemory:
 
 
 def tls_search_gpu(t, y, dy, periods=None, durations=None,
+                   qmin=None, qmax=None, n_durations=15,
                    R_star=1.0, M_star=1.0,
                    period_min=None, period_max=None, n_transits_min=2,
                    oversampling_factor=3, duration_grid_step=1.1,
@@ -351,6 +390,15 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         Flux uncertainties
     periods : array_like, optional
         Custom period grid. If None, generated automatically.
+    qmin : array_like, optional
+        Minimum fractional duration per period (for Keplerian search).
+        If provided, enables Keplerian mode.
+    qmax : array_like, optional
+        Maximum fractional duration per period (for Keplerian search).
+        If provided, enables Keplerian mode.
+    n_durations : int, optional
+        Number of duration samples per period (default: 15).
+        Only used in Keplerian mode.
     R_star : float, optional
         Stellar radius in solar radii (default: 1.0)
     M_star : float, optional
@@ -426,9 +474,13 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     if block_size is None:
         block_size = _choose_block_size(ndata)
 
-    # Get or compile kernel
+    # Determine if using Keplerian mode
+    use_keplerian = (qmin is not None and qmax is not None)
+
+    # Get or compile kernels
     if kernel is None:
-        kernel = _get_cached_kernels(block_size)
+        kernels = _get_cached_kernels(block_size)
+        kernel = kernels['keplerian'] if use_keplerian else kernels['standard']
 
     # Allocate or use existing memory
     if memory is None:
@@ -437,6 +489,14 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
                                     transfer=transfer_to_device)
     elif transfer_to_device:
         memory.setdata(t, y, dy, periods=periods, transfer=True)
+
+    # Set qmin/qmax if using Keplerian mode
+    if use_keplerian:
+        qmin = np.asarray(qmin, dtype=np.float32)
+        qmax = np.asarray(qmax, dtype=np.float32)
+        if len(qmin) != nperiods or len(qmax) != nperiods:
+            raise ValueError(f"qmin and qmax must have same length as periods ({nperiods})")
+        memory.setdata(t, y, dy, periods=periods, qmin=qmin, qmax=qmax, transfer=transfer_to_device)
 
     # Calculate shared memory requirements
     # Simple/basic kernels: phases, y_sorted, dy_sorted, + 4 thread arrays
@@ -450,27 +510,52 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     grid = (nperiods, 1, 1)
     block = (block_size, 1, 1)
 
-    if stream is None:
-        kernel(
-            memory.t_g, memory.y_g, memory.dy_g,
-            memory.periods_g,
-            np.int32(ndata), np.int32(nperiods),
-            memory.chi2_g, memory.best_t0_g,
-            memory.best_duration_g, memory.best_depth_g,
-            block=block, grid=grid,
-            shared=shared_mem_size
-        )
+    if use_keplerian:
+        # Keplerian kernel with qmin/qmax arrays
+        if stream is None:
+            kernel(
+                memory.t_g, memory.y_g, memory.dy_g,
+                memory.periods_g, memory.qmin_g, memory.qmax_g,
+                np.int32(ndata), np.int32(nperiods), np.int32(n_durations),
+                memory.chi2_g, memory.best_t0_g,
+                memory.best_duration_g, memory.best_depth_g,
+                block=block, grid=grid,
+                shared=shared_mem_size
+            )
+        else:
+            kernel(
+                memory.t_g, memory.y_g, memory.dy_g,
+                memory.periods_g, memory.qmin_g, memory.qmax_g,
+                np.int32(ndata), np.int32(nperiods), np.int32(n_durations),
+                memory.chi2_g, memory.best_t0_g,
+                memory.best_duration_g, memory.best_depth_g,
+                block=block, grid=grid,
+                shared=shared_mem_size,
+                stream=stream
+            )
     else:
-        kernel(
-            memory.t_g, memory.y_g, memory.dy_g,
-            memory.periods_g,
-            np.int32(ndata), np.int32(nperiods),
-            memory.chi2_g, memory.best_t0_g,
-            memory.best_duration_g, memory.best_depth_g,
-            block=block, grid=grid,
-            shared=shared_mem_size,
-            stream=stream
-        )
+        # Standard kernel with fixed duration range
+        if stream is None:
+            kernel(
+                memory.t_g, memory.y_g, memory.dy_g,
+                memory.periods_g,
+                np.int32(ndata), np.int32(nperiods),
+                memory.chi2_g, memory.best_t0_g,
+                memory.best_duration_g, memory.best_depth_g,
+                block=block, grid=grid,
+                shared=shared_mem_size
+            )
+        else:
+            kernel(
+                memory.t_g, memory.y_g, memory.dy_g,
+                memory.periods_g,
+                np.int32(ndata), np.int32(nperiods),
+                memory.chi2_g, memory.best_t0_g,
+                memory.best_duration_g, memory.best_depth_g,
+                block=block, grid=grid,
+                shared=shared_mem_size,
+                stream=stream
+            )
 
     # Transfer results if requested
     if transfer_to_host:
@@ -569,5 +654,125 @@ def tls_search(t, y, dy, **kwargs):
     See Also
     --------
     tls_search_gpu : Lower-level GPU function
+    tls_transit : Keplerian-aware search wrapper
     """
     return tls_search_gpu(t, y, dy, **kwargs)
+
+
+def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
+                qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
+                period_min=None, period_max=None, n_transits_min=2,
+                oversampling_factor=3, **kwargs):
+    """
+    Transit Least Squares search with Keplerian duration constraints.
+
+    This is the TLS analog of BLS's eebls_transit() function. It uses stellar
+    parameters to focus the duration search on physically plausible values,
+    providing ~7-8× efficiency improvement over fixed duration ranges.
+
+    Parameters
+    ----------
+    t : array_like
+        Observation times (days)
+    y : array_like
+        Flux measurements (arbitrary units)
+    dy : array_like
+        Flux uncertainties
+    R_star : float, optional
+        Stellar radius in solar radii (default: 1.0)
+    M_star : float, optional
+        Stellar mass in solar masses (default: 1.0)
+    R_planet : float, optional
+        Fiducial planet radius in Earth radii (default: 1.0)
+        Sets the central duration value around which to search
+    qmin_fac : float, optional
+        Minimum duration factor (default: 0.5)
+        Searches down to qmin_fac × q_keplerian
+    qmax_fac : float, optional
+        Maximum duration factor (default: 2.0)
+        Searches up to qmax_fac × q_keplerian
+    n_durations : int, optional
+        Number of duration samples per period (default: 15)
+    period_min, period_max : float, optional
+        Period search range (days). Auto-computed if None.
+    n_transits_min : int, optional
+        Minimum number of transits required (default: 2)
+    oversampling_factor : float, optional
+        Period grid oversampling (default: 3)
+    **kwargs
+        Additional parameters passed to tls_search_gpu
+
+    Returns
+    -------
+    results : dict
+        Search results with keys:
+        - 'period': Best-fit period
+        - 'T0': Best mid-transit time
+        - 'duration': Best transit duration
+        - 'depth': Best transit depth
+        - 'SDE': Signal Detection Efficiency
+        - 'periods': Trial periods
+        - 'chi2': Chi-squared values per period
+        ... (see tls_search_gpu for full list)
+
+    Notes
+    -----
+    This function automatically generates:
+    1. Optimal period grid using Ofir (2014) algorithm
+    2. Per-period duration ranges based on Keplerian physics
+    3. Qmin/qmax arrays for focused duration search
+
+    The duration search at each period focuses on physically plausible values:
+    - For short periods: searches shorter durations
+    - For long periods: searches longer durations
+    - Scales with stellar density (M_star, R_star)
+
+    This is much more efficient than searching a fixed fractional duration
+    range (0.5%-15%) at all periods.
+
+    Examples
+    --------
+    >>> from cuvarbase import tls
+    >>> results = tls.tls_transit(t, y, dy,
+    ...                            R_star=1.0, M_star=1.0,
+    ...                            period_min=5.0, period_max=20.0)
+    >>> print(f"Best period: {results['period']:.4f} days")
+    >>> print(f"Transit depth: {results['depth']:.4f}")
+
+    See Also
+    --------
+    tls_search_gpu : Lower-level GPU function
+    tls_grids.duration_grid_keplerian : Generate Keplerian duration grids
+    tls_grids.q_transit : Calculate Keplerian fractional duration
+    """
+    # Generate period grid
+    periods = tls_grids.period_grid_ofir(
+        t, R_star=R_star, M_star=M_star,
+        oversampling_factor=oversampling_factor,
+        period_min=period_min, period_max=period_max,
+        n_transits_min=n_transits_min
+    )
+
+    # Generate Keplerian duration constraints
+    durations, dur_counts, q_values = tls_grids.duration_grid_keplerian(
+        periods, R_star=R_star, M_star=M_star, R_planet=R_planet,
+        qmin_fac=qmin_fac, qmax_fac=qmax_fac, n_durations=n_durations
+    )
+
+    # Calculate qmin and qmax arrays
+    qmin = q_values * qmin_fac
+    qmax = q_values * qmax_fac
+
+    # Run TLS search with Keplerian constraints
+    results = tls_search_gpu(
+        t, y, dy,
+        periods=periods,
+        qmin=qmin,
+        qmax=qmax,
+        n_durations=n_durations,
+        R_star=R_star,
+        M_star=M_star,
+        **kwargs
+    )
+
+    return results
