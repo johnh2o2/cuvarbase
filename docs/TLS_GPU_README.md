@@ -242,13 +242,16 @@ Where:
 
 ## Known Limitations
 
-1. **Dataset Size**: Insertion sort limits data to ~5000 points
-   - For larger datasets, consider binning or multiple searches
-   - Future: Could implement radix/merge sort for scalability
+1. **Dataset Size**: Bitonic sort supports up to ~100,000 points
+   - Designed for typical astronomical light curves (500-20,000 points)
+   - For >100k points, consider binning or using CPU TLS
+   - Performance is optimal for ndata < 20,000
 
 2. **Memory**: Requires ~3×N floats of GPU memory per dataset
-   - 5000 points: ~60 KB
-   - Should work on any GPU with >1GB VRAM
+   - 5,000 points: ~60 KB
+   - 20,000 points: ~240 KB
+   - 100,000 points: ~1.2 MB
+   - Should work on any GPU with >2GB VRAM
 
 3. **Duration Grid**: Currently uniform in log-space
    - Could optimize further using Ofir-style adaptive sampling
@@ -261,7 +264,8 @@ Where:
 
 ### When to Use GPU TLS (`cuvarbase.tls`)
 
-✓ Datasets with 500-5000 points (sweet spot)
+✓ Datasets with 500-20,000 points (sweet spot)
+✓ Up to ~100,000 points supported
 ✓ Bulk processing of many light curves
 ✓ Real-time transit searches
 ✓ When speed is critical (e.g., transient follow-up)
@@ -269,7 +273,7 @@ Where:
 
 ### When to Use CPU TLS (`transitleastsquares`)
 
-✓ Very large datasets (>5000 points)
+✓ Very large datasets (>100,000 points)
 ✓ Need for CPU-side features (limb darkening, eccentricity)
 ✓ Environments without CUDA-capable GPUs
 
