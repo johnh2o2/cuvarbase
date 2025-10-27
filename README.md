@@ -130,6 +130,12 @@ Currently includes implementations of:
   - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations)
     - GPU implementation: `sparse_bls_gpu()` (default)
     - CPU implementation: `sparse_bls_cpu()` (fallback)
+- **Transit Least Squares ([TLS](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract))** - GPU-accelerated transit detection with optimal depth fitting
+  - **35-202× faster** than CPU TLS (transitleastsquares package)
+  - Keplerian-aware duration constraints (`tls_transit()`) - searches physically plausible transit durations
+  - Standard mode (`tls_search_gpu()`) for custom period/duration grids
+  - Optimal period grid sampling (Ofir 2014)
+  - Designed for datasets with 500-5000 observations
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
 - **NUFFT-based Likelihood Ratio Test (LRT)** - Transit detection with correlated noise (contributed by Jamila Taaki)
   - Matched filter in frequency domain with adaptive noise estimation
@@ -196,6 +202,8 @@ Full documentation is available at: https://johnh2o2.github.io/cuvarbase/
 
 ## Quick Start
 
+### Box Least Squares (BLS) - Transit Detection
+
 ```python
 import numpy as np
 from cuvarbase import bls
@@ -205,7 +213,6 @@ t = np.sort(np.random.uniform(0, 10, 1000)).astype(np.float32)
 y = np.sin(2 * np.pi * t / 2.5) + np.random.normal(0, 0.1, len(t))
 dy = np.ones_like(y) * 0.1  # uncertainties
 
-# Box Least Squares (BLS) - Transit detection
 # Define frequency grid
 freqs = np.linspace(0.1, 2.0, 5000).astype(np.float32)
 
@@ -216,6 +223,36 @@ print(f"Best period: {1/best_freq:.2f} (expected: 2.5)")
 
 # Or use adaptive BLS for automatic optimization (5-90x faster!)
 power_adaptive = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
+```
+
+### Transit Least Squares (TLS) - Advanced Transit Detection
+
+```python
+from cuvarbase import tls
+
+# Generate transit data
+t = np.sort(np.random.uniform(0, 50, 500)).astype(np.float32)
+y = np.ones(len(t), dtype=np.float32)
+dy = np.ones(len(t), dtype=np.float32) * 0.001
+
+# Add 1% transit at 10-day period
+phase = (t % 10.0) / 10.0
+in_transit = (phase < 0.01) | (phase > 0.99)
+y[in_transit] -= 0.01
+y += np.random.normal(0, 0.001, len(t)).astype(np.float32)
+
+# TLS with Keplerian duration constraints (35-202x faster than CPU TLS!)
+results = tls.tls_transit(
+    t, y, dy,
+    R_star=1.0,      # Solar radii
+    M_star=1.0,      # Solar masses
+    period_min=5.0,
+    period_max=20.0
+)
+
+print(f"Best period: {results['period']:.2f} days")
+print(f"Transit depth: {results['depth']:.4f}")
+print(f"SDE: {results['SDE']:.1f}")
 ```
 
 For more advanced usage including Lomb-Scargle and Conditional Entropy, see the [full documentation](https://johnh2o2.github.io/cuvarbase/) and [examples/](examples/).
