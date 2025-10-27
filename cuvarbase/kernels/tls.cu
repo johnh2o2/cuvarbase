@@ -131,7 +131,19 @@ extern "C" __global__ void tls_search_kernel_keplerian(
     __syncthreads();
 
     // Insertion sort (works for ndata < 5000)
-    if (threadIdx.x == 0 && ndata < 5000) {
+    // For larger datasets, kernel will return NaN to signal error
+    if (threadIdx.x == 0) {
+        if (ndata >= 5000) {
+            // Signal error: dataset too large for insertion sort
+            // Return NaN values to indicate failure
+            chi2_out[period_idx] = nanf("");
+            best_t0_out[period_idx] = nanf("");
+            best_duration_out[period_idx] = nanf("");
+            best_depth_out[period_idx] = nanf("");
+            return;  // Early exit - don't process this period
+        }
+
+        // Perform insertion sort
         for (int i = 0; i < ndata; i++) {
             y_sorted[i] = y[i];
             dy_sorted[i] = dy[i];
@@ -267,7 +279,19 @@ extern "C" __global__ void tls_search_kernel(
     __syncthreads();
 
     // Insertion sort (works for ndata < 5000)
-    if (threadIdx.x == 0 && ndata < 5000) {
+    // For larger datasets, kernel will return NaN to signal error
+    if (threadIdx.x == 0) {
+        if (ndata >= 5000) {
+            // Signal error: dataset too large for insertion sort
+            // Return NaN values to indicate failure
+            chi2_out[period_idx] = nanf("");
+            best_t0_out[period_idx] = nanf("");
+            best_duration_out[period_idx] = nanf("");
+            best_depth_out[period_idx] = nanf("");
+            return;  // Early exit - don't process this period
+        }
+
+        // Perform insertion sort
         for (int i = 0; i < ndata; i++) {
             y_sorted[i] = y[i];
             dy_sorted[i] = dy[i];

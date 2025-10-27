@@ -568,6 +568,17 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         best_duration_vals = memory.best_duration[:nperiods].copy()
         best_depth_vals = memory.best_depth[:nperiods].copy()
 
+        # Check for NaN values indicating dataset too large error
+        if np.any(np.isnan(chi2_vals)):
+            raise ValueError(
+                f"TLS GPU kernel failed: dataset too large (ndata={len(t)}). "
+                f"The insertion sort algorithm is limited to ndata < 5000. "
+                f"For larger datasets, consider:\n"
+                f"  1. Binning the data to reduce the number of points\n"
+                f"  2. Using the CPU TLS implementation (transitleastsquares)\n"
+                f"  3. Splitting the search into multiple segments"
+            )
+
         # Find best period
         best_idx = np.argmin(chi2_vals)
         best_period = periods[best_idx]

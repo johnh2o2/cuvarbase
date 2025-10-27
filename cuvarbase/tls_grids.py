@@ -406,7 +406,7 @@ def t0_grid(period, duration, n_transits=None, oversampling=5):
 
 def validate_stellar_parameters(R_star=1.0, M_star=1.0,
                                 R_star_min=0.13, R_star_max=3.5,
-                                M_star_min=0.1, M_star_max=1.0):
+                                M_star_min=0.1, M_star_max=2.0):
     """
     Validate stellar parameters are within reasonable bounds.
 
