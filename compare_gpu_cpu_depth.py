@@ -31,8 +31,7 @@ print(f"\n--- GPU TLS ---")
 gpu_result = gpu_tls.tls_search_gpu(
     t.astype(np.float32), y, dy,
     period_min=9.0,
-    period_max=11.0,
-    use_simple=True
+    period_max=11.0
 )
 
 print(f"Period: {gpu_result['period']:.4f} (error: {abs(gpu_result['period'] - period_true)/period_true*100:.2f}%)")

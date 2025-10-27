@@ -60,25 +60,21 @@ def _choose_block_size(ndata):
         return 128  # Max for TLS (vs 256 for BLS)
 
 
-def _get_cached_kernels(block_size, use_optimized=False, use_simple=False):
+def _get_cached_kernels(block_size):
     """
-    Get compiled TLS kernels from cache.
+    Get compiled TLS kernel from cache.
 
     Parameters
     ----------
     block_size : int
         CUDA block size
-    use_optimized : bool
-        Use optimized kernel variant
-    use_simple : bool
-        Use simple kernel variant
 
     Returns
     -------
     kernel : PyCUDA function
         Compiled kernel function
     """
-    key = (block_size, use_optimized, use_simple)
+    key = block_size
 
     with _kernel_cache_lock:
         if key in _kernel_cache:
@@ -86,9 +82,7 @@ def _get_cached_kernels(block_size, use_optimized=False, use_simple=False):
             return _kernel_cache[key]
 
         # Compile kernel
-        compiled = compile_tls(block_size=block_size,
-                               use_optimized=use_optimized,
-                               use_simple=use_simple)
+        compiled = compile_tls(block_size=block_size)
 
         # Add to cache
         _kernel_cache[key] = compiled
@@ -101,7 +95,7 @@ def _get_cached_kernels(block_size, use_optimized=False, use_simple=False):
         return compiled
 
 
-def compile_tls(block_size=_default_block_size, use_optimized=False, use_simple=False):
+def compile_tls(block_size=_default_block_size):
     """
     Compile TLS CUDA kernel.
 
@@ -109,11 +103,6 @@ def compile_tls(block_size=_default_block_size, use_optimized=False, use_simple=
     ----------
     block_size : int, optional
         CUDA block size (default: 128)
-    use_optimized : bool, optional
-        Use optimized kernel with Thrust sorting (default: False)
-    use_simple : bool, optional
-        Use simple kernel without Thrust (default: False)
-        Takes precedence over use_optimized
 
     Returns
     -------
@@ -122,30 +111,19 @@ def compile_tls(block_size=_default_block_size, use_optimized=False, use_simple=
 
     Notes
     -----
-    The kernel will be compiled with the following macros:
-    - BLOCK_SIZE: Number of threads per block
-
-    Three kernel variants:
-    - Basic (Phase 1): Simple bubble sort, basic features
-    - Simple: Insertion sort, optimal depth, no Thrust dependency
-    - Optimized (Phase 2): Thrust sorting, full optimizations
+    The kernel uses insertion sort for phase sorting, which is efficient
+    for nearly-sorted data (common after phase folding sorted time series).
+    Works well for datasets up to ~5000 points.
     """
     cppd = dict(BLOCK_SIZE=block_size)
 
-    if use_simple:
-        kernel_name = 'tls_optimized'  # Has simple kernel too
-        function_name = 'tls_search_kernel_simple'
-    elif use_optimized:
-        kernel_name = 'tls_optimized'
-        function_name = 'tls_search_kernel_optimized'
-    else:
-        kernel_name = 'tls'
-        function_name = 'tls_search_kernel'
+    kernel_name = 'tls'
+    function_name = 'tls_search_kernel'
 
     kernel_txt = _module_reader(find_kernel(kernel_name), cpp_defs=cppd)
 
     # Compile with fast math
-    # no_extern_c=True needed for C++ code (Thrust, etc.)
+    # no_extern_c=True needed for proper extern "C" handling
     module = SourceModule(kernel_txt, options=['--use_fast_math'], no_extern_c=True)
 
     # Get kernel function
@@ -182,12 +160,11 @@ class TLSMemory:
         GPU arrays for best-fit parameters
     """
 
-    def __init__(self, max_ndata, max_nperiods, stream=None, use_optimized=False, **kwargs):
+    def __init__(self, max_ndata, max_nperiods, stream=None, **kwargs):
         self.max_ndata = max_ndata
         self.max_nperiods = max_nperiods
         self.stream = stream
         self.rtype = np.float32
-        self.use_optimized = use_optimized
 
         # CPU pinned memory for fast transfers
         self.t = None
@@ -203,12 +180,6 @@ class TLSMemory:
         self.best_t0_g = None
         self.best_duration_g = None
         self.best_depth_g = None
-
-        # Working memory for optimized kernel (Thrust sorting)
-        self.phases_work_g = None
-        self.y_work_g = None
-        self.dy_work_g = None
-        self.indices_work_g = None
 
         self.allocate_pinned_arrays()
 
@@ -263,15 +234,6 @@ class TLSMemory:
         self.best_t0_g = gpuarray.zeros(nperiods, dtype=self.rtype)
         self.best_duration_g = gpuarray.zeros(nperiods, dtype=self.rtype)
         self.best_depth_g = gpuarray.zeros(nperiods, dtype=self.rtype)
-
-        # Allocate working memory for optimized kernel
-        if self.use_optimized:
-            # Each period needs ndata of working memory for sorting
-            total_work_size = ndata * nperiods
-            self.phases_work_g = gpuarray.zeros(total_work_size, dtype=self.rtype)
-            self.y_work_g = gpuarray.zeros(total_work_size, dtype=self.rtype)
-            self.dy_work_g = gpuarray.zeros(total_work_size, dtype=self.rtype)
-            self.indices_work_g = gpuarray.zeros(total_work_size, dtype=np.int32)
 
     def setdata(self, t, y, dy, periods=None, transfer=True):
         """
@@ -372,7 +334,7 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
                    oversampling_factor=3, duration_grid_step=1.1,
                    R_planet_min=0.5, R_planet_max=5.0,
                    limb_dark='quadratic', u=[0.4804, 0.1867],
-                   block_size=None, use_optimized=False, use_simple=None,
+                   block_size=None,
                    kernel=None, memory=None, stream=None,
                    transfer_to_device=True, transfer_to_host=True,
                    **kwargs):
@@ -409,11 +371,6 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         Limb darkening coefficients (default: [0.4804, 0.1867])
     block_size : int, optional
         CUDA block size (auto-selected if None)
-    use_optimized : bool, optional
-        Use optimized kernel with Thrust sorting (default: False)
-    use_simple : bool, optional
-        Use simple kernel without Thrust (default: None = auto-select)
-        If None, uses simple for ndata < 500, otherwise basic
     kernel : PyCUDA function, optional
         Pre-compiled kernel
     memory : TLSMemory, optional
@@ -465,25 +422,18 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     ndata = len(t)
     nperiods = len(periods)
 
-    # Auto-select kernel variant based on dataset size
-    if use_simple is None:
-        # FIXME: Thrust sorting from device code doesn't work properly
-        # Always use simple kernel for now until we implement proper sorting
-        use_simple = True  # (ndata < 500)  # Use simple kernel for small datasets
-
     # Choose block size
     if block_size is None:
         block_size = _choose_block_size(ndata)
 
     # Get or compile kernel
     if kernel is None:
-        kernel = _get_cached_kernels(block_size, use_optimized, use_simple)
+        kernel = _get_cached_kernels(block_size)
 
     # Allocate or use existing memory
     if memory is None:
         memory = TLSMemory.fromdata(t, y, dy, periods=periods,
                                     stream=stream,
-                                    use_optimized=use_optimized,
                                     transfer=transfer_to_device)
     elif transfer_to_device:
         memory.setdata(t, y, dy, periods=periods, transfer=True)
@@ -500,56 +450,27 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     grid = (nperiods, 1, 1)
     block = (block_size, 1, 1)
 
-    if use_optimized and memory.phases_work_g is not None:
-        # Optimized kernel with Thrust sorting - needs working memory
-        if stream is None:
-            kernel(
-                memory.t_g, memory.y_g, memory.dy_g,
-                memory.periods_g,
-                np.int32(ndata), np.int32(nperiods),
-                memory.chi2_g, memory.best_t0_g,
-                memory.best_duration_g, memory.best_depth_g,
-                memory.phases_work_g, memory.y_work_g,
-                memory.dy_work_g, memory.indices_work_g,
-                block=block, grid=grid,
-                shared=shared_mem_size
-            )
-        else:
-            kernel(
-                memory.t_g, memory.y_g, memory.dy_g,
-                memory.periods_g,
-                np.int32(ndata), np.int32(nperiods),
-                memory.chi2_g, memory.best_t0_g,
-                memory.best_duration_g, memory.best_depth_g,
-                memory.phases_work_g, memory.y_work_g,
-                memory.dy_work_g, memory.indices_work_g,
-                block=block, grid=grid,
-                shared=shared_mem_size,
-                stream=stream
-            )
+    if stream is None:
+        kernel(
+            memory.t_g, memory.y_g, memory.dy_g,
+            memory.periods_g,
+            np.int32(ndata), np.int32(nperiods),
+            memory.chi2_g, memory.best_t0_g,
+            memory.best_duration_g, memory.best_depth_g,
+            block=block, grid=grid,
+            shared=shared_mem_size
+        )
     else:
-        # Simple or basic kernel - no working memory needed
-        if stream is None:
-            kernel(
-                memory.t_g, memory.y_g, memory.dy_g,
-                memory.periods_g,
-                np.int32(ndata), np.int32(nperiods),
-                memory.chi2_g, memory.best_t0_g,
-                memory.best_duration_g, memory.best_depth_g,
-                block=block, grid=grid,
-                shared=shared_mem_size
-            )
-        else:
-            kernel(
-                memory.t_g, memory.y_g, memory.dy_g,
-                memory.periods_g,
-                np.int32(ndata), np.int32(nperiods),
-                memory.chi2_g, memory.best_t0_g,
-                memory.best_duration_g, memory.best_depth_g,
-                block=block, grid=grid,
-                shared=shared_mem_size,
-                stream=stream
-            )
+        kernel(
+            memory.t_g, memory.y_g, memory.dy_g,
+            memory.periods_g,
+            np.int32(ndata), np.int32(nperiods),
+            memory.chi2_g, memory.best_t0_g,
+            memory.best_duration_g, memory.best_depth_g,
+            block=block, grid=grid,
+            shared=shared_mem_size,
+            stream=stream
+        )
 
     # Transfer results if requested
     if transfer_to_host:
