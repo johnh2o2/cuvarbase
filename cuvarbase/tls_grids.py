@@ -110,55 +110,62 @@ def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,
     t = np.asarray(t)
     T_span = np.max(t) - np.min(t)  # Total observation span
 
-    # Set period limits
-    if period_max is None:
-        period_max = T_span / 2.0
+    # Store user's requested limits (for filtering later)
+    user_period_min = period_min
+    user_period_max = period_max
 
-    if period_min is None:
-        # Minimum from Roche limit (rough approximation)
-        # P_roche ≈ 0.5 days for Sun-like star
-        roche_period = 0.5 * (R_star**(3.0/2.0)) / np.sqrt(M_star)
+    # Physical boundary conditions (following Ofir 2014 and CPU TLS)
+    # f_min: require n_transits_min transits over baseline
+    f_min = n_transits_min / (T_span * 86400.0)  # 1/seconds
 
-        # Also consider minimum from practical observability
-        # Shorter periods need fewer observations per transit
-        period_min = roche_period
-
-    # Convert to frequencies
-    f_min = 1.0 / period_max
-    f_max = 1.0 / period_min
-
-    # Ofir (2014) parameter A
+    # f_max: Roche limit (maximum possible frequency)
+    # P_roche = 2π * sqrt(a^3 / (G*M)) where a = 3*R at Roche limit
     R_star_m = R_star * R_sun
     M_star_kg = M_star * M_sun
+    f_max = 1.0 / (2.0 * np.pi) * np.sqrt(G * M_star_kg / (3.0 * R_star_m)**3)
 
+    # Ofir (2014) parameters - equations (5), (6), (7)
+    T_span_sec = T_span * 86400.0  # Convert to seconds
+
+    # Equation (5): optimal frequency sampling parameter
     A = ((2.0 * np.pi)**(2.0/3.0) / np.pi * R_star_m /
-         (G * M_star_kg)**(1.0/3.0) / (T_span * 86400.0 * oversampling_factor))
+         (G * M_star_kg)**(1.0/3.0) / (T_span_sec * oversampling_factor))
 
-    # Calculate C from boundary condition
-    C = f_min**(1.0/3.0)
+    # Equation (6): offset parameter
+    C = f_min**(1.0/3.0) - A / 3.0
 
-    # Calculate required number of frequency samples
-    n_freq = int(np.ceil((f_max**(1.0/3.0) - f_min**(1.0/3.0)) * 3.0 / A))
+    # Equation (7): optimal number of frequency samples
+    n_freq = int(np.ceil((f_max**(1.0/3.0) - f_min**(1.0/3.0) + A / 3.0) * 3.0 / A))
 
     # Ensure we have at least some frequencies
     if n_freq < 10:
         n_freq = 10
 
     # Linear grid in cubic-root frequency space
-    x = np.linspace(0, n_freq - 1, n_freq)
+    x = np.arange(n_freq) + 1  # 1-indexed like CPU TLS
 
-    # Transform to frequency space
+    # Transform to frequency space (Hz)
     freqs = (A / 3.0 * x + C)**3
 
-    # Convert to periods (will be in decreasing order since freqs is increasing)
-    periods = 1.0 / freqs
+    # Convert to periods (days)
+    periods = 1.0 / freqs / 86400.0
 
-    # Ensure periods are in correct range
-    periods = periods[(periods >= period_min) & (periods <= period_max)]
+    # Apply user-requested period limits
+    if user_period_min is not None or user_period_max is not None:
+        if user_period_min is None:
+            user_period_min = 0.0
+        if user_period_max is None:
+            user_period_max = np.inf
+
+        periods = periods[(periods > user_period_min) & (periods <= user_period_max)]
 
     # If we somehow got no periods, use simple linear grid
     if len(periods) == 0:
-        periods = np.linspace(period_min, period_max, 100)
+        if user_period_min is None:
+            user_period_min = T_span / 20.0
+        if user_period_max is None:
+            user_period_max = T_span / 2.0
+        periods = np.linspace(user_period_min, user_period_max, 100)
 
     # Sort in increasing order (standard convention)
     periods = np.sort(periods)
