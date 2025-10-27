@@ -21,6 +21,43 @@ M_sun = 1.98840e30  # Solar mass (kg)
 R_earth = 6.371e6  # Earth radius (m)
 
 
+def q_transit(period, R_star=1.0, M_star=1.0, R_planet=1.0):
+    """
+    Calculate fractional transit duration (q = duration/period) for Keplerian orbit.
+
+    This is the TLS analog of the BLS q parameter. For a circular, edge-on orbit,
+    the transit duration scales with stellar density and planet/star size ratio.
+
+    Parameters
+    ----------
+    period : float or array_like
+        Orbital period in days
+    R_star : float, optional
+        Stellar radius in solar radii (default: 1.0)
+    M_star : float, optional
+        Stellar mass in solar masses (default: 1.0)
+    R_planet : float, optional
+        Planet radius in Earth radii (default: 1.0)
+
+    Returns
+    -------
+    q : float or array_like
+        Fractional transit duration (duration/period)
+
+    Notes
+    -----
+    This follows the same Keplerian assumption as BLS but for TLS.
+    The duration is calculated for edge-on circular orbits and normalized by period.
+
+    See Also
+    --------
+    transit_duration_max : Calculate absolute transit duration
+    duration_grid_keplerian : Generate duration grid using Keplerian q values
+    """
+    duration = transit_duration_max(period, R_star, M_star, R_planet)
+    return duration / period
+
+
 def transit_duration_max(period, R_star=1.0, M_star=1.0, R_planet=1.0):
     """
     Calculate maximum transit duration for circular orbit.
@@ -234,6 +271,90 @@ def duration_grid(periods, R_star=1.0, M_star=1.0, R_planet_min=0.5,
         duration_counts[i] = len(dur)
 
     return durations, duration_counts
+
+
+def duration_grid_keplerian(periods, R_star=1.0, M_star=1.0, R_planet=1.0,
+                            qmin_fac=0.5, qmax_fac=2.0, n_durations=15):
+    """
+    Generate Keplerian-aware duration grid for each period.
+
+    This is the TLS analog of BLS's Keplerian q-based duration search.
+    At each period, we calculate the expected transit duration for a
+    Keplerian orbit and search within qmin_fac to qmax_fac times that value.
+
+    Parameters
+    ----------
+    periods : array_like
+        Trial periods (days)
+    R_star : float, optional
+        Stellar radius in solar radii (default: 1.0)
+    M_star : float, optional
+        Stellar mass in solar masses (default: 1.0)
+    R_planet : float, optional
+        Fiducial planet radius in Earth radii (default: 1.0)
+        This sets the central duration value around which we search
+    qmin_fac : float, optional
+        Minimum duration factor (default: 0.5)
+        Searches down to qmin_fac * q_keplerian
+    qmax_fac : float, optional
+        Maximum duration factor (default: 2.0)
+        Searches up to qmax_fac * q_keplerian
+    n_durations : int, optional
+        Number of duration samples per period (default: 15)
+        Logarithmically spaced between qmin and qmax
+
+    Returns
+    -------
+    durations : list of ndarray
+        List where durations[i] is array of durations for periods[i]
+    duration_counts : ndarray
+        Number of durations for each period (constant = n_durations)
+    q_values : ndarray
+        Keplerian q values (duration/period) for each period
+
+    Notes
+    -----
+    This exploits the Keplerian assumption that transit duration scales
+    predictably with period based on stellar parameters. This is much
+    more efficient than searching all possible durations, as we focus
+    the search around the physically expected value.
+
+    For example, for a Sun-like star (M=1, R=1) and Earth-size planet:
+    - At P=10 days: q ~ 0.015, so we search 0.0075 to 0.030 (0.5x to 2x)
+    - At P=100 days: q ~ 0.027, so we search 0.014 to 0.054
+
+    This is equivalent to BLS's approach but applied to transit shapes.
+
+    See Also
+    --------
+    q_transit : Calculate Keplerian fractional transit duration
+    duration_grid : Alternative method that searches fixed planet radius range
+    """
+    periods = np.asarray(periods)
+
+    # Calculate Keplerian q value (fractional duration) for each period
+    q_values = q_transit(periods, R_star, M_star, R_planet)
+
+    # Duration bounds based on q-factors
+    qmin_vals = q_values * qmin_fac
+    qmax_vals = q_values * qmax_fac
+
+    durations = []
+    duration_counts = np.full(len(periods), n_durations, dtype=np.int32)
+
+    for period, qmin, qmax in zip(periods, qmin_vals, qmax_vals):
+        # Logarithmically-spaced durations from qmin to qmax
+        # (in absolute time, not fractional)
+        dur_min = qmin * period
+        dur_max = qmax * period
+
+        # Log-spaced grid
+        dur = np.logspace(np.log10(dur_min), np.log10(dur_max),
+                         n_durations, dtype=np.float32)
+
+        durations.append(dur)
+
+    return durations, duration_counts, q_values
 
 
 def t0_grid(period, duration, n_transits=None, oversampling=5):
