@@ -25,6 +25,7 @@ import numpy as np
 from .utils import find_kernel, _module_reader
 from . import tls_grids
 from . import tls_models
+from . import tls_stats
 
 _default_block_size = 128  # Smaller default than BLS (TLS has more shared memory needs)
 _KERNEL_CACHE_MAX_SIZE = 10
@@ -364,7 +365,8 @@ class TLSMemory:
         return mem
 
 
-def tls_search_gpu(t, y, dy, periods=None, R_star=1.0, M_star=1.0,
+def tls_search_gpu(t, y, dy, periods=None, durations=None,
+                   R_star=1.0, M_star=1.0,
                    period_min=None, period_max=None, n_transits_min=2,
                    oversampling_factor=3, duration_grid_step=1.1,
                    R_planet_min=0.5, R_planet_max=5.0,
@@ -552,21 +554,71 @@ def tls_search_gpu(t, y, dy, periods=None, R_star=1.0, M_star=1.0,
             stream.synchronize()
         memory.transfer_from_gpu(nperiods)
 
+        chi2_vals = memory.chi2[:nperiods].copy()
+        best_t0_vals = memory.best_t0[:nperiods].copy()
+        best_duration_vals = memory.best_duration[:nperiods].copy()
+        best_depth_vals = memory.best_depth[:nperiods].copy()
+
+        # Find best period
+        best_idx = np.argmin(chi2_vals)
+        best_period = periods[best_idx]
+        best_chi2 = chi2_vals[best_idx]
+        best_t0 = best_t0_vals[best_idx]
+        best_duration = best_duration_vals[best_idx]
+        best_depth = best_depth_vals[best_idx]
+
+        # Estimate number of transits
+        T_span = np.max(t) - np.min(t)
+        n_transits = int(T_span / best_period)
+
+        # Compute statistics
+        stats = tls_stats.compute_all_statistics(
+            chi2_vals, periods, best_idx,
+            best_depth, best_duration, n_transits
+        )
+
+        # Period uncertainty
+        period_uncertainty = tls_stats.compute_period_uncertainty(
+            periods, chi2_vals, best_idx
+        )
+
         results = {
+            # Raw outputs
             'periods': periods,
-            'chi2': memory.chi2[:nperiods].copy(),
-            'best_t0': memory.best_t0[:nperiods].copy(),
-            'best_duration': memory.best_duration[:nperiods].copy(),
-            'best_depth': memory.best_depth[:nperiods].copy(),
+            'chi2': chi2_vals,
+            'best_t0_per_period': best_t0_vals,
+            'best_duration_per_period': best_duration_vals,
+            'best_depth_per_period': best_depth_vals,
+
+            # Best-fit parameters
+            'period': best_period,
+            'period_uncertainty': period_uncertainty,
+            'T0': best_t0,
+            'duration': best_duration,
+            'depth': best_depth,
+            'chi2_min': best_chi2,
+
+            # Statistics
+            'SDE': stats['SDE'],
+            'SDE_raw': stats['SDE_raw'],
+            'SNR': stats['SNR'],
+            'FAP': stats['FAP'],
+            'power': stats['power'],
+            'SR': stats['SR'],
+
+            # Metadata
+            'n_transits': n_transits,
+            'R_star': R_star,
+            'M_star': M_star,
         }
     else:
         # Just return periods if not transferring
         results = {
             'periods': periods,
             'chi2': None,
-            'best_t0': None,
-            'best_duration': None,
-            'best_depth': None,
+            'best_t0_per_period': None,
+            'best_duration_per_period': None,
+            'best_depth_per_period': None,
         }
 
     return results
