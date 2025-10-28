@@ -14,7 +14,7 @@ from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
 from .core import GPUAsyncProcess
-from .utils import find_kernel, _module_reader
+from .utils import find_kernel, _module_reader, normalize_light_curves
 from .utils import autofrequency as utils_autofreq
 from .memory import NFFTMemory, LombScargleMemory, weights
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
@@ -664,6 +664,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                      ['lomb', 'lomb_dirsum']]):
             self._compile_and_prepare_functions(**kwargs)
 
+        # Prepare data
+        data = normalize_light_curves(data)
+
         # create and/or check frequencies
         frqs = freqs
         if frqs is None:
@@ -725,6 +728,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                      ['lomb', 'lomb_dirsum']]):
             self._compile_and_prepare_functions(**kwargs)
 
+        # Prepare data
+        data = normalize_light_curves(data)
+
         # create streams if needed
         bsize = min([len(data), batch_size])
         if len(self.streams) < bsize:
@@ -778,16 +784,16 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
         best_freqs, best_freq_significances = [], []
-        
+
         default_mask = np.array([True] * len(freqs))
         mask = default_mask if ignore_freq_mask is None else ~np.asarray(ignore_freq_mask)
         for b, batch in enumerate(batches):
- 
+
             results = self.run(batch, memory=memory, freqs=freqs,
                                use_fft=use_fft,
                                **kwargs)
             self.finish()
-            
+
             for i, (f, p) in enumerate(results):
                 if only_return_best_freqs:
                     best_index = np.argmax(p[mask])
