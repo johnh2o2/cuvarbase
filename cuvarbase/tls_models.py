@@ -277,6 +277,122 @@ def interpolate_transit_model(model_phases, model_flux, target_phases,
     return flux_scaled.astype(np.float32)
 
 
+def generate_transit_template(n_template=1000, limb_dark='quadratic',
+                              u=[0.4804, 0.1867]):
+    """
+    Generate a 1D transit template for use in the GPU TLS kernel.
+
+    The template maps transit_coord in [-1, 1] (edge-to-edge of transit)
+    to a normalized depth value in [0, 1] where 0 = no dimming (edges)
+    and 1 = maximum dimming (center, with limb darkening).
+
+    Parameters
+    ----------
+    n_template : int, optional
+        Number of points in the template (default: 1000)
+    limb_dark : str, optional
+        Limb darkening law (default: 'quadratic')
+    u : list, optional
+        Limb darkening coefficients (default: [0.4804, 0.1867])
+
+    Returns
+    -------
+    template : ndarray
+        Float32 array of shape (n_template,) with values in [0, 1].
+        Index 0 corresponds to transit_coord = -1 (leading edge),
+        index n_template-1 corresponds to transit_coord = +1 (trailing edge).
+    """
+    transit_coords = np.linspace(-1.0, 1.0, n_template)
+
+    if BATMAN_AVAILABLE:
+        try:
+            # Generate a batman transit model
+            phases, flux = create_reference_transit(
+                n_samples=5000, limb_dark=limb_dark, u=u
+            )
+
+            # Find the in-transit region (where flux < 1.0 - small threshold)
+            threshold = 1e-6
+            in_transit = flux < (1.0 - threshold)
+
+            if not np.any(in_transit):
+                # Fallback to trapezoid if no transit detected
+                return _trapezoid_template(n_template)
+
+            # Get the in-transit indices
+            transit_indices = np.where(in_transit)[0]
+            i_start = transit_indices[0]
+            i_end = transit_indices[-1]
+
+            # Extract in-transit portion
+            transit_phases = phases[i_start:i_end + 1]
+            transit_flux = flux[i_start:i_end + 1]
+
+            # Map transit phases to transit_coord [-1, 1]
+            phase_center = 0.5 * (transit_phases[0] + transit_phases[-1])
+            phase_half_width = 0.5 * (transit_phases[-1] - transit_phases[0])
+
+            if phase_half_width < 1e-10:
+                return _trapezoid_template(n_template)
+
+            source_coords = (transit_phases - phase_center) / phase_half_width
+
+            # Depth values: 0 = no dimming, 1 = max dimming
+            depth_values = 1.0 - transit_flux
+
+            # Normalize so max = 1
+            max_depth = np.max(depth_values)
+            if max_depth < 1e-10:
+                return _trapezoid_template(n_template)
+            depth_values /= max_depth
+
+            # Resample to uniform transit_coord grid
+            template = np.interp(transit_coords, source_coords, depth_values,
+                                 left=0.0, right=0.0)
+
+            return template.astype(np.float32)
+
+        except Exception:
+            return _trapezoid_template(n_template)
+    else:
+        return _trapezoid_template(n_template)
+
+
+def _trapezoid_template(n_template=1000, ingress_fraction=0.1):
+    """
+    Generate a trapezoidal transit template as fallback.
+
+    Parameters
+    ----------
+    n_template : int
+        Number of template points
+    ingress_fraction : float
+        Fraction of transit that is ingress/egress (each side)
+
+    Returns
+    -------
+    template : ndarray
+        Float32 array of shape (n_template,) with values in [0, 1].
+    """
+    transit_coords = np.linspace(-1.0, 1.0, n_template)
+    template = np.zeros(n_template, dtype=np.float32)
+
+    # Trapezoidal shape: ramp up during ingress, flat bottom, ramp down during egress
+    edge_inner = 1.0 - 2.0 * ingress_fraction  # Where flat bottom starts/ends
+
+    for i in range(n_template):
+        coord = abs(transit_coords[i])
+        if coord <= edge_inner:
+            template[i] = 1.0  # Flat bottom (max depth)
+        elif coord <= 1.0:
+            # Linear ramp from 1 to 0 during ingress/egress
+            template[i] = (1.0 - coord) / (1.0 - edge_inner)
+        else:
+            template[i] = 0.0
+
+    return template
+
+
 def get_default_limb_darkening(filter='Kepler', T_eff=5500):
     """
     Get default limb darkening coefficients for common filters and T_eff.

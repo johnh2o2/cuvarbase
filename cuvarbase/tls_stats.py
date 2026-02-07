@@ -18,8 +18,7 @@ def signal_residue(chi2, chi2_null=None):
     """
     Calculate Signal Residue (SR).
 
-    SR is the ratio of chi-squared values, normalized to [0, 1].
-    SR = chi²_null / chi²_signal, where 1 = strongest signal.
+    SR = 1 - chi²_signal / chi²_null, where higher = stronger signal.
 
     Parameters
     ----------
@@ -32,22 +31,19 @@ def signal_residue(chi2, chi2_null=None):
     Returns
     -------
     SR : ndarray
-        Signal residue values [0, 1]
+        Signal residue values. 0 = no signal, higher = stronger.
 
     Notes
     -----
     Higher SR values indicate stronger signals.
-    SR = 1 means chi² is at its minimum (perfect fit).
+    SR ~ 0 means chi² is close to the null model.
     """
     chi2 = np.asarray(chi2)
 
     if chi2_null is None:
         chi2_null = np.max(chi2)
 
-    SR = chi2_null / (chi2 + 1e-10)
-
-    # Clip to [0, 1] range
-    SR = np.clip(SR, 0, 1)
+    SR = 1.0 - chi2 / (chi2_null + 1e-10)
 
     return SR
 
@@ -83,7 +79,7 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
     Notes
     -----
     SDE is essentially a z-score:
-    SDE = (1 - ⟨SR⟩) / σ(SR)
+    SDE = (max(SR) - mean(SR)) / std(SR)
 
     Typical threshold: SDE > 7 for 1% false alarm probability
     """
@@ -99,7 +95,7 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
     if std_SR < 1e-10:
         SDE_raw = 0.0
     else:
-        SDE_raw = (1.0 - mean_SR) / std_SR
+        SDE_raw = (np.max(SR) - mean_SR) / std_SR
 
     # Detrend with median filter if requested
     if detrend:
@@ -122,7 +118,7 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
         if std_SR_detrended < 1e-10:
             SDE = 0.0
         else:
-            SDE = (1.0 - mean_SR_detrended) / std_SR_detrended
+            SDE = (np.max(SR_detrended) - mean_SR_detrended) / std_SR_detrended
 
         power = SR_detrended
     else:
@@ -132,7 +128,8 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
     return SDE, SDE_raw, power
 
 
-def signal_to_noise(depth, depth_err=None, n_transits=1):
+def signal_to_noise(depth, depth_err=None, n_transits=1,
+                    chi2_null=None, chi2_best=None):
     """
     Calculate signal-to-noise ratio.
 
@@ -141,13 +138,15 @@ def signal_to_noise(depth, depth_err=None, n_transits=1):
     depth : float
         Transit depth
     depth_err : float, optional
-        Uncertainty in depth. If None, estimated from Poisson statistics.
-        **WARNING**: The default Poisson approximation is overly simplified
-        and may not be accurate for real data with systematic noise, correlated
-        errors, or stellar activity. Users should provide actual depth_err values
-        computed from their data for more accurate SNR calculations.
+        Uncertainty in depth. If None, estimated from chi2 values or
+        Poisson statistics as a last resort.
     n_transits : int, optional
         Number of transits (default: 1)
+    chi2_null : float, optional
+        Null hypothesis chi-squared (no transit). Used to estimate
+        depth_err when depth_err is not provided.
+    chi2_best : float, optional
+        Best-fit chi-squared. Used with chi2_null to estimate depth_err.
 
     Returns
     -------
@@ -158,19 +157,19 @@ def signal_to_noise(depth, depth_err=None, n_transits=1):
     -----
     SNR improves as sqrt(n_transits) for independent transits.
 
-    The default depth_err estimation (depth / sqrt(n_transits)) assumes:
-    - Pure Poisson (photon) noise
-    - No systematic errors
-    - Independent transits
-    - White noise
-
-    For realistic astrophysical data, these assumptions are rarely valid.
-    Always provide depth_err when available for accurate results.
+    When depth_err is not provided, it is estimated as:
+    depth / sqrt(chi2_null - chi2_best) if chi2 values are given,
+    otherwise returns 0.
     """
     if depth_err is None:
-        # Rough estimate from Poisson statistics
-        # WARNING: This is a simplified approximation - see docstring
-        depth_err = depth / np.sqrt(n_transits)
+        if chi2_null is not None and chi2_best is not None:
+            delta_chi2 = chi2_null - chi2_best
+            if delta_chi2 > 0:
+                depth_err = depth / np.sqrt(delta_chi2)
+            else:
+                return 0.0
+        else:
+            return 0.0
 
     if depth_err < 1e-10:
         return 0.0
@@ -201,9 +200,12 @@ def false_alarm_probability(SDE, method='empirical'):
     Notes
     -----
     Empirical calibration from Hippke & Heller (2019):
-    - SDE = 7 → FAP ≈ 1%
-    - SDE = 9 → FAP ≈ 0.1%
-    - SDE = 11 → FAP ≈ 0.01%
+    - SDE = 7 -> FAP ~ 1%
+    - SDE = 9 -> FAP ~ 0.1%
+    - SDE = 11 -> FAP ~ 0.01%
+
+    These values are approximate. For rigorous FAP estimation,
+    injection-recovery simulations are recommended.
     """
     if method == 'gaussian':
         # Gaussian approximation: FAP = 1 - erf(SDE/sqrt(2))
@@ -312,8 +314,11 @@ def compute_all_statistics(chi2, periods, best_period_idx,
 
     SR = signal_residue(chi2)
 
-    # SNR
-    SNR = signal_to_noise(depth, n_transits=n_transits)
+    # SNR (use chi2 values for depth_err estimation)
+    chi2_null = np.max(chi2)
+    chi2_best = chi2[best_period_idx]
+    SNR = signal_to_noise(depth, n_transits=n_transits,
+                          chi2_null=chi2_null, chi2_best=chi2_best)
 
     # FAP
     FAP = false_alarm_probability(SDE)
