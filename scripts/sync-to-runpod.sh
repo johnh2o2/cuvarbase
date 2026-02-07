@@ -13,7 +13,7 @@ fi
 source .runpod.env
 
 # Build SSH connection string
-SSH_OPTS="-p ${RUNPOD_SSH_PORT}"
+SSH_OPTS="-p ${RUNPOD_SSH_PORT} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 if [ -n "${RUNPOD_SSH_KEY}" ]; then
     SSH_OPTS="${SSH_OPTS} -i ${RUNPOD_SSH_KEY}"
 fi

@@ -13,7 +13,7 @@ fi
 source .runpod.env
 
 # Build SSH connection string
-SSH_OPTS="-p ${RUNPOD_SSH_PORT}"
+SSH_OPTS="-p ${RUNPOD_SSH_PORT} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 if [ -n "${RUNPOD_SSH_KEY}" ]; then
     SSH_OPTS="${SSH_OPTS} -i ${RUNPOD_SSH_KEY}"
 fi
@@ -40,7 +40,7 @@ echo "Step 2: Running tests on RunPod..."
 echo "=========================================="
 
 # Run tests remotely and stream output
-ssh ${SSH_OPTS} ${SSH_HOST} "export PATH=/usr/local/cuda-12.8/bin:\$PATH && export CUDA_HOME=/usr/local/cuda-12.8 && export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:\$LD_LIBRARY_PATH && cd ${RUNPOD_REMOTE_DIR} && pytest ${TEST_PATH} ${PYTEST_ARGS} -v"
+ssh ${SSH_OPTS} ${SSH_HOST} "export PATH=/usr/local/cuda/bin:\$PATH && export CUDA_HOME=/usr/local/cuda && export LD_LIBRARY_PATH=/usr/local/cuda/lib64:\$LD_LIBRARY_PATH && cd ${RUNPOD_REMOTE_DIR} && pytest ${TEST_PATH} ${PYTEST_ARGS} -v"
 
 echo ""
 echo "=========================================="
