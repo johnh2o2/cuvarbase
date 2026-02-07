@@ -2,22 +2,9 @@
 
 ## Overview
 
-This is a GPU-accelerated implementation of the Transit Least Squares (TLS) algorithm for detecting periodic planetary transits in astronomical time series data. The implementation achieves **35-202× speedup** over the CPU-based `transitleastsquares` package.
+This is a GPU-accelerated implementation of the Transit Least Squares (TLS) algorithm for detecting periodic planetary transits in astronomical time series data. Unlike BLS (Box Least Squares), TLS uses a physically realistic limb-darkened transit template for fitting, improving sensitivity to small planets.
 
 **Reference:** [Hippke & Heller (2019), A&A 623, A39](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract)
-
-## Performance
-
-Benchmarks comparing `cuvarbase.tls` (GPU) vs `transitleastsquares` v1.32 (CPU):
-
-| Dataset Size | Baseline | GPU Time | CPU Time | Speedup |
-|--------------|----------|----------|----------|---------|
-| 500 points   | 50 days  | 0.24s    | 8.65s    | **35×** |
-| 1000 points  | 100 days | 0.44s    | 26.7s    | **61×** |
-| 2000 points  | 200 days | 0.88s    | 88.4s    | **100×** |
-| 5000 points  | 500 days | 2.40s    | 485s     | **202×** |
-
-*Hardware: NVIDIA RTX A4500 (20GB, 7,424 CUDA cores) vs Intel Xeon (8 cores)*
 
 ## Quick Start
 
@@ -47,7 +34,7 @@ results = tls.tls_transit(
     R_star=1.0,      # Solar radii
     M_star=1.0,      # Solar masses
     R_planet=1.0,    # Earth radii (fiducial)
-    qmin_fac=0.5,    # Search 0.5× to 2.0× Keplerian duration
+    qmin_fac=0.5,    # Search 0.5x to 2.0x Keplerian duration
     qmax_fac=2.0,
     n_durations=15,
     period_min=5.0,
@@ -57,9 +44,21 @@ results = tls.tls_transit(
 
 ## Features
 
-### 1. Keplerian-Aware Duration Constraints
+### 1. Limb-Darkened Transit Template
 
-Just like BLS's `eebls_transit()`, TLS now exploits Keplerian physics to focus the search on plausible transit durations:
+The key difference from BLS is the use of a physically realistic transit template
+computed using the batman package (Kreidberg 2015). The template accounts for
+stellar limb darkening, producing a rounded transit shape rather than a box.
+
+The template is:
+- Precomputed on the CPU with configurable limb darkening law and coefficients
+- Transferred to GPU shared memory (4KB for 1000-point template)
+- Interpolated via linear lookup during the chi-squared calculation
+- Falls back to a trapezoidal shape if batman is not installed
+
+### 2. Keplerian-Aware Duration Constraints
+
+Just like BLS's `eebls_transit()`, TLS exploits Keplerian physics to focus the search on plausible transit durations:
 
 ```python
 from cuvarbase import tls_grids
@@ -74,27 +73,7 @@ durations, counts, q_vals = tls_grids.duration_grid_keplerian(
 )
 ```
 
-**Why This Matters:**
-
-For a circular orbit, the fractional transit duration q = duration/period depends on:
-- **Period (P)**: Longer periods → longer durations
-- **Stellar density (ρ = M/R³)**: Denser stars → shorter durations
-- **Planet/star size ratio**: Larger planets → longer transits
-
-By calculating the expected Keplerian duration and searching around it (0.5× to 2.0×), we achieve:
-- **7-8× efficiency improvement** by avoiding unphysical durations
-- **Better sensitivity** to small planets
-- **Stellar-parameter aware** searches
-
-**Comparison:**
-
-| Period | Fixed Range | Keplerian Range | Efficiency Gain |
-|--------|-------------|-----------------|-----------------|
-| 5 days | q=0.005-0.15 (30×) | q=0.013-0.052 (4×) | **7.5×** |
-| 10 days | q=0.005-0.15 (30×) | q=0.008-0.032 (4×) | **7.5×** |
-| 20 days | q=0.005-0.15 (30×) | q=0.005-0.021 (4.2×) | **7.1×** |
-
-### 2. Optimal Period Grid Sampling
+### 3. Optimal Period Grid Sampling
 
 Implements Ofir (2014) frequency-to-cubic transformation for optimal period sampling:
 
@@ -110,36 +89,34 @@ periods = tls_grids.period_grid_ofir(
 )
 ```
 
-This ensures no transit signals are missed due to aliasing in the period grid.
+**Reference:** Ofir (2014), "An optimized transit detection algorithm to search for periodic transits of small planets", A&A 561, A138
 
-**Reference:** [Ofir (2014), ApJ 789, 145](https://ui.adsabs.harvard.edu/abs/2014ApJ...789..145O/abstract)
-
-### 3. GPU Memory Management
+### 4. GPU Memory Management
 
 Efficient GPU memory handling via `TLSMemory` class:
-- Pre-allocates GPU arrays for t, y, dy, periods, results
+- Pre-allocates GPU arrays for t, y, dy, periods, template, results
 - Supports both standard and Keplerian modes (qmin/qmax arrays)
 - Memory pooling reduces allocation overhead
-- Clean resource management with context manager support
 
-### 4. Optimized CUDA Kernels
+### 5. Optimized CUDA Kernels
 
 Two optimized CUDA kernels in `cuvarbase/kernels/tls.cu`:
 
 **`tls_search_kernel()`** - Standard search:
 - Fixed duration range (0.5% to 15% of period)
-- Insertion sort for phase-folding
-- Warp reduction for finding minimum chi-squared
+- Limb-darkened transit template in shared memory
+- Bitonic sort for phase-folding
+- Warp shuffle reduction for finding minimum chi-squared
 
 **`tls_search_kernel_keplerian()`** - Keplerian-aware:
 - Per-period qmin/qmax arrays
-- Focused search space (7-8× more efficient)
-- Same core algorithm
+- Focused search space
+- Same core algorithm with template
 
 Both kernels:
-- Use shared memory for phase-folded data
+- Use shared memory for phase-folded data and transit template
 - Minimize global memory accesses
-- Support datasets up to ~5000 points
+- Support datasets up to ~100,000 points
 
 ## API Reference
 
@@ -172,7 +149,7 @@ High-level wrapper with Keplerian duration constraints (analog of BLS's `eebls_t
 - `SDE`: Signal Detection Efficiency
 - `chi2`: Chi-squared value
 - `periods`: Array of trial periods
-- `power`: Chi-squared values for all periods
+- `power`: Detrended power spectrum
 
 #### `tls_search_gpu(t, y, dy, periods=None, **kwargs)`
 
@@ -180,7 +157,6 @@ Low-level GPU search function with custom period/duration grids.
 
 **Additional Parameters:**
 - `periods` (array): Custom period grid (if None, auto-generated)
-- `durations` (array): Custom duration grid (if None, auto-generated)
 - `qmin` (array): Per-period minimum fractional durations (Keplerian mode)
 - `qmax` (array): Per-period maximum fractional durations (Keplerian mode)
 - `n_durations` (int): Number of duration samples if using qmin/qmax
@@ -202,41 +178,35 @@ Generate Keplerian-aware duration grid for each period.
 
 ## Algorithm Details
 
-### Chi-Squared Calculation
+### Transit Template
 
-The kernel calculates:
+The transit model uses a precomputed limb-darkened template:
+
 ```
-χ² = Σ [(y_i - model_i)² / σ_i²]
+model(t) = 1 - depth * template(transit_coord)
 ```
 
-Where the model is a simple box:
-```
-model(t) = {
-    1 - depth,  if in transit
-    1,          otherwise
-}
-```
+Where `transit_coord` maps the phase position within the transit window to [-1, 1],
+and `template()` returns a value in [0, 1] via linear interpolation of the
+precomputed template array. The template captures limb darkening effects, giving
+a rounded bottom rather than the flat-bottomed box of BLS.
 
 ### Optimal Depth Fitting
 
 For each trial (period, duration, T0), depth is solved via weighted least squares:
 ```
-depth = Σ[(1-y_i) / σ_i²] / Σ[1 / σ_i²]  (in-transit points only)
+depth = sum[(1-y_i) * T(x_i) / sigma_i^2] / sum[T(x_i)^2 / sigma_i^2]
 ```
-
-This minimizes chi-squared for the given transit geometry.
+where T(x_i) is the template value at the transit coordinate of point i.
 
 ### Signal Detection Efficiency (SDE)
 
 The SDE metric quantifies signal significance:
 ```
-SDE = (χ²_null - χ²_best) / σ_red
+SDE = (max(SR) - mean(SR)) / std(SR)
 ```
 
-Where:
-- `χ²_null`: Chi-squared assuming no transit
-- `χ²_best`: Chi-squared for best-fit transit
-- `σ_red`: Reduced chi-squared scatter
+Where SR (Signal Residue) = 1 - chi2 / chi2_null.
 
 **SDE > 7** typically indicates a robust detection.
 
@@ -247,10 +217,8 @@ Where:
    - For >100k points, consider binning or using CPU TLS
    - Performance is optimal for ndata < 20,000
 
-2. **Memory**: Requires ~3×N floats of GPU memory per dataset
-   - 5,000 points: ~60 KB
-   - 20,000 points: ~240 KB
-   - 100,000 points: ~1.2 MB
+2. **Memory**: Requires ~(3N + n_template + 4*block_size) floats of shared memory per block
+   - 5,000 points: ~60 KB + 4 KB template
    - Should work on any GPU with >2GB VRAM
 
 3. **Duration Grid**: Currently uniform in log-space
@@ -258,24 +226,15 @@ Where:
 
 4. **Single GPU**: No multi-GPU support yet
    - Trivial to parallelize across multiple light curves
-   - Harder to parallelize single search across GPUs
 
-## Comparison to CPU TLS
+## Related Work
 
-### When to Use GPU TLS (`cuvarbase.tls`)
-
-✓ Datasets with 500-20,000 points (sweet spot)
-✓ Up to ~100,000 points supported
-✓ Bulk processing of many light curves
-✓ Real-time transit searches
-✓ When speed is critical (e.g., transient follow-up)
-✓ **35-202× faster** for typical datasets
-
-### When to Use CPU TLS (`transitleastsquares`)
-
-✓ Very large datasets (>100,000 points)
-✓ Need for CPU-side features (limb darkening, eccentricity)
-✓ Environments without CUDA-capable GPUs
+**CETRA** (Smith et al. 2025) is a complementary GPU-accelerated transit detection
+algorithm that uses a different approach (matched filtering with analytic templates).
+CETRA may be preferable for survey-scale searches where computational throughput is
+paramount. GPU TLS is valuable when standard TLS outputs (SDE, FAP, odd/even tests)
+are needed for transit vetting pipelines, or when results must be directly comparable
+to published CPU TLS results.
 
 ## Testing
 
@@ -285,58 +244,49 @@ Where:
 pytest cuvarbase/tests/test_tls_basic.py -v
 ```
 
-All 20 unit tests cover:
+Tests cover:
+- Transit template generation (batman and trapezoidal fallback)
 - Kernel compilation
 - Memory allocation
 - Period grid generation
+- Statistics (SR, SDE, SNR)
 - Signal recovery (synthetic transits)
-- Edge cases
-
-### End-to-End Validation
-
-```bash
-python test_tls_keplerian_api.py
-```
-
-Tests both standard and Keplerian modes on synthetic transit data.
-
-### Performance Benchmarks
-
-```bash
-python scripts/benchmark_tls.py
-```
-
-Systematic comparison across dataset sizes (500-5000 points).
+- SDE > 0 regression test
 
 ## Implementation Files
 
 ### Core Implementation
-- `cuvarbase/tls.py` - Main Python API (1157 lines)
-- `cuvarbase/tls_grids.py` - Grid generation utilities (312 lines)
-- `cuvarbase/kernels/tls.cu` - CUDA kernels (372 lines)
+- `cuvarbase/tls.py` - Main Python API
+- `cuvarbase/tls_models.py` - Transit template generation
+- `cuvarbase/tls_grids.py` - Grid generation utilities
+- `cuvarbase/tls_stats.py` - Statistical calculations
+- `cuvarbase/kernels/tls.cu` - CUDA kernels
 
 ### Testing
 - `cuvarbase/tests/test_tls_basic.py` - Unit tests
-- `analysis/test_tls_keplerian.py` - Keplerian grid demonstration
-- `analysis/test_tls_keplerian_api.py` - End-to-end validation
 
 ### Documentation
 - `docs/TLS_GPU_README.md` - This file
-- `docs/TLS_GPU_IMPLEMENTATION_PLAN.md` - Detailed implementation plan
 
 ## References
 
 1. **Hippke & Heller (2019)**: "Optimized transit detection algorithm to search for periodic transits of small planets", A&A 623, A39
    - Original TLS algorithm and SDE metric
 
-2. **Kovács et al. (2002)**: "A box-fitting algorithm in the search for periodic transits", A&A 391, 369
+2. **Kovacs et al. (2002)**: "A box-fitting algorithm in the search for periodic transits", A&A 391, 369
    - BLS algorithm (TLS is a refinement)
 
-3. **Ofir (2014)**: "An Analytic Theory for the Period-Radius Distribution", ApJ 789, 145
+3. **Ofir (2014)**: "An optimized transit detection algorithm to search for periodic transits of small planets", A&A 561, A138
    - Optimal period grid sampling
 
-4. **transitleastsquares**: https://github.com/hippke/tls
-   - Reference CPU implementation (v1.32)
+4. **Smith et al. (2025)**: "CETRA: GPU-accelerated transit detection"
+   - Complementary GPU transit detection approach
+
+5. **Kreidberg (2015)**: "batman: BAsic Transit Model cAlculatioN in Python", PASP 127, 1161
+   - Transit model package used for template generation
+
+6. **transitleastsquares**: https://github.com/hippke/tls
+   - Reference CPU implementation
 
 ## Citation
 

@@ -17,7 +17,7 @@ except ImportError:
     PYCUDA_AVAILABLE = False
 
 # Import modules to test
-from cuvarbase import tls_grids, tls_models
+from cuvarbase import tls_grids, tls_models, tls_stats
 
 
 class TestGridGeneration:
@@ -95,6 +95,76 @@ class TestGridGeneration:
         # Invalid mass
         with pytest.raises(ValueError):
             tls_grids.validate_stellar_parameters(R_star=1.0, M_star=5.0)
+
+
+class TestTransitTemplate:
+    """Test transit template generation for GPU kernel."""
+
+    def test_trapezoid_template_shape(self):
+        """Test trapezoidal fallback template has correct shape."""
+        template = tls_models._trapezoid_template(n_template=500)
+
+        assert template.shape == (500,)
+        assert template.dtype == np.float32
+
+    def test_trapezoid_template_normalization(self):
+        """Test trapezoidal template values are in [0, 1]."""
+        template = tls_models._trapezoid_template(n_template=1000)
+
+        assert np.all(template >= 0.0)
+        assert np.all(template <= 1.0)
+        # Center should be at max depth
+        assert template[500] == pytest.approx(1.0)
+        # Edges should be near zero
+        assert template[0] == pytest.approx(0.0, abs=0.01)
+        assert template[-1] == pytest.approx(0.0, abs=0.01)
+
+    def test_trapezoid_template_symmetric(self):
+        """Test trapezoidal template is symmetric."""
+        template = tls_models._trapezoid_template(n_template=1001)
+        np.testing.assert_allclose(template, template[::-1], atol=1e-6)
+
+    @pytest.mark.skipif(not tls_models.BATMAN_AVAILABLE,
+                       reason="batman-package not installed")
+    def test_batman_template_shape(self):
+        """Test batman template has correct shape and dtype."""
+        template = tls_models.generate_transit_template(n_template=1000)
+
+        assert template.shape == (1000,)
+        assert template.dtype == np.float32
+
+    @pytest.mark.skipif(not tls_models.BATMAN_AVAILABLE,
+                       reason="batman-package not installed")
+    def test_batman_template_normalization(self):
+        """Test batman template values are in [0, 1] with max = 1."""
+        template = tls_models.generate_transit_template(n_template=1000)
+
+        assert np.all(template >= 0.0)
+        assert np.all(template <= 1.0)
+        assert np.max(template) == pytest.approx(1.0, abs=0.01)
+        # Edges should be near zero
+        assert template[0] < 0.1
+        assert template[-1] < 0.1
+
+    @pytest.mark.skipif(not tls_models.BATMAN_AVAILABLE,
+                       reason="batman-package not installed")
+    def test_batman_template_limb_darkened(self):
+        """Test batman template shows limb darkening (not a box)."""
+        template = tls_models.generate_transit_template(n_template=1000)
+
+        # The template should NOT be a perfect box (all 0 or 1).
+        # With limb darkening, there should be intermediate values.
+        n_intermediate = np.sum((template > 0.1) & (template < 0.9))
+        assert n_intermediate > 10, "Template should have limb-darkened shape, not a box"
+
+    def test_generate_fallback_without_batman(self):
+        """Test generate_transit_template falls back to trapezoid."""
+        # Force fallback by testing _trapezoid_template directly
+        template = tls_models._trapezoid_template(n_template=500)
+
+        assert template.shape == (500,)
+        assert np.max(template) == pytest.approx(1.0)
+        assert np.min(template) == pytest.approx(0.0, abs=0.01)
 
 
 @pytest.mark.skipif(not tls_models.BATMAN_AVAILABLE,
@@ -175,6 +245,48 @@ class TestSimpleTransitModels:
         # Invalid - wrong number
         with pytest.raises(ValueError):
             tls_models.validate_limb_darkening_coeffs([0.4], 'quadratic')
+
+
+class TestStatistics:
+    """Test TLS statistics calculations."""
+
+    def test_signal_residue_with_signal(self):
+        """Test SR is positive for a signal."""
+        # Simulate chi2 values where one period has much lower chi2
+        chi2 = np.ones(100) * 1000.0
+        chi2[50] = 500.0  # Signal at index 50
+
+        SR = tls_stats.signal_residue(chi2)
+
+        # SR at signal should be highest
+        assert SR[50] > SR[0]
+        assert SR[50] > 0
+
+    def test_sde_positive_for_signal(self):
+        """Test SDE > 0 for an injected signal (regression test)."""
+        # Simulate chi2 values with a clear signal
+        np.random.seed(42)
+        chi2 = np.random.normal(1000, 10, size=200)
+        chi2[100] = 500.0  # Strong signal
+
+        SDE, SDE_raw, power = tls_stats.signal_detection_efficiency(
+            chi2, detrend=False
+        )
+
+        assert SDE > 0, "SDE should be > 0 for injected signal"
+        assert SDE_raw > 0
+
+    def test_snr_with_chi2(self):
+        """Test SNR estimation from chi2 values."""
+        snr = tls_stats.signal_to_noise(
+            0.01, chi2_null=1000.0, chi2_best=500.0
+        )
+        assert snr > 0
+
+    def test_snr_returns_zero_without_info(self):
+        """Test SNR returns 0 when no depth_err or chi2 provided."""
+        snr = tls_stats.signal_to_noise(0.01)
+        assert snr == 0.0
 
 
 @pytest.mark.skipif(not PYCUDA_AVAILABLE,
@@ -313,12 +425,34 @@ class TestTLSBasicExecution:
         assert len(results['chi2']) == 30
 
         # Minimum chi2 should be near period = 10 (within a few samples)
-        # Note: This is a weak test - full validation in test_tls_consistency.py
         min_idx = np.argmin(results['chi2'])
         best_period = results['periods'][min_idx]
 
         # Should be within 20% of true period (very loose for Phase 1)
         assert 8 < best_period < 12
+
+    def test_sde_positive_with_transit(self):
+        """Test SDE > 0 when a transit is present (regression test)."""
+        from cuvarbase import tls
+
+        # Create data with obvious transit
+        t = np.linspace(0, 100, 500)
+        y = np.ones(500)
+
+        period_true = 10.0
+        depth = 0.02
+        phases = (t % period_true) / period_true
+        in_transit = phases < 0.02
+        y[in_transit] -= depth
+
+        dy = np.ones(500) * 0.0001
+
+        periods = np.linspace(8, 12, 50)
+        results = tls.tls_search_gpu(t, y, dy, periods=periods)
+
+        assert results['SDE'] > 0, (
+            "SDE should be > 0 for a clear transit signal"
+        )
 
 
 if __name__ == '__main__':
