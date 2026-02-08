@@ -13,7 +13,7 @@ fi
 source .runpod.env
 
 # Build SSH connection string
-SSH_OPTS="-p ${RUNPOD_SSH_PORT}"
+SSH_OPTS="-p ${RUNPOD_SSH_PORT} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 if [ -n "${RUNPOD_SSH_KEY}" ]; then
     SSH_OPTS="${SSH_OPTS} -i ${RUNPOD_SSH_KEY}"
 fi
@@ -35,10 +35,16 @@ set -e
 
 cd /workspace/cuvarbase
 
-# Set up CUDA environment
-export PATH=/usr/local/cuda-12.8/bin:$PATH
-export CUDA_HOME=/usr/local/cuda-12.8
-export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:$LD_LIBRARY_PATH
+# Set up CUDA environment (auto-detect version)
+if [ -d /usr/local/cuda ]; then
+    export PATH=/usr/local/cuda/bin:$PATH
+    export CUDA_HOME=/usr/local/cuda
+    export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+elif [ -d /usr/local/cuda-12.4 ]; then
+    export PATH=/usr/local/cuda-12.4/bin:$PATH
+    export CUDA_HOME=/usr/local/cuda-12.4
+    export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:$LD_LIBRARY_PATH
+fi
 
 # Check if CUDA is available
 echo "Checking CUDA availability..."
@@ -61,47 +67,10 @@ import re
 import os
 import glob
 
-# Find skcuda installation (could be in different python versions)
-skcuda_paths = glob.glob('/usr/local/lib/python*/dist-packages/skcuda/misc.py')
-if not skcuda_paths:
-    print("Warning: skcuda/misc.py not found, skipping patch")
-    exit(0)
-
-misc_path = skcuda_paths[0]
-print(f"Patching {misc_path}...")
-
-# Read the file
-with open(misc_path, 'r') as f:
-    content = f.read()
-
-# Replace the problematic lines around line 637
-old_code = """# List of available numerical types provided by numpy:
-num_types = [np.sctypeDict[t] for t in \\
-             np.typecodes['AllInteger']+np.typecodes['AllFloat']]"""
-
-new_code = """# List of available numerical types provided by numpy:
-# Fixed for numpy 2.x compatibility
-try:
-    num_types = [np.sctypeDict[t] for t in \\
-                 np.typecodes['AllInteger']+np.typecodes['AllFloat']]
-except KeyError:
-    # numpy 2.x: build list manually
-    num_types = [np.int8, np.int16, np.int32, np.int64,
-                 np.uint8, np.uint16, np.uint32, np.uint64,
-                 np.float16, np.float32, np.float64]"""
-
-if old_code in content:
-    content = content.replace(old_code, new_code)
-    with open(misc_path, 'w') as f:
-        f.write(content)
-    print(f"✓ Patched {misc_path}")
-else:
-    print(f"Note: Already patched or code structure changed")
-
-# Patch np.sctypes usage across all scikit-cuda files
-print("")
-print("Patching np.sctypes usage in scikit-cuda...")
 skcuda_files = glob.glob('/usr/local/lib/python*/dist-packages/skcuda/*.py')
+if not skcuda_files:
+    print("Warning: skcuda not found, skipping patch")
+    exit(0)
 
 for filepath in skcuda_files:
     with open(filepath, 'r') as f:
@@ -109,34 +78,28 @@ for filepath in skcuda_files:
 
     original = content
 
+    # Replace num_types list comprehension using typeDict or sctypeDict
+    # This handles both np.typeDict and np.sctypeDict variants
+    content = re.sub(
+        r'num_types\s*=\s*\[np\.(?:type|sctype)Dict\[t\]\s+for\s+t\s+in\s*\\?\s*\n\s*np\.typecodes\[.AllInteger.\]\+np\.typecodes\[.AllFloat.\]\]',
+        'num_types = [np.int8, np.int16, np.int32, np.int64,\n'
+        '             np.uint8, np.uint16, np.uint32, np.uint64,\n'
+        '             np.float16, np.float32, np.float64]',
+        content
+    )
+
     # Replace np.sctypes with explicit types
-    content = re.sub(
-        r'np\.sctypes\[(["\'])float\1\]',
-        '[np.float16, np.float32, np.float64]',
-        content
-    )
-    content = re.sub(
-        r'np\.sctypes\[(["\'])int\1\]',
-        '[np.int8, np.int16, np.int32, np.int64]',
-        content
-    )
-    content = re.sub(
-        r'np\.sctypes\[(["\'])uint\1\]',
-        '[np.uint8, np.uint16, np.uint32, np.uint64]',
-        content
-    )
-    content = re.sub(
-        r'np\.sctypes\[(["\'])complex\1\]',
-        '[np.complex64, np.complex128]',
-        content
-    )
+    content = re.sub(r'np\.sctypes\[(["\'])float\1\]', '[np.float16, np.float32, np.float64]', content)
+    content = re.sub(r'np\.sctypes\[(["\'])int\1\]', '[np.int8, np.int16, np.int32, np.int64]', content)
+    content = re.sub(r'np\.sctypes\[(["\'])uint\1\]', '[np.uint8, np.uint16, np.uint32, np.uint64]', content)
+    content = re.sub(r'np\.sctypes\[(["\'])complex\1\]', '[np.complex64, np.complex128]', content)
 
     if content != original:
         with open(filepath, 'w') as f:
             f.write(content)
-        print(f"✓ Patched {os.path.basename(filepath)}")
+        print(f"  Patched {os.path.basename(filepath)}")
 
-print("✓ All scikit-cuda files patched for numpy 2.x compatibility")
+print("All scikit-cuda files patched for numpy 2.x compatibility")
 ENDPYTHON
 
 echo ""
