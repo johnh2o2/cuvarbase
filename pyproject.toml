@@ -42,6 +42,9 @@ test = [
     "matplotlib",
     "astropy",
 ]
+cufinufft = [
+    "cufinufft>=2.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/johnh2o2/cuvarbase"

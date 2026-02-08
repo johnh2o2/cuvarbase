@@ -78,6 +78,12 @@ try:
 except ImportError:
     pass
 
+HAS_CUFINUFFT = False
+try:
+    from cuvarbase.cufinufft_backend import HAS_CUFINUFFT
+except ImportError:
+    pass
+
 HAS_TLS_CPU = False
 try:
     from transitleastsquares import transitleastsquares
@@ -396,6 +402,25 @@ def bench_ls_cpu_nifty(ndata, nbatch, nfreq, baseline):
     return med, {'variant': 'nifty-ls (CPU, fastnifty)', 'times': times}
 
 
+def bench_ls_gpu_cufinufft(ndata, nbatch, nfreq, baseline):
+    """cuvarbase LombScargleAsyncProcess with cuFINUFFT backend (GPU)."""
+    if not HAS_CUFINUFFT:
+        return None, {'error': 'cufinufft not installed'}
+
+    batch = generate_batch(ndata, nbatch, baseline)
+    freqs = make_freq_grid(nfreq)
+    freq_list = [freqs] * len(batch)
+
+    def run():
+        proc = cvb_ls.LombScargleAsyncProcess(use_cufinufft=True)
+        results = proc.run([(t, y, dy) for t, y, dy in batch],
+                           freqs=freq_list)
+        proc.finish()
+
+    med, times = time_function(run, n_iter=3, warmup=1, use_cuda=False)
+    return med, {'variant': 'cuvarbase cuFINUFFT', 'times': times}
+
+
 # --- PDM ------------------------------------------------------------------
 
 def bench_pdm_gpu(ndata, nbatch, nfreq, baseline):
@@ -563,6 +588,15 @@ ALGORITHMS = OrderedDict([
             ('nifty_ls', bench_ls_cpu_nifty),
         ]),
         'gpu_old_func': None,
+    }),
+    ('ls_cufinufft', {
+        'display_name': 'Lomb-Scargle (cuFINUFFT)',
+        'complexity': 'O(N + Nfreq*log(Nfreq))',
+        'gpu_func': bench_ls_gpu_cufinufft,
+        'cpu_funcs': OrderedDict([
+            ('nifty_ls', bench_ls_cpu_nifty),
+        ]),
+        'gpu_old_func': bench_ls_gpu,
     }),
     ('pdm', {
         'display_name': 'Phase Dispersion Minimization',

@@ -19,6 +19,11 @@ from .utils import autofrequency as utils_autofreq
 from .memory import NFFTMemory, LombScargleMemory, weights
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
 
+try:
+    from .cufinufft_backend import cufinufft_nfft_adjoint, HAS_CUFINUFFT
+except ImportError:
+    HAS_CUFINUFFT = False
+
 
 
 def get_k0(freqs):
@@ -276,6 +281,7 @@ def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
 
 def lomb_scargle_async(memory, functions, freqs,
                        block_size=256, use_fft=True,
+                       use_cufinufft=False,
                        python_dir_sums=False,
                        transfer_to_device=True,
                        transfer_to_host=True,
@@ -365,12 +371,19 @@ def lomb_scargle_async(memory, functions, freqs,
         nfft_kwargs['minimum_frequency'] = freqs[0]
         nfft_kwargs['samples_per_peak'] = samples_per_peak
 
-        # if not memory.window:
-        # NFFT(w * (y - ybar))
-        nfft_adjoint_async(memory.nfft_mem_yw, nfft_funcs, **nfft_kwargs)
+        if use_cufinufft and HAS_CUFINUFFT:
+            # cuFINUFFT path: replace custom NFFT with cufinufft type-1
+            cufinufft_nfft_adjoint(memory.nfft_mem_yw, **nfft_kwargs)
+            cufinufft_nfft_adjoint(memory.nfft_mem_w, **nfft_kwargs)
+        else:
+            # Custom NFFT path (Gaussian spreading + FFT)
+            # NFFT(w * (y - ybar))
+            nfft_adjoint_async(memory.nfft_mem_yw, nfft_funcs,
+                               **nfft_kwargs)
 
-        # NFFT(w)
-        nfft_adjoint_async(memory.nfft_mem_w, nfft_funcs, **nfft_kwargs)
+            # NFFT(w)
+            nfft_adjoint_async(memory.nfft_mem_w, nfft_funcs,
+                               **nfft_kwargs)
 
     args = (grid, block, stream)
     args += (memory.nfft_mem_w.ghat_g.ptr, memory.nfft_mem_yw.ghat_g.ptr)
@@ -411,6 +424,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
     def __init__(self, *args, **kwargs):
         super(LombScargleAsyncProcess, self).__init__(*args, **kwargs)
 
+        self.use_cufinufft = kwargs.pop('use_cufinufft', False)
+
         self.nfft_proc = NFFTAsyncProcess(*args, **kwargs)
         self._cpp_defs = self.nfft_proc._cpp_defs
 
@@ -426,6 +441,11 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         if self.nharmonics > 1:
             raise Exception("Only 1 harmonic is supported right now")
+
+        if self.use_cufinufft and not HAS_CUFINUFFT:
+            raise ImportError(
+                "cufinufft not found. Install with: pip install cufinufft>=2.2"
+            )
 
     def _compile_and_prepare_functions(self, **kwargs):
 
@@ -693,7 +713,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                 memory[i].setdata(t=t, y=y, dy=dy, **kwargs)
 
         ls_kwargs = dict(block_size=self.block_size,
-                         use_fft=use_fft)
+                         use_fft=use_fft,
+                         use_cufinufft=self.use_cufinufft)
         ls_kwargs.update(kwargs)
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
