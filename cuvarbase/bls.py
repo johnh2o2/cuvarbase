@@ -304,6 +304,16 @@ def compile_bls(block_size=_default_block_size,
     kernel_txt = _module_reader(find_kernel(kernel_name),
                                 cpp_defs=cppd)
 
+    # Filter function names based on kernel variant:
+    # bls_optimized.cu has full_bls_no_sol_optimized but not full_bls_no_sol
+    # bls.cu has full_bls_no_sol but not full_bls_no_sol_optimized
+    if use_optimized:
+        function_names = [n for n in function_names
+                          if n != 'full_bls_no_sol']
+    else:
+        function_names = [n for n in function_names
+                          if n != 'full_bls_no_sol_optimized']
+
     # compile kernel
     module = SourceModule(kernel_txt, options=['--use_fast_math'])
 
@@ -649,7 +659,7 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     This uses an optimized kernel with:
     - Fixed bank conflicts (separate yw/w arrays)
-    - Fast math intrinsics (__float2int_rd)
+    - Fast math intrinsics (floorf)
     - Warp shuffle reduction (eliminates 4 __syncthreads calls)
 
     Expected speedup: 20-30% over standard version
