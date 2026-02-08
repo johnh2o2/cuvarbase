@@ -297,7 +297,7 @@ __global__ void sparse_bls_kernel(
         __syncthreads();
 
         for (unsigned int stride = blockDim.x / 2; stride > 0; stride /= 2) {
-            if (tid < stride) {
+            if (tid < stride && tid + stride < blockDim.x) {
                 if (thread_results[tid + stride] > thread_results[tid]) {
                     thread_results[tid] = thread_results[tid + stride];
                     thread_results[blockDim.x + tid] = thread_results[blockDim.x + tid + stride];

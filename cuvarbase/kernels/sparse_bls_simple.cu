@@ -37,7 +37,7 @@ __device__ float bls_power(float YW, float W, float YY,
  *
  * Shared memory layout:
  *   sh_phi[ndata], sh_y[ndata], sh_w[ndata],
- *   sh_tmp[blockDim.x]  (reused for reductions and best_q/best_phi)
+ *   sh_bls[blockDim.x], sh_best_q[blockDim.x], sh_best_phi[blockDim.x]
  * Total: 3*ndata + 3*blockDim.x floats
  */
 __global__ void sparse_bls_kernel_simple(
@@ -264,7 +264,7 @@ __global__ void sparse_bls_kernel_simple(
         __syncthreads();
 
         for (unsigned int stride = blockDim.x / 2; stride > 0; stride /= 2) {
-            if (tid < stride) {
+            if (tid < stride && tid + stride < blockDim.x) {
                 if (sh_bls[tid + stride] > sh_bls[tid]) {
                     sh_bls[tid] = sh_bls[tid + stride];
                     sh_best_q[tid] = sh_best_q[tid + stride];

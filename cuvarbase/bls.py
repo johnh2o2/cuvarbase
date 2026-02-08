@@ -1589,6 +1589,10 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
     best_q_g = gpuarray.zeros(nfreqs, dtype=np.float32)
     best_phi_g = gpuarray.zeros(nfreqs, dtype=np.float32)
 
+    # Block size must be a power of 2 for tree reductions
+    if block_size & (block_size - 1) != 0:
+        raise ValueError(f"block_size must be a power of 2, got {block_size}")
+
     # Calculate shared memory size
     if use_simple:
         # Simple kernel: sh_phi[N] + sh_y[N] + sh_w[N] + 3*blockDim.x
