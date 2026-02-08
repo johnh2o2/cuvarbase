@@ -61,6 +61,12 @@ except ImportError as e:
     HAS_CUVARBASE = False
     print(f"Warning: Could not import cuvarbase: {e}")
 
+try:
+    from cuvarbase.bls_frequencies import keplerian_freq_grid
+    HAS_BLS_FREQ = True
+except ImportError:
+    HAS_BLS_FREQ = False
+
 # ---------------------------------------------------------------------------
 # CPU baseline imports
 # ---------------------------------------------------------------------------
@@ -531,6 +537,93 @@ def bench_tls_cpu(ndata, nbatch, nfreq, baseline):
     return med, {'variant': 'transitleastsquares (CPU)', 'times': times}
 
 
+# --- BLS Batch (multi-LC) -------------------------------------------------
+
+# Realistic survey profiles for batch BLS benchmarks
+SURVEY_PROFILES = OrderedDict([
+    ('tess_1sector', {
+        'display_name': 'TESS 1-sector',
+        'ndata': 20000, 'baseline': 27, 'period_min': 0.5, 'period_max': 13.5,
+        'qmin': 0.005, 'qmax': 0.1, 'n_lcs': 1000,
+    }),
+    ('tess_extended', {
+        'display_name': 'TESS extended',
+        'ndata': 50000, 'baseline': 365, 'period_min': 0.5, 'period_max': 180,
+        'qmin': 0.005, 'qmax': 0.1, 'n_lcs': 1000,
+    }),
+    ('kepler', {
+        'display_name': 'Kepler',
+        'ndata': 65000, 'baseline': 1460, 'period_min': 0.5, 'period_max': 500,
+        'qmin': 0.005, 'qmax': 0.1, 'n_lcs': 500,
+    }),
+    ('hatnet', {
+        'display_name': 'HAT-Net',
+        'ndata': 6000, 'baseline': 180, 'period_min': 0.5, 'period_max': 10,
+        'qmin': 0.01, 'qmax': 0.1, 'n_lcs': 2000,
+    }),
+    ('ztf', {
+        'display_name': 'ZTF',
+        'ndata': 150, 'baseline': 730, 'period_min': 0.5, 'period_max': 100,
+        'qmin': 0.01, 'qmax': 0.15, 'n_lcs': 5000,
+    }),
+])
+
+
+def bench_bls_batch_gpu(ndata, nbatch, nfreq, baseline):
+    """cuvarbase eebls_gpu_batch (multi-LC kernel)."""
+    batch = generate_batch(ndata, nbatch, baseline)
+    freqs = make_freq_grid(nfreq)
+
+    def run():
+        cvb_bls.eebls_gpu_batch(batch, freqs)
+
+    med, times = time_function(run, n_iter=3, warmup=1, use_cuda=True)
+    return med, {'variant': 'eebls_gpu_batch', 'times': times}
+
+
+def bench_bls_batch_single_gpu(ndata, nbatch, nfreq, baseline):
+    """cuvarbase eebls_gpu_fast_adaptive in a Python loop (baseline)."""
+    batch = generate_batch(ndata, nbatch, baseline)
+    freqs = make_freq_grid(nfreq)
+
+    def run():
+        for t, y, dy in batch:
+            cvb_bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
+
+    med, times = time_function(run, n_iter=3, warmup=1, use_cuda=True)
+    return med, {'variant': 'eebls_gpu_fast_adaptive (loop)', 'times': times}
+
+
+def bench_bls_batch_survey(survey_name):
+    """Benchmark batch BLS for a specific survey profile."""
+    if not HAS_BLS_FREQ:
+        return None, {'error': 'bls_frequencies not available'}
+
+    profile = SURVEY_PROFILES[survey_name]
+    ndata = profile['ndata']
+    n_lcs = profile['n_lcs']
+    baseline = profile['baseline']
+
+    freqs = keplerian_freq_grid(
+        profile['period_min'], profile['period_max'], baseline
+    )
+    batch = generate_batch(ndata, n_lcs, baseline)
+
+    def run():
+        cvb_bls.eebls_gpu_batch(
+            batch, freqs,
+            qmin=profile['qmin'], qmax=profile['qmax']
+        )
+
+    med, times = time_function(run, n_iter=3, warmup=1, use_cuda=True)
+    return med, {
+        'variant': f'eebls_gpu_batch ({profile["display_name"]})',
+        'survey': survey_name,
+        'nfreq_keplerian': len(freqs),
+        'times': times,
+    }
+
+
 # ============================================================================
 # Algorithm registry
 # ============================================================================
@@ -591,6 +684,15 @@ ALGORITHMS = OrderedDict([
             ('transitleastsquares', bench_tls_cpu),
         ]),
         'gpu_old_func': None,
+    }),
+    ('bls_batch', {
+        'display_name': 'BLS Batch (multi-LC)',
+        'complexity': 'O(N * Nfreq * N_lc)',
+        'gpu_func': bench_bls_batch_gpu,
+        'cpu_funcs': OrderedDict([
+            ('astropy', bench_bls_standard_cpu),
+        ]),
+        'gpu_old_func': bench_bls_batch_single_gpu,
     }),
 ])
 
