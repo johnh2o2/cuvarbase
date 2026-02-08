@@ -224,11 +224,12 @@ def generate_markdown_report(results, output_file='benchmark_report.md'):
     print(f"Generated report: {output_file}")
 
 
-# Algorithm complexity reference
+# Algorithm complexity reference — must match keys in benchmark_algorithms.py
 ALGORITHM_COMPLEXITY = {
     'sparse_bls': {'ndata': 2, 'nfreq': 1},
-    'bls_gpu_fast': {'ndata': 2, 'nfreq': 1},
+    'bls_gpu_fast': {'ndata': 1, 'nfreq': 1},
     'lombscargle': {'ndata': 1, 'nfreq': 1},
+    'pdm': {'ndata': 1, 'nfreq': 1},
 }
 
 

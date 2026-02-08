@@ -1,26 +1,16 @@
 # cuvarbase Algorithm Benchmarks
 
-## sparse_bls
+**Status: NEEDS REAL BENCHMARKS**
 
-| ndata | nbatch | CPU Time (s) | GPU Time (s) | Speedup |
-|-------|--------|--------------|--------------|----------|
-| 10 | 1 | 0.05 | 0.97 | 0.0x |
-| 10 | 10 | 0.46 | 1.73 | 0.3x |
-| 10 | 100 | 4.56 | 17.14 | 0.3x |
-| 10 | 1000 | 45.45 | 171.44* | 0.3x |
-| 100 | 1 | 4.43 | 0.21 | 21.1x |
-| 100 | 10 | 44.40 | 1.76 | 25.2x |
-| 100 | 100 | 443.50 | 171.44* | 2.6x |
-| 100 | 1000 | 454.46* | 1714.36* | 0.3x |
-| 1000 | 1 | 447.89 | 1.42 | 315.4x |
-| 1000 | 10 | 443.99* | 13.42 | 33.1x |
-| 1000 | 100 | 4434.95* | 134.24* | 33.0x |
-| 1000 | 1000 | 4544.62* | 1342.40* | 3.4x |
+Previous benchmark results in this directory used incorrect extrapolation
+(linear instead of quadratic scaling for sparse BLS due to a bug in
+`scripts/benchmark_algorithms.py`). The bug has been fixed.
 
-*\* = extrapolated value*
+To generate new results, run on a GPU:
 
-### Key Findings
+```bash
+python scripts/benchmark_algorithms.py --algorithms sparse_bls bls_gpu_fast
+python scripts/visualize_benchmarks.py benchmark_results.json
+```
 
-- **Maximum speedup**: 315.4x at ndata=1000, nbatch=1
-- Algorithm complexity: O(N^2 × Nfreq)
-
+See [docs/BENCHMARKING.md](../../docs/BENCHMARKING.md) for full instructions.

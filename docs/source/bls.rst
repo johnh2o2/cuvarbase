@@ -161,4 +161,4 @@ You can also use sparse BLS directly with ``sparse_bls_cpu``:
 
 
 .. [BLS] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
-.. [SparseBLS] `Burdge et al. 2021 <https://arxiv.org/abs/2103.06193>`_
+.. [SparseBLS] `Panahi & Zucker 2021 <https://arxiv.org/abs/2103.06193>`_
