@@ -17,6 +17,7 @@ from pycuda.compiler import SourceModule
 
 from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader
+from .memory.bls_memory import BLSBatchMemory
 
 import resource
 import numpy as np
@@ -1766,6 +1767,187 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                              ignore_negative_delta_sols=ignore_negative_delta_sols,
                              **kwargs)
     return freqs, powers, sols
+
+
+_batch_function_signature = {
+    'full_bls_batch': [
+        np.intp, np.intp, np.intp,       # t_all, yw_all, w_all
+        np.intp, np.intp,                 # bls_all, freqs
+        np.intp, np.intp,                 # nbins0, nbinsf
+        np.intp,                          # ndata_per_lc
+        np.uint32, np.uint32, np.uint32,  # max_ndata, nfreq, freq_offset
+        np.uint32, np.uint32,             # hist_size, noverlap
+        np.float32, np.float32,           # dlogq, dphi
+        np.uint32, np.uint32,             # ignore_neg, n_lcs
+    ],
+}
+
+
+def compile_bls_batch(block_size=_default_block_size, **kwargs):
+    """
+    Compile the multi-LC batch BLS kernel.
+
+    Parameters
+    ----------
+    block_size : int, optional (default: _default_block_size)
+        CUDA threads per block.
+
+    Returns
+    -------
+    functions : dict
+        Dictionary of compiled kernel functions.
+    """
+    cppd = dict(BLOCK_SIZE=block_size)
+    kernel_txt = _module_reader(find_kernel('bls_batch'), cpp_defs=cppd)
+    module = SourceModule(kernel_txt, options=['--use_fast_math'])
+
+    functions = {}
+    for name, sig in _batch_function_signature.items():
+        func = module.get_function(name)
+        functions[name] = func.prepare(sig)
+
+    return functions
+
+
+def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
+                    noverlap=2, dlogq=0.3, dphi=0.0,
+                    ignore_negative_delta_sols=False,
+                    max_batch_lcs=256, block_size=None,
+                    functions=None, **kwargs):
+    """
+    Process multiple lightcurves in batched GPU operations.
+
+    Launches a single kernel with grid=(nfreq_blocks, n_lcs), where each
+    CUDA block handles one (frequency, lightcurve) pair. This eliminates
+    per-lightcurve Python loop overhead and kernel launch costs.
+
+    Parameters
+    ----------
+    lightcurves : list of (t, y, dy) tuples
+        List of lightcurves to process.
+    freqs : array_like
+        Frequency grid (shared across all lightcurves).
+    qmin : float, optional (default: 1e-2)
+        Minimum fractional transit duration.
+    qmax : float, optional (default: 0.5)
+        Maximum fractional transit duration.
+    noverlap : int, optional (default: 2)
+        Phase overlap factor.
+    dlogq : float, optional (default: 0.3)
+        Logarithmic spacing of q values.
+    dphi : float, optional (default: 0.0)
+        Phase offset.
+    ignore_negative_delta_sols : bool, optional (default: False)
+        Ignore solutions with positive residuals (inverted dips).
+    max_batch_lcs : int, optional (default: 256)
+        Maximum lightcurves per kernel launch.
+    block_size : int, optional
+        CUDA threads per block. If None, auto-selects based on max ndata.
+    functions : dict, optional
+        Pre-compiled batch kernel functions.
+
+    Returns
+    -------
+    bls_results : list of ndarray
+        BLS power array for each lightcurve, each shape (nfreq,).
+    """
+    freqs = np.asarray(freqs).astype(np.float32)
+    nfreq = len(freqs)
+    n_total = len(lightcurves)
+
+    # Group LCs by similar ndata to minimize padding
+    lc_indices = list(range(n_total))
+    lc_ndatas = [len(lc[0]) for lc in lightcurves]
+
+    # Sort by ndata for efficient grouping
+    sorted_indices = sorted(lc_indices, key=lambda i: lc_ndatas[i])
+
+    # Auto-select block size
+    max_ndata_all = max(lc_ndatas)
+    if block_size is None:
+        block_size = _choose_block_size(max_ndata_all)
+
+    # Compile kernel if needed
+    if functions is None:
+        functions = compile_bls_batch(block_size=block_size)
+
+    func = functions['full_bls_batch']
+
+    # Process in batches
+    all_results = [None] * n_total  # indexed by original order
+
+    shmem_lim = kwargs.get('shmem_lim', None)
+    if shmem_lim is None:
+        dev = pycuda.autoprimaryctx.device
+        att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
+        shmem_lim = dev.get_attribute(att)
+
+    float_size = np.float32(1).nbytes
+
+    i = 0
+    while i < len(sorted_indices):
+        # Take up to max_batch_lcs from sorted order
+        batch_end = min(i + max_batch_lcs, len(sorted_indices))
+        batch_indices = sorted_indices[i:batch_end]
+        batch_n = len(batch_indices)
+
+        # Max ndata in this batch
+        max_ndata_batch = max(lc_ndatas[idx] for idx in batch_indices)
+
+        # Allocate batch memory
+        stream = cuda.Stream()
+        mem = BLSBatchMemory(max_ndata_batch, batch_n, nfreq, stream=stream)
+
+        # Set frequency grid
+        max_nbins = mem.set_freqs(freqs, qmin=qmin, qmax=qmax)
+
+        # Check shared memory
+        mem_req = (block_size + 2 * max_nbins) * float_size
+        if mem_req > shmem_lim:
+            qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
+            raise ValueError(
+                f"qmin={qmin:.2e} requires too much shared memory "
+                f"({mem_req} > {shmem_lim}). Try qmin > {qmin_min:.2e}."
+            )
+
+        # Set lightcurve data
+        for j, orig_idx in enumerate(batch_indices):
+            t, y, dy = lightcurves[orig_idx]
+            mem.set_lightcurve(j, t, y, dy)
+
+        # Transfer to GPU
+        mem.transfer_to_gpu()
+
+        # Launch kernel
+        max_nblocks = min(nfreq, 5000)
+        grid = (max_nblocks, batch_n)
+        block = (block_size, 1, 1)
+
+        args = (grid, block, stream)
+        args += (mem.t_g.ptr, mem.yw_g.ptr, mem.w_g.ptr)
+        args += (mem.bls_g.ptr, mem.freqs_g.ptr)
+        args += (mem.nbins0_g.ptr, mem.nbinsf_g.ptr)
+        args += (mem.ndata_per_lc_g.ptr,)
+        args += (np.uint32(max_ndata_batch),)
+        args += (np.uint32(nfreq), np.uint32(0))
+        args += (np.uint32(max_nbins), np.uint32(noverlap))
+        args += (np.float32(dlogq), np.float32(dphi))
+        args += (np.uint32(int(ignore_negative_delta_sols)),)
+        args += (np.uint32(batch_n),)
+
+        func.prepared_async_call(*args, shared_size=int(mem_req))
+
+        # Transfer results back
+        mem.transfer_to_cpu()
+        batch_results = mem.get_results()
+
+        # Store results in original order
+        for j, orig_idx in enumerate(batch_indices):
+            all_results[orig_idx] = batch_results[j]
+
+        i = batch_end
+
+    return all_results
 
 
 def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
