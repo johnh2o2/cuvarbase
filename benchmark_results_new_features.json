@@ -1,0 +1,360 @@
+{
+  "meta": {
+    "gpu": "NVIDIA RTX A5000",
+    "gpu_memory_mb": 24240,
+    "timestamp": "2026-02-08T22:29:44.246378",
+    "has_cufinufft": true,
+    "has_nifty_ls": true,
+    "has_astropy": true
+  },
+  "test_bls_batch": {
+    "ndata_200": {
+      "ndata": 200,
+      "baseline": 730.0,
+      "n_lcs": 10,
+      "nfreq": 2000,
+      "max_rdiff": 0.0026726051382350764,
+      "min_correlation": 0.9999941788924983,
+      "peaks_match": 10,
+      "pass": "True"
+    },
+    "ndata_2000": {
+      "ndata": 2000,
+      "baseline": 180.0,
+      "n_lcs": 10,
+      "nfreq": 2000,
+      "max_rdiff": 0.10572443972876902,
+      "min_correlation": 0.9984172406105057,
+      "peaks_match": 10,
+      "pass": "True"
+    },
+    "ndata_20000": {
+      "ndata": 20000,
+      "baseline": 27.0,
+      "n_lcs": 10,
+      "nfreq": 2000,
+      "max_rdiff": 0.30556555520888873,
+      "min_correlation": 0.9996315163956724,
+      "peaks_match": 10,
+      "pass": "True"
+    }
+  },
+  "test_cufinufft_ls": {
+    "ndata_1000_nfreq_5000": {
+      "ndata": 1000,
+      "nfreq": 5000,
+      "n_lcs": 5,
+      "max_abs_diff": 0.003956317901611328,
+      "min_correlation": 0.9999981431286823,
+      "peak_matches": 5,
+      "pass": "True"
+    },
+    "ndata_5000_nfreq_10000": {
+      "ndata": 5000,
+      "nfreq": 10000,
+      "n_lcs": 5,
+      "max_abs_diff": 0.0017940402030944824,
+      "min_correlation": 0.9999995240583917,
+      "peak_matches": 5,
+      "pass": "True"
+    },
+    "ndata_10000_nfreq_20000": {
+      "ndata": 10000,
+      "nfreq": 20000,
+      "n_lcs": 5,
+      "max_abs_diff": 0.00040525197982788086,
+      "min_correlation": 0.99999996271727,
+      "peak_matches": 5,
+      "pass": "True"
+    }
+  },
+  "test_keplerian_grid": {
+    "ZTF-like": {
+      "keplerian_nfreq": 60121,
+      "uniform_nfreq": 827392,
+      "reduction_factor": 13.762113071971523,
+      "kep_stats": {
+        "nfreq": 60121,
+        "f_min": 0.009999999776482582,
+        "f_max": 2.0000431537628174,
+        "period_min": 0.49998921155929565,
+        "period_max": 100.0,
+        "df_min": 2.405606210231781e-06,
+        "df_max": 8.440017700195312e-05,
+        "df_ratio": 35.08478546142578,
+        "uniform_nfreq": 827253,
+        "reduction_factor": 13.75980106784651
+      },
+      "pass": "True"
+    },
+    "HAT-Net": {
+      "keplerian_nfreq": 11276,
+      "uniform_nfreq": 41949,
+      "reduction_factor": 3.720202199361476,
+      "kep_stats": {
+        "nfreq": 11276,
+        "f_min": 0.10000000149011612,
+        "f_max": 2.000178098678589,
+        "period_min": 0.4999554753303528,
+        "period_max": 10.0,
+        "df_min": 4.529207944869995e-05,
+        "df_max": 0.0003420114517211914,
+        "df_ratio": 7.551241874694824,
+        "uniform_nfreq": 41954,
+        "reduction_factor": 3.7206456190138346
+      },
+      "pass": "True"
+    },
+    "TESS-1sector": {
+      "keplerian_nfreq": 1788,
+      "uniform_nfreq": 7792,
+      "reduction_factor": 4.357941834451902,
+      "kep_stats": {
+        "nfreq": 1788,
+        "f_min": 0.07407407462596893,
+        "f_max": 2.000650644302368,
+        "period_min": 0.49983739852905273,
+        "period_max": 13.5,
+        "df_min": 0.000247173011302948,
+        "df_max": 0.0022791624069213867,
+        "df_ratio": 9.220919609069824,
+        "uniform_nfreq": 7795,
+        "reduction_factor": 4.359619686800895
+      },
+      "pass": "True"
+    },
+    "Kepler": {
+      "keplerian_nfreq": 130597,
+      "uniform_nfreq": 4858154,
+      "reduction_factor": 37.19958345138097,
+      "kep_stats": {
+        "nfreq": 130597,
+        "f_min": 0.0020000000949949026,
+        "f_max": 2.0000195503234863,
+        "period_min": 0.4999951124191284,
+        "period_max": 499.9999694824219,
+        "df_min": 4.1117891669273376e-07,
+        "df_max": 4.220008850097656e-05,
+        "df_ratio": 102.6319351196289,
+        "uniform_nfreq": 4859246,
+        "reduction_factor": 37.20794505233658
+      },
+      "pass": "True"
+    },
+    "transit_detection": {
+      "injected_period": 2.5,
+      "detected_period": 2.5003466606140137,
+      "pass": "True"
+    }
+  },
+  "bench_bls_batch": {
+    "ZTF-like": {
+      "ndata": 150,
+      "nlcs": 500,
+      "nfreq_keplerian": 60121,
+      "baseline": 730.0,
+      "time_single_s": 2.3347624503076077,
+      "time_batch_s": 0.698420200496912,
+      "times_single": [
+        2.7447346709668636,
+        2.3347624503076077,
+        2.1621975488960743
+      ],
+      "times_batch": [
+        0.8399859815835953,
+        0.698420200496912,
+        0.6974925473332405
+      ],
+      "lc_per_sec_single": 214.15454918513205,
+      "lc_per_sec_batch": 715.90140096787,
+      "batch_speedup": 3.342919418204787
+    },
+    "HAT-Net": {
+      "ndata": 6000,
+      "nlcs": 200,
+      "nfreq_keplerian": 11276,
+      "baseline": 180.0,
+      "time_single_s": 0.576923493295908,
+      "time_batch_s": 0.29898541793227196,
+      "times_single": [
+        0.5624013021588326,
+        0.576923493295908,
+        0.5817113965749741
+      ],
+      "times_batch": [
+        0.29898541793227196,
+        0.2990092597901821,
+        0.28580887988209724
+      ],
+      "lc_per_sec_single": 346.6664164730394,
+      "lc_per_sec_batch": 668.9289443718129,
+      "batch_speedup": 1.9296041167686522
+    },
+    "TESS-1sector": {
+      "ndata": 20000,
+      "nlcs": 50,
+      "nfreq_keplerian": 1788,
+      "baseline": 27.0,
+      "time_single_s": 0.24222613498568535,
+      "time_batch_s": 0.20005519688129425,
+      "times_single": [
+        0.17978467419743538,
+        0.24222613498568535,
+        0.24704817682504654
+      ],
+      "times_batch": [
+        0.5999967902898788,
+        0.1999506950378418,
+        0.20005519688129425
+      ],
+      "lc_per_sec_single": 206.4186839415772,
+      "lc_per_sec_batch": 249.93102293497654,
+      "batch_speedup": 1.210796513971161
+    },
+    "Kepler": {
+      "ndata": 65000,
+      "nlcs": 10,
+      "nfreq_keplerian": 130597,
+      "baseline": 1460.0,
+      "time_single_s": 1.7179405950009823,
+      "time_batch_s": 1.7042779251933098,
+      "times_single": [
+        1.717332098633051,
+        1.7179405950009823,
+        1.7661494389176369
+      ],
+      "times_batch": [
+        1.982952706515789,
+        1.7042779251933098,
+        1.702945850789547
+      ],
+      "lc_per_sec_single": 5.820923045359599,
+      "lc_per_sec_batch": 5.867587587784861,
+      "batch_speedup": 1.0080166911779502
+    }
+  },
+  "bench_cufinufft_ls": {
+    "ndata_1000_nfreq_5000": {
+      "ndata": 1000,
+      "nfreq": 5000,
+      "time_custom_gpu_ms": 153.11116725206375,
+      "time_cufinufft_gpu_ms": 178.16489189863205,
+      "cufinufft_vs_custom": 0.8593790034636972,
+      "time_nifty_cpu_ms": 1.3550780713558197,
+      "cufinufft_vs_nifty": 0.007605752496551337,
+      "time_astropy_cpu_ms": 273.86317774653435
+    },
+    "ndata_1000_nfreq_50000": {
+      "ndata": 1000,
+      "nfreq": 50000,
+      "time_custom_gpu_ms": 158.34680572152138,
+      "time_cufinufft_gpu_ms": 171.6742068529129,
+      "cufinufft_vs_custom": 0.9223680634633123,
+      "time_nifty_cpu_ms": 5.352705717086792,
+      "cufinufft_vs_nifty": 0.031179440494942173,
+      "time_astropy_cpu_ms": 2521.7010341584682
+    },
+    "ndata_5000_nfreq_5000": {
+      "ndata": 5000,
+      "nfreq": 5000,
+      "time_custom_gpu_ms": 153.0960015952587,
+      "time_cufinufft_gpu_ms": 157.59217739105225,
+      "cufinufft_vs_custom": 0.9714695496297596,
+      "time_nifty_cpu_ms": 1.6914121806621552,
+      "cufinufft_vs_nifty": 0.010732843524745855,
+      "time_astropy_cpu_ms": 1068.6389617621899
+    },
+    "ndata_5000_nfreq_50000": {
+      "ndata": 5000,
+      "nfreq": 50000,
+      "time_custom_gpu_ms": 167.2087498009205,
+      "time_cufinufft_gpu_ms": 177.55553126335144,
+      "cufinufft_vs_custom": 0.9417265044416749,
+      "time_nifty_cpu_ms": 5.619950592517853,
+      "cufinufft_vs_nifty": 0.031651791146862715,
+      "time_astropy_cpu_ms": 10227.177046239376
+    },
+    "ndata_10000_nfreq_5000": {
+      "ndata": 10000,
+      "nfreq": 5000,
+      "time_custom_gpu_ms": 166.18562489748,
+      "time_cufinufft_gpu_ms": 154.9188643693924,
+      "cufinufft_vs_custom": 1.0727268468817515,
+      "time_nifty_cpu_ms": 2.044443041086197,
+      "cufinufft_vs_nifty": 0.013196863076735291,
+      "time_astropy_cpu_ms": 1901.3105258345604
+    },
+    "ndata_10000_nfreq_50000": {
+      "ndata": 10000,
+      "nfreq": 50000,
+      "time_custom_gpu_ms": 157.83682465553284,
+      "time_cufinufft_gpu_ms": 178.13683301210403,
+      "cufinufft_vs_custom": 0.8860426111022651,
+      "time_nifty_cpu_ms": 8.28588753938675,
+      "cufinufft_vs_nifty": 0.046514173398511806,
+      "time_astropy_cpu_ms": 20323.357846587896
+    },
+    "ndata_50000_nfreq_5000": {
+      "ndata": 50000,
+      "nfreq": 5000,
+      "time_custom_gpu_ms": 158.84677693247795,
+      "time_cufinufft_gpu_ms": 181.46558851003647,
+      "cufinufft_vs_custom": 0.8753548165066706,
+      "time_nifty_cpu_ms": 7.596444338560104,
+      "cufinufft_vs_nifty": 0.04186162456988346,
+      "time_astropy_cpu_ms": 9311.356112360954
+    },
+    "ndata_50000_nfreq_50000": {
+      "ndata": 50000,
+      "nfreq": 50000,
+      "time_custom_gpu_ms": 194.17118281126022,
+      "time_cufinufft_gpu_ms": 166.7277291417122,
+      "cufinufft_vs_custom": 1.1646004165643145,
+      "time_nifty_cpu_ms": 15.134789049625397,
+      "cufinufft_vs_nifty": 0.09077547644616095,
+      "time_astropy_cpu_ms": null
+    }
+  },
+  "bench_keplerian_grid": {
+    "ZTF-like": {
+      "ndata": 150,
+      "baseline": 730.0,
+      "nfreq_uniform": 827392,
+      "nfreq_keplerian": 60121,
+      "freq_reduction": 13.762113071971523,
+      "time_uniform_ms": 42.70084202289581,
+      "time_keplerian_ms": 4.790995270013809,
+      "time_speedup": 8.912728904191287
+    },
+    "HAT-Net": {
+      "ndata": 6000,
+      "baseline": 180.0,
+      "nfreq_uniform": 41949,
+      "nfreq_keplerian": 11276,
+      "freq_reduction": 3.720202199361476,
+      "time_uniform_ms": 7.289186120033264,
+      "time_keplerian_ms": 3.1394027173519135,
+      "time_speedup": 2.3218385076068526
+    },
+    "TESS-1sector": {
+      "ndata": 20000,
+      "baseline": 27.0,
+      "nfreq_uniform": 7792,
+      "nfreq_keplerian": 1788,
+      "freq_reduction": 4.357941834451902,
+      "time_uniform_ms": 6.322752684354782,
+      "time_keplerian_ms": 3.6835111677646637,
+      "time_speedup": 1.7165015650520588
+    },
+    "Kepler": {
+      "ndata": 65000,
+      "baseline": 1460.0,
+      "nfreq_uniform": 4858154,
+      "nfreq_keplerian": 130597,
+      "freq_reduction": 37.19958345138097,
+      "time_uniform_ms": 4252.2005923092365,
+      "time_keplerian_ms": 179.51584979891777,
+      "time_speedup": 23.687048230405733
+    }
+  }
+}

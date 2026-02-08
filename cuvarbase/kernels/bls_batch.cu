@@ -39,6 +39,13 @@ __device__ int batch_divrndup(int a, int b){
     return (a % b > 0) ? a/b + 1 : a/b;
 }
 
+__device__ unsigned int batch_dnbins(unsigned int nbins, float dlogq){
+    if (dlogq < 0.f)
+        return 1;
+    unsigned int n = (unsigned int) floorf(dlogq * nbins);
+    return (n == 0) ? 1 : n;
+}
+
 
 __global__ void full_bls_batch(
         const float* __restrict__ t_all,
@@ -128,7 +135,7 @@ __global__ void full_bls_batch(
             thread_w = 0.f;
             unsigned int m0 = 0;
 
-            for (unsigned int m = 1; m < max_bin_width; m += 1){
+            for (unsigned int m = 1; m < max_bin_width; m += batch_dnbins(m, dlogq)){
                 for (s = m0; s < m; s++){
                     thread_yw += block_bins_yw[(n + s) % nbf];
                     thread_w += block_bins_w[(n + s) % nbf];

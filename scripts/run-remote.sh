@@ -37,8 +37,8 @@ echo ""
 echo "Step 2: Running command on RunPod..."
 echo "=========================================="
 
-# Run command remotely and stream output
-ssh ${SSH_OPTS} ${SSH_HOST} "export PATH=/usr/local/cuda-12.8/bin:\$PATH && export CUDA_HOME=/usr/local/cuda-12.8 && export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:\$LD_LIBRARY_PATH && cd ${RUNPOD_REMOTE_DIR} && ${COMMAND}"
+# Run command remotely with auto-detected CUDA path
+ssh ${SSH_OPTS} ${SSH_HOST} "CUDA_DIR=\$(ls -d /usr/local/cuda-* 2>/dev/null | sort -V | tail -1) && export PATH=\${CUDA_DIR}/bin:\$PATH && export CUDA_HOME=\${CUDA_DIR} && export LD_LIBRARY_PATH=\${CUDA_DIR}/lib64:\$LD_LIBRARY_PATH && cd ${RUNPOD_REMOTE_DIR} && ${COMMAND}"
 
 echo ""
 echo "=========================================="
