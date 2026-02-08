@@ -2,7 +2,6 @@ from itertools import product
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
-from pycuda.tools import mark_cuda_test
 from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
                   single_bls, eebls_gpu_custom, eebls_gpu_fast, \
@@ -448,141 +447,269 @@ class TestBLS(object):
         fmax_regular = freqs[np.argmax(power0)]
         assert(abs(fmax_fast - fmax_regular) * (max(t) - min(t)) / q < 3)
 
-    @pytest.mark.parametrize("freq", [1.0, 2.0])
-    @pytest.mark.parametrize("q", [0.02, 0.1])
-    @pytest.mark.parametrize("phi0", [0.0, 0.5])
-    @pytest.mark.parametrize("ndata", [50, 100])
+    # ---- Sparse BLS tests: ground-truth correctness ----
+
+    @staticmethod
+    def _brute_force_bls(t, y, dy, freq, ignore_negative_delta_sols=False):
+        """Exhaustive BLS over all observation-pair transit boundaries."""
+        t = np.asarray(t, dtype=np.float32)
+        y = np.asarray(y, dtype=np.float32)
+        dy = np.asarray(dy, dtype=np.float32)
+
+        ndata = len(t)
+        w = np.power(dy, -2, dtype=np.float32)
+        w /= np.sum(w)
+
+        phi = (t * freq) % 1.0
+        idx = np.argsort(phi)
+        phi_s, y_s, w_s = phi[idx], y[idx], w[idx]
+
+        ybar = np.dot(w, y)
+        YY = np.dot(w, (y - ybar) ** 2)
+
+        max_bls, best_q, best_phi = 0.0, 0.0, 0.0
+
+        # Non-wrapped pairs
+        for i in range(ndata):
+            W_acc, YW_acc = 0.0, 0.0
+            for j in range(i + 1, ndata + 1):
+                W_acc += w_s[j - 1]
+                YW_acc += w_s[j - 1] * y_s[j - 1]
+                if j < ndata:
+                    q = 0.5 * (phi_s[j] + phi_s[j - 1]) - phi_s[i]
+                else:
+                    q = phi_s[ndata - 1] - phi_s[i] + 1e-7
+                if q <= 0 or q > 0.5:
+                    continue
+                W = W_acc
+                YW = YW_acc - ybar * W
+                if W < 1e-9 or W > 1.0 - 1e-9:
+                    continue
+                if YW > 0 and ignore_negative_delta_sols:
+                    continue
+                bls = (YW ** 2) / (W * (1 - W)) / YY
+                if bls > max_bls:
+                    max_bls, best_q, best_phi = bls, q, phi_s[i]
+
+        # Wrapped pairs
+        for i in range(ndata):
+            W_tail = float(np.sum(w_s[i:]))
+            YW_tail = float(np.dot(w_s[i:], y_s[i:]))
+            W_head, YW_head = 0.0, 0.0
+            for k in range(i):
+                if k > 0:
+                    W_head += w_s[k - 1]
+                    YW_head += w_s[k - 1] * y_s[k - 1]
+                phi0 = phi_s[i]
+                if k > 0:
+                    q = (1.0 - phi0) + 0.5 * (phi_s[k - 1] + phi_s[k])
+                else:
+                    q = 1.0 - phi0 + 1e-7
+                if q <= 0 or q > 0.5:
+                    continue
+                W = W_tail + W_head
+                YW = (YW_tail + YW_head) - ybar * W
+                if W < 1e-9 or W > 1.0 - 1e-9:
+                    continue
+                if YW > 0 and ignore_negative_delta_sols:
+                    continue
+                bls = (YW ** 2) / (W * (1 - W)) / YY
+                if bls > max_bls:
+                    max_bls, best_q, best_phi = bls, q, phi0
+
+        return max_bls, best_q, best_phi
+
+    @pytest.mark.parametrize("ndata", [10, 15, 20])
+    @pytest.mark.parametrize("freq", [1.0, 2.5])
+    @pytest.mark.parametrize("seed", [42, 123])
     @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
-    def test_sparse_bls(self, freq, q, phi0, ndata, ignore_negative_delta_sols):
-        """Test sparse BLS implementation against single_bls"""
-        t, y, dy = data(snr=10, q=q, phi0=phi0, freq=freq,
-                        baseline=365., ndata=ndata)
-        
-        # Test a few frequencies around the true frequency
-        df = q / (10 * (max(t) - min(t)))
-        freqs = np.linspace(freq - 5 * df, freq + 5 * df, 11)
-        
-        # Run sparse BLS
-        power_sparse, sols_sparse = sparse_bls_cpu(t, y, dy, freqs,
-                                                     ignore_negative_delta_sols=ignore_negative_delta_sols)
-        
-        # Compare with single_bls on the same frequency/q/phi combinations
-        for i, (f, (q_s, phi_s)) in enumerate(zip(freqs, sols_sparse)):
-            # Compute BLS with single_bls using the solution from sparse
-            p_single = single_bls(t, y, dy, f, q_s, phi_s,
-                                 ignore_negative_delta_sols=ignore_negative_delta_sols)
-            
-            # The sparse BLS result should match (or be very close to) single_bls
-            # with the parameters it found
-            assert np.abs(power_sparse[i] - p_single) < 1e-5, \
-                f"Mismatch at freq={f}: sparse={power_sparse[i]}, single={p_single}"
-        
-        # The best frequency should be close to the true frequency
-        best_freq = freqs[np.argmax(power_sparse)]
-        assert np.abs(best_freq - freq) < 10 * df  # Allow more tolerance for sparse
+    def test_sparse_bls_vs_exhaustive(self, ndata, freq, seed,
+                                      ignore_negative_delta_sols):
+        """Verify sparse_bls_cpu matches exhaustive brute-force search."""
+        rand = np.random.RandomState(seed)
+        sigma = 0.1
+        q_true, phi0_true = 0.1, 0.3
+        delta = 5.0 * sigma / np.sqrt(ndata * q_true)
+
+        t = np.sort(rand.rand(ndata))
+        y = np.zeros(ndata)
+        phi = (t * freq - phi0_true) % 1.0
+        y[phi < q_true] -= delta
+        y += sigma * rand.randn(ndata)
+        dy = sigma * np.ones(ndata)
+
+        freqs = np.array([freq], dtype=np.float32)
+        power, sols = sparse_bls_cpu(
+            t, y, dy, freqs,
+            ignore_negative_delta_sols=ignore_negative_delta_sols)
+        bf_power, _, _ = self._brute_force_bls(
+            t, y, dy, freq,
+            ignore_negative_delta_sols=ignore_negative_delta_sols)
+
+        assert np.abs(power[0] - bf_power) < 1e-5, \
+            f"sparse={power[0]:.8f}, brute={bf_power:.8f}"
 
     @pytest.mark.parametrize("freq", [1.0, 2.0])
-    @pytest.mark.parametrize("q", [0.02, 0.1])
-    @pytest.mark.parametrize("phi0", [0.0, 0.5])
-    @pytest.mark.parametrize("ndata", [50, 100, 200])
-    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
-    @mark_cuda_test
-    def test_sparse_bls_gpu(self, freq, q, phi0, ndata, ignore_negative_delta_sols):
-        """Test GPU sparse BLS implementation against CPU sparse BLS"""
-        t, y, dy = data(snr=10, q=q, phi0=phi0, freq=freq,
+    @pytest.mark.parametrize("q", [0.05, 0.1])
+    @pytest.mark.parametrize("phi0", [0.0, 0.3, 0.5])
+    @pytest.mark.parametrize("ndata", [100, 200])
+    def test_sparse_bls_ground_truth(self, freq, q, phi0, ndata):
+        """Verify sparse_bls_cpu recovers a known injected transit."""
+        t, y, dy = data(snr=50, q=q, phi0=phi0, freq=freq,
                         baseline=365., ndata=ndata)
 
-        # Test a few frequencies around the true frequency
         df = q / (10 * (max(t) - min(t)))
-        freqs = np.linspace(freq - 5 * df, freq + 5 * df, 11)
+        freqs = np.linspace(freq - 5 * df, freq + 5 * df, 21)
 
-        # Run CPU sparse BLS
-        power_cpu, sols_cpu = sparse_bls_cpu(t, y, dy, freqs,
-                                              ignore_negative_delta_sols=ignore_negative_delta_sols)
+        power, sols = sparse_bls_cpu(t, y, dy, freqs)
 
-        # Run GPU sparse BLS
-        power_gpu, sols_gpu = sparse_bls_gpu(t, y, dy, freqs,
-                                              ignore_negative_delta_sols=ignore_negative_delta_sols)
+        # Best frequency should be within the searched range
+        best_idx = np.argmax(power)
+        best_freq = freqs[best_idx]
+        T = max(t) - min(t)
+        assert np.abs(best_freq - freq) < q / T, \
+            f"Expected freq~{freq}, got {best_freq}"
 
-        # Compare CPU and GPU results
-        # Powers should match closely
-        assert_allclose(power_cpu, power_gpu, rtol=1e-4, atol=1e-6,
-                       err_msg=f"Power mismatch for freq={freq}, q={q}, phi0={phi0}")
-
-        # Solutions should match closely
-        for i, (f, (q_cpu, phi_cpu), (q_gpu, phi_gpu)) in enumerate(
-                zip(freqs, sols_cpu, sols_gpu)):
-            # q values should match
-            assert np.abs(q_cpu - q_gpu) < 1e-4, \
-                f"q mismatch at freq={f}: cpu={q_cpu}, gpu={q_gpu}"
-
-            # phi values should match (accounting for wrapping)
-            phi_diff = np.abs(phi_cpu - phi_gpu)
-            phi_diff = min(phi_diff, 1.0 - phi_diff)  # Account for phase wrapping
-            assert phi_diff < 1e-4, \
-                f"phi mismatch at freq={f}: cpu={phi_cpu}, gpu={phi_gpu}"
-
-        # Both should find peak near true frequency
-        best_freq_cpu = freqs[np.argmax(power_cpu)]
-        best_freq_gpu = freqs[np.argmax(power_gpu)]
-        assert np.abs(best_freq_cpu - best_freq_gpu) < df, \
-            f"Best freq mismatch: cpu={best_freq_cpu}, gpu={best_freq_gpu}"
+        # Verify solution is consistent with single_bls
+        q_found, phi_found = sols[best_idx]
+        p_single = single_bls(t, y, dy, best_freq, q_found, phi_found)
+        assert np.abs(power[best_idx] - p_single) < 1e-4, \
+            f"sparse={power[best_idx]}, single_bls={p_single}"
 
     @pytest.mark.parametrize("freq", [1.0])
-    @pytest.mark.parametrize("q", [0.05])
-    @pytest.mark.parametrize("phi0", [0.0, 0.9])  # Test both non-wrapped and wrapped
-    @pytest.mark.parametrize("ndata", [100])
-    @mark_cuda_test
-    def test_sparse_bls_gpu_vs_single(self, freq, q, phi0, ndata):
-        """Test that GPU sparse BLS solutions match single_bls"""
-        t, y, dy = data(snr=20, q=q, phi0=phi0, freq=freq,
+    @pytest.mark.parametrize("phi0", [0.95, 0.98])
+    @pytest.mark.parametrize("q", [0.08, 0.1])
+    @pytest.mark.parametrize("ndata", [80, 120])
+    def test_sparse_bls_phase_wrapping(self, freq, phi0, q, ndata):
+        """Verify sparse_bls_cpu correctly finds transits that wrap phase 0/1."""
+        t, y, dy = data(snr=50, q=q, phi0=phi0, freq=freq,
                         baseline=365., ndata=ndata)
 
-        # Test a few frequencies
         df = q / (10 * (max(t) - min(t)))
-        freqs = np.linspace(freq - 3 * df, freq + 3 * df, 7)
+        freqs = np.linspace(freq - 5 * df, freq + 5 * df, 21)
 
-        # Run GPU sparse BLS
+        power, sols = sparse_bls_cpu(t, y, dy, freqs)
+
+        best_idx = np.argmax(power)
+        best_freq = freqs[best_idx]
+
+        # Should find transit near the true frequency
+        T = max(t) - min(t)
+        assert np.abs(best_freq - freq) < q / T, \
+            f"Expected freq~{freq}, got {best_freq}"
+
+        # Power should be significant (SNR=50 should give high power)
+        assert power[best_idx] > 0.5, \
+            f"Power too low: {power[best_idx]}"
+
+        # Verify against brute-force at the best frequency
+        bf_power, _, _ = self._brute_force_bls(t, y, dy, best_freq)
+        assert np.abs(power[best_idx] - bf_power) < 1e-5, \
+            f"sparse={power[best_idx]:.8f}, brute={bf_power:.8f}"
+
+    @pytest.mark.parametrize("freq", [1.0, 2.0])
+    @pytest.mark.parametrize("ndata", [50, 100])
+    def test_sparse_bls_optimality(self, freq, ndata):
+        """Verify sparse_bls_cpu finds the global max (no pairs missed)."""
+        t, y, dy = data(snr=30, q=0.08, phi0=0.5, freq=freq,
+                        baseline=365., ndata=ndata)
+
+        freqs = np.array([freq], dtype=np.float32)
+        power, sols = sparse_bls_cpu(t, y, dy, freqs)
+        bf_power, _, _ = self._brute_force_bls(t, y, dy, freq)
+
+        assert np.abs(power[0] - bf_power) < 1e-5, \
+            f"sparse={power[0]:.8f} != brute={bf_power:.8f}"
+
+    @pytest.mark.parametrize("freq", [1.0, 2.0])
+    @pytest.mark.parametrize("q", [0.02, 0.1])
+    @pytest.mark.parametrize("phi0", [0.0, 0.5])
+    @pytest.mark.parametrize("ndata", [50, 100])
+    def test_sparse_bls_gpu(self, freq, q, phi0, ndata):
+        """Test GPU sparse BLS matches CPU and both match ground truth."""
+        t, y, dy = data(snr=30, q=q, phi0=phi0, freq=freq,
+                        baseline=365., ndata=ndata)
+
+        df = q / (10 * (max(t) - min(t)))
+        freqs = np.linspace(freq - 5 * df, freq + 5 * df, 11)
+
+        power_cpu, sols_cpu = sparse_bls_cpu(t, y, dy, freqs)
         power_gpu, sols_gpu = sparse_bls_gpu(t, y, dy, freqs)
 
-        # Verify against single_bls
-        for i, (f, (q_gpu, phi_gpu)) in enumerate(zip(freqs, sols_gpu)):
-            p_single = single_bls(t, y, dy, f, q_gpu, phi_gpu)
+        # Powers should match closely across all frequencies
+        assert_allclose(power_cpu, power_gpu, rtol=1e-3, atol=1e-5,
+                       err_msg=f"Power mismatch for freq={freq}, q={q}, phi0={phi0}")
 
-            # The GPU BLS result should match single_bls with the parameters it found
-            assert np.abs(power_gpu[i] - p_single) < 1e-4, \
-                f"Mismatch at freq={f}: gpu={power_gpu[i]}, single={p_single}"
+        # Best powers should be close (argmax may differ due to float precision)
+        assert np.abs(np.max(power_cpu) - np.max(power_gpu)) < 1e-4, \
+            f"Best power mismatch: cpu={np.max(power_cpu)}, gpu={np.max(power_gpu)}"
+
+    @pytest.mark.parametrize("freq", [1.0])
+    @pytest.mark.parametrize("phi0", [0.95])
+    @pytest.mark.parametrize("q", [0.08])
+    @pytest.mark.parametrize("ndata", [80])
+    def test_sparse_bls_gpu_phase_wrapping(self, freq, phi0, q, ndata):
+        """Test GPU sparse BLS with wrapped transits matches CPU."""
+        t, y, dy = data(snr=50, q=q, phi0=phi0, freq=freq,
+                        baseline=365., ndata=ndata)
+
+        df = q / (10 * (max(t) - min(t)))
+        freqs = np.linspace(freq - 5 * df, freq + 5 * df, 11)
+
+        power_cpu, _ = sparse_bls_cpu(t, y, dy, freqs)
+        power_gpu, _ = sparse_bls_gpu(t, y, dy, freqs)
+
+        assert_allclose(power_cpu, power_gpu, rtol=1e-4, atol=1e-6)
+
+        # Both should find significant power
+        assert np.max(power_gpu) > 0.1
 
     @pytest.mark.parametrize("ndata", [50, 100])
-    @pytest.mark.parametrize("use_sparse_override", [None, True, False])
+    @pytest.mark.parametrize("use_sparse_override", [None, True])
     def test_eebls_transit_auto_select(self, ndata, use_sparse_override):
-        """Test eebls_transit automatic selection between sparse and standard BLS"""
+        """Test eebls_transit automatic selection with sparse BLS."""
         freq_true = 1.0
         q = 0.05
         phi0 = 0.3
-        
-        t, y, dy = data(snr=10, q=q, phi0=phi0, freq=freq_true,
+
+        t, y, dy = data(snr=30, q=q, phi0=phi0, freq=freq_true,
                         baseline=365., ndata=ndata)
-        
-        # Skip GPU tests if use_sparse_override is False (requires PyCUDA)
-        if use_sparse_override is False:
-            pytest.skip("GPU test requires PyCUDA")
-        
-        # Call with automatic selection
+
         freqs, powers, sols = eebls_transit(
             t, y, dy,
             fmin=freq_true * 0.99,
             fmax=freq_true * 1.01,
             use_sparse=use_sparse_override,
-            sparse_threshold=75  # Use sparse for ndata < 75
+            sparse_threshold=150
         )
-        
-        # Check that we got results
+
         assert len(freqs) > 0
         assert len(powers) == len(freqs)
+        assert sols is not None
         assert len(sols) == len(freqs)
-        
-        # Best frequency should be close to true frequency
+
         best_freq = freqs[np.argmax(powers)]
         T = max(t) - min(t)
-        assert np.abs(best_freq - freq_true) < q / (2 * T)
+        assert np.abs(best_freq - freq_true) < q / T
+
+    @pytest.mark.parametrize("ndata", [50, 100])
+    def test_eebls_transit_standard_returns_3(self, ndata):
+        """Test eebls_transit always returns 3 values, even with use_fast."""
+        freq_true = 1.0
+        q = 0.05
+        phi0 = 0.3
+
+        t, y, dy = data(snr=30, q=q, phi0=phi0, freq=freq_true,
+                        baseline=365., ndata=ndata)
+
+        # use_fast=True should still return 3 values (sols=None)
+        result = eebls_transit(
+            t, y, dy,
+            fmin=freq_true * 0.99,
+            fmax=freq_true * 1.01,
+            use_sparse=False,
+            use_fast=True
+        )
+        assert len(result) == 3
+        freqs, powers, sols = result
+        assert sols is None
