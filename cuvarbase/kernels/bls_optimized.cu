@@ -20,8 +20,7 @@ __device__ int mod(int a, int b){
 }
 
 __device__ float mod1_fast(float a){
-    // Use fast intrinsic instead of floorf
-	return a - __float2int_rd(a);
+	return a - floorf(a);
 }
 
 __device__ float bls_value(float ybar, float w, unsigned int ignore_negative_delta_sols){
@@ -42,7 +41,7 @@ __device__ unsigned int dnbins(unsigned int nbins, float dlogq){
 	if (dlogq < 0.f)
 		return 1;
 
-	unsigned int n = (unsigned int) __float2int_rd(dlogq * nbins);
+	unsigned int n = (unsigned int) floorf(dlogq * nbins);
 
 	return (n == 0) ? 1 : n;
 }
@@ -190,7 +189,7 @@ __global__ void full_bls_no_sol_optimized(
 		for (unsigned int k = threadIdx.x; k < ndata; k += blockDim.x){
 			phi = mod1_fast(t[k] * f0);
 
-			b = mod((int) __float2int_rd(((float) nbf) * phi - dphi), (int) nbf);
+			b = mod((int) floorf(((float) nbf) * phi - dphi), (int) nbf);
 
 			// OPTIMIZATION: Atomic adds on separate arrays (no bank conflicts)
 			atomicAdd(&(block_bins_yw[b]), yw[k]);
@@ -313,7 +312,7 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 			nb = nbins_iter(j, nbins0, dlogq);
 
 			for (int s = 0; s < noverlap; s++){
-				b = (unsigned int) mod((int) __float2int_rd(nb * phi - s * dphi), nb);
+				b = (unsigned int) mod((int) floorf(nb * phi - s * dphi), nb);
 				b += offset + s * nb + noverlap * nbtot;
 
 				atomicAdd(&(yw_bin[b]), YW);
@@ -346,7 +345,7 @@ __global__ void bin_and_phase_fold_custom(
 
 		for(int pb = 0; pb < nphi; pb++){
 			float dphi = phi - phi_values[pb];
-			dphi -= __float2int_rd(dphi);
+			dphi -= floorf(dphi);
 
 			for(int qb = 0; qb < nq; qb++){
 				if (dphi < q_values[qb]){

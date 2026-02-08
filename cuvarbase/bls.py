@@ -304,6 +304,16 @@ def compile_bls(block_size=_default_block_size,
     kernel_txt = _module_reader(find_kernel(kernel_name),
                                 cpp_defs=cppd)
 
+    # Filter function names based on kernel variant:
+    # bls_optimized.cu has full_bls_no_sol_optimized but not full_bls_no_sol
+    # bls.cu has full_bls_no_sol but not full_bls_no_sol_optimized
+    if use_optimized:
+        function_names = [n for n in function_names
+                          if n != 'full_bls_no_sol']
+    else:
+        function_names = [n for n in function_names
+                          if n != 'full_bls_no_sol_optimized']
+
     # compile kernel
     module = SourceModule(kernel_txt, options=['--use_fast_math'])
 
