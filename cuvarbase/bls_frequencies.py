@@ -90,9 +90,15 @@ def keplerian_freq_grid(period_min, period_max, baseline,
     return freqs
 
 
-def uniform_freq_grid(period_min, period_max, baseline, oversampling=2):
+def uniform_freq_grid(period_min, period_max, baseline, oversampling=2,
+                       R_star=1.0, M_star=1.0):
     """
-    Generate a uniform frequency grid for BLS.
+    Generate a uniform frequency grid matched to Keplerian sensitivity.
+
+    Uses the finest resolution needed by the Keplerian grid (at the lowest
+    frequency / longest period) as the uniform spacing. This gives a fair
+    comparison: both grids detect the same transits, but the uniform grid
+    wastes resolution at high frequencies where coarser spacing would suffice.
 
     Parameters
     ----------
@@ -104,15 +110,25 @@ def uniform_freq_grid(period_min, period_max, baseline, oversampling=2):
         Total observation baseline (days).
     oversampling : float, optional (default: 2)
         Oversampling factor.
+    R_star : float, optional (default: 1.0)
+        Stellar radius in solar radii.
+    M_star : float, optional (default: 1.0)
+        Stellar mass in solar masses.
 
     Returns
     -------
     freqs : ndarray, float32
         Uniform frequency array (1/days).
     """
+    rho = M_star / (R_star ** 3)
     f_min = 1.0 / period_max
     f_max = 1.0 / period_min
-    df = 1.0 / (baseline * oversampling)
+
+    # Use the finest resolution needed (at lowest frequency)
+    q_min_freq = float(_q_transit(f_min, rho=rho))
+    q_min_freq = max(q_min_freq, 1e-6)
+    df = q_min_freq / (oversampling * baseline)
+
     nf = int(np.ceil((f_max - f_min) / df))
     return np.linspace(f_min, f_max, max(nf, 1)).astype(np.float32)
 
@@ -137,7 +153,9 @@ def freq_grid_stats(freqs, baseline):
     df = np.diff(freqs)
     periods = 1.0 / freqs
 
-    uniform_nf = int(np.ceil((freqs[-1] - freqs[0]) * baseline * 2))
+    # Sensitivity-matched uniform grid: use finest df in this grid
+    df_min = float(df.min())
+    uniform_nf = int(np.ceil((freqs[-1] - freqs[0]) / df_min))
 
     return {
         'nfreq': nf,
@@ -145,7 +163,7 @@ def freq_grid_stats(freqs, baseline):
         'f_max': float(freqs[-1]),
         'period_min': float(periods[-1]),
         'period_max': float(periods[0]),
-        'df_min': float(df.min()),
+        'df_min': df_min,
         'df_max': float(df.max()),
         'df_ratio': float(df.max() / df.min()),
         'uniform_nfreq': uniform_nf,

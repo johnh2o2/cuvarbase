@@ -123,7 +123,7 @@ def cufinufft_nfft_adjoint(memory, minimum_frequency=0.0,
         n_modes=(nf_total,),
         n_trans=1,
         eps=eps,
-        dtype='float32',
+        dtype='complex64',
         gpu_method=1,  # shared-memory subproblem method
     )
     plan.setpts(x_cu)
