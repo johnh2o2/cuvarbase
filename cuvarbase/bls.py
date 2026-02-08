@@ -659,7 +659,7 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     This uses an optimized kernel with:
     - Fixed bank conflicts (separate yw/w arrays)
-    - Fast math intrinsics (__float2int_rd)
+    - Fast math intrinsics (floorf)
     - Warp shuffle reduction (eliminates 4 __syncthreads calls)
 
     Expected speedup: 20-30% over standard version
