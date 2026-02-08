@@ -522,7 +522,9 @@ class TestBLS(object):
     @pytest.mark.parametrize("ndata", [10, 15, 20])
     @pytest.mark.parametrize("freq", [1.0, 2.5])
     @pytest.mark.parametrize("seed", [42, 123])
-    def test_sparse_bls_vs_exhaustive(self, ndata, freq, seed):
+    @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    def test_sparse_bls_vs_exhaustive(self, ndata, freq, seed,
+                                      ignore_negative_delta_sols):
         """Verify sparse_bls_cpu matches exhaustive brute-force search."""
         rand = np.random.RandomState(seed)
         sigma = 0.1
@@ -537,15 +539,19 @@ class TestBLS(object):
         dy = sigma * np.ones(ndata)
 
         freqs = np.array([freq], dtype=np.float32)
-        power, sols = sparse_bls_cpu(t, y, dy, freqs)
-        bf_power, _, _ = self._brute_force_bls(t, y, dy, freq)
+        power, sols = sparse_bls_cpu(
+            t, y, dy, freqs,
+            ignore_negative_delta_sols=ignore_negative_delta_sols)
+        bf_power, _, _ = self._brute_force_bls(
+            t, y, dy, freq,
+            ignore_negative_delta_sols=ignore_negative_delta_sols)
 
         assert np.abs(power[0] - bf_power) < 1e-5, \
             f"sparse={power[0]:.8f}, brute={bf_power:.8f}"
 
     @pytest.mark.parametrize("freq", [1.0, 2.0])
     @pytest.mark.parametrize("q", [0.05, 0.1])
-    @pytest.mark.parametrize("phi0", [0.3, 0.5])
+    @pytest.mark.parametrize("phi0", [0.0, 0.3, 0.5])
     @pytest.mark.parametrize("ndata", [100, 200])
     def test_sparse_bls_ground_truth(self, freq, q, phi0, ndata):
         """Verify sparse_bls_cpu recovers a known injected transit."""
@@ -588,17 +594,18 @@ class TestBLS(object):
         best_freq = freqs[best_idx]
 
         # Should find transit near the true frequency
-        assert np.abs(best_freq - freq) < 5 * df, \
+        T = max(t) - min(t)
+        assert np.abs(best_freq - freq) < q / T, \
             f"Expected freq~{freq}, got {best_freq}"
 
-        # Power should be significant
-        assert power[best_idx] > 0.1, \
+        # Power should be significant (SNR=50 should give high power)
+        assert power[best_idx] > 0.5, \
             f"Power too low: {power[best_idx]}"
 
-        # Verify consistency with single_bls
-        q_found, phi_found = sols[best_idx]
-        p_single = single_bls(t, y, dy, best_freq, q_found, phi_found)
-        assert np.abs(power[best_idx] - p_single) < 1e-4
+        # Verify against brute-force at the best frequency
+        bf_power, _, _ = self._brute_force_bls(t, y, dy, best_freq)
+        assert np.abs(power[best_idx] - bf_power) < 1e-5, \
+            f"sparse={power[best_idx]:.8f}, brute={bf_power:.8f}"
 
     @pytest.mark.parametrize("freq", [1.0, 2.0])
     @pytest.mark.parametrize("ndata", [50, 100])
