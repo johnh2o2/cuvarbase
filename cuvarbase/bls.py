@@ -1413,36 +1413,33 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
 
         # Test all pairs of observations (including phase wrapping)
         for i in range(ndata):
-            # Non-wrapped transits: from i to j (i < j)
-            for j in range(i + 1, ndata):
-                # Transit from observation i to just before observation j
+            # Non-wrapped transits: transit includes obs i through j-1
+            # j ranges from i+1 (one obs in transit) to ndata (all remaining)
+            for j in range(i + 1, ndata + 1):
                 phi0 = phi_sorted[i]
-                # Set q to be midpoint between phi_sorted[j-1] and phi_sorted[j]
-                # This ensures single_bls selects observations i through j-1 only
-                if j < ndata - 1:
-                    q = 0.5 * (phi_sorted[j] + phi_sorted[j-1]) - phi_sorted[i]
+                # Compute q: must place the transit boundary between the
+                # last included obs (j-1) and the first excluded obs (j)
+                if j < ndata:
+                    q = 0.5 * (phi_sorted[j] + phi_sorted[j-1]) - phi0
                 else:
-                    # Last observation - use it fully
-                    q = phi_sorted[j] - phi_sorted[i]
+                    # j == ndata: all obs from i to end are in transit
+                    # Add small epsilon so single_bls includes obs ndata-1
+                    q = phi_sorted[ndata - 1] - phi0 + 1e-7
 
-                # Skip if q is too large (more than half the phase)
-                if q > 0.5:
+                if q <= 0 or q > 0.5:
                     continue
 
                 # Observations in transit: indices i through j-1
                 W = np.sum(w_sorted[i:j])
 
-                # Skip if too few weight in transit
                 if W < 1e-9 or W > 1.0 - 1e-9:
                     continue
 
                 YW = np.dot(w_sorted[i:j], y_sorted[i:j]) - ybar * W
 
-                # Check if we should ignore this solution
                 if YW > 0 and ignore_negative_delta_sols:
                     continue
 
-                # Compute BLS
                 bls = (YW ** 2) / (W * (1 - W)) / YY
 
                 if bls > max_bls:
@@ -1450,23 +1447,21 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
                     best_q_val = q
                     best_phi_val = phi0
 
-            # Wrapped transits: from i to end, then wrap to beginning up to k
+            # Wrapped transits: from i to end, then wrap to beginning
+            # k is the first EXCLUDED observation at the beginning
             for k in range(i):
                 phi0 = phi_sorted[i]
-                # Observations included: from i to end (i..ndata-1), plus 0 to k-1
-                # Next excluded observation is at index k
-                # Set q to midpoint between last included (k-1) and first excluded (k)
+                # Observations included: i..ndata-1 (tail) plus 0..k-1 (head)
                 if k > 0:
-                    q = (1.0 - phi_sorted[i]) + 0.5 * (phi_sorted[k-1] + phi_sorted[k])
+                    q = (1.0 - phi0) + 0.5 * (phi_sorted[k-1] + phi_sorted[k])
                 else:
-                    # k=0 means no observations at beginning, transit ends at phase 1.0
-                    q = 1.0 - phi_sorted[i]
+                    # k=0: only tail obs (i..ndata-1), transit wraps to phase 0
+                    # Add epsilon so single_bls includes obs ndata-1
+                    q = 1.0 - phi0 + 1e-7
 
-                # Skip if q is too large
-                if q > 0.5:
+                if q <= 0 or q > 0.5:
                     continue
 
-                # Observations: from i to end, plus 0 to k-1
                 W = np.sum(w_sorted[i:]) + np.sum(w_sorted[:k])
 
                 if W < 1e-9 or W > 1.0 - 1e-9:
@@ -1492,7 +1487,7 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
     return bls_powers, solutions
 
 
-def compile_sparse_bls(block_size=_default_block_size, use_simple=True, **kwargs):
+def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwargs):
     """
     Compile sparse BLS GPU kernel
 
@@ -1500,15 +1495,15 @@ def compile_sparse_bls(block_size=_default_block_size, use_simple=True, **kwargs
     ----------
     block_size: int, optional (default: _default_block_size)
         CUDA threads per CUDA block.
-    use_simple: bool, optional (default: True)
-        Use simplified kernel (more reliable, slightly slower)
+    use_simple: bool, optional (default: False)
+        Use simplified kernel (bubble sort + parallel pairs).
+        Full kernel uses bitonic sort + prefix sums for O(1) range queries.
 
     Returns
     -------
     kernel: PyCUDA function
         The compiled sparse_bls_kernel function
     """
-    # Read kernel - use simple version by default (it works!)
     kernel_name = 'sparse_bls_simple' if use_simple else 'sparse_bls'
     cppd = dict(BLOCK_SIZE=block_size)
     kernel_txt = _module_reader(find_kernel(kernel_name),
@@ -1526,7 +1521,7 @@ def compile_sparse_bls(block_size=_default_block_size, use_simple=True, **kwargs
 
 def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
                    block_size=64, max_ndata=None,
-                   stream=None, kernel=None):
+                   stream=None, kernel=None, use_simple=False):
     """
     GPU-accelerated sparse BLS implementation.
 
@@ -1557,6 +1552,8 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
         CUDA stream for async execution
     kernel: PyCUDA function, optional (default: None)
         Pre-compiled kernel. If None, compiles kernel automatically.
+    use_simple: bool, optional (default: False)
+        Use simple kernel (bubble sort). Passed to compile_sparse_bls.
 
     Returns
     -------
@@ -1579,7 +1576,8 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
 
     # Compile kernel if not provided
     if kernel is None:
-        kernel = compile_sparse_bls(block_size=block_size)
+        kernel = compile_sparse_bls(block_size=block_size,
+                                    use_simple=use_simple)
 
     # Allocate GPU memory
     t_g = gpuarray.to_gpu(t)
@@ -1592,9 +1590,16 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
     best_phi_g = gpuarray.zeros(nfreqs, dtype=np.float32)
 
     # Calculate shared memory size
-    # Simple kernel needs: 3 data arrays (phi, y, w) + 1 temp array for reductions
-    # Allocate for blockDim from function parameter (block_size) to be safe
-    shared_mem_size = (3 * max_ndata + block_size) * 4
+    if use_simple:
+        # Simple kernel: sh_phi[N] + sh_y[N] + sh_w[N] + 3*blockDim.x
+        shared_mem_size = (3 * max_ndata + 3 * block_size) * 4
+    else:
+        # Full kernel: sh_phi[n_pow2] + sh_y[n_pow2] + sh_w[n_pow2]
+        #            + sh_cumsum_w[N] + sh_cumsum_yw[N] + 3*blockDim.x
+        n_pow2 = 1
+        while n_pow2 < max_ndata:
+            n_pow2 *= 2
+        shared_mem_size = (3 * n_pow2 + 2 * max_ndata + 3 * block_size) * 4
 
     # Launch kernel
     # Grid: one block per frequency (or fewer if limited by hardware)
@@ -1740,8 +1745,8 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                                 qmin=qmins, qmax=qmaxes,
                                 ignore_negative_delta_sols=ignore_negative_delta_sols,
                                 **kwargs)
-        return freqs, powers
-    
+        return freqs, powers, None
+
     powers, sols = eebls_gpu(t, y, dy, freqs,
                              qmin=qmins, qmax=qmaxes,
                              ignore_negative_delta_sols=ignore_negative_delta_sols,
