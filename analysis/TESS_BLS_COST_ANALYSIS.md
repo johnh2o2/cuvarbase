@@ -11,6 +11,15 @@ This document previously contained cost projections based on extrapolated and fa
 - **Standard binned BLS** (cuvarbase `eebls_gpu_fast` or astropy `BoxLeastSquares`) — O(N) per frequency
 - **Sparse BLS** is designed for small datasets (< 500 observations), e.g., ground-based surveys
 
-## TODO
+## Generating Real Cost Estimates
 
-To produce real cost estimates, run `scripts/benchmark_algorithms.py` on RunPod GPUs and use `scripts/visualize_benchmarks.py` to generate reports. See [docs/BENCHMARKING.md](../docs/BENCHMARKING.md).
+```bash
+# On a RunPod GPU (e.g. H100):
+python scripts/benchmark_algorithms.py --algorithms bls_standard bls_sparse \
+    --ndata 20000 --baseline 730 --gpu-model H100_SXM
+
+# Visualize
+python scripts/visualize_benchmarks.py benchmark_results.json
+```
+
+See [docs/BENCHMARKING.md](../docs/BENCHMARKING.md) for full instructions.
