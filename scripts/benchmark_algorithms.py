@@ -91,16 +91,17 @@ def generate_batch(ndata: int, nbatch: int, baseline: float = 5*365.25,
 # ============================================================================
 
 ALGORITHM_COMPLEXITY = {
-    # BLS algorithms - O(N² * Nfreq) for binned, O(N² * Nfreq) for sparse
-    'bls_gpu_fast': {'ndata': 2, 'nfreq': 1, 'nbatch': 1},
-    'bls_gpu_custom': {'ndata': 2, 'nfreq': 1, 'nbatch': 1},
-    'sparse_bls_gpu': {'ndata': 2, 'nfreq': 1, 'nbatch': 1},
+    # Standard (binned) BLS - O(N * Nfreq): bins data (O(N)), searches bins (O(nbins))
+    'bls_gpu_fast': {'ndata': 1, 'nfreq': 1, 'nbatch': 1},
+
+    # Sparse BLS - O(N² * Nfreq): tests all observation pairs
+    'sparse_bls': {'ndata': 2, 'nfreq': 1, 'nbatch': 1},
 
     # Lomb-Scargle - O(N * Nfreq)
-    'lombscargle_gpu': {'ndata': 1, 'nfreq': 1, 'nbatch': 1},
+    'lombscargle': {'ndata': 1, 'nfreq': 1, 'nbatch': 1},
 
-    # PDM - O(N * Nfreq)
-    'pdm_gpu': {'ndata': 1, 'nfreq': 1, 'nbatch': 1},
+    # PDM - O(N * Nfreq) for binned, O(N² * Nfreq) for binless
+    'pdm': {'ndata': 1, 'nfreq': 1, 'nbatch': 1},
 }
 
 

@@ -55,7 +55,7 @@ For experiments that would take too long on CPU (> 5 minutes by default), the be
 | Algorithm | Complexity | Scaling |
 |-----------|-----------|---------|
 | `sparse_bls` | O(N² × Nf) | Quadratic in ndata |
-| `bls_gpu_fast` | O(N² × Nf) | Quadratic in ndata |
+| `bls_gpu_fast` | O(N × Nf) | Linear in ndata |
 | `lombscargle` | O(N × Nf) | Linear in ndata |
 | `pdm` | O(N × Nf) | Linear in ndata |
 

@@ -35,7 +35,7 @@ Created by John Hoffman, (c) 2017
 
 ### A Personal Note
 
-This project was created as part of a PhD thesis, intended mainly for myself and against the very wise advice of two advisors trying to help me stay on track (including Joel Hartman -- legendary author of `vartools`, and Gaspar Bakos, who I promised to provide a catalog of variable stars from HAT telescopes -- something that should have taken maybe a month but instead took years due to an irrational and irresponsible level of perfectionism, and even at the end wasn't comprehensive or useful, and which I never published. To both of you, thank you for an incredible amount of patience.).
+This project was created as part of a PhD thesis, intended mainly for myself and against the very wise advice of two advisors trying to help me stay on track. Joel Hartman -- legendary author of `vartools` -- and Gaspar Bakos both showed me an incredible amount of patience. I had promised Gaspar a catalog of variable stars from HAT telescopes, something that should have taken maybe a month but instead took years due to an irrational and irresponsible level of perfectionism, and even at the end wasn't comprehensive or useful, and which I never published. To both of you: thank you.
 
 Much to my absolute delight this repository has -- organically! -- become useful to several people in the astro community; an ADS search reveals 23 papers with ~430 citations as of October 2025 using cuvarbase in some shape or form. The biggest source of pride was seeing the Quick Look Pipeline adopt cuvarbase for TESS ([Kunimoto et al. 2023](https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract)).
 
@@ -65,7 +65,7 @@ This represents a major modernization effort compared to the `master` branch:
 - Particularly beneficial for ground-based surveys and sparse time series
 - Thread-safe kernel caching with LRU eviction for production environments
 - **New function**: `eebls_gpu_fast_adaptive()` - drop-in replacement with automatic optimization
-- See [docs/ADAPTIVE_BLS_RESULTS.md](docs/ADAPTIVE_BLS_RESULTS.md) for detailed benchmarks
+- See [docs/BLS_OPTIMIZATION.md](docs/BLS_OPTIMIZATION.md) for detailed benchmarks
 
 This optimization makes large-scale BLS searches practical and efficient for all-sky surveys.
 
@@ -115,7 +115,7 @@ This optimization makes large-scale BLS searches practical and efficient for all
 ### Additional Documentation
 - [Benchmarking Guide](docs/BENCHMARKING.md) - Performance testing methodology
 - [RunPod Development](docs/RUNPOD_DEVELOPMENT.md) - Cloud GPU development setup
-- [Code Quality Fixes](docs/CODE_QUALITY_FIXES.md) - Thread-safety and memory management
+- [BLS Optimization History](docs/BLS_OPTIMIZATION.md) - Thread-safety, memory management, and GPU optimizations
 
 For a complete list of changes, see [CHANGELOG.rst](CHANGELOG.rst).
 
@@ -209,8 +209,8 @@ dy = np.ones_like(y) * 0.1  # uncertainties
 # Define frequency grid
 freqs = np.linspace(0.1, 2.0, 5000).astype(np.float32)
 
-# Standard BLS
-power = bls.eebls_gpu(t, y, dy, freqs)
+# Standard BLS (returns power array and best (q, phi) solutions per frequency)
+power, solutions = bls.eebls_gpu(t, y, dy, freqs)
 best_freq = freqs[np.argmax(power)]
 print(f"Best period: {1/best_freq:.2f} (expected: 2.5)")
 
@@ -286,7 +286,7 @@ See [LICENSE.txt](LICENSE.txt) for details.
 
 This project has benefited from contributions and support from many people in the astronomy community. Special thanks to:
 
-- Joel Hartmann (author of the original `varbase`)
+- Joel Hartman (author of the original `vartools`)
 - Gaspar Bakos
 - Kevin Burdge
 - Attila Bodi
