@@ -1,0 +1,186 @@
+{
+  "system": {
+    "platform": "Linux-6.8.0-52-generic-x86_64-with-glibc2.35",
+    "python_version": "3.11.10",
+    "numpy_version": "2.3.5",
+    "timestamp": "2026-02-08T16:34:37.798301",
+    "gpu_name": "NVIDIA RTX 4000 Ada Generation",
+    "gpu_compute_capability": "8.9",
+    "gpu_total_memory_mb": 20028,
+    "cuda_driver_version": "12.8",
+    "astropy_version": "7.2.0",
+    "nifty_ls_version": "1.1.0"
+  },
+  "results": [
+    {
+      "algorithm": "bls_standard",
+      "display_name": "Standard BLS (binned)",
+      "complexity": "O(N * Nfreq)",
+      "ndata": 10000,
+      "nbatch": 10,
+      "nfreq": 5000,
+      "baseline": 3652.5,
+      "gpu": {
+        "cuvarbase_v1": {
+          "total_time": 0.02569228744506836,
+          "time_per_lc": 0.0025692287445068357,
+          "variant": "eebls_gpu_fast_adaptive",
+          "times": [
+            0.025750751495361327,
+            0.02569228744506836,
+            0.025686592102050782
+          ]
+        },
+        "cuvarbase_preopt": {
+          "total_time": 0.7504095458984374,
+          "time_per_lc": 0.07504095458984375,
+          "variant": "eebls_gpu_fast (v0.4 baseline)",
+          "times": [
+            0.7504095458984374,
+            0.7493651123046875,
+            0.761926513671875
+          ]
+        }
+      },
+      "cpu": {
+        "astropy": {
+          "total_time": 7.2931072330102324,
+          "time_per_lc": 0.7293107233010232,
+          "variant": "astropy BoxLeastSquares",
+          "times": [
+            7.277577370987274,
+            7.2931072330102324,
+            7.303596946003381
+          ]
+        }
+      },
+      "speedups": {
+        "v1_vs_preopt": 29.207580193194467,
+        "gpu_vs_astropy": 283.86367888041616
+      },
+      "cost": {
+        "cuvarbase_v1": {
+          "gpu_model": "RTX_4000_Ada",
+          "price_per_hr": 0.2,
+          "gpu_sec_per_lc": 0.0025692287445068357,
+          "cost_per_lc": 1.4273493025037976e-07,
+          "lc_per_dollar": 7005993.545138818,
+          "cost_per_million_lc": 0.14273493025037975
+        }
+      }
+    },
+    {
+      "algorithm": "ls",
+      "display_name": "Lomb-Scargle",
+      "complexity": "O(N + Nfreq*log(Nfreq))",
+      "ndata": 10000,
+      "nbatch": 10,
+      "nfreq": 5000,
+      "baseline": 3652.5,
+      "gpu": {
+        "cuvarbase_v1": {
+          "total_time": 0.20313145400723442,
+          "time_per_lc": 0.020313145400723442,
+          "variant": "cuvarbase LombScargleAsyncProcess",
+          "times": [
+            0.20313145400723442,
+            0.19219745101872832,
+            0.20501266600331292
+          ]
+        }
+      },
+      "cpu": {
+        "astropy": {
+          "total_time": 23.798543548036832,
+          "time_per_lc": 2.3798543548036832,
+          "variant": "astropy LombScargle",
+          "times": [
+            23.798543548036832,
+            23.797259103972465,
+            23.805026189016644
+          ]
+        },
+        "nifty_ls": {
+          "total_time": 0.024494112003594637,
+          "time_per_lc": 0.0024494112003594637,
+          "variant": "nifty-ls (CPU, fastnifty)",
+          "times": [
+            0.024494112003594637,
+            0.024590292014181614,
+            0.024483461980707943
+          ]
+        }
+      },
+      "speedups": {
+        "gpu_vs_astropy": 117.15833800504997,
+        "gpu_vs_nifty_ls": 0.1205825662170581
+      },
+      "cost": {
+        "cuvarbase_v1": {
+          "gpu_model": "RTX_4000_Ada",
+          "price_per_hr": 0.2,
+          "gpu_sec_per_lc": 0.020313145400723442,
+          "cost_per_lc": 1.128508077817969e-06,
+          "lc_per_dollar": 886125.6907735687,
+          "cost_per_million_lc": 1.128508077817969
+        }
+      }
+    }
+  ],
+  "runpod_pricing": {
+    "RTX_4000_Ada": {
+      "price_hr": 0.2,
+      "vram_gb": 20,
+      "arch": "Ada Lovelace",
+      "year": 2023
+    },
+    "RTX_4090": {
+      "price_hr": 0.34,
+      "vram_gb": 24,
+      "arch": "Ada Lovelace",
+      "year": 2022
+    },
+    "V100": {
+      "price_hr": 0.19,
+      "vram_gb": 16,
+      "arch": "Volta",
+      "year": 2017
+    },
+    "L40": {
+      "price_hr": 0.69,
+      "vram_gb": 48,
+      "arch": "Ada Lovelace",
+      "year": 2023
+    },
+    "A100_PCIe": {
+      "price_hr": 0.79,
+      "vram_gb": 80,
+      "arch": "Ampere",
+      "year": 2020
+    },
+    "A100_SXM": {
+      "price_hr": 1.19,
+      "vram_gb": 80,
+      "arch": "Ampere",
+      "year": 2020
+    },
+    "H100_PCIe": {
+      "price_hr": 1.99,
+      "vram_gb": 80,
+      "arch": "Hopper",
+      "year": 2022
+    },
+    "H100_SXM": {
+      "price_hr": 2.69,
+      "vram_gb": 80,
+      "arch": "Hopper",
+      "year": 2022
+    },
+    "H200_SXM": {
+      "price_hr": 3.59,
+      "vram_gb": 141,
+      "arch": "Hopper",
+      "year": 2024
+    }
+  }
+}

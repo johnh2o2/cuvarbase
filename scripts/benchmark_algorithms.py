@@ -28,6 +28,7 @@ import json
 import sys
 import platform
 import subprocess
+import traceback
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
 from collections import OrderedDict
@@ -236,9 +237,20 @@ def generate_batch(ndata, nbatch, baseline=3652.5, seed=42):
 # Frequency / period grids
 # ============================================================================
 
-def make_freq_grid(nfreq, fmin=0.01, fmax=2.0):
-    """Linearly-spaced frequency grid (required by cuvarbase LS NFFT)."""
-    return np.linspace(fmin, fmax, nfreq).astype(np.float32)
+def make_freq_grid(nfreq, fmin=None, fmax=2.0):
+    """
+    Linearly-spaced frequency grid compatible with NFFT-based algorithms.
+
+    Constructs freqs = k * df for k = 1, 2, ..., nfreq where df = fmax/nfreq.
+    This ensures fmin/df is an integer (required by cuvarbase LS and nifty-ls).
+
+    If fmin is specified, constructs freqs = linspace(fmin, fmax, nfreq) instead
+    (may not be NFFT-compatible).
+    """
+    if fmin is not None:
+        return np.linspace(fmin, fmax, nfreq).astype(np.float32)
+    df = fmax / nfreq
+    return (np.arange(1, nfreq + 1) * df).astype(np.float32)
 
 
 def make_period_grid(nperiods, pmin=0.5, pmax=50.0):
@@ -334,13 +346,15 @@ def bench_ls_gpu(ndata, nbatch, nfreq, baseline):
     """cuvarbase LombScargleAsyncProcess (GPU, NFFT)."""
     batch = generate_batch(ndata, nbatch, baseline)
     freqs = make_freq_grid(nfreq)
-
-    proc = cvb_ls.LombScargleAsyncProcess()
+    # LombScargleAsyncProcess.run() expects freqs as a list of arrays (one per LC)
+    freq_list = [freqs] * len(batch)
 
     def run():
-        proc.run([(t, y, dy) for t, y, dy in batch], freqs=freqs)
+        proc = cvb_ls.LombScargleAsyncProcess()
+        results = proc.run([(t, y, dy) for t, y, dy in batch], freqs=freq_list)
+        proc.finish()
 
-    med, times = time_function(run, n_iter=3, warmup=1, use_cuda=True)
+    med, times = time_function(run, n_iter=3, warmup=1, use_cuda=False)
     return med, {'variant': 'cuvarbase LombScargleAsyncProcess', 'times': times}
 
 
@@ -368,7 +382,9 @@ def bench_ls_cpu_nifty(ndata, nbatch, nfreq, baseline):
         return None, {'error': 'nifty-ls not installed'}
 
     batch = generate_batch(ndata, nbatch, baseline)
-    freqs = make_freq_grid(nfreq).astype(np.float64)
+    # Build grid directly in float64 to preserve exact regularity
+    df64 = 2.0 / nfreq
+    freqs = df64 * np.arange(1, nfreq + 1)  # float64
 
     def run():
         for t, y, dy in batch:
@@ -733,6 +749,7 @@ def run_benchmarks(algorithms, ndata, nbatch, nfreq, baseline, gpu_model,
 
             except Exception as e:
                 print(f"ERROR: {e}")
+                traceback.print_exc()
                 entry['gpu']['cuvarbase_v1'] = {'error': str(e)}
 
             # --- GPU old version (for version comparison) ---
@@ -760,6 +777,7 @@ def run_benchmarks(algorithms, ndata, nbatch, nfreq, baseline, gpu_model,
 
                 except Exception as e:
                     print(f"ERROR: {e}")
+                    traceback.print_exc()
                     entry['gpu']['cuvarbase_preopt'] = {'error': str(e)}
 
         # --- CPU baselines ---
@@ -792,6 +810,7 @@ def run_benchmarks(algorithms, ndata, nbatch, nfreq, baseline, gpu_model,
 
             except Exception as e:
                 print(f"ERROR: {e}")
+                traceback.print_exc()
                 entry['cpu'][cpu_name] = {'error': str(e)}
 
         results.append(entry)
