@@ -689,7 +689,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if frqs is None:
             frqs = [self.autofrequency(d[0], **kwargs) for d in data]
 
-        elif isinstance(frqs[0], float):
+        elif not isinstance(frqs, list):
             frqs = [frqs] * len(data)
 
         assert(len(frqs) == len(data))

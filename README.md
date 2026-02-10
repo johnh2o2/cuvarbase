@@ -53,6 +53,34 @@ It would be nice to incorporate additional capabilities and algorithms (e.g. [Ka
 
 **If you're interested in contributing, please see our [Contributing Guide](CONTRIBUTING.md)!**
 
+## Performance at Survey Scale
+
+cuvarbase is designed for processing millions of lightcurves. Benchmarked on an RTX A5000 ($0.20/hr) with realistic survey parameters:
+
+### BLS Transit Search
+
+cuvarbase is the **only GPU implementation** of the standard BLS algorithm ([Kovacs et al. 2002](http://adsabs.harvard.edu/abs/2002A%26A...391..369K)). Combined with Keplerian frequency grids that exploit orbital mechanics to search 4-37x fewer frequencies:
+
+| Survey | Lightcurves | N_freq (Keplerian) | Throughput | Total cost |
+|--------|------------:|-------------------:|-----------:|-----------:|
+| ZTF | 10,000,000 | 60K | 802 LC/s | **$0.69** |
+| HAT-Net | 10,000,000 | 301K | 38 LC/s | **$14.74** |
+| TESS (all sectors) | 5,200,000 | 1.8K | 236 LC/s | **$1.22** |
+| Kepler | 200,000 | 131K | 6 LC/s | **$2.00** |
+
+### Lomb-Scargle Periodogram
+
+At the frequency counts real variability surveys require (100K-1.8M), GPU LS is **1.5-62x faster** than [nifty-ls](https://github.com/flatironinstitute/nifty-ls), the fastest CPU implementation:
+
+| Survey | N_freq | GPU (ms/LC) | nifty-ls (ms/LC) | Speedup |
+|--------|-------:|------------:|------------------:|--------:|
+| ZTF | 365K | 4.4 | timeout | >>27x |
+| HAT-Net | 1.825M | 19.2 | timeout | >>6x |
+| TESS | 13.5K | 3.3 | 4.9 | 1.5x |
+| Kepler | 730K | 19.8 | 250.0 | 12.6x |
+
+See [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for methodology, competitive analysis, and cost projections.
+
 ## What's New in v1.0
 
 This represents a major modernization effort compared to the `master` branch:
@@ -113,6 +141,7 @@ This optimization makes large-scale BLS searches practical and efficient for all
 - Updated documentation and contributing guidelines
 
 ### Additional Documentation
+- [Benchmark Results](docs/BENCHMARK_RESULTS.md) - Survey-scale performance, competitive analysis, and cost projections
 - [Benchmarking Guide](docs/BENCHMARKING.md) - Performance testing methodology
 - [RunPod Development](docs/RUNPOD_DEVELOPMENT.md) - Cloud GPU development setup
 - [BLS Optimization History](docs/BLS_OPTIMIZATION.md) - Thread-safety, memory management, and GPU optimizations

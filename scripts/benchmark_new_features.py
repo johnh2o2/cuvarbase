@@ -180,9 +180,9 @@ SURVEY_PROFILES = OrderedDict([
     }),
     ('HAT-Net', {
         'ndata': 6000,
-        'baseline': 180.0,
+        'baseline': 3650.0,
         'period_min': 0.5,
-        'period_max': 10.0,
+        'period_max': 100.0,
         'nlcs_bench': 200,
         'qmin': 0.01,
         'qmax': 0.1,
@@ -593,9 +593,15 @@ def bench_bls_batch_throughput():
 # ============================================================================
 
 def bench_cufinufft_ls():
-    """Benchmark cuFINUFFT vs custom NFFT vs nifty-ls vs astropy."""
+    """Benchmark cuFINUFFT vs custom NFFT vs nifty-ls vs astropy.
+
+    IMPORTANT: GPU processes are created once and reused across iterations
+    to measure steady-state compute throughput, not compilation overhead.
+    Compilation (~150ms) happens once per process lifetime and is amortized
+    across millions of LCs in survey-scale use.
+    """
     print("\n" + "=" * 70)
-    print("E) cuFINUFFT LS Performance Benchmark")
+    print("E) cuFINUFFT LS Performance Benchmark (single-LC, steady-state)")
     print("=" * 70)
 
     if not HAS_CUFINUFFT:
@@ -606,6 +612,20 @@ def bench_cufinufft_ls():
     ndata_values = [1000, 5000, 10000, 50000]
     nfreq_values = [5000, 50000]
     baseline = 365.0
+
+    # Create GPU processes ONCE (compilation happens here)
+    print("  Pre-compiling GPU kernels...", end='', flush=True)
+    proc_custom = cvb_ls.LombScargleAsyncProcess(use_cufinufft=False)
+    proc_cufinufft = cvb_ls.LombScargleAsyncProcess(use_cufinufft=True)
+
+    # Trigger compilation with a small dummy run
+    dummy_t, dummy_y, dummy_dy = generate_sinusoidal_lc(100, 10.0, 2.0, seed=0)
+    dummy_freqs = np.linspace(0.1, 1.0, 100).astype(np.float32)
+    proc_custom.run([(dummy_t, dummy_y, dummy_dy)], freqs=[dummy_freqs])
+    proc_custom.finish()
+    proc_cufinufft.run([(dummy_t, dummy_y, dummy_dy)], freqs=[dummy_freqs])
+    proc_cufinufft.finish()
+    print(" done")
 
     for ndata in ndata_values:
         for nfreq in nfreq_values:
@@ -626,25 +646,23 @@ def bench_cufinufft_ls():
                 'nfreq': nfreq,
             }
 
-            # Custom NFFT GPU
+            # Custom NFFT GPU (reuse pre-compiled process)
             def run_custom():
-                proc = cvb_ls.LombScargleAsyncProcess(use_cufinufft=False)
-                proc.run([(t, y, dy)], freqs=[freqs])
-                proc.finish()
+                proc_custom.run([(t, y, dy)], freqs=[freqs])
+                proc_custom.finish()
 
             print(f"    Custom NFFT GPU...", end='', flush=True)
-            t_custom, _ = time_function(run_custom, n_iter=3, warmup=1)
+            t_custom, _ = time_function(run_custom, n_iter=5, warmup=2)
             print(f" {t_custom*1000:.1f}ms")
             entry['time_custom_gpu_ms'] = float(t_custom * 1000)
 
-            # cuFINUFFT GPU
-            def run_cufinufft():
-                proc = cvb_ls.LombScargleAsyncProcess(use_cufinufft=True)
-                proc.run([(t, y, dy)], freqs=[freqs])
-                proc.finish()
+            # cuFINUFFT GPU (reuse pre-compiled process)
+            def run_cufinufft_fn():
+                proc_cufinufft.run([(t, y, dy)], freqs=[freqs])
+                proc_cufinufft.finish()
 
             print(f"    cuFINUFFT GPU...", end='', flush=True)
-            t_cufinufft, _ = time_function(run_cufinufft, n_iter=3, warmup=1)
+            t_cufinufft, _ = time_function(run_cufinufft_fn, n_iter=5, warmup=2)
             print(f" {t_cufinufft*1000:.1f}ms")
             entry['time_cufinufft_gpu_ms'] = float(t_cufinufft * 1000)
 
@@ -664,7 +682,7 @@ def bench_cufinufft_ls():
                     )
 
                 print(f"    nifty-ls CPU...", end='', flush=True)
-                t_nifty, _ = time_function_cpu(run_nifty, n_iter=3, warmup=1)
+                t_nifty, _ = time_function_cpu(run_nifty, n_iter=5, warmup=2)
                 if t_nifty is not None:
                     print(f" {t_nifty*1000:.1f}ms")
                     entry['time_nifty_cpu_ms'] = float(t_nifty * 1000)
@@ -804,6 +822,206 @@ def bench_keplerian_grid_impact():
 
 
 # ============================================================================
+# G) LS Survey-Scale Throughput Benchmark
+# ============================================================================
+
+def _ls_nfreq(baseline, period_min, period_max, oversampling=5):
+    """Standard LS frequency count per VanderPlas (2018).
+
+    df = 1 / (oversampling * baseline)
+    nfreq = (fmax - fmin) / df
+
+    For irregularly sampled data there is no Nyquist frequency — the LS
+    periodogram can probe arbitrarily high frequencies (VanderPlas 2018).
+    period_min and period_max are science-motivated.
+    """
+    fmin = 1.0 / period_max
+    fmax = 1.0 / period_min
+    return int(np.ceil((fmax - fmin) * oversampling * baseline))
+
+
+# LS searches for all variability types (binaries, RR Lyrae, delta Scuti,
+# Cepheids, etc.), so the period range is much broader than BLS transit
+# searches. period_min ~ 0.01d (short-period delta Scuti), period_max ~
+# baseline/2 (need ~2 cycles for reliable detection).
+LS_PERIOD_MIN = 0.01  # days — captures delta Scuti, short-period binaries
+LS_SURVEY_CONFIGS = OrderedDict()
+for _name, _prof in SURVEY_PROFILES.items():
+    _baseline = _prof['baseline']
+    _period_max = _baseline
+    _nfreq = _ls_nfreq(_baseline, LS_PERIOD_MIN, _period_max)
+    LS_SURVEY_CONFIGS[_name] = {
+        'ndata': _prof['ndata'],
+        'baseline': _baseline,
+        'period_min': LS_PERIOD_MIN,
+        'period_max': _period_max,
+        'nfreq': _nfreq,
+        'nlcs': _prof['nlcs_bench'] * 2,
+        'batch_size': 1,  # batch_size=1 is fastest (avoids multi-stream overhead)
+        'inject_period': _prof['inject_period'],
+    }
+
+
+def bench_ls_survey_throughput():
+    """Benchmark LS throughput for processing many LCs (survey-scale).
+
+    Uses batched_run_const_nfreq() which pre-allocates GPU memory once
+    and reuses it across all lightcurves, measuring true amortized throughput.
+    Compares GPU (custom NFFT) vs nifty-ls (CPU NFFT).
+    """
+    print("\n" + "=" * 70)
+    print("G) LS Survey-Scale Throughput (batched, amortized)")
+    print("=" * 70)
+
+    results = {}
+
+    for name, config in LS_SURVEY_CONFIGS.items():
+        ndata = config['ndata']
+        baseline = config['baseline']
+        nfreq = config['nfreq']
+        nlcs = config['nlcs']
+        batch_size = config['batch_size']
+        inject_period = config['inject_period']
+
+        print(f"\n  {name}: ndata={ndata}, nfreq={nfreq}, nlcs={nlcs}, "
+              f"batch_size={batch_size}, "
+              f"P=[{config['period_min']},{config['period_max']}]d")
+
+        # Generate lightcurves
+        lightcurves = []
+        for i in range(nlcs):
+            t, y, dy = generate_sinusoidal_lc(
+                ndata, baseline, inject_period,
+                amplitude=0.01, noise=0.003, seed=500 + i
+            )
+            lightcurves.append((t, y, dy))
+
+        # NFFT-compatible frequency grid: freqs = (k0 + i) * df
+        fmin = 1.0 / config['period_max']
+        fmax = 1.0 / config['period_min']
+        df = (fmax - fmin) / nfreq
+        k0 = max(1, int(round(fmin / df)))
+        freqs = (df * (k0 + np.arange(nfreq))).astype(np.float32)
+
+        entry = {
+            'ndata': ndata,
+            'nfreq': nfreq,
+            'nlcs': nlcs,
+            'batch_size': batch_size,
+        }
+
+        # GPU batched (custom NFFT) - uses batched_run_const_nfreq
+        print(f"    GPU batched (custom NFFT)...", end='', flush=True)
+        try:
+            proc_gpu = cvb_ls.LombScargleAsyncProcess(use_cufinufft=False)
+
+            def run_gpu_batched():
+                proc_gpu.batched_run_const_nfreq(
+                    lightcurves, batch_size=batch_size,
+                    freqs=freqs, only_return_best_freqs=False
+                )
+                proc_gpu.finish()
+
+            t_gpu, _ = time_function(run_gpu_batched, n_iter=3, warmup=1)
+            lc_per_sec_gpu = nlcs / t_gpu
+            print(f" {t_gpu:.3f}s ({lc_per_sec_gpu:.0f} LC/s, "
+                  f"{t_gpu/nlcs*1000:.2f} ms/LC)")
+            entry['time_gpu_batched_s'] = float(t_gpu)
+            entry['lc_per_sec_gpu'] = float(lc_per_sec_gpu)
+            entry['ms_per_lc_gpu'] = float(t_gpu / nlcs * 1000)
+        except Exception as e:
+            print(f" ERROR: {e}")
+            traceback.print_exc()
+            entry['time_gpu_batched_s'] = None
+            entry['lc_per_sec_gpu'] = None
+
+        # GPU batched (cuFINUFFT) - if available
+        if HAS_CUFINUFFT:
+            print(f"    GPU batched (cuFINUFFT)...", end='', flush=True)
+            try:
+                proc_cufi = cvb_ls.LombScargleAsyncProcess(use_cufinufft=True)
+
+                def run_cufi_batched():
+                    proc_cufi.batched_run_const_nfreq(
+                        lightcurves, batch_size=batch_size,
+                        freqs=freqs, only_return_best_freqs=False
+                    )
+                    proc_cufi.finish()
+
+                t_cufi, _ = time_function(run_cufi_batched, n_iter=3, warmup=1)
+                lc_per_sec_cufi = nlcs / t_cufi
+                print(f" {t_cufi:.3f}s ({lc_per_sec_cufi:.0f} LC/s, "
+                      f"{t_cufi/nlcs*1000:.2f} ms/LC)")
+                entry['time_cufinufft_batched_s'] = float(t_cufi)
+                entry['lc_per_sec_cufinufft'] = float(lc_per_sec_cufi)
+                entry['ms_per_lc_cufinufft'] = float(t_cufi / nlcs * 1000)
+            except Exception as e:
+                print(f" ERROR: {e}")
+                traceback.print_exc()
+                entry['time_cufinufft_batched_s'] = None
+                entry['lc_per_sec_cufinufft'] = None
+
+        # nifty-ls CPU sequential
+        if HAS_NIFTY_LS:
+            print(f"    nifty-ls CPU sequential...", end='', flush=True)
+            try:
+                def run_nifty_seq():
+                    for t, y, dy in lightcurves:
+                        nifty_ls.lombscargle(
+                            t.astype(np.float64),
+                            y.astype(np.float64),
+                            dy.astype(np.float64),
+                            fmin=float(freqs[0]),
+                            fmax=float(freqs[-1]),
+                            Nf=nfreq,
+                        )
+
+                t_nifty, _ = time_function_cpu(
+                    run_nifty_seq, n_iter=3, warmup=1, timeout=120.0
+                )
+                if t_nifty is not None:
+                    lc_per_sec_nifty = nlcs / t_nifty
+                    print(f" {t_nifty:.3f}s ({lc_per_sec_nifty:.0f} LC/s, "
+                          f"{t_nifty/nlcs*1000:.2f} ms/LC)")
+                    entry['time_nifty_seq_s'] = float(t_nifty)
+                    entry['lc_per_sec_nifty'] = float(lc_per_sec_nifty)
+                    entry['ms_per_lc_nifty'] = float(t_nifty / nlcs * 1000)
+                    # GPU vs nifty-ls speedup
+                    if entry.get('time_gpu_batched_s'):
+                        entry['gpu_vs_nifty_speedup'] = float(
+                            t_nifty / entry['time_gpu_batched_s']
+                        )
+                else:
+                    print(f" TIMEOUT (>120s)")
+                    entry['time_nifty_seq_s'] = None
+            except Exception as e:
+                print(f" ERROR: {e}")
+                entry['time_nifty_seq_s'] = None
+
+        results[name] = entry
+
+    # Summary table
+    print("\n  " + "-" * 85)
+    print(f"  {'Survey':<15} {'ndata':>6} {'nfreq':>6} "
+          f"{'GPU ms/LC':>10} {'cuFI ms/LC':>11} {'nifty ms/LC':>12} "
+          f"{'GPU/nifty':>10}")
+    print("  " + "-" * 85)
+    for name, r in results.items():
+        gpu_str = f"{r['ms_per_lc_gpu']:.2f}" if r.get('ms_per_lc_gpu') else "ERR"
+        cufi_str = f"{r['ms_per_lc_cufinufft']:.2f}" \
+            if r.get('ms_per_lc_cufinufft') else "N/A"
+        nifty_str = f"{r['ms_per_lc_nifty']:.2f}" \
+            if r.get('ms_per_lc_nifty') else "N/A"
+        speedup_str = f"{r['gpu_vs_nifty_speedup']:.2f}x" \
+            if r.get('gpu_vs_nifty_speedup') else "N/A"
+        print(f"  {name:<15} {r['ndata']:>6} {r['nfreq']:>6} "
+              f"{gpu_str:>10} {cufi_str:>11} {nifty_str:>12} "
+              f"{speedup_str:>10}")
+
+    return results
+
+
+# ============================================================================
 # Main
 # ============================================================================
 
@@ -913,6 +1131,13 @@ def main():
             print(f"\n  ERROR in Keplerian grid benchmark: {e}")
             traceback.print_exc()
             all_results['bench_keplerian_grid'] = {'error': str(e)}
+
+        try:
+            all_results['bench_ls_survey'] = bench_ls_survey_throughput()
+        except Exception as e:
+            print(f"\n  ERROR in LS survey throughput benchmark: {e}")
+            traceback.print_exc()
+            all_results['bench_ls_survey'] = {'error': str(e)}
 
     # Save results
     output_path = Path(args.output)
