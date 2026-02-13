@@ -1,0 +1,291 @@
+{
+  "meta": {
+    "gpu": "NVIDIA RTX A5000",
+    "gpu_memory_mb": 24138,
+    "timestamp": "2026-02-10T20:23:07.359215",
+    "has_astropy": true
+  },
+  "test_gpu_vs_cpu": {
+    "ndata_300_P_0.5_5.0": {
+      "ndata": 300,
+      "n_periods": 32608,
+      "correlation": 0.999984599095676,
+      "max_abs_diff": 0.010899394750595093,
+      "peak_match": "True",
+      "period_grid_match": true,
+      "pass": "True"
+    },
+    "ndata_500_P_0.5_10.0": {
+      "ndata": 500,
+      "n_periods": 313600,
+      "correlation": 0.9998244225503828,
+      "max_abs_diff": 0.014776097610592842,
+      "peak_match": "True",
+      "period_grid_match": true,
+      "pass": "True"
+    },
+    "ndata_1000_P_1.0_20.0": {
+      "ndata": 1000,
+      "n_periods": 315648,
+      "correlation": 0.9997037032879423,
+      "max_abs_diff": 0.005846424028277397,
+      "peak_match": "True",
+      "period_grid_match": true,
+      "pass": "True"
+    }
+  },
+  "test_transit_recovery": {
+    "ZTF-like": {
+      "ndata": 150,
+      "inject_period": 3.0,
+      "n_recovered": 3,
+      "n_trials": 5,
+      "pass": true
+    },
+    "HAT-Net": {
+      "ndata": 6000,
+      "inject_period": 2.5,
+      "n_recovered": 5,
+      "n_trials": 5,
+      "pass": true
+    },
+    "TESS-1sector": {
+      "ndata": 20000,
+      "inject_period": 5.0,
+      "n_recovered": 5,
+      "n_trials": 5,
+      "pass": true
+    },
+    "Kepler": {
+      "ndata": 65000,
+      "inject_period": 10.0,
+      "n_recovered": 5,
+      "n_trials": 5,
+      "pass": true
+    }
+  },
+  "bench_ffa_vs_standard": {
+    "ZTF-like": {
+      "ndata": 150,
+      "baseline": 730.0,
+      "period_range": [
+        1.0,
+        10.0
+      ],
+      "nfreq_keplerian": 30918,
+      "nperiods_ffa": 240512,
+      "time_standard_ms": 6.8482160568237305,
+      "time_ffa_ms": 959.3135938048363,
+      "times_standard": [
+        0.007724858820438385,
+        0.007654264569282532,
+        0.0068482160568237305,
+        0.006348229944705963,
+        0.005484320223331451
+      ],
+      "times_ffa": [
+        0.9593402296304703,
+        0.9593135938048363,
+        0.9641687050461769,
+        0.958186037838459,
+        0.9568763896822929
+      ],
+      "ffa_speedup": 0.007138662582338991,
+      "peak_standard_d": 2.9998505115509033,
+      "peak_ffa_d": 3.0,
+      "inject_period_d": 3.0,
+      "time_astropy_ms": 389.6627947688103,
+      "ffa_vs_astropy_speedup": 0.40618917243039054
+    },
+    "HAT-Net": {
+      "ndata": 6000,
+      "baseline": 3650.0,
+      "period_range": [
+        1.0,
+        10.0
+      ],
+      "nfreq_keplerian": 154581,
+      "nperiods_ffa": 1199616,
+      "time_standard_ms": 19.482269883155823,
+      "time_ffa_ms": 3308.842144906521,
+      "times_standard": [
+        0.01947753131389618,
+        0.019556328654289246,
+        0.019482269883155823,
+        0.01968279480934143,
+        0.019481979310512543
+      ],
+      "times_ffa": [
+        3.3178318813443184,
+        3.308842144906521,
+        3.3001352176070213,
+        3.2904334142804146,
+        3.315461702644825
+      ],
+      "ffa_speedup": 0.005887941772364672,
+      "peak_standard_d": 2.4999866485595703,
+      "peak_ffa_d": 2.5,
+      "inject_period_d": 2.5,
+      "time_astropy_ms": 24788.335718214512,
+      "ffa_vs_astropy_speedup": 7.49154375840278
+    },
+    "TESS-1sector": {
+      "ndata": 20000,
+      "baseline": 27.0,
+      "period_range": [
+        1.0,
+        13.5
+      ],
+      "nfreq_keplerian": 1240,
+      "nperiods_ffa": 17376,
+      "time_standard_ms": 86.58559620380402,
+      "time_ffa_ms": 1296.7251613736153,
+      "times_standard": [
+        0.08658559620380402,
+        0.0066583603620529175,
+        0.0951816514134407,
+        0.006626099348068237,
+        0.09501853585243225
+      ],
+      "times_ffa": [
+        1.2982605919241905,
+        1.3303779065608978,
+        1.2727569788694382,
+        1.2946757301688194,
+        1.2967251613736153
+      ],
+      "ffa_speedup": 0.06677251184983893,
+      "peak_standard_d": 5.000873565673828,
+      "peak_ffa_d": 4.9992857142857146,
+      "inject_period_d": 5.0,
+      "time_astropy_ms": 628.3339187502861,
+      "ffa_vs_astropy_speedup": 0.4845544279288101
+    },
+    "Kepler": {
+      "ndata": 65000,
+      "baseline": 1460.0,
+      "period_range": [
+        1.0,
+        20.0
+      ],
+      "nfreq_keplerian": 72919,
+      "nperiods_ffa": 1269760,
+      "time_standard_ms": 99.98741000890732,
+      "time_ffa_ms": 9679.983675479889,
+      "times_standard": [
+        0.10009555518627167,
+        0.09998131543397903,
+        0.09998741000890732,
+        0.09994733333587646,
+        0.10004565864801407
+      ],
+      "times_ffa": [
+        9.665412470698357,
+        9.679983675479889,
+        9.733547002077103,
+        9.6262047290802,
+        9.778238445520401
+      ],
+      "ffa_speedup": 0.010329295312985164,
+      "peak_standard_d": 9.999953269958496,
+      "peak_ffa_d": 10.000019607843138,
+      "inject_period_d": 10.0
+    }
+  },
+  "bench_ffa_throughput": {
+    "ZTF-like": {
+      "ndata": 150,
+      "nlcs": 50,
+      "nfreq_keplerian": 30918,
+      "time_ffa_s": 48.28286648541689,
+      "time_standard_s": 0.11545456945896149,
+      "ms_per_lc_ffa": 965.6573297083378,
+      "ms_per_lc_standard": 2.3090913891792297,
+      "lc_per_sec_ffa": 1.0355640341921653,
+      "lc_per_sec_standard": 433.0707761010064,
+      "ffa_speedup": 0.002391211994296834
+    },
+    "HAT-Net": {
+      "ndata": 6000,
+      "nlcs": 20,
+      "nfreq_keplerian": 154581,
+      "time_ffa_s": 66.94738247990608,
+      "time_standard_s": 0.37151262909173965,
+      "ms_per_lc_ffa": 3347.369123995304,
+      "ms_per_lc_standard": 18.575631454586983,
+      "lc_per_sec_ffa": 0.2987420756293631,
+      "lc_per_sec_standard": 53.83397072905775,
+      "ffa_speedup": 0.0055493226968694005
+    },
+    "TESS-1sector": {
+      "ndata": 20000,
+      "nlcs": 10,
+      "nfreq_keplerian": 1240,
+      "time_ffa_s": 12.997545078396797,
+      "time_standard_s": 0.5065845027565956,
+      "ms_per_lc_ffa": 1299.7545078396797,
+      "ms_per_lc_standard": 50.65845027565956,
+      "lc_per_sec_ffa": 0.7693760583005007,
+      "lc_per_sec_standard": 19.74004326145921,
+      "ffa_speedup": 0.038975398792698866
+    },
+    "Kepler": {
+      "ndata": 65000,
+      "nlcs": 3,
+      "nfreq_keplerian": 72919,
+      "time_ffa_s": 29.368986181914806,
+      "time_standard_s": 0.3001423180103302,
+      "ms_per_lc_ffa": 9789.66206063827,
+      "ms_per_lc_standard": 100.04743933677673,
+      "lc_per_sec_ffa": 0.10214857201463007,
+      "lc_per_sec_standard": 9.99525831574589,
+      "ffa_speedup": 0.010219703061972072
+    }
+  },
+  "bench_ffa_scaling": {
+    "scaling_nobs": {
+      "100": 757.909007370472,
+      "500": 778.6228656768799,
+      "1000": 770.5766633152962,
+      "5000": 760.0154727697372,
+      "10000": 775.9126424789429,
+      "50000": 901.2482836842537
+    },
+    "scaling_prange": {
+      "2.0": {
+        "time_ms": 113.59693855047226,
+        "n_periods": 36864
+      },
+      "5.0": {
+        "time_ms": 369.4945126771927,
+        "n_periods": 85888
+      },
+      "10.0": {
+        "time_ms": 756.7581161856651,
+        "n_periods": 122048
+      },
+      "20.0": {
+        "time_ms": 1543.0045500397682,
+        "n_periods": 157952
+      }
+    },
+    "scaling_mbins": {
+      "25": {
+        "time_ms": 184.42703783512115,
+        "n_periods": 30656
+      },
+      "50": {
+        "time_ms": 369.74456161260605,
+        "n_periods": 61184
+      },
+      "100": {
+        "time_ms": 759.864553809166,
+        "n_periods": 122048
+      },
+      "200": {
+        "time_ms": 1806.7407757043839,
+        "n_periods": 243776
+      }
+    }
+  }
+}
