@@ -544,6 +544,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         cpers = []
         for d, f in zip(data, frqs):
+            # Limit frequencies to ensure that
+            # thread numbers are within the limits of single-precision
+            max_threads_per_launch = 2**32 - 1
+            total_threads = len(d[0]) * len(f)
+            thread_nbatches = int(np.ceil(total_threads/max_threads_per_launch))
+
             size_of_real = self.real_type(1).nbytes
 
             # subtract of lc memory
@@ -552,6 +558,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             tot_bins = self.phase_bins * self.mag_bins
             batch_size = int(np.floor(fmem / (size_of_real * (tot_bins + 2))))
             nbatches = int(np.ceil(len(f) / float(batch_size)))
+
+            if thread_nbatches > nbatches:
+                nbatches = thread_nbatches
+                batch_size = int(np.ceil(len(f) / float(nbatches)))
 
             cper = np.zeros(len(f))
             for i in range(nbatches):
