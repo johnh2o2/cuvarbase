@@ -212,6 +212,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 raise Exception("mag_overlap must be zero "
                                 "if balanced_magbins is True")
 
+        if self.weighted and kwargs.get('use_fast', False):
+            raise Exception("use_fast must be False if weighted is True")
+
         self.use_double = kwargs.get('use_double', False)
 
         self.real_type = np.float32
