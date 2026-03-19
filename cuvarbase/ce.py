@@ -602,7 +602,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         if freqs is None:
             data_with_max_baseline = max(data,
-                                         key=lambda d: max(d[0]) - min(d[0]))
+                                         key=lambda d: np.max(d[0]) - np.min(d[0]))
             freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
 
         df = freqs[1] - freqs[0]

@@ -741,14 +741,14 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         if freqs is None:
             data_with_max_baseline = max(data,
-                                         key=lambda d: max(d[0]) - min(d[0]))
+                                         key=lambda d: np.max(d[0]) - np.min(d[0]))
             freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
 
             # now correct frequencies
             df = freqs[1] - freqs[0]
             k0 = get_k0(freqs)
             # nf = len(freqs)
-            nf = int(round(max(freqs) / df)) - k0
+            nf = int(round(np.max(freqs) / df)) - k0
             freqs = df * (k0 + np.arange(nf))
 
         df = freqs[1] - freqs[0]
