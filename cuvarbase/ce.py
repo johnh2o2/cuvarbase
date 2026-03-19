@@ -182,6 +182,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         computations. This is perfect for large Nfreqs and nobs <~ 2000.
         If True, use :func:`run` and not :func:`large_run` and set
         ``nstreams = 1``.
+    compute_log_prob: bool, optional (default: False)
+        Instead of computing CE, compute and return the log-probability periodogram.
 
     Example
     -------
@@ -203,6 +205,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.max_phi = kwargs.get('max_phi', 3.)
         self.weighted = kwargs.get('weighted', False)
         self.block_size = kwargs.get('block_size', 256)
+        self.compute_log_prob = kwargs.get('compute_log_prob', False)
 
         self.phase_overlap = kwargs.get('phase_overlap', 0)
         self.mag_overlap = kwargs.get('mag_overlap', 0)
@@ -309,7 +312,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                   max_phi=self.max_phi,
                   stream=stream,
                   weighted=self.weighted,
-                  use_double=self.use_double)
+                  use_double=self.use_double,
+                  compute_log_prob=self.compute_log_prob)
 
         kw.update(kwargs)
         mem = ConditionalEntropyMemory(**kw)
@@ -397,6 +401,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                   max_phi=self.max_phi,
                   weighted=self.weighted,
                   use_double=self.use_double,
+                  compute_log_prob=self.compute_log_prob,
                   n0_buffer=max_nobs,
                   buffered_transfer=True,
                   allocate=True,
@@ -611,7 +616,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                           mag_bins=self.mag_bins,
                           weighted=self.weighted,
                           max_phi=self.max_phi,
-                          use_double=self.use_double)
+                          use_double=self.use_double,
+                          compute_log_prob=self.compute_log_prob)
         kwargs_mem.update(kwargs)
         memory = [ConditionalEntropyMemory(stream=stream, **kwargs_mem)
                   for stream in streams]
