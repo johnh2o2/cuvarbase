@@ -11,7 +11,7 @@ import pycuda.autoprimaryctx
 from pycuda.compiler import SourceModule
 
 from .core import GPUAsyncProcess
-from .utils import _module_reader, find_kernel
+from .utils import _module_reader, find_kernel, normalize_light_curves
 from .utils import autofrequency as utils_autofreq
 from .memory import ConditionalEntropyMemory
 
@@ -451,6 +451,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             not all([func in self.prepared_functions for func in
                      ['ce_wt']]):
             self._compile_and_prepare_functions(**kwargs)
+
+        # Prepare data
+        data = normalize_light_curves(data)
 
         # create and/or check frequencies
         frqs = freqs
