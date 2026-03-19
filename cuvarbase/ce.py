@@ -187,7 +187,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     -------
     >>> proc = ConditionalEntropyAsyncProcess()
     >>> Ndata = 1000
-    >>> t = np.sort(365 * np.random.rand(N))
+    >>> t = np.sort(365 * np.random.rand(Ndata))
     >>> y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)
     >>> y += 0.01 * np.random.randn(len(t))
     >>> dy = 0.01 * np.ones_like(y)
