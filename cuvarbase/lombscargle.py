@@ -728,9 +728,6 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                      ['lomb', 'lomb_dirsum']]):
             self._compile_and_prepare_functions(**kwargs)
 
-        # Prepare data
-        data = normalize_light_curves(data)
-
         # create streams if needed
         bsize = min([len(data), batch_size])
         if len(self.streams) < bsize:
