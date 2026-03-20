@@ -49,8 +49,8 @@ Documentation = "https://johnh2o2.github.io/cuvarbase/"
 Repository = "https://github.com/johnh2o2/cuvarbase"
 "Bug Tracker" = "https://github.com/johnh2o2/cuvarbase/issues"
 
-[tool.setuptools]
-packages = ["cuvarbase", "cuvarbase.tests"]
+[tool.setuptools.packages.find]
+include = ["cuvarbase*"]
 
 [tool.setuptools.package-data]
 cuvarbase = ["kernels/*.cu"]
