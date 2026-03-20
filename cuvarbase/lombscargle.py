@@ -12,6 +12,7 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 # import pycuda.autoinit
+import skcuda.fft as cufft
 
 from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader, normalize_light_curves
@@ -459,11 +460,16 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         fft_size = H * (nf + k0)
 
+        mem = 0
+
         # data
         mem += 3 * n0
 
         # final result
         mem += nf
+
+        # regularization
+        mem += 2 * H + 1
 
         rsize = self.real_type(1).nbytes
         csize = self.complex_type(1).nbytes
@@ -471,10 +477,20 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         if kwargs.get('use_fft', True):
             # yw grid / fft (doubled because complex)
-            mem = c * sigma * (fft_size - k0)
+            mem += c * sigma * (fft_size - k0)
+
+            # work area size for cufft.Plan
+            # double because large non-power-of-two sizes trigger Bluestein algorithm
+            nx = sigma * (fft_size - k0)
+            mem += 1/rsize * 2 * cufft.cufft.cufftEstimate1d(nx, cufft.cufft.CUFFT_C2C)
 
             # w grid / fft (doubled because complex)
             mem += c * sigma * (2 * fft_size - k0)
+
+            # work area size for cufft.Plan
+            # double because large non-power-of-two sizes trigger Bluestein algorithm
+            nx = sigma * (2 * fft_size - k0)
+            mem += 1/rsize * 2 * cufft.cufft.cufftEstimate1d(nx, cufft.cufft.CUFFT_C2C)
 
             # precomputation (q1 = n0, q2 = n0, q3 = 2m + 1)
             mem += 2 * n0 + 2 * m + 1
@@ -483,10 +499,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if H > 1:
 
             # sparse matrix A (block-diagonal)
-            mem += (2 * H) ** 2 * nbatch
+            mem += (2 * H) ** 2
 
             # vector b (Ax = b)
-            mem += nbatch
+            mem += 1
+
+        mem *= nbatch
 
         # size of float
         mem *= rsize
