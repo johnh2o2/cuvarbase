@@ -228,6 +228,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         if kwargs.get('use_fast', False):
             self.call_func = conditional_entropy_fast
 
+        self.use_fast = kwargs.get('use_fast', False)
+
         self.memory = kwargs.get('memory', None)
         self.shmem_lc = kwargs.get('shmem_lc', True)
 
@@ -469,6 +471,13 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             frqs = [frqs] * len(data)
 
         assert(len(frqs) == len(data))
+
+        if not self.use_fast:
+            for f, d in zip(frqs, data):
+                if len(f) * len(d[0]) > 2**32-1:
+                    raise OverflowError(
+                        "Number of streams is too large - overflowing 32 bit integers\n"
+                        "Decrease frequency range or use :func:`large_run` instead")
 
         memory = memory if memory is not None else self.memory
 
