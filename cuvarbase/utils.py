@@ -6,7 +6,7 @@ from importlib.resources import files
 def weights(err):
     """ generate observation weights from uncertainties """
     w = np.power(err, -2)
-    return w/sum(w)
+    return w/np.sum(w)
 
 
 def find_kernel(name):
@@ -31,12 +31,12 @@ def _module_reader(fname, cpp_defs=None):
 def tophat_window(t, t0, d):
     w_window = np.zeros_like(t)
     w_window[np.absolute(t - t0) < d] += 1.
-    return w_window / max(w_window)
+    return w_window / np.max(w_window)
 
 
 def gaussian_window(t, t0, d):
     w_window = np.exp(-0.5 * np.power(t - t0, 2) / (d * d))
-    return w_window / (1. if len(w_window) == 0 else max(w_window))
+    return w_window / (1. if len(w_window) == 0 else np.max(w_window))
 
 
 def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
@@ -76,7 +76,7 @@ def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
     frequency : ndarray or Quantity
         The heuristically-determined optimal frequency bin
     """
-    baseline = max(t) - min(t)
+    baseline = np.max(t) - np.min(t)
     n_samples = len(t)
 
     df = 1. / (baseline * samples_per_peak)
