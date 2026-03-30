@@ -132,7 +132,7 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
     grid = (grid_size, 1)
     block = (block_size, 1, 1)
 
-    # weights + weighted variance
+    # weighted mean + weighted variance
     ybar = np.dot(w, y)
     var = np.float32(np.dot(w, np.power(y - ybar, 2)))
 
@@ -204,8 +204,8 @@ class PDMAsyncProcess(GPUAsyncProcess):
         elif kind in ['binned_linterp','binned_step']:
             function = 'pdm_%s_%dbins' % (kind, nbins)
         else:
-            raise KeyError('Function not available. Please use one of the followings: ' + \
-                            'binless_tophat, binless_gauss, binned_linterp, binned_step')
+            raise KeyError('Function not available. Please use one of the followings: '
+                           'binless_tophat, binless_gauss, binned_linterp, binned_step')
 
         if function not in self.prepared_functions:
             self._compile_and_prepare_functions(nbins=nbins)
