@@ -11,7 +11,7 @@ import pycuda.autoprimaryctx
 from pycuda.compiler import SourceModule
 
 from .core import GPUAsyncProcess
-from .utils import _module_reader, find_kernel
+from .utils import _module_reader, find_kernel, normalize_light_curves
 from .utils import autofrequency as utils_autofreq
 from .memory import ConditionalEntropyMemory
 
@@ -182,12 +182,14 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         computations. This is perfect for large Nfreqs and nobs <~ 2000.
         If True, use :func:`run` and not :func:`large_run` and set
         ``nstreams = 1``.
+    compute_log_prob: bool, optional (default: False)
+        Instead of computing CE, compute and return the log-probability periodogram.
 
     Example
     -------
     >>> proc = ConditionalEntropyAsyncProcess()
     >>> Ndata = 1000
-    >>> t = np.sort(365 * np.random.rand(N))
+    >>> t = np.sort(365 * np.random.rand(Ndata))
     >>> y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)
     >>> y += 0.01 * np.random.randn(len(t))
     >>> dy = 0.01 * np.ones_like(y)
@@ -203,6 +205,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.max_phi = kwargs.get('max_phi', 3.)
         self.weighted = kwargs.get('weighted', False)
         self.block_size = kwargs.get('block_size', 256)
+        self.compute_log_prob = kwargs.get('compute_log_prob', False)
 
         self.phase_overlap = kwargs.get('phase_overlap', 0)
         self.mag_overlap = kwargs.get('mag_overlap', 0)
@@ -211,6 +214,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             if kwargs.get('balanced_magbins', False):
                 raise Exception("mag_overlap must be zero "
                                 "if balanced_magbins is True")
+
+        if self.weighted and kwargs.get('use_fast', False):
+            raise Exception("use_fast must be False if weighted is True")
 
         self.use_double = kwargs.get('use_double', False)
 
@@ -221,6 +227,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.call_func = conditional_entropy
         if kwargs.get('use_fast', False):
             self.call_func = conditional_entropy_fast
+
+        self.use_fast = kwargs.get('use_fast', False)
 
         self.memory = kwargs.get('memory', None)
         self.shmem_lc = kwargs.get('shmem_lc', True)
@@ -306,7 +314,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                   max_phi=self.max_phi,
                   stream=stream,
                   weighted=self.weighted,
-                  use_double=self.use_double)
+                  use_double=self.use_double,
+                  compute_log_prob=self.compute_log_prob)
 
         kw.update(kwargs)
         mem = ConditionalEntropyMemory(**kw)
@@ -394,6 +403,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                   max_phi=self.max_phi,
                   weighted=self.weighted,
                   use_double=self.use_double,
+                  compute_log_prob=self.compute_log_prob,
                   n0_buffer=max_nobs,
                   buffered_transfer=True,
                   allocate=True,
@@ -449,6 +459,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                      ['ce_wt']]):
             self._compile_and_prepare_functions(**kwargs)
 
+        # Prepare data
+        data = normalize_light_curves(data)
+
         # create and/or check frequencies
         frqs = freqs
         if frqs is None:
@@ -458,6 +471,13 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             frqs = [frqs] * len(data)
 
         assert(len(frqs) == len(data))
+
+        if not self.use_fast:
+            for f, d in zip(frqs, data):
+                if len(f) * len(d[0]) > 2**32-1:
+                    raise OverflowError(
+                        "Number of streams is too large - overflowing 32 bit integers\n"
+                        "Decrease frequency range or use :func:`large_run` instead")
 
         memory = memory if memory is not None else self.memory
 
@@ -533,6 +553,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         cpers = []
         for d, f in zip(data, frqs):
+            # Limit frequencies to ensure that
+            # thread numbers are within the limits of single-precision
+            max_threads_per_launch = 2**32 - 1
+            total_threads = len(d[0]) * len(f)
+            thread_nbatches = int(np.ceil(total_threads/max_threads_per_launch))
+
             size_of_real = self.real_type(1).nbytes
 
             # subtract of lc memory
@@ -541,6 +567,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             tot_bins = self.phase_bins * self.mag_bins
             batch_size = int(np.floor(fmem / (size_of_real * (tot_bins + 2))))
             nbatches = int(np.ceil(len(f) / float(batch_size)))
+
+            if thread_nbatches > nbatches:
+                nbatches = thread_nbatches
+                batch_size = int(np.ceil(len(f) / float(nbatches)))
 
             cper = np.zeros(len(f))
             for i in range(nbatches):
@@ -581,7 +611,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         if freqs is None:
             data_with_max_baseline = max(data,
-                                         key=lambda d: max(d[0]) - min(d[0]))
+                                         key=lambda d: np.max(d[0]) - np.min(d[0]))
             freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
 
         df = freqs[1] - freqs[0]
@@ -605,7 +635,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                           mag_bins=self.mag_bins,
                           weighted=self.weighted,
                           max_phi=self.max_phi,
-                          use_double=self.use_double)
+                          use_double=self.use_double,
+                          compute_log_prob=self.compute_log_prob)
         kwargs_mem.update(kwargs)
         memory = [ConditionalEntropyMemory(stream=stream, **kwargs_mem)
                   for stream in streams]
