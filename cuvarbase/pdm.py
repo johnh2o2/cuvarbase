@@ -24,8 +24,9 @@ def var_tophat(t, y, w, freq, dphi):
 
     return var
 
+
 def var_gauss(t, y, w, freq, dphi):
-    gaussian = lambda x: np.exp(-0.5 *x**2)
+    gaussian = lambda x: np.exp(-0.5 * x**2)
     var = 0.
     for i, (T, Y, W) in enumerate(zip(t, y, w)):
         mbar = 0.
@@ -40,6 +41,7 @@ def var_gauss(t, y, w, freq, dphi):
         var += W * (Y - mbar / wtot)**2
 
     return var
+
 
 def binned_pdm_model(t, y, w, freq, nbins, linterp=True):
 
@@ -89,6 +91,7 @@ def binless_pdm_cpu(t, y, w, freqs, dphi=0.05, tophat=True):
         return [1 - var_tophat(t, y, w, freq, dphi) / var for freq in freqs]
     else:
         return [1 - var_gauss(t, y, w, freq, dphi) / var for freq in freqs]
+
 
 def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True):
     # Prepare data
@@ -157,7 +160,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
     def _compile_and_prepare_functions(self, nbins=10):
         pdm2_txt = open(find_kernel('pdm'), 'r').read()
         pdm2_txt = pdm2_txt.replace('//INSERT_NBINS_HERE',
-                                    '#define NBINS %d' % (nbins))
+                                    '#define NBINS %d' % nbins)
 
         self.module = SourceModule(pdm2_txt, options=['--use_fast_math'])
 
@@ -185,7 +188,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
             t_g, y_g, w_g = None, None, None
             if len(t) > 0:
                 t_g, y_g, w_g = tuple([gpuarray.zeros(len(t), dtype=np.float32)
-                                       for i in range(3)])
+                                       for _ in range(3)])
 
             pow_g = gpuarray.zeros(len(pow_cpu), dtype=pow_cpu.dtype)
             freqs_g = gpuarray.to_gpu(np.asarray(freqs).astype(np.float32))
