@@ -140,7 +140,10 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
     # transfer data
     w_g.set_async(np.asarray(w).astype(np.float32), stream=stream)
     t_g.set_async(np.asarray(t).astype(np.float32), stream=stream)
-    y_g.set_async(np.asarray(y).astype(np.float32), stream=stream)
+
+    # Ensure y is zero-weighted-meaned for fast kernels (one-pass SS_between)
+    y_norm = (np.asarray(y) - ybar).astype(np.float32)
+    y_g.set_async(y_norm, stream=stream)
 
     function.prepared_async_call(grid, block, stream,
                                  t_g.ptr, y_g.ptr, w_g.ptr,
@@ -167,9 +170,13 @@ class PDMAsyncProcess(GPUAsyncProcess):
         self.dtypes = [np.intp, np.intp, np.intp, np.intp, np.intp,
                        np.int32, np.int32, np.float32, np.float32]
         for function in ['pdm_binless_tophat', 'pdm_binless_gauss',
-                         'pdm_binned_linterp_%dbins' % (nbins),
-                         'pdm_binned_step_%dbins' % (nbins)]:
-            func = function.replace('_%dbins' % (nbins), '')
+                         'pdm_binned_linterp_%dbins' % nbins,
+                         'pdm_binned_step_%dbins' % nbins,
+                         'pdm_binned_linterp_fast_%dbins' % nbins,
+                         'pdm_binned_step_fast_%dbins' % nbins,
+                         'pdm_binless_tophat_fast',
+                         'pdm_binless_gauss_fast']:
+            func = function.replace('_%dbins' % nbins, '')
             func = self.module.get_function(func).prepare(self.dtypes)
             self.prepared_functions[function] = func
 
@@ -200,13 +207,18 @@ class PDMAsyncProcess(GPUAsyncProcess):
     def run(self, data, gpu_data=None, pow_cpus=None,
             kind='binned_linterp', nbins=10, dphi=0.05, **pdm_kwargs):
 
-        if kind in ['binless_tophat', 'binless_gauss']:
-            function = 'pdm_%s' % (kind)
-        elif kind in ['binned_linterp','binned_step']:
+        if kind in ['binless_tophat', 'binless_gauss',
+                    'binless_tophat_fast', 'binless_gauss_fast']:
+            function = 'pdm_%s' % kind
+        elif kind in ['binned_linterp', 'binned_step',
+                      'binned_linterp_fast', 'binned_step_fast']:
             function = 'pdm_%s_%dbins' % (kind, nbins)
         else:
             raise KeyError('Function not available. Please use one of the followings: '
-                           'binless_tophat, binless_gauss, binned_linterp, binned_step')
+                           'binless_tophat, binless_gauss, '
+                           'binless_tophat_fast, binless_gauss_fast, '
+                           'binned_linterp, binned_step, '
+                           'binned_linterp_fast, binned_step_fast')
 
         if function not in self.prepared_functions:
             self._compile_and_prepare_functions(nbins=nbins)
