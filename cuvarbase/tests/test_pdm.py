@@ -89,3 +89,23 @@ def test_cuda_pdm_binless_gauss(binless_pow_cpu,pow_gpu):
 @pytest.mark.parametrize(["binless_pow_cpu","pow_gpu"], [("binless_tophat","binless_tophat")], indirect=True)
 def test_cuda_pdm_binless_tophat(binless_pow_cpu,pow_gpu):
     assert_allclose(binless_pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+@pytest.mark.parametrize(["pow_cpu", "pow_gpu"], [("binned_linterp", "binned_linterp_fast")], indirect=True)
+def test_cuda_pdm_binned_linterp_fast(pow_cpu, pow_gpu):
+    assert_allclose(pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+@pytest.mark.parametrize(["pow_cpu", "pow_gpu"], [("binned_step", "binned_step_fast")], indirect=True)
+def test_cuda_pdm_binned_step_fast(pow_cpu, pow_gpu):
+    assert_allclose(pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+@pytest.mark.parametrize(["binless_pow_cpu", "pow_gpu"], [("binless_gauss", "binless_gauss_fast")], indirect=True)
+def test_cuda_pdm_binless_gauss_fast(binless_pow_cpu ,pow_gpu):
+    assert_allclose(binless_pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+@pytest.mark.parametrize(["binless_pow_cpu", "pow_gpu"], [("binless_tophat", "binless_tophat_fast")], indirect=True)
+def test_cuda_pdm_binless_tophat_fast(binless_pow_cpu, pow_gpu):
+    assert_allclose(binless_pow_cpu, pow_gpu, atol=1E-2, rtol=0)
