@@ -1,12 +1,14 @@
 import numpy as np
 import resource
+import warnings
+from typing import Literal
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
 from .core import GPUAsyncProcess
-from .utils import weights, find_kernel, dphase, normalize_light_curves
+from .utils import weights, find_kernel, dphase, normalize_light_curves, autofrequency
 
 
 def var_tophat(t, y, w, freq, dphi):
@@ -116,7 +118,7 @@ def pdm2_single_freq(t, y, w, freq, nbins=30, linterp=True):
 
 
 def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
-              dphi=0.05, block_size=256):
+              dphi=0.05, block_size=256, **kwargs):
     t, y, w, freqs = data_cpu
     t_g, y_g, w_g, freqs_g, pow_g = data_gpu
 
@@ -180,13 +182,29 @@ class PDMAsyncProcess(GPUAsyncProcess):
             func = self.module.get_function(func).prepare(self.dtypes)
             self.prepared_functions[function] = func
 
-    def allocate(self, data):
+    def allocate(self, data, freqs=None, **kwargs):
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
         gpu_data, pow_cpus = [], []
 
-        for t, y, w, freqs in data:
+        is_deprecated = len(data) > 0 and len(data[0]) == 4
+
+        plot_data = []
+        if is_deprecated:
+            plot_data = data
+        else:
+            frqs = freqs
+            if frqs is None:
+                frqs = [autofrequency(d[0], **kwargs) for d in data]
+            elif isinstance(frqs[0], (float, np.floating)):
+                frqs = [frqs] * len(data)
+
+            for i, (t, y, err) in enumerate(data):
+                # We only need lengths for allocation
+                plot_data.append((t, y, None, frqs[i]))
+
+        for t, y, w, freqs in plot_data:
 
             pow_cpu = cuda.aligned_zeros(shape=(len(freqs),),
                                          dtype=np.float32,
@@ -204,8 +222,12 @@ class PDMAsyncProcess(GPUAsyncProcess):
             pow_cpus.append(pow_cpu)
         return gpu_data, pow_cpus
 
-    def run(self, data, gpu_data=None, pow_cpus=None,
-            kind='binned_linterp', nbins=10, dphi=0.05, **pdm_kwargs):
+    def run(self, data, gpu_data=None, pow_cpus=None, freqs=None,
+            kind: Literal['binless_tophat', 'binless_gauss',
+                          'binless_tophat_fast', 'binless_gauss_fast',
+                          'binned_linterp', 'binned_step',
+                          'binned_linterp_fast', 'binned_step_fast'] = 'binned_linterp',
+            nbins=10, dphi=0.05, **pdm_kwargs):
 
         if kind in ['binless_tophat', 'binless_gauss',
                     'binless_tophat_fast', 'binless_gauss_fast']:
@@ -223,15 +245,45 @@ class PDMAsyncProcess(GPUAsyncProcess):
         if function not in self.prepared_functions:
             self._compile_and_prepare_functions(nbins=nbins)
 
-        # Prepare data
-        data = normalize_light_curves(data)
+        # Backward compatibility check
+        is_deprecated = len(data) > 0 and len(data[0]) == 4
+        if is_deprecated:
+            warnings.warn("The (t, y, w, freqs) format is deprecated "
+                          "and will be removed in the future. "
+                          "Please use the (t, y, err) format "
+                          "and pass freqs as a separate argument "
+                          "or pass optional keyword arguments "
+                          "passed to ``autofrequency``.",
+                          DeprecationWarning, stacklevel=2)
+
+        # Prepare data and determine frequencies
+        if is_deprecated:
+            norm_data = normalize_light_curves(data)
+            frqs = [d[3] for d in data]
+        else:
+            frqs = freqs
+            if frqs is None:
+                frqs = [autofrequency(d[0], **pdm_kwargs) for d in data]
+            elif isinstance(frqs[0], (float, np.floating)):
+                frqs = [frqs] * len(data)
+
+            # Normalize t and y
+            norm_data_temp = normalize_light_curves(data)
+            norm_data = []
+            for i, (t, y, err) in enumerate(norm_data_temp):
+                w = weights(err)
+                norm_data.append((t, y, w, frqs[i]))
 
         if pow_cpus is None or gpu_data is None:
-            gpu_data, pow_cpus = self.allocate(data)
+            gpu_data, pow_cpus = self.allocate(norm_data, freqs=frqs, **pdm_kwargs)
+
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
         func = self.prepared_functions[function]
+
         results = [pdm_async(stream, cdat, gdat, pcpu, func, dphi=dphi, **pdm_kwargs)
                    for stream, cdat, gdat, pcpu in
-                   zip(streams, data, gpu_data, pow_cpus)]
+                   zip(streams, norm_data, gpu_data, pow_cpus)]
 
-        return results
+        if is_deprecated:
+            return results
+        return list(zip(frqs, results))
