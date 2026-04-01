@@ -28,7 +28,7 @@ def var_tophat(t, y, w, freq, dphi):
 
 
 def var_gauss(t, y, w, freq, dphi):
-    gaussian = lambda x: np.exp(-0.5 * x**2)
+    def gaussian(x): return np.exp(-0.5 * x**2)
     var = 0.
     for i, (T, Y, W) in enumerate(zip(t, y, w)):
         mbar = 0.
@@ -36,7 +36,7 @@ def var_gauss(t, y, w, freq, dphi):
 
         for j, (T2, Y2, W2) in enumerate(zip(t, y, w)):
             dph = dphase(abs(T2 - T), freq)
-            wgt   = W2 * gaussian(dph / dphi)
+            wgt = W2 * gaussian(dph / dphi)
             mbar += wgt * Y2
             wtot += wgt
 
