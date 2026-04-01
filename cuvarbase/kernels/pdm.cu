@@ -9,6 +9,7 @@
 #define RESTRICT __restrict__
 #define CONSTANT const
 
+#define MAX_BLOCK_SIZE 256
 
 __device__ float phase_diff(
         CONSTANT float dt,
@@ -216,4 +217,291 @@ __global__ void pdm_binned_step(
 	if (i < nfreqs){
 		power[i] = 1.f - var_step_function(t, y, w, freqs[i], ndata) / var;
 	}
+}
+
+
+__global__ void pdm_binned_step_fast(
+        const float *RESTRICT t,
+        const float *RESTRICT y,
+        const float *RESTRICT w,
+        const float *RESTRICT freqs,
+        float *power,
+        CONSTANT int ndata,
+        CONSTANT int nfreqs,
+        CONSTANT float dphi,
+        CONSTANT float var_tot_val){
+
+    __shared__ float s_t[MAX_BLOCK_SIZE];
+    __shared__ float s_y[MAX_BLOCK_SIZE];
+    __shared__ float s_w[MAX_BLOCK_SIZE];
+
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + tid;
+
+    float freq = (i < nfreqs) ? freqs[i] : 0.0f;
+
+    float bin_wtots[NBINS];
+    float bin_sums[NBINS];
+
+    for (int b = 0; b < NBINS; b++){
+        bin_wtots[b] = 0.f;
+        bin_sums[b] = 0.f;
+    }
+
+    for (int j = 0; j < ndata; j += blockDim.x) {
+        int load_idx = j + tid;
+        if (load_idx < ndata) {
+            s_t[tid] = t[load_idx];
+            s_y[tid] = y[load_idx];
+            s_w[tid] = w[load_idx];
+        }
+        __syncthreads();
+
+        if (i < nfreqs) {
+            int n_in_tile = (ndata - j < blockDim.x) ? (ndata - j) : blockDim.x;
+            for (int k = 0; k < n_in_tile; k++) {
+                float phase = PHASE(s_t[k], freq);
+                int bin = (int)(phase * NBINS);
+                bin = bin % NBINS;
+                bin_wtots[bin] += s_w[k];
+                bin_sums[bin] += s_y[k] * s_w[k];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (i < nfreqs) {
+        float ss_bin = 0.f;
+        for (int b = 0; b < NBINS; b++) {
+            if (bin_wtots[b] > 1e-10f) {
+                ss_bin += (bin_sums[b] * bin_sums[b]) / bin_wtots[b];
+            }
+        }
+        // Assumes y is zero-meaned (weighted)
+        power[i] = ss_bin / var_tot_val;
+    }
+}
+
+__global__ void pdm_binned_linterp_fast(
+        const float *RESTRICT t,
+        const float *RESTRICT y,
+        const float *RESTRICT w,
+        const float *RESTRICT freqs,
+        float *power,
+        CONSTANT int ndata,
+        CONSTANT int nfreqs,
+        CONSTANT float dphi,
+        CONSTANT float var_tot_val){
+
+    __shared__ float s_t[MAX_BLOCK_SIZE];
+    __shared__ float s_y[MAX_BLOCK_SIZE];
+    __shared__ float s_w[MAX_BLOCK_SIZE];
+
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + tid;
+
+    float freq = (i < nfreqs) ? freqs[i] : 0.0f;
+
+    float bin_wtots[NBINS];
+    float bin_means[NBINS];
+
+    for (int b = 0; b < NBINS; b++){
+        bin_wtots[b] = 0.f;
+        bin_means[b] = 0.f;
+    }
+
+    // Pass 1: Accumulate bins
+    for (int j = 0; j < ndata; j += blockDim.x) {
+        int load_idx = j + tid;
+        if (load_idx < ndata) {
+            s_t[tid] = t[load_idx];
+            s_y[tid] = y[load_idx];
+            s_w[tid] = w[load_idx];
+        }
+        __syncthreads();
+
+        if (i < nfreqs) {
+            int n_in_tile = (ndata - j < blockDim.x) ? (ndata - j) : blockDim.x;
+            for (int k = 0; k < n_in_tile; k++) {
+                float phase = PHASE(s_t[k], freq);
+                int bin = (int)(phase * NBINS);
+                bin = bin % NBINS;
+                bin_wtots[bin] += s_w[k];
+                bin_means[bin] += s_y[k] * s_w[k];
+            }
+        }
+        __syncthreads();
+    }
+
+    if (i < nfreqs) {
+        for (int b = 0; b < NBINS; b++) {
+            if (bin_wtots[b] > 1e-10f) {
+                bin_means[b] /= bin_wtots[b];
+            }
+        }
+    }
+
+    float var_pdm = 0.f;
+    // Pass 2: Calculate variance
+    for (int j = 0; j < ndata; j += blockDim.x) {
+        int load_idx = j + tid;
+        if (load_idx < ndata) {
+            s_t[tid] = t[load_idx];
+            s_y[tid] = y[load_idx];
+            s_w[tid] = w[load_idx];
+        }
+        __syncthreads();
+
+        if (i < nfreqs) {
+            int n_in_tile = (ndata - j < blockDim.x) ? (ndata - j) : blockDim.x;
+            for (int k = 0; k < n_in_tile; k++) {
+                float phase = PHASE(s_t[k], freq);
+                float p_nbins = phase * NBINS;
+                int bin = (int)(p_nbins);
+                bin = bin % NBINS;
+
+                float alpha = p_nbins - floorf(p_nbins) - 0.5f;
+                int bin0 = (alpha < 0) ? bin - 1 : bin;
+                int bin1 = (alpha < 0) ? bin : bin + 1;
+
+                if (bin0 < 0) bin0 += NBINS;
+                if (bin1 >= NBINS) bin1 -= NBINS;
+
+                alpha += (alpha < 0) ? 1.f : 0.f;
+                float y0 = (1.f - alpha) * bin_means[bin0] + alpha * bin_means[bin1];
+                float dy = s_y[k] - y0;
+                var_pdm += s_w[k] * dy * dy;
+            }
+        }
+        __syncthreads();
+    }
+
+    if (i < nfreqs) {
+        power[i] = 1.f - var_pdm / var_tot_val;
+    }
+}
+
+__global__ void pdm_binless_tophat_fast(
+        const float *RESTRICT t,
+        const float *RESTRICT y,
+        const float *RESTRICT w,
+        const float *RESTRICT freqs,
+        float *power,
+        CONSTANT int ndata,
+        CONSTANT int nfreqs,
+        CONSTANT float dphi,
+        CONSTANT float var_tot_val){
+
+    __shared__ float s_t[MAX_BLOCK_SIZE];
+    __shared__ float s_y[MAX_BLOCK_SIZE];
+    __shared__ float s_w[MAX_BLOCK_SIZE];
+
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + tid;
+    float freq = (i < nfreqs) ? freqs[i] : 0.0f;
+
+    float total_var_pdm = 0.f;
+
+    for (int j = 0; j < ndata; j++) {
+        float tj = t[j];
+        float yj = y[j];
+        float wj = w[j];
+
+        float mbar = 0.f;
+        float wtot = 0.f;
+
+        for (int ks = 0; ks < ndata; ks += blockDim.x) {
+            int load_idx = ks + tid;
+            if (load_idx < ndata) {
+                s_t[tid] = t[load_idx];
+                s_y[tid] = y[load_idx];
+                s_w[tid] = w[load_idx];
+            }
+            __syncthreads();
+
+            if (i < nfreqs) {
+                int n_in_tile = (ndata - ks < blockDim.x) ? (ndata - ks) : blockDim.x;
+                for (int k = 0; k < n_in_tile; k++) {
+                    float dph = phase_diff(fabsf(s_t[k] - tj), freq);
+                    if (dph < dphi) {
+                        mbar += s_w[k] * s_y[k];
+                        wtot += s_w[k];
+                    }
+                }
+            }
+            __syncthreads();
+        }
+
+        if (i < nfreqs && wtot > 1e-10f) {
+            float diff = yj - (mbar / wtot);
+            total_var_pdm += wj * diff * diff;
+        }
+    }
+
+    if (i < nfreqs) {
+        power[i] = 1.f - total_var_pdm / var_tot_val;
+    }
+}
+
+__global__ void pdm_binless_gauss_fast(
+        const float *RESTRICT t,
+        const float *RESTRICT y,
+        const float *RESTRICT w,
+        const float *RESTRICT freqs,
+        float *power,
+        CONSTANT int ndata,
+        CONSTANT int nfreqs,
+        CONSTANT float dphi,
+        CONSTANT float var_tot_val){
+
+    __shared__ float s_t[MAX_BLOCK_SIZE];
+    __shared__ float s_y[MAX_BLOCK_SIZE];
+    __shared__ float s_w[MAX_BLOCK_SIZE];
+
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + tid;
+    float freq = (i < nfreqs) ? freqs[i] : 0.0f;
+    float inv_dphi = 1.0f / dphi;
+
+    float total_var_pdm = 0.f;
+
+    for (int j = 0; j < ndata; j++) {
+        float tj = t[j];
+        float yj = y[j];
+        float wj = w[j];
+
+        float mbar = 0.f;
+        float wtot = 0.f;
+
+        for (int ks = 0; ks < ndata; ks += blockDim.x) {
+            int load_idx = ks + tid;
+            if (load_idx < ndata) {
+                s_t[tid] = t[load_idx];
+                s_y[tid] = y[load_idx];
+                s_w[tid] = w[load_idx];
+            }
+            __syncthreads();
+
+            if (i < nfreqs) {
+                int n_in_tile = (ndata - ks < blockDim.x) ? (ndata - ks) : blockDim.x;
+                for (int k = 0; k < n_in_tile; k++) {
+                    float dph = phase_diff(fabsf(s_t[k] - tj), freq);
+                    float x = dph * inv_dphi;
+                    float wgt = s_w[k] * expf(-0.5f * x * x);
+                    mbar += wgt * s_y[k];
+                    wtot += wgt;
+                }
+            }
+            __syncthreads();
+        }
+
+        if (i < nfreqs && wtot > 1e-10f) {
+            float diff = yj - (mbar / wtot);
+            total_var_pdm += wj * diff * diff;
+        }
+    }
+
+    if (i < nfreqs) {
+        power[i] = 1.f - total_var_pdm / var_tot_val;
+    }
 }
