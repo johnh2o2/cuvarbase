@@ -158,6 +158,21 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
 
 
 class PDMAsyncProcess(GPUAsyncProcess):
+    """
+    GPUAsyncProcess for the Phase Dispersion Minimization (PDM) period finder.
+
+    Example
+    -------
+    >>> proc = PDMAsyncProcess()
+    >>> Ndata = 1000
+    >>> t = np.sort(365 * np.random.rand(Ndata))
+    >>> y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)
+    >>> y += 0.01 * np.random.randn(len(t))
+    >>> dy = 0.01 * np.ones_like(y)
+    >>> results = proc.run([(t, y, dy)])
+    >>> proc.finish()
+    >>> pdm_freqs, pdm_powers = results[0]
+    """
 
     def __init__(self, *args, **kwargs):
         super(PDMAsyncProcess, self).__init__(*args, **kwargs)
@@ -183,6 +198,23 @@ class PDMAsyncProcess(GPUAsyncProcess):
             self.prepared_functions[function] = func
 
     def allocate(self, data, freqs=None, **kwargs):
+        """
+        Allocate GPU memory for PDM computations.
+
+        Parameters
+        ----------
+        data: list of tuples
+            List of [(t, y, err), ...] or [(t, y, w, freqs), ...] (deprecated)
+        freqs: list or np.ndarray, optional
+            Frequency grid(s) to search.
+
+        Returns
+        -------
+        gpu_data: list
+            List of GPU arrays.
+        pow_cpus: list
+            List of CPU arrays for results.
+        """
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
@@ -228,6 +260,46 @@ class PDMAsyncProcess(GPUAsyncProcess):
                           'binned_linterp', 'binned_step',
                           'binned_linterp_fast', 'binned_step_fast'] = 'binned_linterp',
             nbins=10, dphi=0.05, **pdm_kwargs):
+        """
+        Run PDM on a batch of data.
+
+        Parameters
+        ----------
+        data: list of tuples
+            list of [(t, y, err), ...] containing
+            * ``t``: observation times
+            * ``y``: observations
+            * ``err``: observation uncertainties
+            Alternatively, [(t, y, w, freqs), ...] for backward compatibility.
+        gpu_data: list, optional
+            list of GPU arrays from ``allocate``
+        pow_cpus: list, optional
+            list of CPU arrays from ``allocate``
+        freqs: list or np.ndarray, optional
+            Frequency grid(s) to search.
+        kind: str, optional (default: 'binned_linterp')
+            PDM variant to use. Available options:
+            * 'binless_tophat'
+            * 'binless_gauss'
+            * 'binless_tophat_fast'
+            * 'binless_gauss_fast'
+            * 'binned_linterp'
+            * 'binned_step'
+            * 'binned_linterp_fast'
+            * 'binned_step_fast'
+        nbins: int, optional (default: 10)
+            Number of bins for binned PDM.
+        dphi: float, optional (default: 0.05)
+            Phase width for binless PDM.
+        **pdm_kwargs:
+            Extra arguments passed to ``autofrequency``.
+
+        Returns
+        -------
+        results: list
+            If depracated format is used: list of power arrays.
+            If new format is used: list of (freqs, power) tuples.
+        """
 
         if kind in ['binless_tophat', 'binless_gauss',
                     'binless_tophat_fast', 'binless_gauss_fast']:
