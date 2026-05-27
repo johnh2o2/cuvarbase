@@ -434,10 +434,10 @@ class BLSMemory:
         self.t[:len(t)] = np.asarray(t).astype(self.rtype)[:]
 
         w = np.power(dy, -2)
-        w /= sum(w)
+        w /= np.sum(w)
         self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
 
-        self.ybar = sum(y * w)
+        self.ybar = np.sum(y * w)
         self.yy = np.dot(w, np.power(y - self.ybar, 2))
 
         u = (y - self.ybar) * w
@@ -976,7 +976,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
     # move data to GPU
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
     ybar = np.dot(w, y)
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
@@ -1202,7 +1202,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     # move data to GPU
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
     ybar = np.dot(w, y)
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
