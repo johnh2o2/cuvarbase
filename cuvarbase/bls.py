@@ -5,7 +5,6 @@ and variants.
 .. [K2002] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
 
 """
-import sys
 import threading
 from collections import OrderedDict
 
@@ -15,7 +14,6 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader
 
 import resource
