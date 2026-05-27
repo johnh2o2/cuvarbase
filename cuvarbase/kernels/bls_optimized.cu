@@ -24,7 +24,7 @@ __device__ float mod1_fast(float a){
 }
 
 __device__ float bls_value(float ybar, float w, unsigned int ignore_negative_delta_sols){
-	float bls = (w > 1e-10f && w < 1.f - 1e-10f) ? ybar * ybar / (w * (1.f - w)) : 0.f;
+	float bls = (w > 1e-10f && w < 1.f - 1e-10f && fabs(ybar) > 1e-5) ? ybar * ybar / (w * (1.f - w)) : 0.f;
     return ((ignore_negative_delta_sols == 1) & (ybar > 0.f)) ? 0.f : bls;
 }
 
