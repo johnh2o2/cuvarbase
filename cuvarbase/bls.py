@@ -188,7 +188,7 @@ def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
     qmin = float(min_obs_per_transit) / len(t)
 
     fmin1 = freq_transit(qmin, rho=rho)
-    fmin2 = 2./(max(t) - min(t))
+    fmin2 = 2./(np.max(t) - np.min(t))
     return max([fmin1, fmin2])
 
 
@@ -260,7 +260,7 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     if fmax is None:
         fmax = fmax_transit(rho=rho, **kwargs)
 
-    T = max(t) - min(t)
+    T = np.max(t) - np.min(t)
     freqs = [fmin]
     while freqs[-1] < fmax:
         df = qmin_fac * q_transit(freqs[-1], rho=rho) / (samples_per_peak * T)
@@ -1781,7 +1781,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
     f = f0
     nol = noverlap
 
-    baseline = max(t) - min(t)
+    baseline = np.max(t) - np.min(t)
 
     functions = compile_bls(**kwargs)
     i = 0
