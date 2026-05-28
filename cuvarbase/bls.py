@@ -184,7 +184,7 @@ def _reduction_max(max_func, arr, arr_args, nfreq, nbins,
 
 
 def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
-    T = max(t) - min(t)
+    # T = np.max(t) - np.min(t)
     qmin = float(min_obs_per_transit) / len(t)
 
     fmin1 = freq_transit(qmin, rho=rho)
