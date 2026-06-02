@@ -1356,7 +1356,7 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     return 0 if W < 1e-9 else (YW ** 2) / (W * (1 - W)) / YY
 
 
-def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
+def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False, **kwargs):
     """
     Sparse BLS implementation for CPU (no binning, tests all pairs of observations).
     
@@ -1529,7 +1529,7 @@ def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwarg
 
 def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
                    block_size=64, max_ndata=None,
-                   stream=None, kernel=None, use_simple=False):
+                   stream=None, kernel=None, use_simple=False, **kwargs):
     """
     GPU-accelerated sparse BLS implementation.
 
