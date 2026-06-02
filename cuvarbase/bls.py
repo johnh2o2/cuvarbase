@@ -1644,7 +1644,8 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
 
 def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                   qmin_fac=0.5, qmax_fac=2.0, fmin=None,
-                  fmax=None, freqs=None, qvals=None, use_fast=False,
+                  fmax=None, freqs=None, qvals=None,
+                  use_fast=False, use_optimized=False,
                   use_sparse=None, sparse_threshold=500,
                   use_gpu=True,
                   ignore_negative_delta_sols=False,
@@ -1687,6 +1688,17 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         Overrides the keplerian q values
     use_fast: bool, optional (default: False)
         Use fast GPU implementation (if not using sparse)
+    use_optimized: bool, optional (default: False)
+        Use optimized GPU implementation (if not using sparse).
+
+        This automatically selects optimal block size based on ndata:
+        - ndata <= 32: 32 threads (single warp)
+        - ndata <= 64: 64 threads (two warps)
+        - ndata <= 128: 128 threads (four warps)
+        - ndata > 128: 256 threads (eight warps)
+
+        This provides significant speedups for small datasets by reducing
+        idle thread overhead and kernel launch costs.
     use_sparse: bool, optional (default: None)
         If True, use sparse BLS. If False, use standard BLS. If None (default),
         automatically select based on dataset size (sparse_threshold).
@@ -1751,8 +1763,25 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     # Use GPU BLS for larger datasets
     qmins = qvals * qmin_fac
     qmaxes = qvals * qmax_fac
-    
-    if use_fast:
+
+    if use_optimized:
+        # Choose optimal block size
+        block_size = _choose_block_size(ndata)
+
+        # Override any user-provided block_size
+        kwargs['block_size'] = block_size
+
+        # Get cached kernels for this block size
+        fname = 'full_bls_no_sol_optimized'
+        functions = _get_cached_kernels(block_size, use_optimized, [fname])
+
+        powers = eebls_gpu_fast_optimized(t, y, dy, freqs,
+                                          qmin=qmins, qmax=qmaxes,
+                                          ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                          functions=functions,
+                                          **kwargs)
+        return freqs, powers, None
+    elif use_fast:
         powers = eebls_gpu_fast(t, y, dy, freqs,
                                 qmin=qmins, qmax=qmaxes,
                                 ignore_negative_delta_sols=ignore_negative_delta_sols,
