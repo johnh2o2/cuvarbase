@@ -258,7 +258,7 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
         fmin = fmin_transit(t, rho=rho, samples_per_peak=samples_per_peak,
                             **kwargs)
     if fmax is None:
-        fmax = fmax_transit(rho=rho, **kwargs)
+        fmax = fmax_transit(rho=rho, qmax=0.5 / qmax_fac, **kwargs)
 
     T = np.max(t) - np.min(t)
     freqs = [fmin]
