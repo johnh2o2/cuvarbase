@@ -242,6 +242,8 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     qmax_fac: float, optional (default: None)
         The maximum :math:`q` value to search in units of the Keplerian
         :math:`q` value. If ``None``, this defaults to ``1/qmin_fac``.
+    **kwargs:
+        passed to `fmin_transit`
 
     Returns
     -------
@@ -255,8 +257,7 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
         qmax_fac = 1./qmin_fac
 
     if fmin is None:
-        fmin = fmin_transit(t, rho=rho, samples_per_peak=samples_per_peak,
-                            **kwargs)
+        fmin = fmin_transit(t, rho=rho, **kwargs)
     if fmax is None:
         fmax = fmax_transit(rho=rho, qmax=0.5 / qmax_fac, **kwargs)
 
@@ -1359,11 +1360,11 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
 def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False, **kwargs):
     """
     Sparse BLS implementation for CPU (no binning, tests all pairs of observations).
-    
+
     This is more efficient than traditional BLS when the number of observations
     is small, as it avoids redundant grid searching over finely-grained parameter
     grids. Based on https://arxiv.org/abs/2103.06193
-    
+
     Parameters
     ----------
     t: array_like, float
@@ -1376,7 +1377,7 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False, **kwargs):
         Frequencies to test
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore solutions with negative delta (inverted dips)
-    
+
     Returns
     -------
     bls: array_like, float
@@ -1486,11 +1487,11 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False, **kwargs):
                     max_bls = bls
                     best_q_val = q
                     best_phi_val = phi0
-        
+
         bls_powers[i_freq] = max_bls
         best_q[i_freq] = best_q_val
         best_phi[i_freq] = best_phi_val
-    
+
     solutions = list(zip(best_q, best_phi))
     return bls_powers, solutions
 
@@ -1759,7 +1760,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
             powers, sols = sparse_bls_cpu(t, y, dy, freqs,
                                           ignore_negative_delta_sols=ignore_negative_delta_sols)
         return freqs, powers, sols
-    
+
     # Use GPU BLS for larger datasets
     qmins = qvals * qmin_fac
     qmaxes = qvals * qmax_fac
