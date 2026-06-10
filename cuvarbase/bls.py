@@ -14,7 +14,7 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .utils import find_kernel, _module_reader
+from .utils import find_kernel, _module_reader, normalize_light_curves
 
 import resource
 import numpy as np
@@ -565,6 +565,8 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         :math:`1 - \chi_2(\omega) / \chi_2(constant)`
 
     """
+    t, y, dy = normalize_light_curves([(t, y, dy)])[0]
+
     fname = 'full_bls_no_sol'
 
     if functions is None:
@@ -711,6 +713,8 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         :math:`1 - \chi_2(\omega) / \chi_2(constant)`
 
     """
+    t, y, dy = normalize_light_curves([(t, y, dy)])[0]
+
     fname = 'full_bls_no_sol_optimized'
 
     if functions is None:
@@ -1151,6 +1155,10 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         Best ``(q, phi)`` solution at each frequency
 
     """
+    # Store original t mean for phase adjustment
+    t_mean = np.floor(np.mean(t))
+
+    t, y, dy = normalize_light_curves([(t, y, dy)], use_floor=True)[0]
 
     def locext(ext, arr, imin=None, imax=None):
         if isinstance(arr, float) or isinstance(arr, int):
@@ -1305,6 +1313,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     best_phi = bls_best_phi.get()
 
     qphi_sols = list(zip(best_q, best_phi))
+    # Adjust phases to original timescale
+    qphi_sols = [(q, (phi + (t_mean * freq)) % 1.0) for (q, phi), freq in zip(qphi_sols, freqs)]
 
     return bls_g.get()/YY, qphi_sols
 
@@ -1571,6 +1581,11 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
     solutions: list of (q, phi0) tuples
         Best (q, phi0) solution at each frequency
     """
+    # Store original t mean for phase adjustment
+    t_mean = np.mean(t)
+
+    t, y, dy = normalize_light_curves([(t, y, dy)])[0]
+
     # Convert to numpy arrays
     t = np.asarray(t).astype(np.float32)
     y = np.asarray(y).astype(np.float32)
@@ -1640,6 +1655,9 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
     best_phi = best_phi_g.get()
 
     solutions = list(zip(best_q, best_phi))
+    # Adjust phases to original timescale
+    solutions = [(q, (phi + (t_mean * freq)) % 1.0) for (q, phi), freq in zip(solutions, freqs)]
+
     return bls_powers, solutions
 
 
