@@ -408,6 +408,14 @@ __global__ void reduction_max(float *arr, unsigned int *arr_args, unsigned int n
 		float val = partial_max[threadIdx.x];
 		unsigned int arg = partial_arg_max[threadIdx.x];
 
+        float other_val = partial_max[threadIdx.x + 32];
+        unsigned int other_arg = partial_arg_max[threadIdx.x + 32];
+
+        if (other_val > val) {
+            val = other_val;
+            arg = other_arg;
+        }
+
 		for(int offset = 16; offset > 0; offset /= 2){
 			float other_val = __shfl_down_sync(0xffffffff, val, offset);
 			unsigned int other_arg = __shfl_down_sync(0xffffffff, arg, offset);
