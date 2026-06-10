@@ -130,9 +130,9 @@ _function_signatures = {
                         np.float32, np.float32, np.uint32],
     'bin_and_phase_fold_custom': [np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.intp,
-                                  np.intp, np.intp, np.int32,
-                                  np.uint32, np.uint32, np.uint32,
-                                  np.uint32],
+                                  np.intp, np.intp, np.float64,
+                                  np.int32, np.uint32, np.uint32,
+                                  np.uint32, np.uint32],
     'reduction_max': [np.intp, np.intp, np.uint32, np.uint32, np.uint32,
                       np.intp, np.intp, np.uint32, np.uint32],
     'store_best_sols': [np.intp, np.intp, np.intp, np.uint32,
@@ -939,6 +939,10 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         Best (q, phi) solution at each frequency
 
     """
+    # Store original t mean for phase adjustment
+    t_mean = np.floor(np.mean(t))
+
+    t, y, dy = normalize_light_curves([(t, y, dy)], use_floor=True)[0]
 
     functions = functions if functions is not None \
         else compile_bls(**kwargs)
@@ -989,7 +993,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     t_g = gpuarray.to_gpu(np.array(t).astype(np.float32))
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
-    freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
+    freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float64))
 
     yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs, streams \
         = [], [], [], [], []
@@ -1044,7 +1048,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         args = (bin_grid, block, stream)
         args += (t_g.ptr, yw_g.ptr, w_g.ptr)
         args += (yw_g_bin.ptr, w_g_bin.ptr, freqs_g.ptr)
-        args += (q_values_g.ptr, phi_values_g.ptr)
+        args += (q_values_g.ptr, phi_values_g.ptr, np.float64(t_mean))
         args += (np.uint32(len(q_values)), np.uint32(len(phi_values)))
         args += (np.uint32(len(t)), np.uint32(nf))
         args += (np.uint32(freq_batch_size * batch),)

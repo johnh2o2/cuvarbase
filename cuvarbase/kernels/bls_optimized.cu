@@ -23,6 +23,10 @@ __device__ float mod1_fast(float a){
 	return a - floorf(a);
 }
 
+__device__ double mod1d_fast(double a){
+	return a - floor(a);
+}
+
 __device__ float bls_value(float ybar, float w, unsigned int ignore_negative_delta_sols){
 	float bls = (w > 1e-10f && w < 1.f - 1e-10f && fabs(ybar) > 1e-5) ? ybar * ybar / (w * (1.f - w)) : 0.f;
     return ((ignore_negative_delta_sols == 1) & (ybar > 0.f)) ? 0.f : bls;
@@ -326,8 +330,9 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 
 __global__ void bin_and_phase_fold_custom(
 	                    float *t, float *yw, float *w,
-						float *yw_bin, float *w_bin, float *freqs,
+						float *yw_bin, float *w_bin, double *freqs,
 						float *q_values, float *phi_values,
+						double t_mean,
 						unsigned int nq, unsigned int nphi, unsigned int ndata,
 						unsigned int nfreq, unsigned int freq_offset){
 	unsigned int i = get_id();
@@ -341,10 +346,13 @@ __global__ void bin_and_phase_fold_custom(
 		float W = w[i_data];
 		float YW = yw[i_data];
 
+		// get phase [0, 1)
 		float phi = mod1_fast(t[i_data] * freqs[i_freq + freq_offset]);
 
 		for(int pb = 0; pb < nphi; pb++){
-			float dphi = phi - phi_values[pb];
+			// Adjust test phase to normalized timescale
+			float phi0 = (float)mod1d_fast((double)phi_values[pb] - (t_mean * freqs[i_freq + freq_offset]));
+			float dphi = phi - phi0;
 			dphi -= floorf(dphi);
 
 			for(int qb = 0; qb < nq; qb++){

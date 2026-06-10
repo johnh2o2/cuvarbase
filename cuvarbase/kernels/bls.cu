@@ -17,6 +17,10 @@ __device__ float mod1(float a){
 	return a - floorf(a);
 }
 
+__device__ double mod1d(double a){
+	return a - floor(a);
+}
+
 __device__ float bls_value(float ybar, float w, unsigned int ignore_negative_delta_sols){
     // if ignore negative delta sols is turned on, that means only solutions where
     // the mean amplitude within the transit is _lower_ than the mean amplitude of the source 
@@ -329,9 +333,10 @@ __global__ void full_bls_no_sol(
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)
 __global__ void bin_and_phase_fold_custom(
 	                    float *t, float *yw, float *w,
-						float *yw_bin, float *w_bin, float *freqs,
-						float *q_values, float *phi_values, 
-						unsigned int nq, unsigned int nphi, unsigned int ndata, 
+						float *yw_bin, float *w_bin, double *freqs,
+						float *q_values, float *phi_values,
+						double t_mean,
+						unsigned int nq, unsigned int nphi, unsigned int ndata,
 						unsigned int nfreq, unsigned int freq_offset){
 	unsigned int i = get_id();
 
@@ -348,7 +353,9 @@ __global__ void bin_and_phase_fold_custom(
 		float phi = mod1(t[i_data] * freqs[i_freq + freq_offset]);
 
 		for(int pb = 0; pb < nphi; pb++){
-			float dphi = phi - phi_values[pb];
+			// Adjust test phase to normalized timescale
+			float phi0 = (float)mod1d((double)phi_values[pb] - (t_mean * freqs[i_freq + freq_offset]));
+			float dphi = phi - phi0;
 			dphi -= floorf(dphi);
 
 			for(int qb = 0; qb < nq; qb++){
