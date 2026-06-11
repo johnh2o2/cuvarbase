@@ -238,3 +238,43 @@ class TestLombScargle(object):
 
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
+
+
+class TestLombScargleSimpleWeights(object):
+    """Regression tests for lomb_scargle_simple's weight handling.
+
+    The function used to pre-normalize dy**-2 and pass the result in the
+    dy slot of run(); LombScargleMemory.setdata then applied the
+    inverse-variance conversion AGAIN, producing effective weights
+    proportional to dy^4 -- the largest-error points got the MOST weight.
+    lomb_scargle_simple must pass raw dy straight through.
+    """
+
+    def test_weights_helper_is_inverse_variance(self):
+        from ..memory.lombscargle_memory import weights
+        dy = np.array([0.1, 0.2, 0.4])
+        w = weights(dy)
+        expected = (dy ** -2) / np.sum(dy ** -2)
+        assert_allclose(w, expected, rtol=1e-6)
+        assert_allclose(w, [0.76190476, 0.19047619, 0.04761905], rtol=1e-5)
+        # double application inverts the ordering (the old bug)
+        w2 = weights(weights(dy))
+        assert np.argmax(w2) == np.argmax(dy)  # largest error dominates
+        assert np.argmax(w) == np.argmin(dy)   # correct: smallest error
+
+    def test_lomb_scargle_simple_passes_raw_dy(self, monkeypatch):
+        from .. import lombscargle as ls
+        dy = np.array([0.1, 0.2, 0.4])
+        t = np.array([0.0, 1.0, 2.0])
+        y = np.array([1.0, 2.0, 3.0])
+        captured = {}
+
+        def fake_run(self, data, **kwargs):
+            captured['data'] = data
+            return [(np.array([1.0]), np.array([0.5]))]
+
+        monkeypatch.setattr(ls.LombScargleAsyncProcess, 'run', fake_run)
+        ls.lomb_scargle_simple(t, y, dy)
+
+        passed_dy = captured['data'][0][2]
+        assert_allclose(passed_dy, dy)  # raw uncertainties, not weights
