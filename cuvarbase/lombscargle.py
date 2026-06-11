@@ -13,8 +13,14 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
+from ._skcuda_compat import ensure_numpy_aliases
+
+ensure_numpy_aliases()  # must run before any skcuda import (numpy >= 1.24)
+
+import skcuda.fft as cufft  # noqa: E402
+
 from .core import GPUAsyncProcess
-from .utils import find_kernel, _module_reader
+from .utils import find_kernel, _module_reader, normalize_light_curves
 from .utils import autofrequency as utils_autofreq
 from .memory import NFFTMemory, LombScargleMemory, weights
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
@@ -487,6 +493,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # final result
         mem += nf
 
+        # regularization
+        mem += 2 * H + 1
+
         rsize = self.real_type(1).nbytes
         csize = self.complex_type(1).nbytes
         c = int(np.ceil(float(csize) / rsize))
@@ -495,8 +504,18 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             # yw grid / fft (doubled because complex)
             mem += c * sigma * (fft_size - k0)
 
+            # work area size for cufft.Plan
+            # double because large non-power-of-two sizes trigger Bluestein algorithm
+            nx = sigma * (fft_size - k0)
+            mem += 1/rsize * 2 * cufft.cufft.cufftEstimate1d(nx, cufft.cufft.CUFFT_C2C)
+
             # w grid / fft (doubled because complex)
             mem += c * sigma * (2 * fft_size - k0)
+
+            # work area size for cufft.Plan
+            # double because large non-power-of-two sizes trigger Bluestein algorithm
+            nx = sigma * (2 * fft_size - k0)
+            mem += 1/rsize * 2 * cufft.cufft.cufftEstimate1d(nx, cufft.cufft.CUFFT_C2C)
 
             # precomputation (q1 = n0, q2 = n0, q3 = 2m + 1)
             mem += 2 * n0 + 2 * m + 1
@@ -505,10 +524,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if H > 1:
 
             # sparse matrix A (block-diagonal)
-            mem += (2 * H) ** 2 * nbatch
+            mem += (2 * H) ** 2
 
             # vector b (Ax = b)
-            mem += nbatch
+            mem += 1
+
+        mem *= nbatch
 
         # size of float
         mem *= rsize
@@ -686,6 +707,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                      ['lomb', 'lomb_dirsum']]):
             self._compile_and_prepare_functions(**kwargs)
 
+        # Prepare data
+        data = normalize_light_curves(data)
+
         # create and/or check frequencies
         frqs = freqs
         if frqs is None:
@@ -758,14 +782,14 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         if freqs is None:
             data_with_max_baseline = max(data,
-                                         key=lambda d: max(d[0]) - min(d[0]))
+                                         key=lambda d: np.max(d[0]) - np.min(d[0]))
             freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
 
             # now correct frequencies
             df = freqs[1] - freqs[0]
             k0 = get_k0(freqs)
             # nf = len(freqs)
-            nf = int(round(max(freqs) / df)) - k0
+            nf = int(round(np.max(freqs) / df)) - k0
             freqs = df * (k0 + np.arange(nf))
 
         df = freqs[1] - freqs[0]
@@ -801,16 +825,16 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
         best_freqs, best_freq_significances = [], []
-        
+
         default_mask = np.array([True] * len(freqs))
         mask = default_mask if ignore_freq_mask is None else ~np.asarray(ignore_freq_mask)
         for b, batch in enumerate(batches):
- 
+
             results = self.run(batch, memory=memory, freqs=freqs,
                                use_fft=use_fft,
                                **kwargs)
             self.finish()
-            
+
             for i, (f, p) in enumerate(results):
                 if only_return_best_freqs:
                     best_index = np.argmax(p[mask])
