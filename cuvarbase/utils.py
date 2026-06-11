@@ -1,6 +1,6 @@
 from copy import deepcopy
+import os
 import numpy as np
-from importlib.resources import files
 
 
 def weights(err):
@@ -10,7 +10,12 @@ def weights(err):
 
 
 def find_kernel(name):
-    return str(files("cuvarbase").joinpath('kernels', f'{name}.cu'))
+    # Resolve relative to this file rather than importlib.resources:
+    # setuptools PEP-660 editable installs hand files("cuvarbase") a
+    # MultiplexedPath that misresolves to the project root on py<3.12,
+    # and the kernels must be real on-disk files for open()/nvcc anyway.
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        'kernels', f'{name}.cu')
 
 
 def _module_reader(fname, cpp_defs=None):

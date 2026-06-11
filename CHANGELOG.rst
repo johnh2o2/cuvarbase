@@ -33,6 +33,7 @@ What's new in cuvarbase
         * **BREAKING:** requires Python 3.9+
         * Fixed wheel/sdist omitting the ``base``/``memory`` subpackages (pip installs of the v1.0 branch were unimportable)
         * Lazy module imports: ``import cuvarbase`` and BLS/CE/PDM no longer require scikit-cuda; a numpy>=1.24 compatibility shim is applied automatically before skcuda loads
+        * Fixed CUDA kernel lookup crashing for editable installs (``pip install -e .``) on Python < 3.12 when cuvarbase is imported from outside the source tree; kernel paths now resolve relative to the package directory
         * GitHub Actions CI: CPU test suite (108 tests; GPU tests stubbed/skipped) on Python 3.9-3.12 + build-wheel-install-import packaging check; flake8 error class enforced
         * Root ``conftest.py`` stubs pycuda/skcuda so the suite runs on GPU-less machines
         * Removed vestigial ``cuvarbase.periodograms`` scaffolding

@@ -54,6 +54,25 @@ def fake_sine(n=300, baseline=365.0, freq=1.0 / 5.0, sigma=0.1, seed=7):
     return t, y, dy
 
 
+def ce_numpy_reference(t, y, freqs, phase_bins=10, mag_bins=5):
+    """Plain-numpy Graham et al. (2013) conditional entropy (unweighted,
+    no bin overlap) for gating the default CE kernel."""
+    yi = np.digitize(y, np.linspace(y.min(), y.max(), mag_bins + 1)[1:-1])
+    out = np.zeros(len(freqs))
+    n = len(t)
+    for k, f in enumerate(freqs):
+        phi = (t * f) % 1.0
+        pi = np.minimum((phi * phase_bins).astype(int), phase_bins - 1)
+        hist, _, _ = np.histogram2d(pi, yi, bins=[phase_bins, mag_bins],
+                                    range=[[0, phase_bins], [0, mag_bins]])
+        p = hist / n
+        p_phi = p.sum(axis=1, keepdims=True)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            term = p * np.log(p_phi / p)
+        out[k] = np.nansum(np.where(p > 0, term, 0.0))
+    return out
+
+
 def main():
     from cuvarbase.bls import eebls_gpu_fast, eebls_gpu_fast_optimized
 
@@ -130,17 +149,46 @@ def main():
           ok, "%d result sets, all finite" % len(results))
 
     # --- 4. Conditional entropy ----------------------------------------
+    # NOTE: CE recovery is checked on a strong sinusoid, not the transit.
+    # For the q=0.05 transit above, the CE global minimum legitimately
+    # lands on the 2*f harmonic (folding a transit at 2f superimposes the
+    # dip on itself), so transit argmin-recovery is not a valid CE gate.
+    # Kernel correctness is instead gated by correlation against a plain
+    # numpy conditional-entropy reference on identical (normalized) data.
     from cuvarbase.ce import ConditionalEntropyAsyncProcess
 
     ce_freqs = np.linspace(0.05, 1.0, 2000)
+    rand = np.random.RandomState(13)
+    tc = np.sort(365.0 * rand.rand(300))
+    yc = 12 + 0.5 * np.cos(2 * np.pi * 0.2 * tc) + 0.05 * rand.randn(300)
+    dyc = 0.05 * np.ones_like(yc)
+    proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5)
+    r = proc.run([(tc, yc, dyc)], freqs=ce_freqs)
+    proc.finish()
+    fr, cper = r[0]
+    f_ce = fr[np.argmin(cper)]
+    check("CE recovers strong sinusoid frequency",
+          abs(f_ce - 0.2) < 0.01,
+          "best=%.4f injected=%.4f" % (f_ce, 0.2))
+
+    # GPU vs numpy reference on the transit data (run() mean-subtracts
+    # t and y first, so the reference uses the same normalization).
+    # The kernel's statistic is an offset/scaled variant of the textbook
+    # CE, so gate on shared global minimum plus rank correlation rather
+    # than numerical agreement.
     proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5)
     r = proc.run([(t, y, dy)], freqs=ce_freqs)
     proc.finish()
     fr, cper = r[0]
-    f_ce = fr[np.argmin(cper)]
-    check("CE baseline run recovers transit period",
-          abs(f_ce - f_inj) < 0.01,
-          "best=%.4f injected=%.4f" % (f_ce, f_inj))
+    ref = ce_numpy_reference(t - np.mean(t), y - np.mean(y), ce_freqs,
+                             phase_bins=10, mag_bins=5)
+    ce_corr = np.corrcoef(ref, cper)[0, 1]
+    same_min = np.argmin(ref) == np.argmin(cper)
+    check("CE periodogram matches numpy reference",
+          ce_corr > 0.9 and same_min,
+          "corr=%.4f argmin %s (ref=%.4f gpu=%.4f)"
+          % (ce_corr, "same" if same_min else "DIFFERS",
+             ce_freqs[np.argmin(ref)], fr[np.argmin(cper)]))
 
     proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5,
                                           compute_log_prob=True)
