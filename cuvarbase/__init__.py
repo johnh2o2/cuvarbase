@@ -2,7 +2,7 @@
 import pycuda.autoprimaryctx
 
 # Version
-__version__ = "0.4.0"
+__version__ = "1.0.0.dev0"
 
 # For backward compatibility, import all main classes
 from .base import GPUAsyncProcess
