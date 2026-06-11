@@ -767,3 +767,31 @@ class TestEeblsTransitSparseKwargs(object):
                 pytest.fail("standard path should not warn")
             except Exception:
                 pass  # GPU unavailable (stubbed)
+
+
+class TestCompileBlsValidation(object):
+    """compile_bls should fail loudly on bad block sizes and on filter
+    results that would otherwise surface as confusing KeyErrors."""
+
+    def test_bad_block_size_raises(self):
+        from ..bls import _validate_block_size
+        for bad in (0, 16, 31, 48, 100, -64, 2.5, "256"):
+            with pytest.raises(ValueError):
+                _validate_block_size(bad)
+        for good in (32, 64, 128, 256, 512, 1024):
+            _validate_block_size(good)  # should not raise
+
+    def test_compile_bls_rejects_bad_block_size(self):
+        with pytest.raises(ValueError, match="block_size"):
+            compile_bls(block_size=48)
+
+    def test_compile_bls_empty_filter_raises_value_error(self):
+        # full_bls_no_sol only exists in the standard kernel; requesting
+        # it alone with use_optimized=True used to produce an empty
+        # function dict and downstream KeyErrors.
+        with pytest.raises(ValueError, match="no loadable functions"):
+            compile_bls(function_names=['full_bls_no_sol'],
+                        use_optimized=True)
+        with pytest.raises(ValueError, match="no loadable functions"):
+            compile_bls(function_names=['full_bls_no_sol_optimized'],
+                        use_optimized=False)

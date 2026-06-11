@@ -274,6 +274,21 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     return freqs, q0vals
 
 
+def _validate_block_size(block_size):
+    """Validate CUDA block size for the BLS kernels.
+
+    The tree reductions and warp-shuffle stages assume a power-of-two
+    block of at least one full warp; anything else silently produces
+    wrong results or undefined behavior, so fail loudly here instead.
+    """
+    if not isinstance(block_size, (int, np.integer)):
+        raise ValueError("block_size must be an integer, got %r"
+                         % (block_size,))
+    if block_size < 32 or (block_size & (block_size - 1)) != 0:
+        raise ValueError("block_size must be a power of 2 and >= 32 "
+                         "(one warp); got %d" % block_size)
+
+
 def compile_bls(block_size=_default_block_size,
                 function_names=_all_function_names,
                 prepare=True,
@@ -300,6 +315,8 @@ def compile_bls(block_size=_default_block_size,
         Dictionary of (function name, PyCUDA function object) pairs
 
     """
+    _validate_block_size(block_size)
+
     # Read kernel
     cppd = dict(BLOCK_SIZE=block_size)
     kernel_name = 'bls_optimized' if use_optimized else 'bls'
@@ -309,12 +326,22 @@ def compile_bls(block_size=_default_block_size,
     # Filter function names based on kernel variant:
     # bls_optimized.cu has full_bls_no_sol_optimized but not full_bls_no_sol
     # bls.cu has full_bls_no_sol but not full_bls_no_sol_optimized
+    requested = list(function_names)
     if use_optimized:
         function_names = [n for n in function_names
                           if n != 'full_bls_no_sol']
     else:
         function_names = [n for n in function_names
                           if n != 'full_bls_no_sol_optimized']
+
+    if len(function_names) == 0:
+        raise ValueError(
+            "compile_bls: no loadable functions remain from %r with "
+            "use_optimized=%r (the %s kernel provides %r)"
+            % (requested, use_optimized,
+               'optimized' if use_optimized else 'standard',
+               'full_bls_no_sol_optimized' if use_optimized
+               else 'full_bls_no_sol'))
 
     # compile kernel
     module = SourceModule(kernel_txt, options=['--use_fast_math'])
@@ -1826,6 +1853,8 @@ def compile_bls_batch(block_size=_default_block_size, **kwargs):
     functions : dict
         Dictionary of compiled kernel functions.
     """
+    _validate_block_size(block_size)
+
     cppd = dict(BLOCK_SIZE=block_size)
     kernel_txt = _module_reader(find_kernel('bls_batch'), cpp_defs=cppd)
     module = SourceModule(kernel_txt, options=['--use_fast_math'])
