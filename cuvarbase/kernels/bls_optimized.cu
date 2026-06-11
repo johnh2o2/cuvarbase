@@ -387,8 +387,12 @@ __global__ void reduction_max(float *arr, unsigned int *arr_args, unsigned int n
 
 	float m1, m2;
 
-	// Reduce to find max - standard reduction down to warp level
-	for(int s = blockDim.x / 2; s > 32; s /= 2){
+	// Reduce to find max - standard reduction down to warp level.
+	// NOTE: must be s >= 32 (not s > 32) so the s=32 fold runs and only
+	// 32 candidates survive for the warp-shuffle stage below; with s > 32
+	// elements 32..63 were silently dropped (same bug fixed in
+	// full_bls_no_sol_optimized by commit 72ae029).
+	for(int s = blockDim.x / 2; s >= 32; s /= 2){
 		if(threadIdx.x < s){
 			m1 = partial_max[threadIdx.x];
 			m2 = partial_max[threadIdx.x + s];
