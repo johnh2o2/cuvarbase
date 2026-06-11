@@ -83,6 +83,7 @@ def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
 
 def get_total_nbins(nbins0, nbinsf, dlogq):
     nbins_tot = 0
+    x = 1.
     while (int(x * nbins0) <= nbinsf):
         nb = int(x * nbins0)
         x *= 1 + dlogq
@@ -129,7 +130,7 @@ def manual_binning(t, y, dy, freqs, nbins0, nbinsf, dlogq,
                 bf = np.floor(nb * mod1(phi - s * q * dphi))
 
                 bf += i * nbins_tot * noverlap + s * nb + noverlap * nbtot
-                for b, YW, W in zip(bf[mask], yw[mask], w[mask]):
+                for b, YW, W in zip(bf.astype(int), yw, w):
                     yw_bins[b] += YW
                     w_bins[b] += W
 

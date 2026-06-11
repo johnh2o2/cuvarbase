@@ -131,7 +131,7 @@ This optimization makes large-scale BLS searches practical and efficient for all
 ### Improvements
 - Modern Python packaging with `pyproject.toml`
 - Docker support for easier installation with CUDA 11.8
-- GitHub Actions CI/CD for automated testing across Python 3.7-3.12
+- GitHub Actions CI: CPU test suite (GPU tests stubbed/skipped) on Python 3.9-3.12, plus a build-wheel-install-import packaging check; GPU kernels validated manually before releases
 - Cleaner, more maintainable codebase (89 lines of compatibility code removed)
 - Updated documentation and contributing guidelines
 

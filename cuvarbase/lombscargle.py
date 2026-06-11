@@ -479,6 +479,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         fft_size = H * (nf + k0)
 
+        mem = 0
+
         # data
         mem += 3 * n0
 
@@ -491,7 +493,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         if kwargs.get('use_fft', True):
             # yw grid / fft (doubled because complex)
-            mem = c * sigma * (fft_size - k0)
+            mem += c * sigma * (fft_size - k0)
 
             # w grid / fft (doubled because complex)
             mem += c * sigma * (2 * fft_size - k0)

@@ -7,8 +7,8 @@ What's new in cuvarbase
     * Updated minimum dependency versions: numpy>=1.17, scipy>=1.3
     * Added modern Python packaging with ``pyproject.toml``
     * Added Docker support for easier installation with CUDA 11.8
-    * Added GitHub Actions CI/CD for automated testing across Python 3.7-3.11
-    * Updated classifiers to reflect Python 3.7-3.11 support
+    * Added GitHub Actions CI: CPU test suite on Python 3.9-3.12 + packaging smoke test (GPU validation remains manual)
+    * Updated classifiers to reflect Python 3.9-3.12 support
     * Cleaner, more maintainable codebase (89 lines of compatibility code removed)
     * Includes all features from 0.2.6:
         * Added Sparse BLS implementation for efficient transit detection with small datasets
