@@ -6,8 +6,8 @@ Measured on NVIDIA RTX A5000 (24 GB), February 2026. Source data in `benchmark_r
 
 cuvarbase makes GPU-accelerated period finding practical for entire astronomical surveys. The key results:
 
-- **BLS**: The only GPU implementation of the standard BLS algorithm. Combined with Keplerian frequency grids, processes 10 million ZTF lightcurves in 3.5 hours for **$0.69**
-- **Lomb-Scargle**: At realistic survey frequency counts (100K-1.8M), GPU is **1.5-62x faster** than nifty-ls (the fastest CPU LS). At ZTF/HAT-Net scales, nifty-ls cannot even complete within timeout
+- **BLS**: To our knowledge the only published, production-deployed GPU implementation of the standard BLS algorithm. Combined with Keplerian frequency grids, processes 10 million ZTF lightcurves in 3.5 hours for **$0.69**
+- **Lomb-Scargle**: At realistic survey frequency counts (100K-1.8M), GPU is **1.5-12.6x faster** than nifty-ls (the fastest CPU LS) in head-to-head measurements; at ZTF/HAT-Net scales nifty-ls cannot complete within the 120s timeout (lower bounds >27x and >15x). At small problem sizes (10K obs, 5K freqs, single LCs) nifty-ls on CPU is faster than the GPU implementation
 - **Keplerian frequency grid**: Exploits the physics of Keplerian orbits to search 4-37x fewer frequencies with no loss in transit detection sensitivity
 
 ## 1. Lomb-Scargle: GPU vs nifty-ls at Survey Scale
@@ -39,8 +39,8 @@ All measurements use `batched_run_const_nfreq()` which pre-allocates GPU memory 
 
 | Survey | N_obs | N_freq | GPU (ms/LC) | nifty-ls (ms/LC) | GPU speedup |
 |--------|------:|-------:|------------:|------------------:|------------:|
-| ZTF | 150 | 365K | **4.4** | TIMEOUT (>120s/batch) | **>>27x** |
-| HAT-Net | 6,000 | 1.825M | **19.2** | TIMEOUT (>120s/batch) | **>>6x** |
+| ZTF | 150 | 365K | **4.4** | TIMEOUT (>120s/batch) | **>27x** |
+| HAT-Net | 6,000 | 1.825M | **19.2** | TIMEOUT (>120s/batch) | **>15x** |
 | TESS | 20,000 | 13.5K | **3.3** | 4.9 | **1.5x** |
 | Kepler | 65,000 | 730K | **19.8** | 250.0 | **12.6x** |
 
@@ -190,4 +190,4 @@ Results are saved to `benchmark_results_new_features.json`.
 - Wang, K. et al. (2024). GPU Phase Folding and Convolutional Neural Network. MNRAS, 528, 4053.
 - Smith, L. C. et al. (2025). CETRA: Cambridge Exoplanet Transit Recovery Algorithm. MNRAS, 539, 297.
 - Shahaf, S. et al. (2022). fBLS: A fast-folding BLS algorithm. MNRAS, 513, 2732.
-- Barnsley, R. M. & Sherley, J. (2024). nifty-ls: Fast Lomb-Scargle with NUFFT. JOSS.
+- Garrison, L. H., Foreman-Mackey, D., Shih, Y.-H., & Barnett, A. (2024). nifty-ls: Fast and Accurate Lomb-Scargle Periodograms Using a Non-Uniform FFT. arXiv:2409.08090.

@@ -1,5 +1,14 @@
 # Spec: GPU-Accelerated Fast Folding BLS (fBLS)
 
+> **STATUS: EXPERIMENT COMPLETED — NEGATIVE RESULT (Feb 2026).**
+> This spec was implemented and benchmarked on the
+> `feature/ffa-bls-experimental` branch (commit 7e3c8a0). Even with
+> Phase-2 octave batching, the FFA approach measured **~14x slower** than
+> `eebls_gpu_fast_adaptive` + Keplerian frequency grids, because the FFA's
+> native arithmetic-in-period grid structurally oversamples by 8-17x
+> relative to Keplerian spacing. The branch is preserved as an archive;
+> this document is retained as a record of the design and why it lost.
+
 ## 1. Motivation
 
 cuvarbase's current BLS kernel (`full_bls_no_sol` in `kernels/bls.cu`) does this for each trial frequency:
@@ -9,7 +18,7 @@ cuvarbase's current BLS kernel (`full_bls_no_sol` in `kernels/bls.cu`) does this
 
 Step 1 costs O(N × N_f) total. GPU parallelism across frequencies makes this fast in wall-clock time, but every data point is re-binned for every trial frequency. The Fast Folding Algorithm (FFA) eliminates this redundancy: it generates all folded profiles simultaneously in O(N_p × m × log N_p) total, where N_p is the number of trial periods and m is the number of phase bins.
 
-For Kepler-class data (N=65K, N_p=131K), the theoretical speedup for the folding step is N/log₂(N_p) ≈ 65000/17 ≈ 3800x. Even accounting for the scoring step (which is the same for both methods), a GPU fBLS could be substantially faster than the current GPU BLS.
+For Kepler-class data (N=65K, N_p=131K, m≈100 bins), per-period FFA folding costs m·log₂(N_p), so the theoretical folding-step speedup is N/(m·log₂ N_p) ≈ 65000/(100·17) ≈ 38x — not the naive N/log₂(N_p) ≈ 3800x, which omits the m factor. (In practice even the 38x did not materialize; see STATUS above.)
 
 **Key property: fBLS produces identical output to the current binned BLS.** The same Signal Residue statistic, the same periodogram shape, the same detected periods. Zero accuracy sacrifice.
 
@@ -143,8 +152,6 @@ For each pair (2*blockIdx.x, 2*blockIdx.x + 1):
         atomicAdd(&yw_bins[pair][1][bin1], yw[k])  // drift=1: add shifted
         atomicAdd(&w_bins[pair][1][bin1], w[k])
 ```
-
-Wait — this isn't quite right. Let me reconsider the data structure.
 
 At level 0, we need to produce N_p/2 pair-folds, each with 2 drift variants (0, 1). Each fold is an m-element array of (yw, w). The drift=0 fold sums both sections without shift. The drift=1 fold sums section[s] without shift + section[s+1] with a 1-bin circular shift.
 
