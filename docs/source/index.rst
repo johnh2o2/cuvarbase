@@ -17,6 +17,7 @@
    ce
    lomb
    bls
+   pdm
    modules
 
 Indices and tables

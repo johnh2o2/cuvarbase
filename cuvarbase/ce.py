@@ -1,6 +1,15 @@
 """
 Implementation of Graham et al. 2013's Conditional Entropy
 period finding algorithm
+
+.. note:: **Maintenance status.** cuvarbase's conditional entropy
+    implementation is in maintenance mode: it works and will keep
+    working, but no further performance or feature development is
+    planned. For new projects that need a fast GPU conditional-entropy
+    (or AOV) search, consider `periodfind
+    <https://github.com/scope-ml/periodfind>`_ (also on PyPI as
+    ``periodfind``), an actively maintained GPU period-finding
+    package developed for ZTF/SCoPe.
 """
 import numpy as np
 
