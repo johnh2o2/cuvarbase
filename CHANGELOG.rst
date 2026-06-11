@@ -1,7 +1,7 @@
 What's new in cuvarbase
 ***********************
 * **0.4.0**
-    * **BREAKING CHANGE:** Dropped Python 2.7 support - now requires Python 3.7+
+    * **BREAKING CHANGE:** Dropped Python 2.7 support - now requires Python 3.9+ (importlib.resources.files)
     * Removed ``future`` package dependency and all Python 2 compatibility code
     * Modernized codebase: removed ``__future__`` imports and ``builtins`` compatibility layer
     * Updated minimum dependency versions: numpy>=1.17, scipy>=1.3
