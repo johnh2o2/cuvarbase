@@ -119,6 +119,14 @@ def pdm2_single_freq(t, y, w, freq, nbins=30, linterp=True):
 
 def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
               dphi=0.05, block_size=256, **kwargs):
+    # The *_fast kernels statically allocate shared-memory tiles of
+    # MAX_BLOCK_SIZE (= 256) floats; a larger launch would write past them.
+    if not (0 < block_size <= 256):
+        raise ValueError("block_size must be in (0, 256] "
+                         "(the PDM kernels' shared-memory tiles are "
+                         "sized for at most 256 threads per block); "
+                         "got %r" % (block_size,))
+
     t, y, w, freqs = data_cpu
     t_g, y_g, w_g, freqs_g, pow_g = data_gpu
 
@@ -293,7 +301,9 @@ class PDMAsyncProcess(GPUAsyncProcess):
         dphi: float, optional (default: 0.05)
             Phase width for binless PDM.
         **pdm_kwargs:
-            Extra arguments passed to ``autofrequency``.
+            Extra arguments passed to ``autofrequency`` (when ``freqs``
+            is not given) and to ``pdm_async`` (e.g. ``block_size``,
+            which must be <= 256).
 
         Returns
         -------

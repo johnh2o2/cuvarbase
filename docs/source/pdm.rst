@@ -28,8 +28,8 @@ so the best candidate frequencies appear as **maxima** of the returned
 power array, consistent with the other periodograms in this package.
 
 To our knowledge this is the only GPU implementation of PDM currently
-available. It is used in production-scale searches but receives
-maintenance-level development; if you find problems, please open an issue.
+available. As of v1.0 it has fast kernels for all variants, unit tests,
+and this documentation; if you find problems, please open an issue.
 
 PDM variants
 ------------

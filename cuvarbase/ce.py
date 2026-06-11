@@ -578,8 +578,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             nbatches = int(np.ceil(len(f) / float(batch_size)))
 
             if thread_nbatches > nbatches:
-                nbatches = thread_nbatches
-                batch_size = int(np.ceil(len(f) / float(nbatches)))
+                # Cap the batch size by the thread limit directly:
+                # ceil(len(f) / thread_nbatches) can overshoot
+                # max_threads_per_launch by up to len(d[0]) - 1 threads,
+                # which would trip the overflow guard in run().
+                batch_size = max(1, max_threads_per_launch // len(d[0]))
+                nbatches = int(np.ceil(len(f) / float(batch_size)))
 
             cper = np.zeros(len(f))
             for i in range(nbatches):
