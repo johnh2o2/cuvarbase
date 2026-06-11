@@ -16,7 +16,16 @@ What's new in cuvarbase
         * Memory classes refactored into ``cuvarbase.memory`` (behavior-preserving)
         * Optional cuFINUFFT backend (``use_cufinufft=True``) as a cross-check; the custom NFFT kernel remains faster
         * Fixed ``lomb_scargle_simple`` double-applying inverse-variance weights (largest-error points previously got the most weight)
-        * Fixed ``memory_requirement`` crashing with NameError
+        * Improved ``memory_requirement`` estimation (PR #59; fixes the previous NameError and now accounts for cuFFT work areas and per-batch buffers)
+        * Lightcurves are normalized (mean-subtracted ``t`` and ``y``) before processing for numerical stability (PRs #57/#60)
+    * **PDM** (community contribution by @astrobatty — PR #62)
+        * Fast shared-memory CUDA kernels for all four variants: ``binned_step_fast``, ``binned_linterp_fast``, ``binless_tophat_fast``, ``binless_gauss_fast``
+        * Backward-compatible ``(t, y, err)`` input API for ``PDMAsyncProcess.run()`` with automatic frequency grids; the legacy ``(t, y, w, freqs)`` format is deprecated (emits DeprecationWarning)
+        * Unit tests for all kernel variants and new Sphinx documentation (``docs/source/pdm.rst``)
+    * **Conditional Entropy** (community contribution — PR #61)
+        * Optional log-probability periodogram via ``compute_log_prob=True``
+        * Lightcurves normalized before processing; 32-bit overflow guard for large ``nfreq x ndata`` runs; clear error for the unsupported ``use_fast`` + ``weighted`` combination
+        * CE is now in **maintenance mode**: it keeps working, but no new development is planned — for an actively developed GPU CE/AOV search see `periodfind <https://github.com/scope-ml/periodfind>`_
     * **Experimental** (UserWarning on import; not recommended for science use yet)
         * GPU Transit Least Squares (``cuvarbase.tls``) with Ofir (2014) period grids — known epoch-grid and shared-memory limitations, rework planned for v1.1
         * NUFFT-LRT matched filter (``cuvarbase.nufft_lrt``, contributed by Jamila Taaki) — currently CPU-bound with a grid-span limitation

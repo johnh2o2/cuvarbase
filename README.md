@@ -49,17 +49,23 @@ In the years since 2017, I moved away from astrophysics and life has gone on. I 
 
 In 2025, for the first time, coding agents like `copilot` are finally at a level of quality that even a limited time investment in updating this repository can bring a lot of return. I would really like to encourage people interested to become official **contributors** so that I can pass the torch onto the larger community.
 
-It would be nice to incorporate additional capabilities and algorithms (e.g. [Katz et al. 2021](https://ui.adsabs.harvard.edu/abs/2021MNRAS.503.2665K/abstract) greatly improved on the inefficient conditional entropy implementation in this repository), and improve robustness and portability, to make this library a much more professional and easy-to-use tool. Especially nowadays, with the world awash in GPUs and with the scale of time-series data becoming many orders of magnitude larger than it was 10 years ago, something like `cuvarbase` seems even more relevant today than it was back then.
+It would be nice to incorporate additional capabilities and algorithms, and improve robustness and portability, to make this library a much more professional and easy-to-use tool. Especially nowadays, with the world awash in GPUs and with the scale of time-series data becoming many orders of magnitude larger than it was 10 years ago, something like `cuvarbase` seems even more relevant today than it was back then. (Where others have built better tools for a given method — e.g. [periodfind](https://github.com/scope-ml/periodfind) for conditional entropy — we would rather point you to them than duplicate the effort.)
 
 **If you're interested in contributing, please see our [Contributing Guide](CONTRIBUTING.md)!**
 
 ## Performance at Survey Scale
 
-cuvarbase is designed for processing millions of lightcurves. Benchmarked on an RTX A5000 ($0.20/hr) with realistic survey parameters:
+cuvarbase is built for processing millions of lightcurves, and it is proven in production: **NASA's TESS Quick-Look Pipeline has run cuvarbase's GPU BLS on every TESS sector since Sector 59** ([Kunimoto et al. 2023](https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract)).
+
+The headline numbers, all traceable to benchmark data in this repository:
+
+- **Standard BLS is 257-354x faster than astropy's `BoxLeastSquares`**, measured consistently across all 7 GPU architectures tested (V100 through H200)
+- **Keplerian frequency grids search 4-37x fewer frequencies** than uniform grids at survey baselines by exploiting the orbital-mechanics link between period and transit duration
+- **All four major surveys for ~$33 of GPU time**: running both Lomb-Scargle and BLS over ZTF + HAT-Net + TESS + Kepler scale lightcurve collections costs roughly $33 total on a rented RTX A5000 at $0.20/hr (tables below)
 
 ### BLS Transit Search
 
-cuvarbase is, to our knowledge, the only published and production-deployed GPU implementation of the standard BLS algorithm ([Kovacs et al. 2002](http://adsabs.harvard.edu/abs/2002A%26A...391..369K)). Combined with Keplerian frequency grids that exploit orbital mechanics to search 4-37x fewer frequencies:
+cuvarbase provides a production-validated GPU implementation of the standard BLS algorithm ([Kovacs et al. 2002](http://adsabs.harvard.edu/abs/2002A%26A...391..369K)) — the implementation behind the TESS QLP transit search. Combined with Keplerian frequency grids:
 
 | Survey | Lightcurves | N_freq (Keplerian) | Throughput | Total cost |
 |--------|------------:|-------------------:|-----------:|-----------:|
@@ -111,6 +117,11 @@ This optimization makes large-scale BLS searches practical and efficient for all
 
 ### New Features
 
+**Community contributions** (PRs #57-#62, with particular thanks to [@astrobatty](https://github.com/astrobatty)):
+- **PDM overhaul**: fast shared-memory CUDA kernels for all four PDM variants, a backward-compatible `(t, y, err)` input API for `PDMAsyncProcess.run()` with automatic frequency grids, unit tests, and new [documentation](https://johnh2o2.github.io/cuvarbase/) — PDM is now a tested, documented, first-class method (and to our knowledge still the only GPU PDM available anywhere)
+- **Conditional entropy**: optional log-probability periodogram (`compute_log_prob=True`), input normalization before processing, a 32-bit overflow guard for large `nfreq x ndata` runs, and a clear error for the unsupported `use_fast` + `weighted` combination
+- **Lomb-Scargle**: improved GPU memory estimation (now accounts for cuFFT work areas and per-batch buffers) and lightcurve normalization for numerical stability
+
 **Sparse BLS implementation** for efficient transit detection on small datasets:
 - Based on algorithm from [Panahi & Zucker (2021)](https://arxiv.org/abs/2103.06193)
 - **Both GPU (`sparse_bls_gpu`) and CPU (`sparse_bls_cpu`) implementations available**
@@ -156,8 +167,10 @@ Currently includes implementations of:
     - CPU implementation: `sparse_bls_cpu()` (fallback)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
 - **Conditional Entropy period finder ([CE](http://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
-- **Phase Dispersion Minimization ([PDM2](http://www.stellingwerf.com/rfs-bin/index.cgi?action=PageView&id=29))** - Statistical period finding method
-  - Currently operational but minimal unit testing or documentation
+  - **Maintenance mode**: CE works and will keep working, but no further development is planned here. For new projects that want an actively developed GPU conditional entropy (or AOV) search, we recommend [periodfind](https://github.com/scope-ml/periodfind) from the ZTF/SCoPe team
+- **Phase Dispersion Minimization ([PDM](http://www.stellingwerf.com/rfs-bin/index.cgi?action=PageView&id=29))** - Statistical period finding
+  - Binned (step and linear-interpolation) and binless (tophat and Gaussian kernel) variants, each with fast shared-memory kernels
+  - To our knowledge the only GPU PDM implementation in existence
 
 ### Experimental Features
 
@@ -185,7 +198,6 @@ Future developments may include:
 - (Weighted) wavelet transforms
 - Spectrograms (for PDM and GLS)
 - Multiharmonic extensions for GLS
-- Improved conditional entropy implementation (e.g., Katz et al. 2021)
 
 ## Installation
 
@@ -193,7 +205,7 @@ Future developments may include:
 
 - CUDA-capable GPU (NVIDIA)
 - CUDA Toolkit (11.x or 12.x recommended)
-- Python 3.7 or later
+- Python 3.9 or later
 
 ### Dependencies
 
