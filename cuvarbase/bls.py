@@ -598,7 +598,16 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     fname = 'full_bls_no_sol'
 
     if functions is None:
-        functions = compile_bls(function_names=[fname], **kwargs)
+        # Use the thread-safe LRU kernel cache (compilation costs ~150 ms
+        # per call otherwise). Fall back to a direct compile only for
+        # non-default compile options that aren't part of the cache key.
+        if kwargs.get('prepare', True):
+            functions = _get_cached_kernels(
+                kwargs.get('block_size', _default_block_size),
+                kwargs.get('use_optimized', False),
+                [fname])
+        else:
+            functions = compile_bls(function_names=[fname], **kwargs)
 
     func = functions[fname]
 
@@ -744,7 +753,14 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     fname = 'full_bls_no_sol_optimized'
 
     if functions is None:
-        functions = compile_bls(function_names=[fname], use_optimized=True, **kwargs)
+        if kwargs.get('prepare', True):
+            functions = _get_cached_kernels(
+                kwargs.get('block_size', _default_block_size),
+                True,  # use_optimized
+                [fname])
+        else:
+            functions = compile_bls(function_names=[fname],
+                                    use_optimized=True, **kwargs)
 
     func = functions[fname]
 
