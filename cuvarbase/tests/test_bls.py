@@ -713,3 +713,57 @@ class TestBLS(object):
         assert len(result) == 3
         freqs, powers, sols = result
         assert sols is None
+
+
+class TestEeblsTransitSparseKwargs(object):
+    """Regression tests: eebls_transit's sparse path must tolerate the
+    documented pass-through kwargs (rho, samples_per_peak, dlogq, ...)
+    instead of crashing with TypeError (sparse_bls_gpu has a closed
+    signature), and must warn when q constraints are silently ignored."""
+
+    def _data(self, ndata=100):
+        t, y, dy = data(snr=20, q=0.05, phi0=0.3, freq=1.0,
+                        baseline=365., ndata=ndata)
+        return t, y, dy
+
+    def test_sparse_gpu_path_accepts_documented_kwargs(self):
+        # Before the fix: TypeError('sparse_bls_gpu() got an unexpected
+        # keyword argument "rho"') raised at call time, before any GPU
+        # work. GPU-runtime errors (e.g. on CPU-only test machines) are
+        # acceptable here -- we are only asserting the kwarg plumbing.
+        t, y, dy = self._data()
+        try:
+            eebls_transit(t, y, dy, rho=1.5, samples_per_peak=2,
+                          fmin=0.95, fmax=1.05, use_gpu=True)
+        except TypeError as e:
+            pytest.fail("sparse path crashed on documented kwarg: %s" % e)
+        except Exception:
+            pass  # GPU unavailable (stubbed) -- plumbing already verified
+
+    def test_sparse_cpu_path_accepts_documented_kwargs(self):
+        t, y, dy = self._data()
+        freqs, powers, sols = eebls_transit(t, y, dy, rho=1.0,
+                                            fmin=0.95, fmax=1.05,
+                                            use_gpu=False)
+        assert len(freqs) == len(powers)
+        assert np.all(np.isfinite(powers))
+
+    def test_sparse_path_warns_when_q_constraints_ignored(self):
+        t, y, dy = self._data()
+        with pytest.warns(UserWarning, match="ignores qmin_fac"):
+            eebls_transit(t, y, dy, qmin_fac=0.3,
+                          fmin=0.95, fmax=1.05, use_gpu=False)
+
+    def test_standard_path_unaffected(self):
+        # No warning and no kwargs filtering on the standard path
+        import warnings as _warnings
+        t, y, dy = self._data(ndata=100)
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("error", UserWarning)
+            try:
+                eebls_transit(t, y, dy, fmin=0.95, fmax=1.05,
+                              use_sparse=False)
+            except UserWarning:
+                pytest.fail("standard path should not warn")
+            except Exception:
+                pass  # GPU unavailable (stubbed)

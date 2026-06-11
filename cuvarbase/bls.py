@@ -7,6 +7,7 @@ and variants.
 """
 import sys
 import threading
+import warnings
 from collections import OrderedDict
 
 #import pycuda.autoinit
@@ -1702,8 +1703,21 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore inverted dips
     **kwargs:
-        passed to `eebls_gpu`, `eebls_gpu_fast`, `sparse_bls_gpu`,
-        `compile_bls`, `fmax_transit`, `fmin_transit`, and `transit_autofreq`
+        passed to `eebls_gpu`, `eebls_gpu_fast`, `compile_bls`,
+        `fmax_transit`, `fmin_transit`, and `transit_autofreq`. On the
+        sparse path, only the kwargs that `sparse_bls_gpu` accepts
+        (``block_size``, ``max_ndata``, ``stream``, ``kernel``,
+        ``use_simple``) are forwarded to it.
+
+        .. warning::
+
+            The sparse-BLS path (default for ``ndata < sparse_threshold``)
+            searches *all* transit durations ``q`` in ``(0, 0.5]`` and
+            ignores the Keplerian constraints ``qmin_fac``/``qmax_fac``
+            (and ``use_fast``). Results are therefore not directly
+            comparable across the ``sparse_threshold`` boundary. Pass
+            ``use_sparse=False`` to force the standard q-constrained
+            search.
 
     Returns
     -------
@@ -1740,11 +1754,26 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
 
     # Use sparse BLS for small datasets
     if use_sparse:
+        # The sparse kernels search all q in (0, 0.5]; the Keplerian
+        # qmin_fac/qmax_fac constraints (and use_fast) do not apply here.
+        if qmin_fac != 0.5 or qmax_fac != 2.0 or use_fast:
+            warnings.warn("eebls_transit is using sparse BLS (ndata < "
+                          "sparse_threshold), which searches all transit "
+                          "durations q in (0, 0.5] and ignores qmin_fac, "
+                          "qmax_fac, and use_fast. Pass use_sparse=False "
+                          "to force the standard q-constrained search.",
+                          UserWarning)
         if use_gpu:
-            # Use GPU sparse BLS (default)
+            # Forward only the kwargs sparse_bls_gpu accepts; the rest
+            # (rho, samples_per_peak, dlogq, ...) belong to the frequency
+            # grid helpers or standard-BLS layers above.
+            sparse_keys = ('block_size', 'max_ndata', 'stream', 'kernel',
+                           'use_simple')
+            sparse_kwargs = {k: v for k, v in kwargs.items()
+                             if k in sparse_keys}
             powers, sols = sparse_bls_gpu(t, y, dy, freqs,
                                           ignore_negative_delta_sols=ignore_negative_delta_sols,
-                                          **kwargs)
+                                          **sparse_kwargs)
         else:
             # Use CPU sparse BLS (fallback)
             powers, sols = sparse_bls_cpu(t, y, dy, freqs,
