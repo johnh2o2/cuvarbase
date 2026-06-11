@@ -4,21 +4,36 @@ import pycuda.autoprimaryctx
 # Version
 __version__ = "1.0.0.dev0"
 
-# For backward compatibility, import all main classes
-from .base import GPUAsyncProcess
-from .memory import (
-    NFFTMemory, 
-    ConditionalEntropyMemory, 
-    LombScargleMemory
-)
+# Public attributes are resolved lazily (PEP 562) so that importing the
+# package does not drag in every backend. In particular, `import cuvarbase`
+# must not require scikit-cuda (only the NFFT/Lomb-Scargle modules need
+# cufft) — BLS/CE/PDM users can run on environments where scikit-cuda is
+# broken (e.g. numpy >= 1.24 without the compat shim).
+_LAZY_ATTRS = {
+    'GPUAsyncProcess': '.base',
+    'NFFTMemory': '.memory',
+    'ConditionalEntropyMemory': '.memory',
+    'LombScargleMemory': '.memory',
+    'BLSMemory': '.bls',
+    'BLSBatchMemory': '.memory',
+    'NFFTAsyncProcess': '.cunfft',
+    'nfft_adjoint_async': '.cunfft',
+    'ConditionalEntropyAsyncProcess': '.ce',
+    'conditional_entropy': '.ce',
+    'conditional_entropy_fast': '.ce',
+    'LombScargleAsyncProcess': '.lombscargle',
+    'lomb_scargle_async': '.lombscargle',
+    'PDMAsyncProcess': '.pdm',
+    'NUFFTLRTAsyncProcess': '.nufft_lrt',
+    'NUFFTLRTMemory': '.nufft_lrt',
+}
 
-# Import periodogram implementations
-from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
-from .ce import ConditionalEntropyAsyncProcess, conditional_entropy, conditional_entropy_fast
-from .lombscargle import LombScargleAsyncProcess, lomb_scargle_async
-from .pdm import PDMAsyncProcess
-from .bls import *
-from .nufft_lrt import NUFFTLRTAsyncProcess, NUFFTLRTMemory
+_SUBMODULES = {
+    'base', 'memory', 'core', 'utils',
+    'bls', 'bls_frequencies', 'ce', 'cunfft', 'lombscargle', 'pdm',
+    'nufft_lrt', 'cufinufft_backend',
+    'tls', 'tls_grids', 'tls_models', 'tls_stats',
+}
 
 __all__ = [
     'GPUAsyncProcess',
@@ -33,3 +48,30 @@ __all__ = [
     'NUFFTLRTMemory',
 ]
 
+
+def __getattr__(name):
+    import importlib
+
+    if name in _LAZY_ATTRS:
+        module = importlib.import_module(_LAZY_ATTRS[name], __name__)
+        return getattr(module, name)
+
+    if name in _SUBMODULES:
+        return importlib.import_module('.' + name, __name__)
+
+    # Backward compatibility with the old eager `from .bls import *`:
+    # any public name bls exposes is reachable as cuvarbase.<name>.
+    if not name.startswith('_'):
+        try:
+            bls = importlib.import_module('.bls', __name__)
+        except ImportError:
+            raise AttributeError(
+                "module %r has no attribute %r" % (__name__, name))
+        if hasattr(bls, name):
+            return getattr(bls, name)
+
+    raise AttributeError("module %r has no attribute %r" % (__name__, name))
+
+
+def __dir__():
+    return sorted(set(list(globals()) + __all__ + list(_SUBMODULES)))
