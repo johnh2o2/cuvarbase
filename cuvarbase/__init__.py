@@ -2,7 +2,7 @@
 import pycuda.autoprimaryctx
 
 # Version
-__version__ = "1.0.0.dev0"
+__version__ = "1.0.0"
 
 # Public attributes are resolved lazily (PEP 562) so that importing the
 # package does not drag in every backend. In particular, `import cuvarbase`
