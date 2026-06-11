@@ -9,9 +9,21 @@ in unknown correlated Gaussian noise" (IEEE paper)
 The method uses NUFFT for gappy data and adaptive noise estimation via power spectrum.
 """
 import sys
+import warnings
+
 import numpy as np
 
-import pycuda.driver as cuda
+warnings.warn(
+    "cuvarbase.nufft_lrt is EXPERIMENTAL and not recommended for science "
+    "use in this release. Known issues: the computation currently runs on "
+    "the CPU (interpolation + rfft; the compiled CUDA kernels are never "
+    "invoked), and the uniform grid spans only median(dt)*nf from the "
+    "first observation, silently ignoring data beyond that span for "
+    "multi-season/gappy baselines. See analysis/V1_AUDIT_AND_GAMEPLAN.md "
+    "in the repository.",
+    UserWarning)
+
+import pycuda.driver as cuda  # noqa: E402
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
