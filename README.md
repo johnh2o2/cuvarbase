@@ -104,18 +104,6 @@ This optimization makes large-scale BLS searches practical and efficient for all
 
 ### New Features
 
-**NUFFT Likelihood Ratio Test (LRT)** for transit detection with correlated noise:
-- Contributed by **Jamila Taaki** ([@xiaziyna](https://github.com/xiaziyna))
-- GPU-accelerated matched filter in frequency domain with adaptive noise estimation
-- Particularly effective for gappy data with red/correlated noise
-- Naturally handles correlated (non-white) noise through power spectrum estimation
-- More robust than traditional BLS under stellar activity and systematic noise
-- See [docs/NUFFT_LRT_README.md](docs/NUFFT_LRT_README.md) for complete documentation
-
-**Citation for NUFFT-LRT**: If you use this method, please cite:
-- Taaki, J. S., Kamalabadi, F., & Kemball, A. (2020). *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization.*
-- Reference implementation: https://github.com/star-skelly/code_nova_exoghosts
-
 **Sparse BLS implementation** for efficient transit detection on small datasets:
 - Based on algorithm from [Panahi & Zucker (2021)](https://arxiv.org/abs/2103.06193)
 - **Both GPU (`sparse_bls_gpu`) and CPU (`sparse_bls_cpu`) implementations available**
@@ -159,20 +147,29 @@ Currently includes implementations of:
   - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations)
     - GPU implementation: `sparse_bls_gpu()` (default)
     - CPU implementation: `sparse_bls_cpu()` (fallback)
-- **Transit Least Squares ([TLS](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract))** - GPU-accelerated transit detection with optimal depth fitting
-  - **35-202× faster** than CPU TLS (transitleastsquares package)
-  - Keplerian-aware duration constraints (`tls_transit()`) - searches physically plausible transit durations
-  - Standard mode (`tls_search_gpu()`) for custom period/duration grids
-  - Optimal period grid sampling (Ofir 2014)
-  - Supports datasets up to ~100,000 observations (optimal: 500-20,000)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
-- **NUFFT-based Likelihood Ratio Test (LRT)** - Transit detection with correlated noise (contributed by Jamila Taaki)
-  - Matched filter in frequency domain with adaptive noise estimation
-  - Particularly effective for gappy data with red/correlated noise
-  - See [docs/NUFFT_LRT_README.md](docs/NUFFT_LRT_README.md) for details
 - **Conditional Entropy period finder ([CE](http://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
 - **Phase Dispersion Minimization ([PDM2](http://www.stellingwerf.com/rfs-bin/index.cgi?action=PageView&id=29))** - Statistical period finding method
   - Currently operational but minimal unit testing or documentation
+
+### Experimental Features
+
+These modules ship in this release but have **known correctness issues** and
+are not recommended for science use yet. They emit a `UserWarning` on import.
+
+- **Transit Least Squares ([TLS](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract))** (`cuvarbase.tls`) - GPU transit
+  detection with optimal depth fitting and Ofir (2014) period grids.
+  Known issues: the fixed 30-point epoch grid misses short-duration
+  transits (most periods > ~3.5 d in Keplerian mode); light curves above
+  ~3,500 points exceed the kernel's shared-memory budget; statistics can
+  be corrupted by failed periods. A rework is planned for v1.1.
+- **NUFFT-based Likelihood Ratio Test** (`cuvarbase.nufft_lrt`) - Matched-filter
+  transit detection for correlated noise, based on the method of
+  Taaki, Kamalabadi & Kemball (2020) and contributed by **Jamila Taaki**
+  ([@xiaziyna](https://github.com/xiaziyna)). Known issues: the current
+  implementation computes on the CPU (the CUDA kernels are compiled but
+  unused) and ignores data beyond `median(dt) * nf` from the first
+  observation, which silently truncates multi-season baselines.
 
 ### Planned Features
 
@@ -252,36 +249,6 @@ print(f"Best period: {1/best_freq:.2f} (expected: 2.5)")
 
 # Or use adaptive BLS for automatic optimization (5-90x faster!)
 power_adaptive = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
-```
-
-### Transit Least Squares (TLS) - Advanced Transit Detection
-
-```python
-from cuvarbase import tls
-
-# Generate transit data
-t = np.sort(np.random.uniform(0, 50, 500)).astype(np.float32)
-y = np.ones(len(t), dtype=np.float32)
-dy = np.ones(len(t), dtype=np.float32) * 0.001
-
-# Add 1% transit at 10-day period
-phase = (t % 10.0) / 10.0
-in_transit = (phase < 0.01) | (phase > 0.99)
-y[in_transit] -= 0.01
-y += np.random.normal(0, 0.001, len(t)).astype(np.float32)
-
-# TLS with Keplerian duration constraints (35-202x faster than CPU TLS!)
-results = tls.tls_transit(
-    t, y, dy,
-    R_star=1.0,      # Solar radii
-    M_star=1.0,      # Solar masses
-    period_min=5.0,
-    period_max=20.0
-)
-
-print(f"Best period: {results['period']:.2f} days")
-print(f"Transit depth: {results['depth']:.4f}")
-print(f"SDE: {results['SDE']:.1f}")
 ```
 
 For more advanced usage including Lomb-Scargle and Conditional Entropy, see the [full documentation](https://johnh2o2.github.io/cuvarbase/) and [examples/](examples/).

@@ -1,5 +1,13 @@
 # NUFFT-based Likelihood Ratio Test (LRT) for Transit Detection
 
+> **⚠️ EXPERIMENTAL — not recommended for science use in this release.**
+> The current implementation computes on the CPU (the CUDA kernels are
+> compiled but never invoked), and the uniform grid spans only
+> median(dt)*nf from the first observation — data beyond that span is
+> silently ignored for multi-season/gappy baselines. See
+> analysis/V1_AUDIT_AND_GAMEPLAN.md.
+
+
 ## Overview
 
 This implementation integrates a concept and reference prototype originally developed by

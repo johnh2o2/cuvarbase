@@ -1,5 +1,14 @@
 # GPU-Accelerated Transit Least Squares (TLS)
 
+> **⚠️ EXPERIMENTAL — not recommended for science use in this release.**
+> Known issues: the fixed 30-point epoch (t0) grid misses short-duration
+> transits (most periods > ~3.5 d in Keplerian mode); light curves above
+> ~3,500 points exceed the kernel's shared-memory budget (docs below that
+> claim 100,000-point support are aspirational); failed periods can corrupt
+> SDE/FAP statistics. See analysis/V1_AUDIT_AND_GAMEPLAN.md. A rework is
+> planned for v1.1.
+
+
 ## Overview
 
 This is a GPU-accelerated implementation of the Transit Least Squares (TLS) algorithm for detecting periodic planetary transits in astronomical time series data. Unlike BLS (Box Least Squares), TLS uses a physically realistic limb-darkened transit template for fitting, improving sensitivity to small planets.
