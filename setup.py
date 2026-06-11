@@ -4,10 +4,7 @@ import io
 import os
 import re
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
 
 
 def read(path, encoding='utf-8'):
@@ -36,8 +33,7 @@ setup(name='cuvarbase',
       description="Period-finding and variability on the GPU",
       author='John Hoffman',
       author_email='johnh2o2@gmail.com',
-      packages=['cuvarbase',
-                'cuvarbase.tests'],
+      packages=find_packages(include=['cuvarbase*']),
       package_data={'cuvarbase': ['kernels/*cu']},
       url='https://github.com/johnh2o2/cuvarbase',
       setup_requires=['pytest-runner'],
