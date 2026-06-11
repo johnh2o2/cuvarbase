@@ -175,3 +175,70 @@ This is not "all-in on planets" — it's *all-in on the two things with receipts
 | periodfind overlaps BLS/LS/CE | Differentiate on transit depth (Keplerian grids, TLS, batch) and published, honest benchmarks |
 | scikit-cuda decays further | v1.0: lazy imports + shim; v1.x: replace cufft dependency (the only skcuda use) |
 | Solo-maintainer bus factor | JOSS paper + contributor onboarding (astrobatty), CI that makes external PRs safe |
+
+---
+
+## 7. Ratified plan — June 11, 2026 (post-overnight-fixes)
+
+**State**: `v1.0-fixes` carries the 15 overnight fix commits (all 15 audit tasks
+done; 108 CPU tests pass; wheel builds+imports). A fresh `git fetch` then
+revealed the earlier branch audit ran on stale refs: **remote `origin/v1.0`
+gained community PRs #57–62 (Feb–Apr 2026, largely astrobatty)** that our line
+lacks — `v1.0-fixes` is 43 ahead / 29 behind the real remote v1.0. The junk
+local branch `origin/v1.0` that shadowed the remote ref has been deleted.
+
+**What the unmerged remote work contains**:
+- PR #62: PDM refactor — fast PDM CUDA kernels + hooks, (t,y,err) run() API
+  (backward compatible), docstrings, tests. *Directly satisfies the "PDM:
+  maintain and grab efficiency/usability gains" decision.*
+- PR #61: CE enhancements — normalization before processing, compute_log_prob,
+  32-bit stream-count overflow check, use_fast+weighted guard
+- PR #60: remove inline normalization in LombScargleAsyncProcess
+- PR #59: improved LS memory estimation (overlaps our memory_requirement fix —
+  reconcile, keep the better)
+- PR #58: packaging via setuptools packages.find (same intent as our fix —
+  reconcile)
+- PR #57/#26: normalize-light-curves for LS/PDM (also now in origin/master,
+  which is 6 ahead of local master)
+
+**Ratified decisions**:
+1. **PDM: maintain + improve** (only GPU PDM in existence). Integrating PR #62
+   delivers most of it; follow with docs (issue #15).
+2. **CE: deprecation/maintenance notice pointing to scope-ml/periodfind**
+   (NOT gce — abandonware). Close PR #48 (gce wrapper) with explanation.
+3. **TLS: not shipped as working** — experimental status stands. The v1.1
+   flagship is the rework (duration-scaled t0 grid, shared-mem fix, stats
+   fixes, golden tests vs transitleastsquares), then a *measured* speedup
+   benchmark. "First GPU TLS" is verified uncontested (no GPU TLS exists
+   anywhere; hippke/tls#51 open since 2019); the old 35-202x number has no
+   backing data and stays dead.
+4. **README: second honesty+significance pass** — lead with numbers that carry
+   meaning: TESS QLP runs cuvarbase in production since Sector 59 (Kunimoto+
+   2023); standard BLS 257–354x vs astropy across 7 GPU architectures; all
+   four major surveys (ZTF+HAT-Net+TESS+Kepler LS+BLS) processable for ~$33
+   of GPU time; Keplerian grids 4–37x fewer frequencies. Keep the honest
+   caveats (nifty-ls wins small problems; batch BLS for ndata<1000).
+5. **Versioning: no ceremonious release yet.** Tag `v1.0.0` on the integrated,
+   GPU-validated result; v1.1 tracks the TLS rework line. PyPI publish is a
+   separate, deliberate step later.
+
+**Next-session execution order**:
+1. `git fetch --all --prune` (refs went stale once already).
+2. Merge `refs/remotes/origin/v1.0` into `v1.0-fixes`. Conflict guidance:
+   keep our lazy PEP-562 `__init__` + skcuda shim; reconcile the two
+   packaging fixes (same intent); reconcile LS memory_requirement vs PR #59;
+   keep our lomb_scargle_simple weights fix; take PDM #62 and CE #61
+   wholesale; re-check that their CE/PDM changes don't reintroduce eager
+   skcuda imports.
+3. Gate: full CPU suite (expect ≥108 passed, 0 failed) + wheel smoke test +
+   flake8 error class.
+4. CE deprecation notice (README + ce.py docstring note → periodfind).
+5. README significance pass (item 4 above).
+6. GitHub hygiene: close PR #55 (already merged via 1ed5639), retarget/close
+   #56 (superseded by this integration), close #48 (CE referral changed to
+   periodfind), comment on issue #63 (skcuda shim + lazy imports shipped;
+   full replacement post-1.0), comment on issue #33 (PDM plan).
+7. Push `v1.0-fixes`; fast-forward/push `v1.0` to the integrated result.
+8. GPU validation on RunPod (full suite + reduction_max equivalence +
+   kernel-cache timing + benchmark_new_features --tests-only), then tag
+   v1.0.0.
