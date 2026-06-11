@@ -905,10 +905,13 @@ def lomb_scargle_simple(t, y, dy, **kwargs):
     ``LombScargleAsyncProcess`` interface.
     """
 
-    w = np.power(dy, -2)
-    w /= sum(w)
+    # Pass dy straight through: LombScargleMemory.setdata converts
+    # uncertainties to normalized inverse-variance weights itself.
+    # (Pre-normalizing here double-applied the conversion, effectively
+    # weighting by dy^4 and giving the *largest*-error points the most
+    # weight.)
     proc = LombScargleAsyncProcess()
-    results = proc.run([(t, y, w)], **kwargs)
+    results = proc.run([(t, y, dy)], **kwargs)
 
     freqs, powers = results[0]
 
