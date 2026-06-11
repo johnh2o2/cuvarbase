@@ -42,7 +42,7 @@ fi
 
 API_URL="https://api.runpod.io/graphql?api_key=${RUNPOD_API_KEY}"
 IMAGE="runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04"
-RESULTS_DIR="${PROJECT_DIR}/benchmark_results_by_gpu"
+RESULTS_DIR="${PROJECT_DIR}/benchmarks/results/by_gpu"
 mkdir -p "${RESULTS_DIR}"
 
 # SSH key option
@@ -256,7 +256,7 @@ if runtime and runtime.get('ports'):
         --exclude='.pytest_cache' --exclude='build' --exclude='dist' \
         --exclude='*.egg-info' --exclude='.runpod.env' --exclude='work' \
         --exclude='testing' --exclude='*.png' --exclude='*.gif' \
-        --exclude='benchmark_results_by_gpu' --exclude='.claude' \
+        --exclude='benchmarks/results/by_gpu' --exclude='.claude' \
         --exclude='._*' --exclude='.DS_Store' \
         -C "${PROJECT_DIR}" . 2>/dev/null || \
     COPYFILE_DISABLE=1 tar czf "${LOCAL_TAR}" \
@@ -264,7 +264,7 @@ if runtime and runtime.get('ports'):
         --exclude='.pytest_cache' --exclude='build' --exclude='dist' \
         --exclude='*.egg-info' --exclude='.runpod.env' --exclude='work' \
         --exclude='testing' --exclude='*.png' --exclude='*.gif' \
-        --exclude='benchmark_results_by_gpu' --exclude='.claude' \
+        --exclude='benchmarks/results/by_gpu' --exclude='.claude' \
         --exclude='._*' --exclude='.DS_Store' \
         -C "${PROJECT_DIR}" . 2>/dev/null
 
