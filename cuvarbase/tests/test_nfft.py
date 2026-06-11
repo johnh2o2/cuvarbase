@@ -8,9 +8,12 @@ from pycuda import gpuarray
 
 import skcuda.fft as cufft
 
-from nfft import nfft_adjoint as nfft_adjoint_cpu
-from nfft.utils import nfft_matrix
-from nfft.kernels import KERNELS
+pytest.importorskip(
+    "nfft", reason="the optional 'nfft' package is the CPU reference "
+                   "for these tests")
+from nfft import nfft_adjoint as nfft_adjoint_cpu  # noqa: E402
+from nfft.utils import nfft_matrix  # noqa: E402
+from nfft.kernels import KERNELS  # noqa: E402
 
 from ..cunfft import NFFTAsyncProcess
 
