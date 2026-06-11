@@ -1,6 +1,6 @@
 # Benchmark Results: Survey-Scale Performance
 
-Measured on NVIDIA RTX A5000 (24 GB), February 2026. Source data in `benchmark_results_new_features.json`, scripts in `scripts/benchmark_new_features.py`.
+Measured on NVIDIA RTX A5000 (24 GB), February 2026. Source data in `benchmarks/results/benchmark_results_new_features.json`, scripts in `scripts/benchmark_new_features.py`.
 
 ## The Big Picture
 
@@ -180,7 +180,7 @@ python scripts/benchmark_new_features.py --bench-only
 python scripts/benchmark_new_features.py --tests-only
 ```
 
-Results are saved to `benchmark_results_new_features.json`.
+Results are saved to `benchmarks/results/benchmark_results_new_features.json`.
 
 ## References
 

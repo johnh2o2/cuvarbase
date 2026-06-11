@@ -18,7 +18,7 @@ Usage:
     python scripts/benchmark_new_features.py --bench-only   # benchmarks only
     python scripts/benchmark_new_features.py --skip-cufinufft  # skip cufinufft tests
 
-Output: JSON results in benchmark_results_new_features.json
+Output: JSON results in benchmarks/results/benchmark_results_new_features.json
 """
 
 import numpy as np
@@ -1036,7 +1036,7 @@ def main():
     parser.add_argument('--skip-cufinufft', action='store_true',
                         help='Skip cuFINUFFT-related tests and benchmarks')
     parser.add_argument('--output', type=str,
-                        default='benchmark_results_new_features.json',
+                        default='benchmarks/results/benchmark_results_new_features.json',
                         help='Output JSON file')
     args = parser.parse_args()
 

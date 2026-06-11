@@ -67,9 +67,9 @@ tmux new-session -d -s "${SESSION_NAME}" bash -c "
     # CPU timeout: 5 minutes (300s)
     # GPU timeout: 2 minutes (120s)
     python3 scripts/benchmark_algorithms.py \
-        --algorithms sparse_bls \
+        --algorithms bls_sparse \
         --max-cpu-time 300 \
-        --max-gpu-time 120 \
+        --max-cpu-time 120 \
         --output '${RESULTS_FILE}' \
         2>&1 | tee -a '${LOG_FILE}'
 

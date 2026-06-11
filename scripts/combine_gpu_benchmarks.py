@@ -3,8 +3,8 @@
 Combine benchmark results from multiple GPU runs into a unified comparison.
 
 Usage:
-    python scripts/combine_gpu_benchmarks.py benchmark_results_by_gpu/
-    python scripts/combine_gpu_benchmarks.py benchmark_results_by_gpu/ --report results.md
+    python scripts/combine_gpu_benchmarks.py benchmarks/results/by_gpu/
+    python scripts/combine_gpu_benchmarks.py benchmarks/results/by_gpu/ --report results.md
 """
 
 import json
