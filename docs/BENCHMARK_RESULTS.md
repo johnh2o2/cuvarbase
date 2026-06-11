@@ -1,6 +1,6 @@
 # Benchmark Results: Survey-Scale Performance
 
-Measured on NVIDIA RTX A5000 (24 GB), February 2026. Source data in `benchmarks/results/benchmark_results_new_features.json`, scripts in `scripts/benchmark_new_features.py`.
+Measured on NVIDIA RTX A5000 (24 GB), February 2026, except where noted. Source data in `benchmarks/results/benchmark_results_new_features.json`, scripts in `scripts/benchmark_new_features.py`. The multi-GPU comparison in Section 3 has its own per-architecture source data in `benchmarks/results/by_gpu/`.
 
 ## The Big Picture
 
@@ -96,6 +96,22 @@ Projects that are sometimes confused with GPU BLS but are fundamentally differen
 | **TLS** (Hippke & Heller 2019) | Transit-shaped template (not box) | No (CPU) | No — different model, more sensitive |
 
 The closest CPU competitor is **fBLS** at ~6 seconds for 65K datapoints / 100K frequencies. cuvarbase's GPU BLS does the same in ~1 second.
+
+### Standard BLS across 7 GPU architectures
+
+Measured February 2026 with `scripts/benchmark_algorithms.py` (driven across pods by `scripts/benchmark_all_gpus.sh`; 10K observations, 5K frequencies, batches of 10 lightcurves; astropy `BoxLeastSquares` on the host CPU as the reference). Per-GPU source data: `benchmarks/results/by_gpu/benchmark_<GPU>.json`.
+
+| GPU | BLS time/LC (ms) | vs astropy | vs pre-v1.0 kernel | $/hr (RunPod, Feb 2026) | $ per 1M LCs |
+|-----|-----------------:|-----------:|-------------------:|------------------------:|-------------:|
+| NVIDIA L40 | 2.62 | **354x** | 390x | $0.69 | $0.50 |
+| NVIDIA H200 | 2.34 | 306x | 70x | $3.59 | $2.33 |
+| Tesla V100-SXM2-16GB | 6.03 | 305x | 21x | $0.19 | $0.32 |
+| NVIDIA GeForce RTX 4090 | 2.99 | 290x | 38x | $0.34 | $0.28 |
+| NVIDIA RTX 4000 Ada | 2.57 | 284x | 29x | $0.20 | **$0.14** |
+| NVIDIA H100 80GB HBM3 | 2.26 | 268x | 148x | $2.69 | $1.69 |
+| NVIDIA A100-SXM4-80GB | 3.70 | **257x** | 49x | $1.19 | $1.22 |
+
+The speedup over astropy is remarkably consistent — **257-354x across every architecture from Volta (2017) to Hopper (2024)** — because both the GPU kernel and astropy scale linearly in N x N_freq at this problem size. The cheapest way to process a million lightcurves is a workstation card (RTX 4000 Ada at **$0.14/M**), not a data-center flagship.
 
 ### BLS survey-scale throughput
 

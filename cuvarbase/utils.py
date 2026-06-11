@@ -124,7 +124,8 @@ def normalize_light_curves(data: list[tuple[np.array, ...]]):
         list of [(t, y, ...), ...] containing
         * ``t``: updated observation times
         * ``y``: updated observations
-        * ... other columns (preserved as in input)
+        * ... other columns (preserved as in input; ``None`` entries --
+          e.g. ``dy=None`` for unweighted runs -- pass through unchanged)
 
     """
     data = deepcopy(data)
@@ -135,6 +136,8 @@ def normalize_light_curves(data: list[tuple[np.array, ...]]):
         for j in range(len(lc)):
             if j < 2:
                 updated_lc.append((lc[j] - means[j]).copy())
+            elif lc[j] is None:
+                updated_lc.append(None)
             else:
                 updated_lc.append(lc[j].copy())
         data[i] = tuple(updated_lc)
