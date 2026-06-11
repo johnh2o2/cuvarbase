@@ -59,7 +59,7 @@ cuvarbase is designed for processing millions of lightcurves. Benchmarked on an 
 
 ### BLS Transit Search
 
-cuvarbase is the **only GPU implementation** of the standard BLS algorithm ([Kovacs et al. 2002](http://adsabs.harvard.edu/abs/2002A%26A...391..369K)). Combined with Keplerian frequency grids that exploit orbital mechanics to search 4-37x fewer frequencies:
+cuvarbase is, to our knowledge, the only published and production-deployed GPU implementation of the standard BLS algorithm ([Kovacs et al. 2002](http://adsabs.harvard.edu/abs/2002A%26A...391..369K)). Combined with Keplerian frequency grids that exploit orbital mechanics to search 4-37x fewer frequencies:
 
 | Survey | Lightcurves | N_freq (Keplerian) | Throughput | Total cost |
 |--------|------------:|-------------------:|-----------:|-----------:|
@@ -70,14 +70,19 @@ cuvarbase is the **only GPU implementation** of the standard BLS algorithm ([Kov
 
 ### Lomb-Scargle Periodogram
 
-At the frequency counts real variability surveys require (100K-1.8M), GPU LS is **1.5-62x faster** than [nifty-ls](https://github.com/flatironinstitute/nifty-ls), the fastest CPU implementation:
+At the frequency counts real variability surveys require (100K-1.8M), GPU LS is **1.5-12.6x faster** than [nifty-ls](https://github.com/flatironinstitute/nifty-ls), the fastest CPU implementation, in head-to-head measurements — and **>15x** where nifty-ls could not finish within the 120s timeout:
 
 | Survey | N_freq | GPU (ms/LC) | nifty-ls (ms/LC) | Speedup |
 |--------|-------:|------------:|------------------:|--------:|
-| ZTF | 365K | 4.4 | timeout | >>27x |
-| HAT-Net | 1.825M | 19.2 | timeout | >>6x |
+| ZTF | 365K | 4.4 | timeout | >27x |
+| HAT-Net | 1.825M | 19.2 | timeout | >15x |
 | TESS | 13.5K | 3.3 | 4.9 | 1.5x |
 | Kepler | 730K | 19.8 | 250.0 | 12.6x |
+
+**Honest caveat**: at small problem sizes (e.g. 10K observations x 5K
+frequencies, single lightcurves), nifty-ls on CPU is faster than cuvarbase's
+GPU LS — the GPU advantage appears at survey-scale frequency grids (>~100K
+frequencies) and batched workloads. Use nifty-ls for one-off small searches.
 
 See [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for methodology, competitive analysis, and cost projections.
 
@@ -87,18 +92,20 @@ This represents a major modernization effort compared to the `master` branch:
 
 ### ⚡ Performance Improvements (Major Update)
 
-**Dramatically Faster BLS Transit Detection** - Up to **90x speedup** for sparse datasets:
+**Dramatically Faster BLS Transit Detection** — **257-354x faster** than astropy `BoxLeastSquares`, consistent across all 7 GPU architectures tested (V100 through H200):
 - Adaptive block sizing automatically optimizes GPU utilization based on dataset size
-- **5-90x faster** depending on number of observations (most dramatic for ndata < 500)
+  (1.4-5.3x over the fixed-block kernel on realistic grids; up to 90x for
+  very small lightcurves, ndata < 64)
 - Particularly beneficial for ground-based surveys and sparse time series
 - Thread-safe kernel caching with LRU eviction for production environments
 - **New function**: `eebls_gpu_fast_adaptive()` - drop-in replacement with automatic optimization
-- See [docs/BLS_OPTIMIZATION.md](docs/BLS_OPTIMIZATION.md) for detailed benchmarks
+- Best cost-efficiency: RTX 4000 Ada at **$0.14 per million lightcurves**
+- See [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for full results across GPUs
 
 This optimization makes large-scale BLS searches practical and efficient for all-sky surveys.
 
 ### Breaking Changes
-- **Dropped Python 2.7 support** - now requires Python 3.7+
+- **Dropped Python 2.7 support** - now requires Python 3.9+
 - Removed `future` package dependency and all Python 2 compatibility code
 - Updated minimum dependency versions: numpy>=1.17, scipy>=1.3
 
@@ -142,7 +149,7 @@ Currently includes implementations of:
 
 - **Generalized [Lomb-Scargle](https://arxiv.org/abs/0901.2573) periodogram** - Fast period finding for unevenly sampled data
 - **Box Least Squares ([BLS](http://adsabs.harvard.edu/abs/2002A%26A...391..369K))** - Transit detection algorithm
-  - **Adaptive GPU version** with 5-90x speedup (`eebls_gpu_fast_adaptive()`)
+  - **Adaptive GPU version** with automatic block-size tuning (`eebls_gpu_fast_adaptive()`)
   - Standard GPU-accelerated version (`eebls_gpu_fast()`)
   - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations)
     - GPU implementation: `sparse_bls_gpu()` (default)
@@ -247,7 +254,7 @@ power, solutions = bls.eebls_gpu(t, y, dy, freqs)
 best_freq = freqs[np.argmax(power)]
 print(f"Best period: {1/best_freq:.2f} (expected: 2.5)")
 
-# Or use adaptive BLS for automatic optimization (5-90x faster!)
+# Or use adaptive BLS for automatic block-size tuning
 power_adaptive = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
 ```
 
