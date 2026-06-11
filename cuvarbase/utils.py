@@ -1,3 +1,4 @@
+from copy import deepcopy
 import numpy as np
 from importlib.resources import files
 
@@ -5,7 +6,7 @@ from importlib.resources import files
 def weights(err):
     """ generate observation weights from uncertainties """
     w = np.power(err, -2)
-    return w/sum(w)
+    return w/np.sum(w)
 
 
 def find_kernel(name):
@@ -30,12 +31,12 @@ def _module_reader(fname, cpp_defs=None):
 def tophat_window(t, t0, d):
     w_window = np.zeros_like(t)
     w_window[np.absolute(t - t0) < d] += 1.
-    return w_window / max(w_window)
+    return w_window / np.max(w_window)
 
 
 def gaussian_window(t, t0, d):
     w_window = np.exp(-0.5 * np.power(t - t0, 2) / (d * d))
-    return w_window / (1. if len(w_window) == 0 else max(w_window))
+    return w_window / (1. if len(w_window) == 0 else np.max(w_window))
 
 
 def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
@@ -75,7 +76,7 @@ def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
     frequency : ndarray or Quantity
         The heuristically-determined optimal frequency bin
     """
-    baseline = max(t) - min(t)
+    baseline = np.max(t) - np.min(t)
     n_samples = len(t)
 
     df = 1. / (baseline * samples_per_peak)
@@ -103,3 +104,39 @@ def get_autofreqs(t, **kwargs):
                         if var in ['minimum_frequency', 'maximum_frequency',
                                    'nyquist_factor', 'samples_per_peak']}
     return autofrequency(t, **autofreqs_kwargs)
+
+
+def normalize_light_curves(data: list[tuple[np.array, ...]]):
+    """
+    Normalize light curves by subtracting the mean from the magnitudes and the observation times.
+
+    Parameters
+    ----------
+    data: list of tuples
+        list of [(t, y, ...), ...] containing
+        * ``t``: observation times
+        * ``y``: observations
+        * ... other columns
+
+    Returns
+    -------
+    data: list of tuples
+        list of [(t, y, ...), ...] containing
+        * ``t``: updated observation times
+        * ``y``: updated observations
+        * ... other columns (preserved as in input)
+
+    """
+    data = deepcopy(data)
+    for i, lc in enumerate(data):
+        updated_lc = []
+        # Precompute means for the first two elements
+        means = [np.nanmean(lc[j]) if j < 2 else None for j in range(len(lc))]
+        for j in range(len(lc)):
+            if j < 2:
+                updated_lc.append((lc[j] - means[j]).copy())
+            else:
+                updated_lc.append(lc[j].copy())
+        data[i] = tuple(updated_lc)
+
+    return data
