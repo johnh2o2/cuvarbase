@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "cuvarbase"
 dynamic = ["version"]
 description = "Period-finding and variability on the GPU"
-readme = "README.rst"
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.9"
 license = {text = "GPL-3.0"}
 authors = [

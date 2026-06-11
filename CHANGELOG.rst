@@ -1,6 +1,38 @@
 What's new in cuvarbase
 ***********************
-* **0.4.0**
+* **1.0.0**
+    * First major release. Supersedes the unreleased internal 0.4.0 (below); everything since the last PyPI release (0.2.6) ships here.
+    * **BLS**
+        * Optimized kernel variant (``bls_optimized.cu``) with bank-conflict fixes and warp shuffles; ``eebls_gpu_fast_optimized()`` and ``eebls_gpu_fast_adaptive()`` (automatic block sizing — 1.4-5.3x on realistic grids, larger gains for very small lightcurves)
+        * Thread-safe kernel caching with LRU eviction
+        * Sparse BLS (Panahi & Zucker 2021) on GPU and CPU, with ground-truth correctness tests; ``eebls_transit`` auto-selects sparse vs standard BLS by dataset size
+        * Multi-lightcurve batch mode: ``eebls_gpu_batch()`` + ``BLSBatchMemory`` (best for ndata < ~1000 per lightcurve)
+        * Keplerian frequency grids: ``cuvarbase.bls_frequencies.keplerian_freq_grid()`` — 4-37x fewer frequencies than uniform grids at survey baselines
+        * Fixed ``mod1_fast`` integer overflow for t*f >= 2^31 (corrupted phases on long-baseline data)
+        * Fixed ``reduction_max`` in the optimized kernel silently dropping half the per-block candidates (``use_optimized=True`` paths)
+        * Fixed ``eebls_transit`` sparse path crashing with TypeError on documented kwargs (rho, samples_per_peak, ...); it now also warns that the sparse search ignores qmin_fac/qmax_fac
+        * ``compile_bls`` validates block_size (power of 2, >= 32) and raises a clear error when no requested kernel functions are loadable
+    * **Lomb-Scargle / NFFT**
+        * Memory classes refactored into ``cuvarbase.memory`` (behavior-preserving)
+        * Optional cuFINUFFT backend (``use_cufinufft=True``) as a cross-check; the custom NFFT kernel remains faster
+        * Fixed ``lomb_scargle_simple`` double-applying inverse-variance weights (largest-error points previously got the most weight)
+        * Fixed ``memory_requirement`` crashing with NameError
+    * **Experimental** (UserWarning on import; not recommended for science use yet)
+        * GPU Transit Least Squares (``cuvarbase.tls``) with Ofir (2014) period grids — known epoch-grid and shared-memory limitations, rework planned for v1.1
+        * NUFFT-LRT matched filter (``cuvarbase.nufft_lrt``, contributed by Jamila Taaki) — currently CPU-bound with a grid-span limitation
+    * **Packaging / infrastructure**
+        * **BREAKING:** requires Python 3.9+
+        * Fixed wheel/sdist omitting the ``base``/``memory`` subpackages (pip installs of the v1.0 branch were unimportable)
+        * Lazy module imports: ``import cuvarbase`` and BLS/CE/PDM no longer require scikit-cuda; a numpy>=1.24 compatibility shim is applied automatically before skcuda loads
+        * GitHub Actions CI: CPU test suite (108 tests; GPU tests stubbed/skipped) on Python 3.9-3.12 + build-wheel-install-import packaging check; flake8 error class enforced
+        * Root ``conftest.py`` stubs pycuda/skcuda so the suite runs on GPU-less machines
+        * Removed vestigial ``cuvarbase.periodograms`` scaffolding
+        * Benchmark suite (``scripts/benchmark_*.py``) and multi-GPU results in ``docs/BENCHMARK_RESULTS.md``
+    * **Docs**
+        * Performance claims re-grounded in measured data (257-354x vs astropy BoxLeastSquares across 7 GPU architectures for standard BLS; honest small-problem caveats for LS)
+        * Corrected the nifty-ls reference to Garrison et al. (arXiv:2409.08090)
+
+* **0.4.0** *(never released — folded into 1.0.0)*
     * **BREAKING CHANGE:** Dropped Python 2.7 support - now requires Python 3.9+ (importlib.resources.files)
     * Removed ``future`` package dependency and all Python 2 compatibility code
     * Modernized codebase: removed ``__future__`` imports and ``builtins`` compatibility layer
