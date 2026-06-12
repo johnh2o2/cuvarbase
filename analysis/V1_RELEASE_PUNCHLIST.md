@@ -45,6 +45,9 @@ terminate, archive, and check these off.
       recovery on the audit scenario (P~100 d injection that the old
       30-epoch grid missed 8/8); runtime sanity with n_t0 up to 20k
       (cap) at the narrowest durations
+- [ ] TLS golden tests: pip install transitleastsquares (in addition
+      to batman-package) on the pod; run test_tls_golden.py (4 tests:
+      2 recovery + 2 reference comparisons)
 
 
 ## A. Errors — wrong results, crashes, broken API (publish blockers)
@@ -88,7 +91,7 @@ terminate, archive, and check these off.
 - [ ] **TLS: bitonic sort provably incomplete for non-power-of-2 sizes (wasted GPU work, misleading naming)**
   - Evidence: cuvarbase/kernels/tls.cu:47-55 (comparator-skipping bounds check 'ixj < ndata && i < ndata' breaks the bitonic network invariant)
   - Arrays are only permuted, not sorted, for non-power-of-2 ndata. Audit found downstream code permutation-invariant (harmless to results) — pure wasted work plus misleading names. Lowest-priority TLS item.
-- [ ] **TLS: no golden accuracy test vs transitleastsquares; the 5 batman-dependent tests were skipped in the v1.0.0 GPU gate**
+- [x] **TLS: no golden accuracy test vs transitleastsquares; the 5 batman-dependent tests were skipped in the v1.0.0 GPU gate** — TESTS WRITTEN: test_tls_golden.py compares period/depth/SDE against the reference transitleastsquares package on identical data (2 configs incl. the narrow-transit case) plus a no-reference narrow-transit recovery test on the audit scenario; skip cleanly on CPU. EXECUTION is in the pod batch (install batman-package + transitleastsquares). Commit: 9329ac1
   - Evidence: analysis/v1.0.0-gpu-validation/README.md — verified: '568 passed, 5 skipped... The 5 skips are batman-package tests'; skipif markers at cuvarbase/tests/test_tls_basic.py:127,136,149,170
   - test_tls_basic.py exists but the promised accuracy comparison against the reference transitleastsquares package does not, and the batman tests never ran on GPU (optional dep not installed on the pod). TLS shipped experimental with zero end-to-end GPU accuracy validation. If TLS is not cut, install batman on the validation pod and rerun before release.
 - [x] **tls_models silently swallows all batman exceptions and substitutes a trapezoid template** — FIXED: _warn_template_fallback() warns with the failure reason in all four silent-fallback paths (broad except + 3 degenerate-model cases); TestTemplateFallbackWarns (monkeypatched batman failure). Commit: fdfd01a
