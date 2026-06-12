@@ -95,8 +95,8 @@ alabaster theme and README structure — content-only updates.**
 
 ## T2. Rigorous benchmark campaign — BLS & TLS vs SOTA + master  ⟵ NEW
 
-Protocol doc: analysis/BENCHMARK_PROTOCOL_V1.md (draft in progress —
-QLP-anchored; awaiting QLP-usage research results). Key design inputs
+Protocol doc: analysis/BENCHMARK_PROTOCOL_V1.md (DRAFT COMPLETE
+2026-06-12, QLP research verified — awaiting maintainer sign-off). Key design inputs
 from recon (full details in audit):
 - master (060d839, v0.3.0) has the SAME eebls_gpu_fast signature but
   no kernel caching/adaptive/batch/sparse and no epoch subtraction →
@@ -130,7 +130,7 @@ from recon (full details in audit):
   (TLS small-planet sensitivity gain per Hippke & Heller 2019; duration-
   window widening for eccentric orbits = linear compute cost, enabled
   by per-frequency q bounds; denser grids/longer baselines).
-- [ ] Finalize protocol doc (after QLP research lands)
+- [x] Finalize protocol doc (analysis/BENCHMARK_PROTOCOL_V1.md)
 - [ ] Maintainer sign-off on protocol BEFORE pod spend
 - [ ] Execute on pod(s); archive raw JSON + env pins in benchmarks/
 - [ ] Rewrite README/BENCHMARK_RESULTS claims from the new data

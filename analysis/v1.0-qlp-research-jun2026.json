@@ -1,0 +1,453 @@
+{
+  "summary": "Research TESS QLP usage of cuvarbase: citations, search configuration, TLS feasibility math, science implications",
+  "agentCount": 24,
+  "logs": [],
+  "result": {
+    "qlp-citations": {
+      "summary": "PRIMARY CITATION for \"used in production by TESS QLP\": Kunimoto, M., Tey, E., Fong, W., Hesse, K., Petitpas, G., & Shporer, A. 2023, \"QLP Data Release Notes 003: GPU-based Transit Search\", Research Notes of the AAS, 7, 28 — bibcode 2023RNAAS...7...28K, DOI 10.3847/2515-5172/acbc13, arXiv:2302.01293 (published 2023 Feb 16). I read the arXiv PDF directly (all 3 pages). Key verbatim text — Section 2.1: \"The GPU BLS implementation is provided in cuvarbase[1], which uses PyCUDA (Klöckner et al. 2012) for fast time-series analysis. cuvarbase further optimizes planet searches by using a Keplerian assumption, where only transit durations near the duration expected for a central, circular orbit at a given period and host star density are searched.\" Footnote 1 is https://github.com/johnh2o2/cuvarbase; footnote 2: \"We use the following other cuvarbase inputs: samples_per_peak = 2, dlogq = 0.1, and noverlap = 3.\" Abstract: \"Starting in Sector 59, QLP has switched to a significantly faster GPU-based transit search capable of searching an entire sector in only ~1 day.\" Section 3: \"Despite searching up to ~10 times more frequencies, the GPU implementation was ~40 times faster.\" Table 1: cuvarbase 1.9 s/star (Cam 1) and 4.2 s/star (Cam 4) vs VARTOOLS 77 s and 172 s; TOIs recovered 392/468 vs 380/468. Note: the paper credits cuvarbase only via the GitHub-URL footnote — there is NO Hoffman entry in its reference list (references are Fausnaugh, Hartman & Bakos, Huang, Klöckner, Kovács, Kunimoto, Paegert, Pont). SUPPORTING CITATIONS (continued/production use): (1) Kunimoto et al. 2023, \"False Alarms Revealed in a Planet Search of TESS Light Curves\", RNAAS 7, 7, DOI 10.3847/2515-5172/acb149, arXiv:2301.01900 — \"We then performed a multi-planet search of the detrended light curves with the Box-Least Squares (BLS) algorithm from cuvarbase.\" (2) Petitpas et al. 2026, \"QLP Data Release Notes 004\", RNAAS, DOI 10.3847/2515-5172/ae5790, arXiv:2603.22236 — \"Our planet search uses a GPU based Box-Least-Squared (BLS) routine (Kunimoto et al., 2023) which is then filtered using a variety of signal-to-noise based cutoffs.\" — confirms the cuvarbase-based GPU BLS is still QLP's production search as of March 2026. (3) Kunimoto et al. 2025, \"LEO-Vetter\", AJ 170, 280, DOI 10.3847/1538-3881/ae070a, arXiv:2509.10619, Sec 5.2 — \"We searched for signals with periods between 1 day and a target-dependent maximum orbital period using the BLS routine implemented in the cuvarbase time series analysis package.\" (4) Hussain & Kunimoto 2025, AJ 169, 91, DOI 10.3847/1538-3881/ad9a6c — \"First, we used the Box Least Squares (BLS) algorithm implemented in cuvarbase to search for periods within 10% of the periods of the known TOIs.\" PRE-SWITCH ERA (do NOT cite for cuvarbase use): Huang et al. 2020 QLP I/II (2020RNAAS...4..204H / ...4..206H) are photometry notes; the VARTOOLS-era search is documented by DRN 003's own intro (\"Since the start of the TESS mission, QLP has used the Box Least Squares (BLS) algorithm (Kovács et al. 2002) implemented in VARTOOLS (Hartman & Bakos 2016) to perform its planet search.\") and by Kunimoto et al. 2022, ApJS 259, 33 (faint-star search, vartools BLS). Kunimoto et al. 2021, RNAAS 5, 234 (DOI 10.3847/2515-5172/ac2ef0) contains no BLS/cuvarbase mention at all (verified). SOFTWARE CITATION ROUTE: ASCL entry ascl:2210.030, \"cuvarbase: fast period finding utilities for GPUs\", author John Hoffman, bibcode 2022ascl.soft10030H. GitHub dependents graph shows only 3 unrelated repos (QLP's code is not a public dependent); the local README (lines 40, 58, 68 of /Users/johnhoffman/Documents/cuvarbase/README.md) already cites 2023RNAAS...7...28K for the QLP adoption claim, consistent with these findings. Sources: https://arxiv.org/abs/2302.01293, https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract, https://iopscience.iop.org/article/10.3847/2515-5172/acb149, https://arxiv.org/html/2603.22236, https://arxiv.org/html/2509.10619v1, https://iopscience.iop.org/article/10.3847/1538-3881/ad9a6c, https://ascl.net/2210.030, https://iopscience.iop.org/article/10.3847/2515-5172/ac2ef0",
+      "facts": [
+        {
+          "claim": "The paper to cite for 'cuvarbase used in production by TESS QLP' is Kunimoto, Tey, Fong, Hesse, Petitpas & Shporer 2023, 'QLP Data Release Notes 003: GPU-based Transit Search', RNAAS 7, 28; bibcode 2023RNAAS...7...28K; DOI 10.3847/2515-5172/acbc13; arXiv:2302.01293; published 2023 Feb 16.",
+          "evidence": "arXiv PDF read directly (https://arxiv.org/pdf/2302.01293, saved local copy); DOI/volume/issue/article from Crossref API (api.crossref.org); bibcode from ADS link https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Verbatim from DRN 003 Section 2.1: 'The GPU BLS implementation is provided in cuvarbase, which uses PyCUDA (Klöckner et al. 2012) for fast time-series analysis. cuvarbase further optimizes planet searches by using a Keplerian assumption, where only transit durations near the duration expected for a central, circular orbit at a given period and host star density are searched.' Footnote 1 = https://github.com/johnh2o2/cuvarbase; footnote 2 = 'We use the following other cuvarbase inputs: samples_per_peak = 2, dlogq = 0.1, and noverlap = 3.'",
+          "evidence": "Read page 1 of arXiv:2302.01293 PDF directly",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Verbatim from DRN 003 abstract: 'Starting in Sector 59, QLP has switched to a significantly faster GPU-based transit search capable of searching an entire sector in only ~1 day.' Section 3: 'Despite searching up to ~10 times more frequencies, the GPU implementation was ~40 times faster. GPU BLS was also able to recover more known TESS Objects of Interest (TOIs).'",
+          "evidence": "Read pages 1-2 of arXiv:2302.01293 PDF directly",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "DRN 003 Table 1: GPU-based (cuvarbase) average runtime 1.9 s/star (Sector 58 Camera 1 CCD 4, 77567 stars) and 4.2 s/star (Camera 4 CCD 4, 38486 stars), recovering 392/468 TOIs; CPU-based (VARTOOLS) 77 s and 172 s, recovering 380/468. Caption: 'cuvarbase uses an optimal frequency grid while VARTOOLS used an under-sampled frequency grid due to the time expense.'",
+          "evidence": "Read pages 2-3 of arXiv:2302.01293 PDF directly",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "DRN 003 does NOT cite Hoffman in its reference list; cuvarbase is credited only via a footnoted GitHub URL. The full reference list is: Fausnaugh 2020, Hartman & Bakos 2016, Huang 2020, Klöckner 2012, Kovács 2002, Kunimoto 2021, Paegert 2021, Pont 2006.",
+          "evidence": "Read page 3 (REFERENCES) of arXiv:2302.01293 PDF directly",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "DRN 003 Section 2.2 verbatim: 'cuvarbase enables a significantly faster BLS search, but is missing the computation of several useful statistics:' (followed by S/N, trapezoid fit, noise estimates, signal-to-pink-noise, and other statistics that QLP computes on top of cuvarbase output). Also: 'SR is outputted by cuvarbase, but we make two changes to Eqn. 1.'",
+          "evidence": "Read pages 1-2 of arXiv:2302.01293 PDF directly",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Kunimoto, Bryson, Daylan, Lissauer, Matesic, Mullally & Rowe 2023, 'False Alarms Revealed in a Planet Search of TESS Light Curves', RNAAS 7, 7 (DOI 10.3847/2515-5172/acb149, arXiv:2301.01900) states verbatim: 'We then performed a multi-planet search of the detrended light curves with the Box-Least Squares (BLS) algorithm from cuvarbase.'",
+          "evidence": "WebFetch of https://iopscience.iop.org/article/10.3847/2515-5172/acb149 (author list, RNAAS Vol 7 No 1 Article 7, 2023); arXiv:2301.01900 confirmed via search. Bibcode 2023RNAAS...7....7K inferred from vol/article, not independently confirmed on ADS.",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Petitpas et al. 2026, 'QLP Data Release Notes 004: TESS-Gaia Light Curve Photometry Implementation' (arXiv:2603.22236, RNAAS DOI 10.3847/2515-5172/ae5790) states verbatim: 'Our planet search uses a GPU based Box-Least-Squared (BLS) routine (Kunimoto et al., 2023) which is then filtered using a variety of signal-to-noise based cutoffs.' — i.e., the cuvarbase-based GPU BLS remains QLP's production transit search as of March 2026 (it cites DRN 003 rather than naming cuvarbase).",
+          "evidence": "WebFetch of https://arxiv.org/html/2603.22236; the document contains no literal 'cuvarbase' string but cites Kunimoto et al. 2023 (DRN 003) for the GPU BLS routine",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Kunimoto et al. 2025, 'LEO-Vetter: Fully Automated Flux- and Pixel-Level Vetting of TESS Planet Candidates to Support Occurrence Rates', AJ 170, 280 (DOI 10.3847/1538-3881/ae070a, arXiv:2509.10619), Section 5.2 states verbatim: 'We searched for signals with periods between 1 day and a target-dependent maximum orbital period using the BLS routine implemented in the cuvarbase time series analysis package.'",
+          "evidence": "WebFetch of https://arxiv.org/html/2509.10619v1 (quote, Section 5.2); journal reference AJ 170, 280 and DOI from IOPscience search result https://iopscience.iop.org/article/10.3847/1538-3881/ae070a",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Hussain & Kunimoto 2025, 'Eight New Candidate Multiplanet Systems among TESS Objects of Interest', AJ 169, 91 (DOI 10.3847/1538-3881/ad9a6c) states verbatim: 'First, we used the Box Least Squares (BLS) algorithm implemented in cuvarbase to search for periods within 10% of the periods of the known TOIs.'",
+          "evidence": "WebFetch of https://iopscience.iop.org/article/10.3847/1538-3881/ad9a6c",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Pre-Sector-59 QLP papers do NOT use cuvarbase: DRN 003's introduction states verbatim 'Since the start of the TESS mission, QLP has used the Box Least Squares (BLS) algorithm (Kovács et al. 2002) implemented in VARTOOLS (Hartman & Bakos 2016) to perform its planet search.' Kunimoto et al. 2021 (RNAAS 5, 234, DOI 10.3847/2515-5172/ac2ef0) contains no mention of BLS, VARTOOLS, cuvarbase, or GPU; Huang et al. 2020 Part II (RNAAS 4, 206, DOI 10.3847/2515-5172/abca2d) likewise contains none of those terms.",
+          "evidence": "DRN 003 intro read from arXiv:2302.01293 PDF page 1; WebFetch of https://iopscience.iop.org/article/10.3847/2515-5172/ac2ef0 and https://iopscience.iop.org/article/10.3847/2515-5172/abca2d both returned no matches for those terms",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Kunimoto et al. 2022, 'The TESS Faint-star Search: 1617 TOIs from the TESS Primary Mission', ApJS 259, 33 (DOI 10.3847/1538-4365/ac5688) describes the pre-GPU search: 'a box-least squares (BLS) transit search implemented in vartools is run on these multisector lightcurves' — so it is not a cuvarbase-use citation.",
+          "evidence": "WebSearch result summaries quoting the paper (https://iopscience.iop.org/article/10.3847/1538-4365/ac5688 and MIT DSpace copy); quote not independently re-read from full text",
+          "confidence": "likely",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "The formal software-citation route for cuvarbase is the ASCL entry: ascl:2210.030, 'cuvarbase: fast period finding utilities for GPUs', credited author John Hoffman, bibcode 2022ascl.soft10030H, listing https://github.com/johnh2o2/cuvarbase. None of the QLP papers use this entry; they cite the GitHub URL or DRN 003 instead.",
+          "evidence": "WebFetch of https://ascl.net/2210.030 (title, author, ASCL ID, bibcode, URLs); absence in QLP reference lists verified for DRN 003 (PDF p.3)",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "GitHub's dependents graph for johnh2o2/cuvarbase lists only ~3 unrelated repositories (terryyz/X-Repo2Run, alphavector/all, Lyn4ever29/pipy_server) and 0 packages — QLP's pipeline code is not a public GitHub dependent, so production use is documented only through the papers above.",
+          "evidence": "WebFetch of https://github.com/johnh2o2/cuvarbase/network/dependents",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "The local repo README already makes the QLP claim with the correct citation: /Users/johnhoffman/Documents/cuvarbase/README.md line 58 says 'NASA's TESS Quick-Look Pipeline has run cuvarbase's GPU BLS on every TESS sector since Sector 59' citing 2023RNAAS...7...28K — consistent with the verified sources (Sector 59 start per DRN 003; still in use per DRN 004, March 2026).",
+          "evidence": "/Users/johnhoffman/Documents/cuvarbase/README.md:40,58,68 (grep output); arXiv:2302.01293 abstract; arXiv:2603.22236",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        }
+      ]
+    },
+    "qlp-config": {
+      "summary": "TESS QLP transit-search OPERATING CONFIGURATION (for exact benchmark replication). Key finding: since Sector 59 (Dec 2022), QLP's production BLS IS cuvarbase (this repo) — QLP DRN 003 (Kunimoto et al. 2023, RNAAS 7, 28; arXiv:2302.01293) footnotes https://github.com/johnh2o2/cuvarbase directly.\n\n(1) CADENCE / POINTS PER LC: QLP light curves are extracted from FFIs at native FFI cadence: 30-min for Sectors 1-26 (Primary Mission), 10-min for Sectors 27-55 (Extended Mission 1), 200-s for Sectors 56+ (Extended Mission 2) [MAST QLP HLSP page; Kunimoto et al. 2022 RNAAS aca158: \"FFIs were sampled every 30 minutes during the TESS Prime Mission (2018 July-2020 July) and every 10 minutes during the first Extended Mission\"]. NO QLP source examined states any binning of light curves before the BLS search — this is explicitly NOT STATED (checked Huang 2020 I+II, Kunimoto 2021/2022 RNAAS, DRN 001/002/003, Guerrero 2021, MAST page). Points per light curve per 27.4-d sector are not stated anywhere; derived estimates (27.4 d minus ~2 downlink gaps): ~1,200-1,300 pts (30-min), ~3,800-3,950 pts (10-min), ~11,400-11,800 pts (200-s). Multi-sector searches concatenate these.\n\n(2) LIGHT CURVES SEARCHED PER SECTOR: extraction is magnitude-limited at T < 13.5 (\"QLP performs multi-aperture photometry to extract lightcurves for all targets with TESS magnitude T < 13.5 mag from TESS FFIs\" — Kunimoto et al. 2022 Faint Star Search, arXiv:2112.02176), giving \"~1 million stars each 27.4-day sector\" (Kunimoto et al. 2021, arXiv:2110.05542). DRN 003 says the search covers \"several hundreds of thousand stars... every 27.4-day sector\"; concrete per-CCD counts from the Sector 58 benchmark: Camera 1 CCD 4 = 77,567 stars, Camera 4 CCD 4 = 38,486 stars (16 CCDs per sector). Since Sector 41, faint M dwarfs (T < 15, Teff < 4000 K, R < 0.8 Rsun) were added. The full ~1M T<13.5 sample is searched, but human vetting/triage is limited to T < 10.5 (\"QLP heavily relies on manual inspection..., limiting vetting efforts to planet-hosting stars brighter than T = 10.5 mag\"); over the whole Primary Mission \"2,507,460 BLS signals passed QLP's detection criteria.\"\n\n(3) PERIOD & DURATION GRID — TWO ERAS. CPU era (Sectors 1-58, VARTOOLS BLS): \"The search is performed for periods ranging from 0.1 days to half the length of the longest baseline expected for the given target star. The number and spacing of frequencies searched by BLS is adapted to the total baseline..., similar to Vanderburg et al. (2016a)\" (Guerrero et al. 2021, ApJS 254, 39). DRN 003 retrospective: \"QLP searches an under-sampled frequency grid on the order of 80,000 frequencies or less\" and \"searches for periods up to only ~56 days despite many stars having hundreds of days of data in order to avoid increasing the number of frequencies needed to be searched.\" One fully-specified CPU-era instance (S42 K2-overlap, DRN 001, arXiv:2110.11959): \"uniform period grid from 0.1 - 28 days using 200,000 bins, and 500 bins in the phase folded grid. The minimum and maximum allowed transit duration to period ratios are 0.004 and 0.08.\" GPU era (Sector 59+, cuvarbase): Keplerian frequency/duration grid — \"only transit durations near the duration expected for a central, circular orbit at a given period and host star density are searched\", stellar density from TIC (solar if missing), \"durations between 0.5 and 2.0 times a circular orbit duration\"; cuvarbase inputs \"samples_per_peak = 2, dlogq = 0.1, and noverlap = 3\" (these map directly to cuvarbase transit_autofreq/eebls_transit args qmin_fac=0.5, qmax_fac=2.0, samples_per_peak, dlogq, noverlap in cuvarbase/bls.py:233-234,547-548). Period bounds: minimum period where semi-major axis = 3 stellar radii (S59-60) or 2 stellar radii (S61+); \"The maximum period is the length of the longest continuous stretch of data, or half this length if there are no gaps longer than one TESS sector.\" The GPU grid searches \"up to ~10 times more frequencies\" than the CPU grid (i.e., up to ~10x 80K ≈ 800K-1M frequencies for multi-sector stars; exact counts not stated).\n\n(4) MULTI-SECTOR: \"At the end of each sector, all available data for targets observed in that sector are stitched together, and a box-least squares (BLS) transit search... is run on these multi-sector lightcurves\" (Faint Star Search); \"After the completion of a sector, each target's lightcurves are merged with all previous data available to that target. These multi-sector lightcurves are the primary data products used... from the transit search to planet candidate report generation\" (Kunimoto 2021). Baselines reach \"hundreds of days\" (DRN 003); number of sectors combined varies per star (1 to ~13/yr near CVZ); no total-sector/baseline figure is stated.\n\n(5) HARDWARE/RUNTIME: GPU model, GPU count, and CPU model are NOT STATED in DRN 003 or anywhere found. Stated performance (DRN 003 Table 1, Sector 58 multi-sector light curves): GPU (cuvarbase) average runtime per star 1.9 s (Cam 1 CCD 4) / 4.2 s (Cam 4 CCD 4), recovering 392/468 TOIs; CPU (VARTOOLS) 77 s / 172 s per star, 380/468 TOIs. \"Despite searching up to ~10 times more frequencies, the GPU implementation was ~40 times faster.\" Sector-level: \"a significantly faster GPU-based transit search capable of searching an entire sector in only ~1 day.\"\n\n(6) DETECTION THRESHOLDS: Primary-mission/CPU era (Guerrero 2021): TCE if signal-to-pink-noise (Hartman & Bakos 2016) > 9 AND BLS peak significance > 9; Faint Star Search phrasing: \"at least 5 points in transit, a signal-to-pink noise ratio of at least 9, and a signal-to-noise ratio (S/N) of at least 5 (if T < 12 mag) or 9 (otherwise)\". DRN 003: \"With VARTOOLS, QLP used detection criteria of at least two transits, S/N_pink > 9, and S/N > 5 for stars brighter than T = 12 mag and S/N > 9 for fainter stars. We now require S/N > 9 for all stars because S/N values for transit-like signals tend to be higher in the GPU implementation due to the finer frequency grids.\" Their \"S/N\" is an SDE-like spectrum statistic: S/N(f) = (SR(f) − SR_trend(f))/σ_SR, where the trend is a median-binned (Sturge's-law bins) interpolation of the SR spectrum and σ_SR = 1.4826 × MAD — NOT classic Kovács SDE. Multi-planet search: clip/mask ±1 transit duration around detected signal and re-run, \"up to five times per light curve\" (false-alarms note, arXiv:2301.01900) / \"until no further significant peaks are found\" (Guerrero 2021). Stated compute limitations: the under-sampled ≤~80K-frequency grid and ~56-d period cap were explicitly compute-motivated; manual-vetting load (not compute) capped triage at T < 10.5.\n\nCITATIONS: Huang et al. 2020, RNAAS 4, 204 & 206 (arXiv:2011.06459); Kunimoto et al. 2021, RNAAS 5, 234 (arXiv:2110.05542); Kunimoto et al. 2022, RNAAS 6, 236 (DOI 10.3847/2515-5172/aca158); QLP DRN 001 (arXiv:2110.11959); DRN 002 (arXiv:2211.04387, detrending only); DRN 003 (arXiv:2302.01293, RNAAS 7, 28); Guerrero et al. 2021, ApJS 254, 39 (arXiv:2103.12538 §5.2); Kunimoto et al. 2022 Faint Star Search, ApJS (arXiv:2112.02176); Kunimoto et al. 2023 false-alarms note (arXiv:2301.01900); MAST QLP HLSP page https://archive.stsci.edu/hlsp/qlp.",
+      "facts": [
+        {
+          "claim": "Since TESS Sector 59, QLP's production transit search is GPU-based BLS implemented in cuvarbase (this repository), using PyCUDA.",
+          "evidence": "DRN 003 (Kunimoto et al. 2023, RNAAS 7, 28; arXiv:2302.01293), Sec 2.1: \"The GPU BLS implementation is provided in cuvarbase, which uses PyCUDA (Klockner et al. 2012) for fast time-series analysis\"; footnote 1 links https://github.com/johnh2o2/cuvarbase. Abstract: \"Starting in Sector 59, QLP has switched to a significantly faster GPU-based transit search capable of searching an entire sector in only ~1 day.\"",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "QLP light curve cadences: 30-min (Sectors 1-26), 10-min (Sectors 27-55), 200-s (Sectors 56+).",
+          "evidence": "MAST QLP HLSP page (https://archive.stsci.edu/hlsp/qlp): \"The second data release consists of 10-minute cadence light curves for 9.1 million stars... (Sectors 27-39). The third data release consists of 10-minute cadence light curves for 5.7 million stars... (Sectors 40-55). For the second Extended Mission starting in Sector 56 the cadence was improved again to 200 seconds.\" Huang et al. 2020 (arXiv:2011.06459): TESS \"downloads images from its entire field of view every 30 minutes\" (Primary Mission).",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "No QLP paper or data-release note states that light curves are binned before the BLS search; binning before BLS is NOT STATED (search appears to run on native-cadence stitched light curves).",
+          "evidence": "Checked verbatim: Huang et al. 2020 RNAAS Parts I & II (arXiv:2011.06459), Kunimoto et al. 2021 (arXiv:2110.05542), Kunimoto et al. 2022 (10.3847/2515-5172/aca158), QLP DRN 001 (arXiv:2110.11959), DRN 002 (arXiv:2211.04387), DRN 003 (arXiv:2302.01293), Guerrero et al. 2021 Sec 5.2 (arXiv:2103.12538), MAST QLP page. None mention pre-search binning; only binning mentions are for precision metrics (1-hr timescale) and plot displays.",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Points per light curve per 27.4-day sector: not stated in QLP papers; derived estimates are ~1,200-1,300 (30-min), ~3,800-3,950 (10-min), ~11,400-11,800 (200-s) accounting for ~1-2 days of downlink gaps.",
+          "evidence": "Derived from cadences above and the 27.4-day sector length quoted in DRN 003 abstract (\"observed by TESS every 27.4-day sector\"). No paper states cadence counts per light curve.",
+          "confidence": "likely",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "QLP extracts and searches all stars with TESS magnitude T < 13.5, roughly ~1 million light curves per sector (per-CCD: 77,567 stars on S58 Camera 1 CCD 4; 38,486 on Camera 4 CCD 4; 16 CCDs/sector).",
+          "evidence": "Kunimoto et al. 2022 Faint Star Search (arXiv:2112.02176) p.1: \"QLP performs multi-aperture photometry to extract lightcurves for all targets with TESS magnitude T < 13.5 mag from TESS FFIs.\" Kunimoto et al. 2021 (arXiv:2110.05542) abstract: \"~1 million stars each 27.4-day sector.\" DRN 003 Sec 3: \"Sector 58 Camera 1 CCD 4 (77567 stars) and Camera 4 CCD 4 (38486 stars).\"",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Vetting/triage (not the search) is limited to bright stars: nominal triage only for T < 10.5; over the Primary Mission 2,507,460 BLS signals passed QLP detection criteria.",
+          "evidence": "DRN 001 (arXiv:2110.11959) Sec 1.3: \"Nominal triage of QLP threshold crossing events is performed only for those around stars brighter than T = 10.5 mag in order to constrain the number of planet candidates needing manual review.\" Faint Star Search (arXiv:2112.02176): \"over the entire Primary Mission, we found that 2,507,460 BLS signals passed QLP's detection criteria.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "CPU-era (Sectors 1-58) period grid: 0.1 days to half the longest expected baseline, frequency spacing adapted to baseline (a la Vanderburg et al. 2016a), under-sampled at <=~80,000 frequencies, with periods capped at ~56 days for compute reasons.",
+          "evidence": "Guerrero et al. 2021 (ApJS 254, 39; arXiv:2103.12538) Sec 5.2.1: \"The search is performed for periods ranging from 0.1 days to half the length of the longest baseline expected for the given target star. The number and spacing of frequencies searched by BLS is adapted to the total baseline in the light curves, similar to Vanderburg et al. (2016a).\" DRN 003 Sec 1: \"QLP searches an under-sampled frequency grid on the order of 80,000 frequencies or less... QLP also searches for periods up to only ~56 days despite many stars having hundreds of days of data in order to avoid increasing the number of frequencies needed to be searched.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Fully-specified CPU-era example (Sector 42, K2-overlap full-baseline search): uniform period grid 0.1-28 days with 200,000 bins, 500 phase-fold bins, transit duration/period ratio q in [0.004, 0.08], BLS in VARTOOLS with per-campaign/per-orbit MAD weights.",
+          "evidence": "DRN 001 (arXiv:2110.11959) Sec 1.2 verbatim: \"For S42, we searched on a uniform period grid from 0.1 - 28 days using 200,000 bins, and 500 bins in the phase folded grid. The minimum and maximum allowed transit duration to period ratios are 0.004 and 0.08, respectively.\" (Note: this special K2-overlap search used the FULL baseline rather than the usual half-baseline max period.)",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "GPU-era (Sector 59+) grid: Keplerian duration assumption with stellar density from the TIC (solar if missing); durations searched 0.5-2.0x the circular-orbit duration; cuvarbase inputs samples_per_peak=2, dlogq=0.1, noverlap=3.",
+          "evidence": "DRN 003 Sec 2.1: \"cuvarbase further optimizes planet searches by using a Keplerian assumption, where only transit durations near the duration expected for a central, circular orbit at a given period and host star density are searched. We adopt stellar density from the TESS Input Catalog (Paegert et al. 2021), and assume a solar density if missing. We search for durations between 0.5 and 2.0 times a circular orbit duration to account for eccentric or grazing orbits.\" Footnote 2: \"We use the following other cuvarbase inputs: samples_per_peak = 2, dlogq = 0.1, and noverlap = 3.\" Parameter names match cuvarbase/bls.py:233-234 (transit_autofreq: samples_per_peak, qmin_fac, qmax_fac) and bls.py:547-548 (dlogq, noverlap).",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "GPU-era period bounds: minimum period = period where semi-major axis equals 3 stellar radii (Sectors 59-60) or 2 stellar radii (Sectors 61+); maximum period = length of longest continuous stretch of data, or half that length if there are no gaps longer than one TESS sector.",
+          "evidence": "DRN 003 Sec 2.1 verbatim: \"Determined for each star, the minimum orbital period searched is the period where the semi-major axis is three times (Sectors 59, 60) or two times (Sectors 61+) the stellar radius... The maximum period is the length of the longest continuous stretch of data, or half this length if there are no gaps longer than one TESS sector.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "GPU grid size: up to ~10x more frequencies than the CPU-era <=80K grid (implying up to roughly 800K-1M frequencies for multi-sector stars); exact frequency counts are NOT STATED.",
+          "evidence": "DRN 003 Sec 3: \"Despite searching up to ~10 times more frequencies, the GPU implementation was ~40 times faster.\" No absolute GPU-era frequency count is given in any source examined.",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Multi-sector search: at the end of each sector, all available sectors for each target are stitched and the BLS search re-runs on the full multi-sector light curve; baselines reach hundreds of days; number of sectors combined varies per star and no total is stated.",
+          "evidence": "Faint Star Search (arXiv:2112.02176) p.1: \"At the end of each sector, all available data for targets observed in that sector are stitched together, and a box-least squares (BLS) transit search... implemented in vartools... is run on these multi-sector lightcurves.\" Kunimoto et al. 2021 (arXiv:2110.05542) Sec 2: \"After the completion of a sector, each target's lightcurves are merged with all previous data available to that target. These multi-sector lightcurves are the primary data products used in the remainder of QLP processing, from the transit search to planet candidate report generation.\" DRN 003 Sec 1: \"many stars having hundreds of days of data.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Reported runtime (DRN 003 Table 1, Sector 58 multi-sector light curves): GPU/cuvarbase 1.9 s/star (Camera 1 CCD 4) and 4.2 s/star (Camera 4 CCD 4), 392/468 TOIs recovered; CPU/VARTOOLS 77 s/star and 172 s/star, 380/468 TOIs; GPU ~40x faster while searching up to ~10x more frequencies; whole sector searched in ~1 day.",
+          "evidence": "DRN 003 Table 1 (extracted from ar5iv HTML of arXiv:2302.01293): \"GPU-based (cuvarbase) 1.9 seconds 4.2 seconds 392/468; CPU-based (VARTOOLS) 77 seconds 172 seconds 380/468\"; abstract: \"capable of searching an entire sector in only ~1 day.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Hardware is NOT STATED: DRN 003 gives no GPU model, GPU count, CPU model, or core count; no other QLP source found states the hardware.",
+          "evidence": "DRN 003 full text (arXiv:2302.01293, 2 pages + table, read in full): only mentions \"Graphics processing units (GPUs)\" and PyCUDA generically. MAST QLP page and tess.mit.edu/qlp-2/ also contain no hardware details.",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Detection thresholds, CPU era: signal-to-pink-noise ratio (Hartman & Bakos 2016 / Pont et al. 2006) > 9 AND BLS peak significance (S/N) > 9 designates a TCE (Guerrero 2021); equivalently stated as at least two transits (or 'at least 5 points in transit' in the Faint Star Search), S/N_pink >= 9, and S/N >= 5 for T < 12 mag or >= 9 for fainter stars.",
+          "evidence": "Guerrero et al. 2021 Sec 5.2.1: \"Any signal with a signal-to-pink-noise ratio (SNR, as defined by Hartman & Bakos 2016) > 9 and BLS peak significance > 9 is designated as a TCE.\" Faint Star Search p.1: \"at least 5 points in transit, a signal-to-pink noise ratio of at least 9, and a signal-to-noise ratio (S/N) of at least 5 (if T < 12 mag) or 9 (otherwise).\" DRN 003: \"With VARTOOLS, QLP used detection criteria of at least two transits, S/N_pink > 9, and S/N > 5 for stars brighter than T = 12 mag and S/N > 9 for fainter stars.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Detection thresholds, GPU era (Sector 59+): S/N > 9 for ALL stars (plus S/N_pink > 9 and >= 2 transits); threshold was raised because the finer GPU frequency grid yields higher S/N for transit-like signals.",
+          "evidence": "DRN 003 Sec 2.2: \"We now require S/N > 9 for all stars because S/N values for transit-like signals tend to be higher in the GPU implementation due to the finer frequency grids.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "QLP's 'S/N' statistic is SDE-like but not classic Kovacs SDE: S/N(f) = (SR(f) - SR_trend(f)) / sigma_SR, where SR_trend is a median-binned (Sturge's law, N = 1 + 3.322 log n bins) interpolated trend of the BLS spectrum and sigma_SR = 1.4826 x MAD of SR; S/N_pink uses the trapezoid-fit integrated depth rather than the box depth.",
+          "evidence": "DRN 003 Sec 2.2 items 1 and 4: \"First, we median-bin the spectrum and interpolate over the binned spectrum to find the trend at each point, SR_trend(f), and remove this instead of SR-bar... we estimate sigma_SR as 1.4826 times the median absolute deviation of SR\"; footnote 3: \"Following Sturge's law, N = 1 + 3.322 log n\"; item 4: \"replacing delta with the integral over the full trapezoid model.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Multi-planet/iterative search: detected signals are masked (one full transit duration before and after each transit, plus the transit) and the search re-runs until no significant peaks remain (Guerrero 2021); in the related cuvarbase-based M-dwarf search this was capped at 5 iterations per light curve.",
+          "evidence": "Guerrero et al. 2021 Sec 5.2.1: \"the QLP clips out transits with the period of the strongest BLS peak, masking one full transit duration prior to and following each transit along with the transit. QLP re-runs the search until no further significant peaks are found.\" Kunimoto et al. 2023 false-alarms note (arXiv:2301.01900): \"data within one transit duration of the measured center of the transit time is masked out and the residuals were searched, up to five times per light curve.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Stated compute limitations: the CPU-era undersampled grid (<=~80K frequencies) and ~56-day period cap were explicitly imposed due to computational expense, which degraded short-period long-baseline sensitivity; growing baseline costs motivated the GPU switch.",
+          "evidence": "DRN 003 Sec 1 verbatim: \"Due to the high computational expense, QLP searches an under-sampled frequency grid on the order of 80,000 frequencies or less. Short-period, long-baseline signals are adversely affected as transit signals may not line up well, which hampers post-BLS analysis. QLP also searches for periods up to only ~56 days... Recognizing that searches will be more expensive as the TESS observing baseline increases, QLP now takes advantage of Graphics processing units (GPUs).\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Independent corroboration of cuvarbase operating config: Kunimoto et al. 2023 M-dwarf false-alarm search used cuvarbase BLS on 92,899 M dwarfs (T < 13.5) across Sectors 1-52, period range 0.5-100 days (or longest consecutive sector stretch if shorter), TCE = S/N > 9 with at least two events, after wotan biweight detrending (0.5-day window).",
+          "evidence": "arXiv:2301.01900 (RNAAS, ar5iv full text): \"a multi-planet search of the detrended light curves with the Box-Least Squares (BLS) algorithm implemented in cuvarbase... Each star was searched from 0.5 days to 100 days or the length of the longest consecutive stretch of TESS sectors comprising the light curve, whichever was shorter... We define Threshold Crossing Events (TCEs) as signals with S/N > 9 and at least two events.\"",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Per-sector searched-star counts in the extended missions: 12.2 million per-sector light curves for 5.7 million unique stars over Sectors 40-55 (~760K per sector); faint M dwarfs (T < 15, Teff < 4000 K, R < 0.8 Rsun) added from Sector 41.",
+          "evidence": "Kunimoto et al. 2022 (RNAAS, DOI 10.3847/2515-5172/aca158): \"12.2 million per-sector light curves for 5.7 million unique stars\" across Sectors 40-55; \"fainter M dwarfs (T < 15 mag, Teff < 4000 K, R < 0.8 Rsun)\" starting Sector 41.",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "QLP DRN 002 concerns only the detrending algorithm (quaternion-based systematics removal), not the transit search; as of Sector 94 QLP switched photometry to the TGLC methodology (DRN 004).",
+          "evidence": "arXiv:2211.04387 (DRN 002) abstract: detrending via quaternion data; MAST QLP page: \"As of Sector 94, QLP is now using the TESS-Gaia Light Curve (TGLC) methodology to produce light curves\"; DRN 004 arXiv:2603.22236.",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        }
+      ]
+    },
+    "tls-feasibility": {
+      "summary": "# TLS-at-QLP-Scale Feasibility Framework (pre-benchmark)\n\n## 1. Kernel cost model (from repo, read-only)\n\nSource files: /Users/johnhoffman/Documents/cuvarbase/cuvarbase/tls.py, /Users/johnhoffman/Documents/cuvarbase/cuvarbase/kernels/tls.cu, /Users/johnhoffman/Documents/cuvarbase/cuvarbase/tls_grids.py\n\nStructure: one CUDA block per trial period (grid=(nperiods,1,1), block=(128,1,1) for ndata>64; tls.py:587-588, _choose_block_size). Per period the kernel loops over n_durations=15 log-spaced durations; per duration it computes n_t0 = clip(ceil(3/q), 30, 20000) trial epochs (tls.cu:47-52, T0_OVERSAMPLE=3, MIN 30, MAX 20000; mirrored in tls_grids.py:407-436), strided across the 128 threads. Each (duration, t0) trial costs ONE full O(ndata) pass for the weighted-LS depth (calculate_optimal_depth, tls.cu:95-130) plus a SECOND full O(ndata) pass for chi2 only when depth lands in (0, 0.5) (tls.cu:136-166, 245-262). So per-LC work = sum over (periods x durations) of n_t0 x (1..2) x ndata point-visits. Data, template (n_template=1000 default), and 4 per-thread reduction arrays live in shared memory: shared bytes = (3*ndata + n_template + 4*block_size)*4, hard-capped at 48 KB (tls.py:49, 544-555) => max ndata = 3,592 points at defaults (\"~3,500\" in the module's own warning and ValueError text).\n\nn_t0 for typical TESS q values (Keplerian q for solar R/M, R_p=1 R_earth; Keplerian kernel scans q in [0.5q_kep, 2q_kep]):\n- P=0.5 d: q=0.121 -> n_t0=30 (floor); 50 at qmin\n- P=1 d: q=0.076 -> 40; 79 at qmin\n- P=2 d: q=0.048 -> 63; 125\n- P=4 d: q=0.030 -> 100; 199\n- P=8 d: q=0.019 -> 158; 315\n- P=13.7 d: q=0.013 -> 226; 451\n- P=16 d: q=0.012 -> 250; 500\nStandard (non-Keplerian) kernel uses fixed q in [0.005, 0.15] (tls.cu:387-388): n_t0 runs 600 down to 30; sum over the 15 durations = 2,730 t0 trials per period. The 20,000 cap is NEVER reached in a single-sector search (needs q < 1.5e-4; 0 of 37,500 trials hit it) — it only binds for multi-sector/long-period grids.\n\nSingle-sector survey grid (Ofir 2014 grid, tls_grids.py:103-210; T_span=27.4 d, oversampling=3, n_transits_min=2, solar host): n_periods = 2,500, spanning 0.602-13.70 d. IMPORTANT: a requested range of \"0.5-16 d\" collapses to this — period_min/period_max only FILTER the auto-generated grid (tls_grids.py:190-197); P_min=0.60 d is the Roche limit and P_max=13.7 d is T_span/2 from n_transits_min=2. The benchmark spec should say \"Ofir grid, 0.6-13.7 d, 2500 periods\" or override the grid explicitly.\n\nTotal per-LC work at ndata=1300, Keplerian mode: Sum n_t0 = 3.31e6 (duration,t0) trials (mean n_t0=88 per period-duration pair) => 4.3e9 point-visits for the depth pass, <=8.6e9 including chi2 passes; at ~5-10 flops/visit, ~22-86 GFLOP fp32 per LC. PROJECTION (not a measurement): order 10-100 ms kernel time per LC on an RTX A5000 (27.8 TFLOPS fp32 peak, realistically 1-5 TFLOPS sustained for this branchy shared-memory kernel; thread utilization drops where n_t0 < 128, i.e. all short-period/long-duration trials).\n\nFidelity caveat that dominates the cost model: cuvarbase's t0 stride is duration/3 (T0_OVERSAMPLE=3 => Delta_t0 ~ 0.33 transit durations). The reference transitleastsquares default is Delta_t0 = 0.01 durations, and Hippke & Heller report Delta_t0 = 0.1 already costs \"a few percent\" detection efficiency. Matching reference fidelity multiplies n_t0 (and hence kernel time) by ~33x => projected ~0.3-3 s/LC. Cost is linear in T0_OVERSAMPLE; this is the single biggest open knob and must be benchmarked jointly with detection efficiency.\n\nAlso note tls.py:19-28 module-level warning (verbatim): \"cuvarbase.tls is EXPERIMENTAL and not recommended for science use in this release... the rework has not yet been validated against the reference transitleastsquares package. Light curves with more than ~3,500 points exceed the kernel's shared-memory budget (a ValueError is raised).\" Validation against reference TLS is a prerequisite to any survey claim.\n\n## 2. TESS FFI points-per-sector vs the 3,592-point cap\n\n27.4 d sector (minus ~1 d downlink gap), per cadence (HEASARC TESS mission docs: 30-min FFIs in primary mission, 10-min from Sector 27 (EM1), 200-s from Sector 56 (EM2)):\n- 30 min: 27.4x48 ~ 1,315 frames -> ~1,200-1,300 usable points. FITS (shared mem 21.1 KB of 48 KB).\n- 10 min: 27.4x144 ~ 3,945 -> ~3,700-3,900 points. EXCEEDS the 3,592 cap (51.6 KB needed) -> does not fit; requires >=2x binning.\n- 200 s: 27.4x432 ~ 11,837 -> ~11,000-11,800 points. EXCEEDS the cap (144 KB needed) -> requires >=4x binning (or bin straight to 30 min -> ~1,300 pts).\nSo current-era TESS FFI cadences (10-min, 200-s) cannot be searched unbinned by this kernel; binning to 30-min — consistent with Hippke & Heller benchmarking TLS at 30-min cadence and with FFI-search practice — is the assumed preprocessing, giving the canonical benchmark point ndata=1300. Multi-sector stitched LCs (e.g. 4 sectors at 30-min = ~5,260 pts) also exceed the cap and would need ~1-h binning or per-segment searches.\n\n## 3. Literature anchors (CPU TLS cost and TLS-on-TESS searches)\n\nReference CPU transitleastsquares (Hippke & Heller 2019, A&A 623, A39, arXiv:1901.02015):\n- Abstract, verbatim: \"A typical K2 light curve, including 80 d of observations at a cadence of 30 min, can be searched with TLS in ~10 s real time on a standard laptop computer, as fast as the widely used box least squares (BLS) algorithm.\" (4,000 points, ~8,500 trial periods.)\n- Appendix A, Table A.1 (Kepler K1 LC = 4.25 yr at 30 min = 60,000 points, Delta_t0=0): run times in MINUTES: delta_cut=10 ppm: 30 (+-0.1rho prior) / 50 (+-0.2rho) / 400 (no prior); 50 ppm: 20/40/300; 100 ppm: 7/10/30. \"For reference: Astropy BLS run time: 13 min.\"\n- Table A.2 (delta_cut=10 ppm): Delta_t0=0: 30/50/400 min; Delta_t0=0.01: 7/9/40; Delta_t0=0.1: 7/7/7. Verbatim: \"Empirically, we find that setting Delta_t0 = 0.01 (instead of zero) allows for virtually identical SDE values in Kepler K1 and K2 data, while Delta_t0 = 0.1 results in a detection efficiency loss of a few percent and should be used only for high S/N transits.\"\n- Hardware: Intel Core i7-7700K; \"Our TLS implementation leverages all available CPU cores.\" TLS docs FAQ: inner loop achieves 12.2 GFLOPs on one core of an i5-6300U (72% of peak); ~3e8 light-curve evaluations per K2 search; \"a pure C or Fortran implementation\" would gain \"certainly not more than of order 10%\" — i.e. the CPU code is already near hardware limits, so further CPU speedup must come from hardware count, not software.\n- TESS-scale gloss (Rao et al. 2021 \"Nigraha\", MNRAS, arXiv:2101.09227, verbatim): \"Hippke & Heller (2019) point out that TLS is able to detect shallow transits at an acceptable computational cost (i.e., approximately 10 seconds per TESS lightcurve when run on an 8-core Intel i9 laptop).\"\n\nTLS-on-TESS searches (the \"Dietrich, Heller\" reference resolves to two threads):\n- Heller et al. \"Transit least-squares survey\" papers I-IV (arXiv:1904.00651, 1905.09038, 2020 A&A 638 A10, arXiv:2206.02071) ran TLS on K2/Kepler/PLATO-sims — none at TESS FFI scale.\n- Dietrich et al. (EDEN): Gibbs et al. 2020 (AJ 159, 169, arXiv:2002.10017) and Dietrich et al. 2023 (arXiv:2302.04138) use TLS-based pipelines for nearby late-M-dwarf surveys — ground-based photometry, sample sizes of order 10^2 targets.\n- Gillis, Cloutier & Pass 2026 (arXiv:2602.23364, AJ): TLS on 8,134 mid-to-late M dwarfs, 2-min cadence, sectors 1-86; verbatim: \"the computational expense of a transit search scales exponentially with baseline duration, making transit searches of targets with many consecutive sectors of observation prohibitively expensive\", mitigated by \"concatenating sectors of consecutive observations as a series of light curves, up to a maximum of four consecutive sectors (~112 days)\". Period range 0.2-30 d.\n- Tschudi 2026 (arXiv:2603.10247): TLS multisector search of just 121 TESS M dwarfs took \"~800 CPU-hours total\" (Apple M-series + Xeon) — ~6.6 CPU-h per target.\n- KEY GAP: no published TLS search exceeds ~10^4 light curves; nothing at FFI/QLP scale (~10^6 LC/sector). At the canonical ~10 s/LC, one sector's 1M QLP light curves = ~2,800 laptop-hours (>2e4 core-hours) PER SECTOR — that is why it has not been done.\n\nQLP scale + the GPU-BLS precedent (decisive anchor): QLP extracts light curves for all stars T<13.5 — \"~1 million stars each 27.4 days sector\" (MIT QLP page; 9.1M unique stars over Sectors 27-39, Kunimoto et al. 2021 RNAAS 5, 234). QLP Data Release Notes 003 (Kunimoto et al. 2023, arXiv:2302.01293) verbatim: \"Starting in Sector 59, QLP has switched to a significantly faster GPU-based transit search capable of searching an entire sector in only ~1 day\"; \"The GPU BLS implementation is provided in cuvarbase, which uses PyCUDA\" (footnote: github.com/johnh2o2/cuvarbase — THIS repo). Table 1 (multi-sector LCs, Sector 58): cuvarbase GPU 1.9 s/star (Cam 1 CCD 4, 77,567 stars) and 4.2 s/star (Cam 4 CCD 4, 38,486 stars) vs VARTOOLS CPU 77 s / 172 s; \"Despite searching up to ~10 times more frequencies, the GPU implementation was ~40 times faster\"; TOIs recovered 392/468 vs 380/468. So the operational pipeline already runs this repo's GPU BLS at sector scale — GPU TLS is feasible iff its per-LC cost lands within roughly an order of magnitude of GPU BLS.\n\n## 4. Feasibility equation\n\nsurvey_hours = N_lc x t_TLS_per_lc / 3600 / N_gpus\n\n  (survey_cost_$ = survey_hours x $/GPU-hr; A5000 spot ~ $0.27/hr)\n\nMEASURED in the benchmark (the unknowns):\n1. t_TLS_per_lc — end-to-end AND kernel-only, at ndata=1300, Keplerian mode, n_durations=15, Ofir grid oversampling=3 (=> 2,500 periods, 0.60-13.7 d; note the nominal \"0.5-16 d\" request truncates to this), on RTX A5000, with TLSMemory/kernel reuse across LCs (compilation ~150 ms and allocation must be amortized, as established for LS/BLS benchmarks).\n2. t_TLS_per_lc vs T0_OVERSAMPLE in {3, 10, 33} — cost model predicts linear scaling; pairs with an injection-recovery check of detection efficiency vs the reference package (the Delta_t0 fidelity question).\n3. t_TLS_per_lc vs ndata (1300 -> 3500) and vs n_periods — model predicts linear in each.\n4. Reference transitleastsquares wall time on the identical LC + grid (same machine class) — grounds the GPU/CPU ratio instead of relying on the literature's ~10 s.\n5. Sustained throughput (LCs/hour) over a batch of >=100 LCs with streams — captures per-LC Python/stats/transfer overhead that a single-LC timing hides.\n\nASSUMED (stated, not measured):\n- N_lc = 1e6 per sector (QLP T<13.5 FFI scale; MIT QLP / Kunimoto et al. 2021).\n- Binning to 30-min cadence => ndata ~ 1300 (REQUIRED for 10-min and 200-s FFI cadences, which exceed the 3,592-point shared-memory cap; consistent with H&H benchmarking at 30-min).\n- Solar-type host for the q/Ofir grids (per-target stellar density shifts n_periods and n_t0 by tens of percent, not orders of magnitude).\n- n_durations=15, T0_OVERSAMPLE=3 defaults; single-sector searches only.\n- GPU price $0.27/hr (RunPod A5000, June 2026).\n\nDERIVED from repo source (this analysis, deterministic given assumptions): n_periods=2500; Sum n_t0 = 3.31e6 t0-trials/LC; 4.3-8.6e9 point-visits ~ 22-86 GFLOP/LC; shared mem 21.1 KB at ndata=1300; max ndata 3,592.\n\nPROJECTED (to be replaced by measurement): t_TLS_per_lc ~ 0.01-0.1 s at default fidelity, ~0.3-3 s at reference-matched t0 fidelity. Plugging into the equation at N_lc=1e6, N_gpus=1: 0.03 s -> 8.3 GPU-h/sector (~$2.3); 0.1 s -> 28 GPU-h; 1 s -> 278 GPU-h (~11.6 GPU-days, i.e. 1 sector/day on 12 GPUs, ~$75/sector); 4.2 s (parity with QLP's worst-case multi-sector GPU BLS) -> 1,167 GPU-h. CPU comparison at 10 s/LC: ~2,800 machine-hours/sector. Feasibility verdict hinges almost entirely on where measured t_TLS lands between 0.03 and 3 s — i.e. on the T0_OVERSAMPLE fidelity requirement — which is exactly what the benchmark must resolve.",
+      "facts": [
+        {
+          "claim": "The cuvarbase TLS kernel assigns one CUDA block (128 threads for ndata>64) per trial period; per period it loops over n_durations=15 durations, and per duration over n_t0 trial epochs strided across threads.",
+          "evidence": "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/tls.py:587-588 (grid=(nperiods,1,1), block=(block_size,1,1)), tls.py:80-104 (_choose_block_size), kernels/tls.cu:236-263 (duration/t0 loops, n_durations param), tls.cu:390 (n_durations=15 in standard kernel)",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "n_t0 per (period,duration) = clip(ceil(3/q), 30, 20000) where q is the fractional transit duration; each (duration,t0) trial costs one full O(ndata) pass for depth plus a second O(ndata) pass for chi2 when depth is in (0,0.5).",
+          "evidence": "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/kernels/tls.cu:37-52 (T0_OVERSAMPLE=3, MIN_N_T0=30, MAX_N_T0=20000), tls.cu:95-130 and 136-166 (both device functions loop i=0..ndata-1), tls.cu:245-262 (chi2 conditional on depth>0 && depth<0.5); Python mirror tls_grids.py:407-436",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Shared memory per block = (3*ndata + n_template + 4*block_size)*4 bytes against a 48 KB cap, giving max ndata = 3,592 points at defaults (n_template=1000, block_size=128); tls.py raises ValueError above it and its warning quotes '~3,500 points'.",
+          "evidence": "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/tls.py:49 (_SHARED_MEM_LIMIT = 48*1024), tls.py:544-555 (formula + ValueError), tls.py:19-28 (EXPERIMENTAL warning); computed: (49152/4 - 1000 - 512)/3 = 3592",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "n_t0 for typical TESS Keplerian q values (solar host, R_p=1 R_earth): P=0.5d q=0.121 n_t0=30; P=1d q=0.076 n_t0=40; P=4d q=0.030 n_t0=100; P=8d q=0.019 n_t0=158; P=13.7d q=0.013 n_t0=226; P=16d q=0.012 n_t0=250 (roughly doubled at the Keplerian-mode qmin=0.5*q edge). The 20,000 cap is never hit in a single-sector search (0 of 37,500 trials; needs q<1.5e-4).",
+          "evidence": "Computed by executing tls_grids.q_transit and tls_grids.t0_grid_size from /Users/johnhoffman/Documents/cuvarbase/cuvarbase/tls_grids.py in this session",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "The Ofir-grid single-sector survey at T_span=27.4 d, oversampling=3, solar host yields 2,500 trial periods spanning 0.602-13.70 d; a requested 0.5-16 d range collapses to this because period_min/period_max only filter the auto-generated grid (P_min=Roche limit, P_max=T_span/2 from n_transits_min=2).",
+          "evidence": "Computed by executing tls_grids.period_grid_ofir from /Users/johnhoffman/Documents/cuvarbase/cuvarbase/tls_grids.py; filtering behavior at tls_grids.py:190-197, f_min from n_transits_min at line 156",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Total per-LC kernel work at ndata=1300, Keplerian mode, 2500 periods: Sum n_t0 = 3.31e6 (duration,t0) trials (mean n_t0=88), i.e. 4.3e9 point-visits for depth passes and up to 8.6e9 including chi2 passes (~22-86 GFLOP fp32).",
+          "evidence": "Computed in this session from tls_grids.py functions: sum over 2500 periods x 15 log-spaced durations in [0.5q, 2q] of t0_grid_size(q) = 3,312,972; x1300 = 4.307e9",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Projected GPU kernel time is order 10-100 ms/LC on an RTX A5000 at default t0 fidelity, rising ~linearly with T0_OVERSAMPLE (~0.3-3 s at reference-matched Delta_t0=0.01); this is a projection, not a measurement, and is the primary quantity the benchmark must measure.",
+          "evidence": "Derived: 22-86 GFLOP/LC against 1-5 TFLOPS sustained (A5000 fp32 peak 27.8 TFLOPS, derated for branch divergence and n_t0<128 thread idling); cost linear in n_t0 per tls.cu:47-52",
+          "confidence": "uncertain",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "cuvarbase's t0 stride is duration/3 (Delta_t0 ~ 0.33 transit durations), ~33x coarser than the reference TLS default Delta_t0=0.01; Hippke & Heller report Delta_t0=0.1 already loses a few percent detection efficiency, so default-fidelity GPU timings may understate the cost of a reference-equivalent search by ~33x.",
+          "evidence": "tls.cu:37-39 (T0_OVERSAMPLE 3.0f); Hippke & Heller 2019 (arXiv:1901.02015) p.13, verbatim: 'Empirically, we find that setting Delta_t0 = 0.01 (instead of zero) allows for virtually identical SDE values in Kepler K1 and K2 data, while Delta_t0 = 0.1 results in a detection efficiency loss of a few percent'",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "TESS FFI points per 27.4-d sector: ~1,300 at 30-min (primary mission), ~3,900 at 10-min (Sector 27+, EM1), ~11,800 at 200-s (Sector 56+, EM2). The 10-min and 200-s cadences EXCEED the kernel's 3,592-point cap (51.6 KB and 144 KB shared memory needed vs 48 KB) and must be binned; 30-min binning brings any of them to ~1,300 points (21.1 KB, fits).",
+          "evidence": "Arithmetic: 27.4x48=1315, 27.4x144=3946, 27.4x432=11837; shared-mem formula tls.py:545; cadence history per HEASARC TESS docs (https://heasarc.gsfc.nasa.gov/docs/tess/) confirmed via web search: 30-min primary, 10-min from EM1, 200-s from Sector 56",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Reference CPU transitleastsquares searches a typical K2 light curve (80 d, 30-min cadence, ~4000 points) in ~10 s on a laptop, per the paper abstract: 'A typical K2 light curve, including 80 d of observations at a cadence of 30 min, can be searched with TLS in ~10 s real time on a standard laptop computer, as fast as the widely used box least squares (BLS) algorithm.'",
+          "evidence": "Hippke & Heller 2019, A&A 623, A39 (https://arxiv.org/abs/1901.02015), abstract, read verbatim from PDF page 1",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Hippke & Heller 2019 Table A.1 (Kepler K1 LC, 4.25 yr at 30 min = 60,000 points, i7-7700K): TLS run times 7-400 MINUTES depending on depth threshold and density prior (delta_cut=10ppm: 30/50/400 min for +-0.1rho/+-0.2rho/no prior; 100ppm: 7/10/30 min); 'For reference: Astropy BLS run time: 13 min'. Table A.2: Delta_t0=0.01 cuts the 10ppm prior case to 7-9 min.",
+          "evidence": "Hippke & Heller 2019 (arXiv:1901.02015) Appendix A, Tables A.1 and A.2, read verbatim from PDF page 13; '10 min per Kepler LC class' matches the 7-50 min with-priors entries",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "The reference TLS CPU code is already near hardware limits: inner loop hits 12.2 GFLOPs on one core (72% of an i5-6300U's peak), ~3e8 evaluations per K2 search across ~8,500 trial periods, and 'a pure C or Fortran implementation' would gain 'certainly not more than of order 10%' — so CPU-side speedup at survey scale requires more cores, not better code, strengthening the GPU case.",
+          "evidence": "TLS documentation FAQ, https://transitleastsquares.readthedocs.io/en/latest/FAQ.html (fetched this session)",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "A TESS-scale per-LC TLS cost of ~10 s is the figure cited in the literature: 'Hippke & Heller (2019) point out that TLS is able to detect shallow transits at an acceptable computational cost (i.e., approximately 10 seconds per TESS lightcurve when run on an 8-core Intel i9 laptop).'",
+          "evidence": "Rao, Mahabal et al. 2021, 'Nigraha' (MNRAS, arXiv:2101.09227), extracted verbatim from PDF via pdftotext (lines 215-218 of extracted text)",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "No published TLS search approaches QLP/FFI scale (~1e6 LCs/sector). Largest found: Gillis, Cloutier & Pass 2026 ran TLS on 8,134 TESS mid-to-late M dwarfs (2-min cadence, sectors 1-86), and explicitly capped searches at four consecutive sectors because 'the computational expense of a transit search scales exponentially with baseline duration, making transit searches of targets with many consecutive sectors of observation prohibitively expensive.'",
+          "evidence": "Gillis, Cloutier & Pass 2026, AJ (arXiv:2602.23364, https://arxiv.org/html/2602.23364v1), Methods section, quoted verbatim via WebFetch",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "A 2026 TLS multisector search of just 121 TESS M3-M6 dwarfs consumed ~800 CPU-hours ('Transit searches ran on Apple M-series and Intel Xeon CPUs (~800 CPU-hours total)'), i.e. ~6.6 CPU-h per multisector target — extrapolating to 1e6 FFI targets is plainly infeasible on CPU.",
+          "evidence": "Tschudi 2026, arXiv:2603.10247 (https://arxiv.org/html/2603.10247), quoted via WebFetch",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "The 'Dietrich' TLS searches are the EDEN survey papers (TLS-based pipelines for nearby late-M dwarfs, order 10^2 targets, ground-based photometry), not TESS-FFI scale: Gibbs et al. 2020 (AJ 159, 169) and Dietrich et al. 2023; Heller et al.'s 'Transit least-squares survey' papers I-IV ran TLS on K2/Kepler/PLATO-simulated data, not TESS FFIs.",
+          "evidence": "arXiv:2002.10017 and arXiv:2302.04138 (EDEN, TLS-based per search results); TLS survey series arXiv:1904.00651 (I, K2), arXiv:1905.09038 (II, K2), A&A 638 A10 (III, Kepler), arXiv:2206.02071 (IV, PLATO)",
+          "confidence": "likely",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "QLP produces light curves for ~1 million stars (T<13.5) per 27.4-d sector — 9.1M unique stars over Sectors 27-39 alone — establishing N_lc ~ 1e6/sector as the QLP-scale assumption.",
+          "evidence": "MIT QLP page https://tess.mit.edu/qlp/ ('lightcurves for ~1 million stars each 27.4 days sector'); Kunimoto et al. 2021, RNAAS 5, 234 (arXiv:2110.05542)",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "QLP already runs THIS repo's GPU BLS in production: 'Starting in Sector 59, QLP has switched to a significantly faster GPU-based transit search capable of searching an entire sector in only ~1 day'; 'The GPU BLS implementation is provided in cuvarbase, which uses PyCUDA' (footnote: github.com/johnh2o2/cuvarbase). Table 1: cuvarbase GPU 1.9 s/star (77,567 stars, Cam 1 CCD 4) and 4.2 s/star (38,486 stars, Cam 4 CCD 4) on multi-sector LCs vs VARTOOLS CPU 77/172 s; '~40 times faster' despite '~10 times more frequencies'; TOIs recovered 392/468 vs 380/468.",
+          "evidence": "Kunimoto, Tey, Fong, Hesse, Petitpas & Shporer 2023, 'QLP Data Release Notes 003: GPU-based Transit Search' (arXiv:2302.01293), abstract, Sections 1-3 and Table 1, read verbatim from PDF pages 1-3",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Feasibility equation: survey_hours = N_lc x t_TLS_per_lc / 3600 / N_gpus. At N_lc=1e6 and one A5000: t=0.03 s -> 8.3 GPU-h/sector; t=0.1 s -> 28 GPU-h; t=1 s -> 278 GPU-h (1 sector/day on ~12 GPUs); CPU reference at 10 s/LC -> ~2,800 machine-hours/sector. The verdict hinges on measured t_TLS, principally via the T0_OVERSAMPLE fidelity requirement (33x cost range).",
+          "evidence": "Arithmetic on the equation; anchors: Nigraha/H&H ~10 s CPU per TESS LC, QLP GPU-BLS 1.9-4.2 s/star and ~1 day/sector (arXiv:2302.01293)",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "MEASURED vs ASSUMED split: to measure on GPU — t_TLS_per_lc (kernel-only and end-to-end with memory/kernel reuse) at ndata=1300, Keplerian mode, n_durations=15, 2500-period Ofir grid; its scaling vs T0_OVERSAMPLE {3,10,33}, vs ndata (to 3500), vs n_periods; sustained batch throughput; and reference transitleastsquares wall time on the identical LC. Assumed — N_lc=1e6/sector, 30-min binning (ndata~1300), solar host grids, defaults n_durations=15/T0_OVERSAMPLE=3, single-sector LCs, A5000 at ~$0.27/hr. Derived deterministically from repo source — n_periods=2500, Sum n_t0=3.31e6, 4.3-8.6e9 point-visits, max ndata 3,592.",
+          "evidence": "Repo: tls.py, tls.cu, tls_grids.py as cited above; computations executed this session; GPU price from project memory (RunPod A5000, June 2026)",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Prerequisite caveat: cuvarbase.tls is self-declared experimental and unvalidated — 'cuvarbase.tls is EXPERIMENTAL and not recommended for science use in this release... the rework has not yet been validated against the reference transitleastsquares package' — so the benchmark must pair timing with injection-recovery validation before any survey feasibility claim.",
+          "evidence": "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/tls.py:19-28 (module-level UserWarning, quoted verbatim)",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        }
+      ]
+    },
+    "science-implications": {
+      "summary": "Literature research for the science-translation section: what 100-300x cheaper GPU BLS + newly-feasible GPU TLS buys scientifically, with citations and the exact quantitative statements we can responsibly make.\n\n(1) TLS vs BLS sensitivity — Hippke & Heller 2019, A&A 623, A39 (arXiv:1901.02015). The headline numbers: in their transit injection-retrieval experiment (Earth-sized planets, Sun-like stars, 110 ppm white noise per 30-min cadence, K2-like 80 d baselines), at a matched SDE=7 threshold giving 1% false-positive rate for BOTH algorithms, TLS recovers 93.1% of injected signals vs 75.7% for BLS — i.e., +17 percentage points, or ~23% more small planets recovered in relative terms. The authors' own summary claim (TLS README + paper) is \"~10% higher detection efficiency (and similar false alarm rates) compared to BLS.\" Also: SDE>=9 yields FPR < 1e-4 for TLS (adopted by the TLS survey papers, e.g., Heller et al. 2019, A&A 627, A66). RESPONSIBLE FRAMING: the sensitivity gain is algorithmic and per-light-curve, NOT a compute effect; the compute translation is that TLS's higher per-search cost (the paper itself notes the realistic-template approach's \"increase in the detection significance ... by 5-10% comes at the toll of larger computational demands\") is what kept it from survey-scale deployment — a GPU TLS converts the documented +17 pp gain from \"feasible on one K2 light curve in ~10 s on a laptop\" to feasible across millions of light curves. The 93%/76% numbers are specific to that injection setup (Earth-size around Sun-like, white noise); do not generalize to all planet sizes. Classification: INDIRECT but quantified (gain is algorithmic; compute makes it deployable at scale).\n\n(2) Denser period grids — Ofir 2014, A&A 561, A138 (arXiv:1307.7330), \"Optimizing the search for transiting planets in long time series.\" Key verbatim results: \"the optimal frequency sampling is found to be cubic and not linear\" (df proportional to f^(2/3), coefficient set by stellar density, baseline, and an oversampling parameter); with a uniform grid \"one is either rather insensitive to long-period planets, or less sensitive to short-period planets — and computationally slower by a significant factor of ~330 (for a 3 yr long dataset).\" RESPONSIBLE FRAMING: Ofir quantifies the grid-density REQUIREMENT and the compute penalty of meeting it with a uniform grid (~330x for 3 yr); he does not publish a single \"% detection-efficiency loss from undersampling\" number — the loss mechanism is period-grid spacing exceeding the periodogram peak width, smearing the folded transit and depressing SDE. cuvarbase already implements the Ofir-style physical (Keplerian-density) grid (freq_grid/eebls_transit_gpu in cuvarbase/bls.py; our own benchmarks show 13.8-37.2x frequency reduction vs uniform). Classification: DIRECT — grid density and oversampling (samples_per_peak) are compute-bound knobs today; 100-300x cheaper BLS means full Ofir-optimal grids with generous oversampling on long-baseline data (where uniform-grid costs explode as baseline^? via the ~330x-type penalty) stop being the binding constraint.\n\n(3) Eccentric orbits via widened duration windows — Barnes 2007 (PASP 119, 986), Burke 2008 (ApJ 679, 1566 — note: the task said 'Burke et al. 2006' but the duration/eccentricity detection paper is Burke 2008, arXiv:0801.2579), Kipping 2010 (MNRAS 407, 301). Physics: an eccentric orbit at the same period has transit duration scaled by sqrt(1-e^2)/(1+e*cos(phi_transit)) relative to circular (Barnes 2007); over all transit orientations this spans sqrt((1-e)/(1+e)) to sqrt((1+e)/(1-e)). DERIVED coverage statement (label as derived, citing Barnes 2007/Kipping 2010 for the underlying relation): a duration window of [1/f, f] times the circular-Keplerian duration covers every periastron angle up to e = (f^2-1)/(f^2+1); cuvarbase defaults qmin_fac=0.5, qmax_fac=2.0 (f=2) cover e <= 0.6; f=3 covers e <= 0.8. Population numbers: for the known-exoplanet eccentricity distribution at P > 10 d, mean transit duration is ~0.88x the circular value and transit probability ~1.25x higher (Barnes 2007); only ~10-20% of eccentric-orbit durations are LONGER than circular for e ~ 0.1-0.8 (Burke 2008) — so widening qmin (shorter durations) matters more than qmax. Yield: Burke 2008 finds the two eccentricity effects nearly cancel for Poisson-noise surveys (~4% net yield increase vs circular assumption) but ~25% higher yield when correlated noise dominates. COMPUTE-COST claim is verified in our own code, not literature: eebls_gpu_custom cost is exactly linear in the number of trial durations (cuvarbase/bls.py:1062, nbtot = len(q_values)*len(phi_values)*freq_batch_size); for eebls_gpu/eebls_gpu_fast the per-frequency work is dominated by the finest binning nbinsf = 1/qmin (bls.py:499-500, count_tot_nbins geometric sum), so halving qmin_fac ~doubles compute (linear in 1/qmin_fac), while raising qmax_fac adds only coarser, cheaper bin levels plus a lower fmax. RESPONSIBLE FRAMING: do NOT claim a specific \"% more eccentric planets found\" — no literature number exists for the yield gain from widening the BLS duration window specifically; the defensible statement is \"an f=2 duration window covers all transit geometries to e=0.6 at ~2x (worst case) the compute of the circular-only search; cheap compute removes the incentive to clamp q-ranges.\" Classification: DIRECT for the cost scaling (verified in code); LIKELY/derived for the eccentricity-coverage mapping; INDIRECT for any yield claim.\n\n(4) Lower thresholds, FAP, and trials — Jenkins, Caldwell & Borucki 2002 (ApJ 564, 495) + Christiansen et al. injection-recovery program (KSCI-19110-001, 2017; Christiansen et al. 2015/2020). Kepler's 7.1-sigma threshold derives from the trials calculus: ~1.7e7 effective independent statistical tests per star times ~1e5 stars requires a per-test FAP of ~1/1.7e12 to expect <=1 mission-long false alarm — i.e., MORE search (denser grids, wider duration ranges, longer period ranges) RAISES the required threshold at fixed FAP; compute alone does not lower thresholds. What compute actually buys: replacing analytic (Gaussian-assumption) thresholds with empirically calibrated ones — the analytic 7.1-sigma assumes idealized noise, and the field's gold standard became pixel-level transit injection on every target with full pipeline re-runs (Christiansen 2017 DR25 injection; Hippke & Heller 2019 likewise set their SDE thresholds, SDE=7 -> FPR 1%, SDE>=9 -> FPR<1e-4, by injection experiment rather than analytics). Injection-recovery cost = N_injections x (cost of one full search), so a 100-300x cheaper search makes 1e4-1e5-injection completeness calibration (Kepler-style, previously a NASA-pipeline-scale undertaking) routine per survey/per pipeline-configuration, and enables operating at lower thresholds with MEASURED reliability (Thompson et al. 2018 DR25 framework pairs completeness with reliability) instead of conservative analytic margins. Classification: DIRECT for \"compute -> injection-recovery calibration at scale\" (cost is literally N searches); INDIRECT and to be stated carefully for \"lower thresholds -> more planets\" (only valid with measured reliability; trials penalty pushes the other way).\n\nOverall do-not-overclaim guidance for the report: (a) quote 93.1% vs 75.7% with its exact experimental conditions; (b) use Ofir's ~330x as the cost of naive uniform grids, not as a detection-efficiency loss number; (c) state the eccentricity translation as geometry+cost (e<=0.6 coverage at <=2x cost with f=2), never as a planet-yield percentage; (d) frame threshold gains as calibration capability, acknowledging the independent-trials penalty of searching more.",
+      "facts": [
+        {
+          "claim": "Hippke & Heller 2019 (A&A 623, A39): at matched SDE=7 threshold (1% false-positive rate for both algorithms), TLS recovers ~93% of injected Earth-sized transits vs ~76% for BLS; precisely 93.1% vs 75.7% in the body text. Experiment: Earth-sized planets, Sun-like stars, 110 ppm white noise per 30-min cadence, K2-like light curves.",
+          "evidence": "A&A 623, A39 abstract (https://www.aanda.org/articles/aa/full_html/2019/03/aa34672-18/aa34672-18.html): \"We determine the SDE thresholds for both BLS and TLS to reach a false positive rate of 1% to be SDE = 7 in both cases. The resulting true positive (or recovery) rates are ~93% for TLS and ~76% for BLS, implying more reliable detections with TLS.\" Body: \"TLS recovers 93.1% of the injected signals (the true positives) compared to 75.7% for BLS\". arXiv:1901.02015.",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "The authors' own summary figure for the TLS gain is ~10% higher detection efficiency at similar false alarm rates; the paper attributes the significance gain from realistic transit shapes as 5-10% at higher computational cost.",
+          "evidence": "TLS README (https://github.com/hippke/tls/blob/master/README.md): \"These improvements yield a ~10 % higher detection efficiency (and similar false alarm rates) compared to BLS.\" Paper introduction: \"The resulting increase in the detection significance of the algorithm by 5-10% comes at the toll of larger computational demands.\"",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "TLS runtime parity claim is per-light-curve on CPU: a K2 light curve (80 d at 30-min cadence) searches in ~10 s on a laptop, 'as fast as' BLS; H&H also note TLS detection thresholds were set by injection experiment (SDE>=9 gives FPR < 1e-4 for TLS, per the TLS survey papers' adoption).",
+          "evidence": "A&A 623, A39 abstract: \"A typical K2 light curve, including 80 d of observations at a cadence of 30 min, can be searched with TLS in ~10 s real time on a standard laptop computer, as fast as the widely used box least squares (BLS) algorithm.\" SDE>=9/FPR<1e-4 statement quoted in Heller et al. TLS survey II (A&A 627, A66, https://www.aanda.org/articles/aa/full_html/2019/07/aa35600-19/aa35600-19.html): \"a detection threshold of SDE >= 9 results in an FPR < 10^-4 for TLS\".",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Ofir 2014 (A&A 561, A138): optimal transit-search frequency sampling is cubic (df ~ A f^(2/3), A set by stellar density, baseline, oversampling), not linear; a uniform grid is either insensitive at long or short periods, or ~330x computationally slower for a 3-yr dataset.",
+          "evidence": "arXiv:1307.7330 abstract (https://arxiv.org/abs/1307.7330): \"the optimal frequency sampling is found to be cubic and not linear\"; \"By using the (standard) BLS one is either rather insensitive to long-period planets, or less sensitive to short-period planets\" and \"computationally slower by a significant factor of ~330 (for a 3yr long dataset)\".",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Ofir 2014 does NOT publish a single percent detection-efficiency loss for undersampled grids; the quantified result is the sampling requirement and the ~330x uniform-grid cost penalty. Report must frame undersampling cost as SDE smearing when grid spacing exceeds peak width, citing the requirement, not an invented percentage.",
+          "evidence": "arXiv:1307.7330 abstract and search of paper summaries: quantitative claims are the cubic sampling law and factor ~330; no % efficiency-loss figure appears in the abstract.",
+          "confidence": "verified",
+          "adversarial": "confirmed"
+        },
+        {
+          "claim": "Barnes 2007 (PASP 119, 986): eccentric-orbit transit duration scales as sqrt(1-e^2)/(1+e cos phi) relative to a circular orbit of the same period; eccentric planets are (1-e^2)^-1 more likely to transit; for the known-exoplanet eccentricity distribution at P>10 d, transit probability is ~1.25x higher and mean duration ~0.88x shorter than the circular equivalent.",
+          "evidence": "Barnes 2007, PASP 119, 986 (arXiv:0708.0243, https://arxiv.org/abs/0708.0243): duration ratio sqrt(1-e^2)/(1+e cos(phi)); abstract: transit probability \"~1.25 times higher than the equivalent circular orbit and the average transit duration is ~0.88 times shorter than the equivalent circular orbit\" for P>10 d eccentricity distribution.",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Burke 2008 (ApJ 679, 1566; note task said 'Burke et al. 2006' — the correct duration/eccentricity detection paper is Burke 2008): only ~10-20% of eccentric transit durations are longer than the circular expectation for e~0.1-0.8; net transiting-planet yield is ~4% higher than circular-assumption for Poisson-noise surveys, ~25% higher when correlated noise/stellar variability dominates.",
+          "evidence": "arXiv:0801.2579 (https://arxiv.org/abs/0801.2579) abstract: \"Only ~10%-20% of transit durations will be longer than expected for any eccentricity of ~0.1-0.8\"; \"a modest ~4% increase in the transiting planet yield\"; \"the transit yield is ~25% higher than that predicted under the assumption of circular orbits\" when correlated noise dominates.",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Derived (not a literature quote): a BLS duration window of [1/f, f] times the circular-Keplerian duration covers all periastron angles for eccentricities up to e = (f^2-1)/(f^2+1), since the eccentric/circular duration ratio spans sqrt((1-e)/(1+e)) to sqrt((1+e)/(1-e)) over orientation. cuvarbase defaults qmin_fac=0.5/qmax_fac=2.0 (f=2) cover e<=0.6; f=3 covers e<=0.8. Must be labeled as derived from the Barnes 2007 / Kipping 2010 duration relations.",
+          "evidence": "Derived from Barnes 2007 duration ratio sqrt(1-e^2)/(1+e cos phi) evaluated at periastron/apoastron transits; Kipping 2010 (MNRAS 407, 301, arXiv:1004.3819) for accurate duration expressions and \"the effect of falsely using circular expressions for eccentric orbits, with particularly important consequences for transit surveys\". Defaults at /Users/johnhoffman/Documents/cuvarbase/cuvarbase/bls.py:1728 (qmin_fac=0.5, qmax_fac=2.0).",
+          "confidence": "likely",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Compute cost of widening the duration window is linear, verified in cuvarbase code (not literature): eebls_gpu_custom total work is exactly proportional to the number of trial durations (nbtot = len(q_values) * len(phi_values) * freq_batch_size); in eebls_gpu/eebls_gpu_fast per-frequency work is dominated by the finest bin count nbinsf = 1/qmin (geometric sum over log-spaced duration levels), so halving qmin_fac approximately doubles compute, while raising qmax_fac adds only coarser (cheaper) levels and lowers fmax.",
+          "evidence": "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/bls.py:1062 (nbtot = len(q_values) * len(phi_values) * freq_batch_size), bls.py:499-500 (nbinsf = 1/qmin, nbins0 = 1/qmax per frequency), bls.py:1184-1189 (count_tot_nbins geometric accumulation), bls.py:1862-1863 (qmins = qvals*qmin_fac, qmaxes = qvals*qmax_fac), bls.py:1827 (fmax = fmax_transit(qmax=0.5/qmax_fac)).",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "No published number exists for 'X% more planets found by widening the BLS duration window for eccentric orbits'; Burke 2008 implies most eccentric transits are SHORTER than circular (so widening toward small q matters more than large q). The report should state coverage+cost (e<=0.6 at <=~2x compute with f=2), not a yield percentage.",
+          "evidence": "Burke 2008 abstract (arXiv:0801.2579): \"Only ~10%-20% of transit durations will be longer than expected\"; absence of yield-vs-q-window numbers in Barnes 2007 / Burke 2008 / Kipping 2010 abstracts and search results.",
+          "confidence": "likely",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Jenkins, Caldwell & Borucki 2002 (ApJ 564, 495): Kepler's 7.1-sigma threshold follows from the independent-trials calculus — ~1.7e7 effective independent statistical tests per star across ~1e5 stars requires per-test FAP ~ 1/(1.7e12) for <=1 expected mission-long false alarm. Implication for the report: searching MORE (denser grids, wider duration ranges) raises the threshold needed at fixed FAP; compute alone does not lower thresholds.",
+          "evidence": "Kepler pipeline detection papers describing the Jenkins et al. 2002 rationale (e.g., Tenenbaum et al., 'Detection of Potential Transit Signals in the First Twelve Quarters of Kepler Mission Data', arXiv:1212.2915): \"the equivalent of 1.7 x 10^7 independent statistical tests per star ... required a threshold with a false alarm probability of 1 in 1.7 x 10^12, which corresponds to a threshold of 7.1 sigma (Jenkins et al. 2002)\"; TCE definition: \"combined (folded) transit detection statistic exceeds 7.1 sigma\".",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "The field's gold standard for threshold/completeness calibration is injection-recovery at full-pipeline scale: Christiansen 2017 (KSCI-19110-001) injected artificial transit signals at the pixel level into Kepler field stars and re-ran the full detection pipeline to measure recovery fraction vs MES for DR25 occurrence rates (with companions Christiansen et al. 2015; Christiansen et al. 2020, AJ; Burke & Catanzarite 2017 flux-level injections). Cost structure: calibration cost = N_injections x cost of one full search, so 100-300x cheaper BLS/TLS searches translate DIRECTLY into routine survey-specific injection-recovery calibration instead of analytic Gaussian-noise thresholds.",
+          "evidence": "Christiansen 2017, 'Planet Detection Metrics: Pixel-Level Transit Injection Tests of Pipeline Detection Efficiency for Data Release 25', KSCI-19110-001 (https://ntrs.nasa.gov/citations/20170009553; ADS 2017ksci.rept...18C): injected simulated transit signals into calibrated pixels of Kepler field stars, processed through the standard pipeline to measure recovery vs MES; DR25 catalog paper Thompson et al. 2018 (arXiv:1710.06758) pairs measured completeness with measured reliability.",
+          "confidence": "verified",
+          "adversarial": "unchecked"
+        },
+        {
+          "claim": "Classification of the four science translations for the report: (1) TLS gain = INDIRECT but quantified (algorithmic +17 pp / ~23% relative recovery gain for Earth-size injections; GPU compute makes survey-scale deployment feasible); (2) Ofir-optimal dense grids = DIRECT (grid density/oversampling is a compute-bound knob; ~330x uniform-grid penalty quantifies the cost being removed); (3) eccentricity duration-window widening = DIRECT for cost (linear, code-verified) + derived geometry (e<=0.6 at f=2), INDIRECT for yield; (4) thresholds = DIRECT for enabling injection-recovery calibration at scale, INDIRECT/careful for 'lower threshold -> more planets' (requires measured reliability; independent-trials penalty works against naive threshold lowering).",
+          "evidence": "Synthesis of: Hippke & Heller 2019 (A&A 623, A39); Ofir 2014 (A&A 561, A138); Barnes 2007 (PASP 119, 986), Burke 2008 (ApJ 679, 1566), Kipping 2010 (MNRAS 407, 301); Jenkins et al. 2002 (ApJ 564, 495), Christiansen 2017 (KSCI-19110-001), Thompson et al. 2018 (ApJS 235, 38); cuvarbase/bls.py cost structure (lines 499-500, 1062, 1862-1863).",
+          "confidence": "likely",
+          "adversarial": "unchecked"
+        }
+      ]
+    }
+  }
+}
