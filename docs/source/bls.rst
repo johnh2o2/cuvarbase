@@ -162,3 +162,28 @@ You can also use sparse BLS directly with ``sparse_bls_cpu``:
 
 .. [BLS] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
 .. [SparseBLS] `Panahi & Zucker 2021 <https://arxiv.org/abs/2103.06193>`_
+Power-spectrum convention
+-------------------------
+
+All BLS functions in cuvarbase report
+
+.. math::
+
+    P(f) = 1 - \chi^2(f) / \chi^2_0
+
+where :math:`\chi^2(f)` is the weighted sum of squared residuals of
+the best-fit box at frequency :math:`f` and :math:`\chi^2_0` is that
+of a constant (weighted-mean) model. :math:`P` is dimensionless and
+lies in :math:`[0, 1]`, with 1 meaning the box model fits perfectly.
+
+This differs from ``astropy.timeseries.BoxLeastSquares``, whose
+default ``objective='likelihood'`` returns the log-likelihood
+improvement, and whose ``objective='snr'`` returns the
+signal-to-noise of the depth; numerical values are **not** directly
+comparable between the two packages, although peak locations are.
+Selectable output conventions are tracked in
+`issue #17 <https://github.com/johnh2o2/cuvarbase/issues/17>`_.
+
+Reported ``phi0`` values are transit *start* phases measured relative
+to ``min(t)`` (observation times are epoch-subtracted internally to
+preserve float32 precision).
