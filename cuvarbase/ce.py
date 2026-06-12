@@ -143,7 +143,10 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         if force_nblocks is not None:
             grid = (force_nblocks, 1)
 
-        assert(grid[0] > 0)
+        if not grid[0] > 0:
+            raise RuntimeError(
+                "computed CUDA grid size is 0: the shared-memory limit is "
+                "too small for this configuration")
 
         args = (grid, block, stream)
         args += (memory.t_g.ptr, memory.y_g.ptr)
@@ -221,11 +224,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         if self.mag_overlap > 0:
             if kwargs.get('balanced_magbins', False):
-                raise Exception("mag_overlap must be zero "
+                raise ValueError("mag_overlap must be zero "
                                 "if balanced_magbins is True")
 
         if self.weighted and kwargs.get('use_fast', False):
-            raise Exception("use_fast must be False if weighted is True")
+            raise ValueError("use_fast must be False if weighted is True")
 
         self.use_double = kwargs.get('use_double', False)
 
@@ -479,7 +482,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         elif isinstance(frqs[0], float):
             frqs = [frqs] * len(data)
 
-        assert(len(frqs) == len(data))
+        if len(frqs) != len(data):
+            raise ValueError(
+                "number of frequency grids (%d) does not match number of "
+            "lightcurves (%d)" % (len(frqs), len(data)))
 
         if not self.use_fast:
             for f, d in zip(frqs, data):
@@ -558,7 +564,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         elif isinstance(frqs[0], float):
             frqs = [frqs] * len(data)
 
-        assert(len(frqs) == len(data))
+        if len(frqs) != len(data):
+            raise ValueError(
+                "number of frequency grids (%d) does not match number of "
+            "lightcurves (%d)" % (len(frqs), len(data)))
 
         cpers = []
         for d, f in zip(data, frqs):

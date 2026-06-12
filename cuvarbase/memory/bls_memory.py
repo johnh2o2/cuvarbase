@@ -105,8 +105,9 @@ class BLSBatchMemory:
         """
         freqs = np.asarray(freqs, dtype=self.rtype)
         nf = len(freqs)
-        assert nf <= self.nfreqs, (
-            f"Got {nf} freqs but allocated for {self.nfreqs}")
+        if nf > self.nfreqs:
+            raise ValueError(
+                f"Got {nf} freqs but allocated for {self.nfreqs}")
 
         self.freqs[:nf] = freqs
 
@@ -144,9 +145,11 @@ class BLSBatchMemory:
         dy = np.asarray(dy, dtype=np.float64)
         ndata = len(t)
 
-        assert idx < self.n_lcs, f"idx={idx} >= n_lcs={self.n_lcs}"
-        assert ndata <= self.max_ndata, (
-            f"ndata={ndata} > max_ndata={self.max_ndata}")
+        if idx >= self.n_lcs:
+            raise ValueError(f"idx={idx} >= n_lcs={self.n_lcs}")
+        if ndata > self.max_ndata:
+            raise ValueError(
+                f"ndata={ndata} > max_ndata={self.max_ndata}")
 
         self.ndata_per_lc[idx] = np.uint32(ndata)
         self.epochs[idx] = epoch

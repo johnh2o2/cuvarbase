@@ -660,7 +660,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
             s = "qmin = %.2e requires too much shared memory." % (1./max_nbins)
             s += " Either try a larger value of qmin (> %e)" % (qmin_min)
             s += " or avoid using eebls_gpu_fast."
-            raise Exception(s)
+            raise ValueError(s)
         # nblocks = int((2 * max_shmem / (mem_req + 4 * float_size)))
         nblocks = min([nfreqs, max_nblocks])
         if force_nblocks is not None:
@@ -813,7 +813,7 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
             s = "qmin = %.2e requires too much shared memory." % (1./max_nbins)
             s += " Either try a larger value of qmin (> %e)" % (qmin_min)
             s += " or avoid using eebls_gpu_fast_optimized."
-            raise Exception(s)
+            raise ValueError(s)
         nblocks = min([nfreqs, max_nblocks])
         if force_nblocks is not None:
             nblocks = force_nblocks
@@ -1027,7 +1027,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         freq_batch_size = int(float(max_memory - mem0) / (mem_per_f))
 
         if freq_batch_size == 0:
-            raise Exception("Not enough memory (freq_batch_size = 0)")
+            raise RuntimeError("Not enough memory (freq_batch_size = 0)")
 
     nbtot = len(q_values) * len(phi_values) * freq_batch_size
 
@@ -1255,7 +1255,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         freq_batch_size = int(float(max_memory - mem0) / (mem_per_f))
 
         if freq_batch_size == 0:
-            raise Exception("Not enough memory (freq_batch_size = 0)")
+            raise RuntimeError("Not enough memory (freq_batch_size = 0)")
 
     gs = freq_batch_size * nbins_tot_max * noverlap
 
@@ -1790,7 +1790,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     # Generate frequency grid if not provided
     if freqs is None:
         if qvals is not None:
-            raise Exception("qvals must be None if freqs is None")
+            raise ValueError("qvals must be None if freqs is None")
         if fmin is None:
             fmin = fmin_transit(t, **kwargs) * fmin_frac
         if fmax is None:
@@ -2158,7 +2158,7 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
 
     if freqs is None:
         if qvals is not None:
-            raise Exception("qvals must be None if freqs is None")
+            raise ValueError("qvals must be None if freqs is None")
         if fmin is None:
             fmin = fmin_transit(t, **kwargs) * fmin_frac
         if fmax is None:

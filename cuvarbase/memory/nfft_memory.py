@@ -73,8 +73,14 @@ class NFFTMemory:
         self.n0 = kwargs.get('n0', self.n0)
         self.nf = kwargs.get('nf', self.nf)
 
-        assert(self.n0 is not None)
-        assert(self.nf is not None)
+        if not (self.n0 is not None):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.n0 is not None` not satisfied")
+        if not (self.nf is not None):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.nf is not None` not satisfied")
 
         self.t_g = gpuarray.zeros(self.n0, dtype=self.real_type)
         self.y_g = gpuarray.zeros(self.n0, dtype=self.real_type)
@@ -85,7 +91,10 @@ class NFFTMemory:
         """Allocate memory for precomputed psi values."""
         self.n0 = kwargs.get('n0', self.n0)
 
-        assert(self.n0 is not None)
+        if not (self.n0 is not None):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.n0 is not None` not satisfied")
 
         self.q1 = gpuarray.zeros(self.n0, dtype=self.real_type)
         self.q2 = gpuarray.zeros(self.n0, dtype=self.real_type)
@@ -97,7 +106,10 @@ class NFFTMemory:
         """Allocate GPU memory for the frequency grid."""
         self.nf = kwargs.get('nf', self.nf)
 
-        assert(self.nf is not None)
+        if not (self.nf is not None):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.nf is not None` not satisfied")
 
         self.n = int(self.sigma * self.nf)
         self.ghat_g = gpuarray.zeros(self.n,
@@ -110,7 +122,10 @@ class NFFTMemory:
         """Allocate pinned CPU memory for async transfers."""
         self.nf = kwargs.get('nf', self.nf)
 
-        assert(self.nf is not None)
+        if not (self.nf is not None):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.nf is not None` not satisfied")
         self.ghat_c = cuda.aligned_zeros(shape=(self.nf,),
                                          dtype=self.complex_type,
                                          alignment=resource.getpagesize())
@@ -119,25 +134,52 @@ class NFFTMemory:
 
     def is_ready(self):
         """Verify all required memory is allocated."""
-        assert(self.n0 == len(self.t_g))
-        assert(self.n0 == len(self.y_g))
-        assert(self.n == len(self.ghat_g))
+        if not (self.n0 == len(self.t_g)):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.n0 == len(self.t_g)` not satisfied")
+        if not (self.n0 == len(self.y_g)):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.n0 == len(self.y_g)` not satisfied")
+        if not (self.n == len(self.ghat_g)):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.n == len(self.ghat_g)` not satisfied")
 
         if self.ghat_c is not None:
-            assert(self.nf == len(self.ghat_c))
+            if not (self.nf == len(self.ghat_c)):
+                raise RuntimeError(
+                    "NFFTMemory: requirement "
+                    "`self.nf == len(self.ghat_c)` not satisfied")
 
         if self.precomp_psi:
-            assert(self.n0 == len(self.q1))
-            assert(self.n0 == len(self.q2))
-            assert(2 * self.m + 1 == len(self.q3))
+            if not (self.n0 == len(self.q1)):
+                raise RuntimeError(
+                    "NFFTMemory: requirement "
+                    "`self.n0 == len(self.q1)` not satisfied")
+            if not (self.n0 == len(self.q2)):
+                raise RuntimeError(
+                    "NFFTMemory: requirement "
+                    "`self.n0 == len(self.q2)` not satisfied")
+            if not (2 * self.m + 1 == len(self.q3)):
+                raise RuntimeError(
+                    "NFFTMemory: requirement "
+                    "`2 * self.m + 1 == len(self.q3)` not satisfied")
 
     def allocate(self, **kwargs):
         """Allocate all required memory for NFFT computation."""
         self.n0 = kwargs.get('n0', self.n0)
         self.nf = kwargs.get('nf', self.nf)
 
-        assert(self.n0 is not None)
-        assert(self.nf is not None)
+        if not (self.n0 is not None):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.n0 is not None` not satisfied")
+        if not (self.nf is not None):
+            raise RuntimeError(
+                "NFFTMemory: requirement "
+                "`self.nf is not None` not satisfied")
         self.n = int(self.sigma * self.nf)
 
         self.allocate_data(**kwargs)
@@ -153,8 +195,14 @@ class NFFTMemory:
         t = kwargs.get('t', self.t)
         y = kwargs.get('y', self.y)
 
-        assert(t is not None)
-        assert(y is not None)
+        if not (t is not None):
+            raise ValueError(
+                "NFFTMemory: requirement "
+                "`t is not None` not satisfied")
+        if not (y is not None):
+            raise ValueError(
+                "NFFTMemory: requirement "
+                "`y is not None` not satisfied")
 
         self.t_g.set_async(t, stream=self.stream)
         self.y_g.set_async(y, stream=self.stream)
