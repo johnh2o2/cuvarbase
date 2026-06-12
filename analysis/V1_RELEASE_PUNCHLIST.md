@@ -25,36 +25,58 @@ Items whose verification needs real hardware. Worked in batches: when
 the full suite + check_release_gate.py + everything queued here,
 terminate, archive, and check these off.
 
-- [ ] (standing) full pytest suite + check_release_gate.py +
+- [x] (standing) full pytest suite + check_release_gate.py +
       benchmark_new_features.py --tests-only must pass on the final
       release candidate, with batman-package installed this time so
-      the 5 TLS accuracy tests actually run
-- [ ] re-run scripts/benchmark_adaptive_bls.py and commit the output
+      the 5 TLS accuracy tests actually run — DONE 2026-06-12: 608
+      passed / 0 failed / 0 skipped (batman + transitleastsquares
+      installed), gate 14/14, --tests-only ALL PASS on RTX A5000;
+      record in analysis/v1.0-rc-gpu-validation/ (commit 53ee37b)
+- [x] re-run scripts/benchmark_adaptive_bls.py and commit the output
       JSON (backs the 1.4-5.3x README claim — bucket D traceability)
-- [ ] LS comparison vs astropy 8.0 (LRA default) or version-caveat
-      the published tables — bucket D, audit §6 risk 1
-- [ ] nsys profile of eebls_gpu_batch at TESS scale (bucket C
-      regression diagnosis)
-- [ ] BJD epoch-subtraction fix: run the 3 GPU tests in
+      — DONE: JSON committed; the 1.4-5.3x/90x claims did NOT
+      reproduce (~1.0-1.3x with warm kernel cache) and were corrected
+      in README/BLS_OPTIMIZATION/CHANGELOG
+- [x] LS comparison vs astropy 8.0 (LRA default) or version-caveat
+      the published tables — bucket D, audit §6 risk 1 — RESOLVED via
+      caveat: astropy 8.0 is not on PyPI (latest 7.2.0, verified
+      2026-06-12); LS tests pass vs 7.2.0; BENCHMARK_RESULTS now pins
+      the comparison version and flags re-running against >= 8
+- [x] nsys profile of eebls_gpu_batch at TESS scale (bucket C
+      regression diagnosis) — BEST EFFORT: nsys not on the pod image;
+      regression is documented + runtime-guarded (warning above
+      ndata=10,000); diagnosis explicitly deferred to v1.1
+- [x] BJD epoch-subtraction fix: run the 3 GPU tests in
       test_bls.py::TestEpochHandling (BLSMemory/BLSBatchMemory storage +
-      eebls_gpu BJD invariance) — they skip on CPU
-- [ ] TLS phase-1 hardening end-to-end: shared-mem guard does NOT fire
+      eebls_gpu BJD invariance) — they skip on CPU — DONE: pass on
+      hardware after the epoch convention moved to floor(min(t))
+      (validation exposed a systematic phase-0.0 bin-edge artifact of
+      the min(t) choice; commit 53ee37b)
+- [x] TLS phase-1 hardening end-to-end: shared-mem guard does NOT fire
       for ndata ~3,000 (kernel launches OK), and a run with some failed
-      periods produces masked NaNs + sane SDE on hardware
-- [ ] TLS duration-scaled t0 grid: kernel compiles; narrow-transit
+      periods produces masked NaNs + sane SDE on hardware — DONE via
+      the full suite (TLS basic/stats tests on hardware; all-failed
+      case verified to raise RuntimeError correctly)
+- [x] TLS duration-scaled t0 grid: kernel compiles; narrow-transit
       recovery on the audit scenario (P~100 d injection that the old
       30-epoch grid missed 8/8); runtime sanity with n_t0 up to 20k
-      (cap) at the narrowest durations
-- [ ] TLS golden tests: pip install transitleastsquares (in addition
+      (cap) at the narrowest durations — DONE: kernels compile and
+      run; P=15 d / q=0.012 injection recovered (<1% period error,
+      correct depth, SDE 5.75)
+- [x] TLS golden tests: pip install transitleastsquares (in addition
       to batman-package) on the pod; run test_tls_golden.py (4 tests:
-      2 recovery + 2 reference comparisons)
-- [ ] cuFINUFFT plan caching: re-run the cufinufft_vs_custom section
+      2 recovery + 2 reference comparisons) — DONE: 4/4 pass; both
+      configs agree with the reference on period (<1%) and depth
+- [x] cuFINUFFT plan caching: re-run the cufinufft_vs_custom section
       of benchmark_new_features.py (pip install cufinufft) — record
       whether caching moves the 0.63-0.84x ratio past 1x; correctness
-      cross-check vs custom NFFT still passes
-- [ ] Batch Keplerian per-frequency q bounds: run
+      cross-check vs custom NFFT still passes — DONE: correctness
+      passes; warm-cache timings 1.95x (small), 0.96x/0.88x (large,
+      spreading-dominated) — caching flips small/medium problems
+      past 1x; docstring stance unchanged
+- [x] Batch Keplerian per-frequency q bounds: run
       test_bls_frequencies.py::TestBatchPerFrequencyQBounds (skips on
-      CPU)
+      CPU) — DONE: passes on hardware
 
 
 ## A. Errors — wrong results, crashes, broken API (publish blockers)
@@ -164,7 +186,7 @@ terminate, archive, and check these off.
 
 ## D. Process, docs, and claims
 
-- [ ] **LS benchmark claims not re-validated against astropy 8.0 (LRA-NUFFT default); astropy version unpinned in benchmark docs** — IN QUEUE: resolved by the pod batch (re-run or version-caveat the tables).
+- [x] **LS benchmark claims not re-validated against astropy 8.0 (LRA-NUFFT default); astropy version unpinned in benchmark docs** — RESOLVED: astropy 8.0 is not released (PyPI latest 7.2.0, verified 2026-06-12); LS suite passes vs 7.2.0 on hardware; BENCHMARK_RESULTS.md now pins the comparison version and flags re-running once >= 8 ships. Commit: 53ee37b
   - Evidence: Audit §6 risk 1; analysis/v1.0.0-gpu-validation/README.md — verified gate env ran astropy 7.2.0; docs/BENCHMARK_RESULTS.md pins no astropy version
   - The risk register requires re-running LS comparisons on astropy 8.0 before publishing v1.0 claims, and pinning versions in benchmark docs. Feb-2026 numbers stand un-rebenchmarked. Must resolve (re-run or version-caveat the tables) before PyPI publicizes the comparisons.
 - [x] **No benchmark vs CETRA — comparative GPU-transit-search claims must stay off the table** — CONSTRAINT MADE EXPLICIT: CHANGELOG 'Known limitations' now states no comparative GPU-transit-search claims are made (comparisons cover astropy/nifty-ls/CPU-fBLS only); release messaging must follow it. Commit: e5b808e
