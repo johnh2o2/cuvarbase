@@ -41,6 +41,10 @@ terminate, archive, and check these off.
 - [ ] TLS phase-1 hardening end-to-end: shared-mem guard does NOT fire
       for ndata ~3,000 (kernel launches OK), and a run with some failed
       periods produces masked NaNs + sane SDE on hardware
+- [ ] TLS duration-scaled t0 grid: kernel compiles; narrow-transit
+      recovery on the audit scenario (P~100 d injection that the old
+      30-epoch grid missed 8/8); runtime sanity with n_t0 up to 20k
+      (cap) at the narrowest durations
 
 
 ## A. Errors — wrong results, crashes, broken API (publish blockers)
@@ -66,7 +70,7 @@ terminate, archive, and check these off.
 
 ## B. Experimental debt — fix or formally cut/document
 
-- [ ] **TLS: hard-coded n_t0=30 epoch grid misses narrow transits (Keplerian mode effectively broken for P > ~3.5 d)**
+- [x] **TLS: hard-coded n_t0=30 epoch grid misses narrow transits (Keplerian mode effectively broken for P > ~3.5 d)** — FIXED: duration-scaled t0 grid in both kernels (device t0_grid_size(): stride = duration/3, floor 30, cap 20,000), Python mirror tls_grids.t0_grid_size() as the documented contract; TestT0GridDurationScaled (scaling, circular coverage guarantee, kernel-source check; 3/3 fail pre-fix). GPU recovery test on the audit scenario queued. Commit: 77e32b9
   - Evidence: cuvarbase/kernels/tls.cu:277-279 and 433-435 (int n_t0 = 30); disclosed in import warning tls.py:19-28 and README.md:180-185
   - Both TLS kernels test only 30 epochs per period; transit windows narrower than 1/30 of phase mostly never overlap a tested epoch (audit simulation: 8/8 epochs missed at P=100d). Fix (duration-scaled t0 stride) deferred to the v1.1 rework. Dedupe note: the consolidated 'TLS module' finding was folded into this and the two following items.
 - [x] **TLS: shared-memory layout caps ndata at ~3,500 with no launch-time guard; TLS_GPU_README body still claims 100,000-point support** — FIXED: ValueError guard before kernel compile (accounts for ndata, n_template, block_size); both TLS_GPU_README claim lines corrected; TestSharedMemoryGuard (2 tests, CPU). Commit: fdfd01a
