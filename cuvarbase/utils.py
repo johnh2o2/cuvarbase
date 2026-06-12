@@ -11,14 +11,23 @@ def weights(err):
 
 def subtract_epoch(t):
     """
-    Shift observation times so that they start at zero.
+    Shift observation times so that they start near zero.
 
-    Returns ``(t - min(t), min(t))``, with the subtraction performed in
-    float64. Phase folding on the GPU happens in single precision, so
-    for absolute timestamps (e.g. BJD ~ 2,455,000 days) the product
-    ``float32(t) * freq`` loses nearly all phase information; times must
-    be epoch-subtracted *before* any cast to float32. As a consequence,
-    all phases (``phi0`` solutions) are measured relative to ``min(t)``.
+    Returns ``(t - floor(min(t)), floor(min(t)))``, with the
+    subtraction performed in float64. Phase folding on the GPU happens
+    in single precision, so for absolute timestamps (e.g. BJD ~
+    2,455,000 days) the product ``float32(t) * freq`` loses nearly all
+    phase information; times must be epoch-subtracted *before* any
+    cast to float32. All phases (``phi0`` solutions) are measured
+    relative to the returned epoch.
+
+    The epoch is ``floor(min(t))`` rather than ``min(t)`` itself: a
+    round-number epoch is friendlier for reconstructing absolute
+    transit times, and subtracting ``min(t)`` exactly would place the
+    first observation at phase exactly 0.0 for *every* trial
+    frequency — a systematic bin-edge alignment that makes binned
+    (GPU) and exact (CPU) box memberships disagree at wrap-around
+    solutions.
 
     Parameters
     ----------
@@ -28,12 +37,12 @@ def subtract_epoch(t):
     Returns
     -------
     t_shifted: ndarray, float64
-        ``t - min(t)``
+        ``t - floor(min(t))``
     epoch: float
-        ``min(t)``, the epoch that was subtracted
+        ``floor(min(t))``, the epoch that was subtracted
     """
     t = np.asarray(t, dtype=np.float64)
-    epoch = t.min()
+    epoch = np.floor(t.min())
     return t - epoch, epoch
 
 

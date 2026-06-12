@@ -61,9 +61,9 @@ def _choose_block_size(ndata):
     The heuristic considers only ``ndata``; occupancy effects driven
     by the number of phase bins (i.e. small ``qmin``) are ignored, so
     the choice may be suboptimal for unusual ``ndata``/``nbins``
-    combinations. The adaptive-kernel speedups published in the README
-    (1.4-5.3x) were measured on Keplerian-style grids; outside that
-    regime, benchmark ``block_size`` yourself and pass it explicitly.
+    combinations. The v1.0 re-benchmark (warm kernel cache) measures ~1.0-1.3x over
+    fixed blocks on Keplerian-style grids; benchmark ``block_size``
+    yourself if it matters for your workload.
     """
     if ndata <= 32:
         return 32   # Single warp
@@ -394,7 +394,7 @@ class BLSMemory:
 
         self.rtype = np.float32
 
-        # min(t) subtracted from the times before the float32 cast
+        # floor(min(t)) subtracted from the times before the float32 cast
         # (phases are measured relative to it)
         self.epoch = None
 
@@ -997,7 +997,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         Set of q values to search at each trial frequency
     phi_values: float or array_like
         Set of phi values to search at each trial frequency; phases
-        are measured relative to ``min(t)`` (times are epoch-subtracted
+        are measured relative to ``floor(min(t))`` (times are epoch-subtracted
         before folding)
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
@@ -1237,7 +1237,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
     qphi_sols: list of ``(q, phi)`` tuples
         Best ``(q, phi)`` solution at each frequency; ``phi`` is
-        measured relative to ``min(t)`` (times are epoch-subtracted
+        measured relative to ``floor(min(t))`` (times are epoch-subtracted
         before folding to preserve float32 precision)
 
     """
@@ -1417,7 +1417,7 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     q: float
         Transit duration in phase
     phi0: float
-        Phase offset of transit, relative to ``min(t)`` (times are
+        Phase offset of transit, relative to ``floor(min(t))`` (times are
         epoch-subtracted before folding, consistent with the GPU
         functions in this module)
     ignore_negative_delta_sols:
@@ -1476,7 +1476,7 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
         BLS power at each frequency
     solutions: list of (q, phi0) tuples
         Best (q, phi0) solution at each frequency; ``phi0`` is measured
-        relative to ``min(t)``
+        relative to ``floor(min(t))``
     """
     t = subtract_epoch(t)[0].astype(np.float32)
     y = np.asarray(y).astype(np.float32)
@@ -1650,7 +1650,7 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
         BLS power at each frequency
     solutions: list of (q, phi0) tuples
         Best (q, phi0) solution at each frequency; ``phi0`` is measured
-        relative to ``min(t)``
+        relative to ``floor(min(t))``
     """
     # Convert to numpy arrays (epoch-subtract before the float32 cast)
     t = subtract_epoch(t)[0].astype(np.float32)

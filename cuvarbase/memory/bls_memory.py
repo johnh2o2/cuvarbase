@@ -48,7 +48,7 @@ class BLSBatchMemory:
         # Per-LC normalization factors
         self.yy = np.zeros(n_lcs, dtype=np.float64)
 
-        # Per-LC epochs: min(t) subtracted from each lightcurve's times
+        # Per-LC epochs: floor(min(t)) subtracted from each lightcurve's times
         # before the float32 cast (phases are relative to it)
         self.epochs = np.zeros(n_lcs, dtype=np.float64)
 
