@@ -52,6 +52,9 @@ terminate, archive, and check these off.
       of benchmark_new_features.py (pip install cufinufft) — record
       whether caching moves the 0.63-0.84x ratio past 1x; correctness
       cross-check vs custom NFFT still passes
+- [ ] Batch Keplerian per-frequency q bounds: run
+      test_bls_frequencies.py::TestBatchPerFrequencyQBounds (skips on
+      CPU)
 
 
 ## A. Errors — wrong results, crashes, broken API (publish blockers)
@@ -110,7 +113,7 @@ terminate, archive, and check these off.
 - [ ] **eebls_transit sparse/standard discontinuity: sparse path ignores qmin_fac/qmax_fac/use_fast and searches all q in (0, 0.5]**
   - Evidence: cuvarbase/bls.py:1755-1763 (docstring warning), 1798-1816 (implementation + runtime UserWarning + kwargs whitelist silently dropping others)
   - Merged two sweep findings (audit + code-marker). The kwargs TypeError crash was fixed (ae0af5d) and the loud UserWarning works as intended, but per-frequency q bounds are never passed to the sparse kernels, so power values and best solutions change qualitatively at the arbitrary ndata=500 threshold. Functional fix (q bounds in sparse kernels) outstanding; 'loudly document' was the accepted v1.0 remedy — confirm that stance or fix.
-- [ ] **keplerian_freq_grid does not return q values; per-frequency q bounds not wired into eebls_gpu_batch**
+- [x] **keplerian_freq_grid does not return q values; per-frequency q bounds not wired into eebls_gpu_batch** — FIXED: keplerian_freq_grid(return_qvals=True) returns (freqs, qvals); eebls_gpu_batch documents array qmin/qmax (BLSBatchMemory.set_freqs already broadcast them; the kernel reads per-frequency bins) and its shared-mem ValueError no longer crashes formatting an array qmin; test_bls_frequencies.py (5 CPU tests + GPU batch Keplerian-q test, queued). Commit: 6313bb4
   - Evidence: cuvarbase/bls_frequencies.py:90 (returns freqs only); cuvarbase/bls.py:1886 (eebls_gpu_batch takes scalar qmin/qmax); audit §3 quick wins
   - The GPU batch kernel already supports per-frequency q bounds, but the grid helper returns only frequencies, so batch users cannot run duration-constrained Keplerian searches. Audit-listed quick win, never done.
 - [ ] **Eager `import pycuda.autoprimaryctx` makes `import cuvarbase` require a working GPU, contradicting advertised CPU fallbacks**
