@@ -33,7 +33,8 @@ def _q_transit(freq, rho=1.0):
 
 
 def keplerian_freq_grid(period_min, period_max, baseline,
-                        R_star=1.0, M_star=1.0, oversampling=2):
+                        R_star=1.0, M_star=1.0, oversampling=2,
+                        return_qvals=False):
     """
     Generate a non-uniform frequency grid optimized for transit detection.
 
@@ -60,11 +61,19 @@ def keplerian_freq_grid(period_min, period_max, baseline,
         Stellar mass in solar masses. Used to compute stellar density.
     oversampling : float, optional (default: 2)
         Oversampling factor. Higher values give denser grids.
+    return_qvals : bool, optional (default: False)
+        Also return the Keplerian transit duration fraction q at each
+        frequency. Pass e.g. ``qmin=0.5 * qvals, qmax=2.0 * qvals`` to
+        :func:`cuvarbase.bls.eebls_gpu_batch` for a duration-
+        constrained search (the batch kernel supports per-frequency
+        q bounds).
 
     Returns
     -------
     freqs : ndarray, float32
         Non-uniform frequency array (1/days), sorted ascending.
+    qvals : ndarray, float32
+        Keplerian q at each frequency (only if ``return_qvals=True``).
     """
     # Mean stellar density in solar units
     rho = M_star / (R_star ** 3)
@@ -86,6 +95,11 @@ def keplerian_freq_grid(period_min, period_max, baseline,
 
     # Trim to exact range
     freqs = freqs[freqs <= f_max * 1.001]
+
+    if return_qvals:
+        qvals = _q_transit(freqs.astype(np.float64),
+                           rho=rho).astype(np.float32)
+        return freqs, qvals
 
     return freqs
 

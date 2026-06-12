@@ -1906,10 +1906,15 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         List of lightcurves to process.
     freqs : array_like
         Frequency grid (shared across all lightcurves).
-    qmin : float, optional (default: 1e-2)
-        Minimum fractional transit duration.
-    qmax : float, optional (default: 0.5)
-        Maximum fractional transit duration.
+    qmin : float or array_like, optional (default: 1e-2)
+        Minimum fractional transit duration. An array gives a
+        per-frequency bound (e.g. from
+        ``bls_frequencies.keplerian_freq_grid(..., return_qvals=True)``
+        scaled by a qmin factor); must have the same length as
+        ``freqs``.
+    qmax : float or array_like, optional (default: 0.5)
+        Maximum fractional transit duration (scalar or per-frequency,
+        as for ``qmin``).
     noverlap : int, optional (default: 2)
         Phase overlap factor.
     dlogq : float, optional (default: 0.3)
@@ -1980,13 +1985,14 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         # Set frequency grid
         max_nbins = mem.set_freqs(freqs, qmin=qmin, qmax=qmax)
 
-        # Check shared memory
+        # Check shared memory (qmin may be a per-frequency array)
         mem_req = (block_size + 2 * max_nbins) * float_size
         if mem_req > shmem_lim:
             qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
             raise ValueError(
-                f"qmin={qmin:.2e} requires too much shared memory "
-                f"({mem_req} > {shmem_lim}). Try qmin > {qmin_min:.2e}."
+                f"qmin={float(np.min(qmin)):.2e} requires too much "
+                f"shared memory ({mem_req} > {shmem_lim}). "
+                f"Try qmin > {qmin_min:.2e}."
             )
 
         # Set lightcurve data
