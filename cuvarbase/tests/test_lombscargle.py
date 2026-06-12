@@ -350,3 +350,86 @@ class TestFapBaluev(object):
                          self.fmax)
         assert fap[0] == pytest.approx(1.0)
         assert fap[1] >= 0.0
+
+
+class _FakePtr(object):
+    ptr = 0
+
+
+class _FakeKernel(object):
+    def __init__(self):
+        self.calls = []
+
+    def prepared_async_call(self, *args):
+        self.calls.append(args)
+
+
+class _FakeLSMemory(object):
+    """Minimal stand-in for LombScargleMemory: just enough attributes
+    for the use_fft=False (direct sums) branch of lomb_scargle_async."""
+
+    def __init__(self, freqs):
+        from ..lombscargle import get_k0
+        self.tmin, self.tmax = 0.0, 100.0
+        self.k0 = get_k0(freqs)
+        self.stream = None
+        self.nf = len(freqs)
+        self.n0 = 50
+        self.real_type = np.float32
+        self.yy = 1.0
+        self.ybar = 0.0
+        self.mode = np.int32(0)
+        self.t_g = _FakePtr()
+        self.yw_g = _FakePtr()
+        self.w_g = _FakePtr()
+        self.lsp_g = _FakePtr()
+        self.reg_g = _FakePtr()
+        self.lsp_c = np.zeros(len(freqs), dtype=np.float32)
+        self.n_gpu_transfers = 0
+        self.n_lsp_transfers = 0
+
+    def transfer_data_to_gpu(self):
+        self.n_gpu_transfers += 1
+
+    def transfer_lsp_to_cpu(self):
+        self.n_lsp_transfers += 1
+
+
+class TestLombScargleAsyncGating(object):
+    """Argument-gating bugs in the module-level lomb_scargle_async:
+    the direct-sums branch used to key the host transfer on
+    transfer_to_device, and use_cufinufft=True was silently ignored
+    when cufinufft was missing."""
+
+    def _setup(self):
+        df = 0.01
+        freqs = df * (1 + np.arange(64))
+        memory = _FakeLSMemory(freqs)
+        functions = ((_FakeKernel(), _FakeKernel()), None)
+        return freqs, memory, functions
+
+    def test_dirsums_transfer_to_host_true_copies(self):
+        from ..lombscargle import lomb_scargle_async
+        freqs, memory, functions = self._setup()
+        lomb_scargle_async(memory, functions, freqs, use_fft=False,
+                           transfer_to_device=False,
+                           transfer_to_host=True)
+        assert memory.n_gpu_transfers == 0
+        assert memory.n_lsp_transfers == 1
+
+    def test_dirsums_transfer_to_host_false_suppresses_copy(self):
+        from ..lombscargle import lomb_scargle_async
+        freqs, memory, functions = self._setup()
+        lomb_scargle_async(memory, functions, freqs, use_fft=False,
+                           transfer_to_device=True,
+                           transfer_to_host=False)
+        assert memory.n_gpu_transfers == 1
+        assert memory.n_lsp_transfers == 0
+
+    def test_use_cufinufft_without_cufinufft_raises(self, monkeypatch):
+        from .. import lombscargle as ls
+        monkeypatch.setattr(ls, 'HAS_CUFINUFFT', False)
+        freqs, memory, functions = self._setup()
+        with pytest.raises(ImportError, match="cufinufft"):
+            ls.lomb_scargle_async(memory, functions, freqs,
+                                  use_fft=False, use_cufinufft=True)
