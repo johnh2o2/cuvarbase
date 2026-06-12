@@ -114,7 +114,7 @@ Two optimized CUDA kernels in `cuvarbase/kernels/tls.cu`:
 **`tls_search_kernel()`** - Standard search:
 - Fixed duration range (0.5% to 15% of period)
 - Limb-darkened transit template in shared memory
-- Bitonic sort for phase-folding
+- Duration-scaled epoch (t0) grid
 - Warp shuffle reduction for finding minimum chi-squared
 
 **`tls_search_kernel_keplerian()`** - Keplerian-aware:
