@@ -10,7 +10,7 @@ Please be respectful and constructive in all interactions with the project commu
 
 ### Prerequisites
 
-- Python 3.7 or later
+- Python 3.9 or later
 - CUDA-capable GPU (NVIDIA)
 - CUDA Toolkit (11.x or 12.x recommended)
 - PyCUDA >= 2017.1.1 (avoid 2024.1.2)
