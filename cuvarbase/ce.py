@@ -287,12 +287,38 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.function_tuple = tuple(self.prepared_functions[fname]
                                     for fname in sorted(self.dtypes.keys()))
 
-    def memory_requirement(self, data, **kwargs):
+    def memory_requirement(self, n0, nf, **kwargs):
         """
-        Return an approximate GPU memory requirement in bytes.
-        Will throw a ``NotImplementedError`` if called, so ... don't call it.
+        Return an approximate GPU memory requirement in bytes for one
+        lightcurve with ``n0`` observations and ``nf`` trial
+        frequencies.
+
+        The histogram dominates: ``nf * phase_bins * mag_bins``
+        entries (uint32, or ``real_type`` when ``weighted=True``).
+
+        Parameters
+        ----------
+        n0: int
+            Number of observations.
+        nf: int
+            Number of trial frequencies.
+
+        Returns
+        -------
+        mem: int
+            Approximate bytes of GPU memory required.
         """
-        raise NotImplementedError()
+        rsize = np.dtype(self.real_type).itemsize
+        bin_size = rsize if self.weighted else np.dtype(np.uint32).itemsize
+
+        # histogram bins
+        mem = nf * self.phase_bins * self.mag_bins * bin_size
+        # observation data: t, y (+ dy when weighted)
+        mem += (3 if self.weighted else 2) * n0 * rsize
+        # frequencies + CE result
+        mem += 2 * nf * rsize
+
+        return int(mem)
 
     def allocate_for_single_lc(self, t, y, freqs, dy=None,
                                stream=None, **kwargs):

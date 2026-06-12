@@ -119,7 +119,11 @@ class NFFTMemory:
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
-        """Allocate pinned CPU memory for async transfers."""
+        """Allocate page-aligned (not page-locked) CPU memory.
+
+        Despite the method name, the arrays are not pinned, so
+        async transfers fall back to synchronous staged copies.
+        """
         self.nf = kwargs.get('nf', self.nf)
 
         if not (self.nf is not None):
