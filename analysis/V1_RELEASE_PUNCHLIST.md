@@ -35,11 +35,14 @@ terminate, archive, and check these off.
       the published tables — bucket D, audit §6 risk 1
 - [ ] nsys profile of eebls_gpu_batch at TESS scale (bucket C
       regression diagnosis)
+- [ ] BJD epoch-subtraction fix: run the 3 GPU tests in
+      test_bls.py::TestEpochHandling (BLSMemory/BLSBatchMemory storage +
+      eebls_gpu BJD invariance) — they skip on CPU
 
 
 ## A. Errors — wrong results, crashes, broken API (publish blockers)
 
-- [ ] **BLS float32 phase-fold degradation for BJD-scale timestamps (no t.min() subtraction)**
+- [x] **BLS float32 phase-fold degradation for BJD-scale timestamps (no t.min() subtraction)** — FIXED: `utils.subtract_epoch()` applied in float64 before every float32 cast across all 7 BLS folding paths (BLSMemory.setdata, BLSBatchMemory.set_lightcurve, eebls_gpu, eebls_gpu_custom, single_bls, sparse_bls_cpu, sparse_bls_gpu); phi0 convention now relative to min(t), documented in docstrings + CHANGELOG; regression tests in TestEpochHandling (CPU test reproduced 0.961→0.002 power collapse before fix). Commit: a987987
   - Evidence: cuvarbase/bls.py:455-470 — verified at HEAD 5553248: setdata does `self.t[:len(t)] = np.asarray(t).astype(self.rtype)[:]` with no epoch subtraction; audit §3 quick wins
   - BLSMemory.setdata / BLSBatchMemory cast raw times to float32 without subtracting t.min(). Audit demonstrated 0.705 -> 0.285 power loss with BJD-scale timestamps (~2.4e6 days) — silent accuracy loss on the most common real-world input format. No commit in v0.2.6..HEAD touches the memory path. Single sweep, no dupes.
 - [ ] **fap_baluev returns exactly 0 for significant peaks (issue #14, numerical underflow)**
