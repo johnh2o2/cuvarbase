@@ -181,8 +181,9 @@ are not recommended for science use yet. They emit a `UserWarning` on import.
   detection with optimal depth fitting and Ofir (2014) period grids.
   Known issues: the fixed 30-point epoch grid misses short-duration
   transits (most periods > ~3.5 d in Keplerian mode); light curves above
-  ~3,500 points exceed the kernel's shared-memory budget; statistics can
-  be corrupted by failed periods. A rework is planned for v1.1.
+  ~3,500 points exceed the kernel's shared-memory budget (a `ValueError`
+  is raised). Failed trial periods are masked out of the SDE/FAP
+  statistics. A rework is planned for v1.1.
 A NUFFT-based Likelihood Ratio Test (matched-filter transit detection
 for correlated noise, contributed by **Jamila Taaki**) was previously
 listed here but has been removed from the released package: the

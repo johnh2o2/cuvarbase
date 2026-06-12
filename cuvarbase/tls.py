@@ -21,10 +21,10 @@ warnings.warn(
     "in this release. Known issues: the fixed 30-point epoch (t0) grid "
     "misses or degrades transits with duration < ~3% of the period "
     "(most periods > ~3.5 d in Keplerian mode); light curves with more "
-    "than ~3,500 points exceed the kernel's shared-memory budget; and "
-    "failed periods can corrupt the SDE/FAP statistics. See "
-    "analysis/V1_AUDIT_AND_GAMEPLAN.md in the repository. For validated "
-    "transit searches use cuvarbase.bls (eebls_transit).",
+    "than ~3,500 points exceed the kernel's shared-memory budget (a "
+    "ValueError is raised). See analysis/V1_AUDIT_AND_GAMEPLAN.md in "
+    "the repository. For validated transit searches use cuvarbase.bls "
+    "(eebls_transit).",
     UserWarning)
 
 import pycuda.autoprimaryctx  # noqa: E402
@@ -43,6 +43,38 @@ _default_block_size = 128  # Smaller default than BLS (TLS has more shared memor
 _KERNEL_CACHE_MAX_SIZE = 10
 _kernel_cache = OrderedDict()
 _kernel_cache_lock = threading.Lock()
+
+# Default CUDA limit for dynamic shared memory per block; exceeding it
+# fails at kernel launch, so we guard at the Python layer instead.
+_SHARED_MEM_LIMIT = 48 * 1024
+
+# The kernels initialize each period's chi2 to this sentinel and only
+# overwrite it when a valid solution is found.
+TLS_CHI2_SENTINEL = np.float32(1e30)
+
+
+def _mask_failed_periods(chi2_vals):
+    """Return a boolean mask of trial periods with a valid solution.
+
+    Failed periods keep the kernel's 1e30 chi2 initializer; left
+    unmasked they corrupt the best-fit argmin and collapse the SDE/FAP
+    statistics. Warns when any period failed; raises RuntimeError if
+    every period failed.
+    """
+    chi2_vals = np.asarray(chi2_vals)
+    valid = np.isfinite(chi2_vals) & (chi2_vals < 0.1 * TLS_CHI2_SENTINEL)
+    n_failed = int(chi2_vals.size - valid.sum())
+    if n_failed == chi2_vals.size:
+        raise RuntimeError(
+            "TLS kernel returned no valid solution for any of the %d "
+            "trial periods" % chi2_vals.size)
+    if n_failed:
+        warnings.warn(
+            "%d of %d trial periods returned no valid TLS solution "
+            "(chi2 sentinel); they are excluded from the best-fit "
+            "search and the SDE/FAP statistics and appear as NaN in "
+            "the returned arrays" % (n_failed, chi2_vals.size))
+    return valid
 
 
 def _choose_block_size(ndata):
@@ -501,6 +533,25 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     # Determine if using Keplerian mode
     use_keplerian = (qmin is not None and qmax is not None)
 
+    # Shared-memory budget check BEFORE compiling kernels or touching
+    # the GPU. Layout: phases[ndata] + y_sorted[ndata] +
+    # dy_sorted[ndata] + template[n_template] + 4 thread arrays of
+    # block_size floats, 4 bytes each. The default CUDA cap of 48 KB
+    # per block bounds ndata at ~3,500 points for the default
+    # template/block sizes.
+    n_template = kwargs.get('n_template', 1000)
+    shared_mem_size = (3 * ndata + n_template + 4 * block_size) * 4
+    if shared_mem_size > _SHARED_MEM_LIMIT:
+        max_ndata = (_SHARED_MEM_LIMIT // 4
+                     - n_template - 4 * block_size) // 3
+        raise ValueError(
+            "ndata=%d requires %d bytes of shared memory per block but "
+            "the kernel limit is %d: the TLS kernels support at most "
+            "~%d points with n_template=%d and block_size=%d. Bin or "
+            "split the light curve." % (ndata, shared_mem_size,
+                                        _SHARED_MEM_LIMIT, max_ndata,
+                                        n_template, block_size))
+
     # Get or compile kernels
     if kernel is None:
         kernels = _get_cached_kernels(block_size)
@@ -522,18 +573,13 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
             raise ValueError(f"qmin and qmax must have same length as periods ({nperiods})")
         memory.setdata(t, y, dy, periods=periods, qmin=qmin, qmax=qmax, transfer=transfer_to_device)
 
-    # Generate and transfer transit template
-    n_template = kwargs.get('n_template', 1000)
+    # Generate and transfer transit template (n_template and
+    # shared_mem_size were computed with the guard above)
     if memory.template_g is None:
         template = tls_models.generate_transit_template(
             n_template=n_template, limb_dark=limb_dark, u=u
         )
         memory.set_template(template)
-
-    # Calculate shared memory requirements
-    # phases[ndata] + y_sorted[ndata] + dy_sorted[ndata] +
-    # template[n_template] + 4 * thread arrays[block_size]
-    shared_mem_size = (3 * ndata + n_template + 4 * block_size) * 4  # 4 bytes per float
 
     # Launch kernel
     grid = (nperiods, 1, 1)
@@ -579,8 +625,15 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         best_duration_vals = memory.best_duration[:nperiods].copy()
         best_depth_vals = memory.best_depth[:nperiods].copy()
 
-        # Find best period
-        best_idx = np.argmin(chi2_vals)
+        # Mask failed periods (1e30 sentinel) before any statistics:
+        # unmasked they collapse SDE to ~0 and drive FAP to 1
+        valid = _mask_failed_periods(chi2_vals)
+        chi2_valid = chi2_vals[valid]
+        periods_valid = periods[valid]
+
+        # Find best period among the valid ones
+        best_valid_idx = int(np.argmin(chi2_valid))
+        best_idx = int(np.flatnonzero(valid)[best_valid_idx])
         best_period = periods[best_idx]
         best_chi2 = chi2_vals[best_idx]
         best_t0 = best_t0_vals[best_idx]
@@ -591,24 +644,32 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         T_span = np.max(t) - np.min(t)
         n_transits = int(T_span / best_period)
 
-        # Compute statistics
+        # Compute statistics on the valid periods only
         stats = tls_stats.compute_all_statistics(
-            chi2_vals, periods, best_idx,
+            chi2_valid, periods_valid, best_valid_idx,
             best_depth, best_duration, n_transits
         )
 
         # Period uncertainty
         period_uncertainty = tls_stats.compute_period_uncertainty(
-            periods, chi2_vals, best_idx
+            periods_valid, chi2_valid, best_valid_idx
         )
 
+        # Failed periods appear as NaN in the returned spectra
+        def _expand(values):
+            full = np.full(nperiods, np.nan)
+            full[valid] = values
+            return full
+
         results = {
-            # Raw outputs
+            # Raw outputs (NaN at failed periods)
             'periods': periods,
-            'chi2': chi2_vals,
+            'chi2': np.where(valid, chi2_vals, np.nan),
             'best_t0_per_period': best_t0_vals,
             'best_duration_per_period': best_duration_vals,
             'best_depth_per_period': best_depth_vals,
+            'valid_periods': valid,
+            'n_failed_periods': int(nperiods - valid.sum()),
 
             # Best-fit parameters
             'period': best_period,
@@ -618,13 +679,14 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
             'depth': best_depth,
             'chi2_min': best_chi2,
 
-            # Statistics
+            # Statistics (computed on valid periods, expanded to the
+            # full grid with NaN at failed periods)
             'SDE': stats['SDE'],
             'SDE_raw': stats['SDE_raw'],
             'SNR': stats['SNR'],
             'FAP': stats['FAP'],
-            'power': stats['power'],
-            'SR': stats['SR'],
+            'power': _expand(stats['power']),
+            'SR': _expand(stats['SR']),
 
             # Metadata
             'n_transits': n_transits,
