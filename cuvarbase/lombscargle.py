@@ -873,8 +873,8 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
         Number of degrees of freedom for default model.
     use_gamma: bool, optional (default: True)
         Use gamma function for computation of numerical
-        coefficient; replaced with scipy.special.gammaln
-        and should be stable now
+        coefficient; computed with scipy.special.gammaln
+        to avoid overflow at large N
     Returns
     -------
     fap: float
@@ -913,14 +913,30 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     W = fmax * Teff
     A = (2 * np.pi ** 1.5) * W
 
+    # Evaluate in log space (issue #14): for z near 1 the naive
+    #     FAP = 1 - (1 - (1-z)**(0.5*N_K)) * exp(-tau)
+    # underflows -- both factors round to 1.0 and the subtraction
+    # cancels to exactly 0.0 for significant peaks. Rewriting as
+    #     FAP = -expm1(-tau) + exp(log(1 - Psing) - tau)
+    # keeps the result positive down to the float64 limit (~1e-308).
+    z = np.asarray(z, dtype=np.float64)
+
     eZ1 = (z / np.pi) ** 0.5 * (d - 1)
-    eZ2 = (1 - z) ** (0.5 * (N_K - 1))
 
-    tau = (g * A / (2 * np.pi)) * eZ1 * eZ2
+    with np.errstate(divide='ignore'):
+        # log(1 - z); -inf at z == 1 (exp() of it is 0, as intended)
+        log1mz = np.log1p(-np.minimum(z, 1.0))
+        log_eZ1 = np.log(eZ1)
 
-    Psing = 1 - (1 - z) ** (0.5 * N_K)
+    log_tau = (np.log(g * A / (2 * np.pi))
+               + log_eZ1
+               + 0.5 * (N_K - 1) * log1mz)
+    tau = np.exp(log_tau)
 
-    return 1 - Psing * np.exp(-tau)
+    # log(1 - Psing) = log((1 - z)**(0.5 * N_K))
+    log_Psing_c = 0.5 * N_K * log1mz
+
+    return -np.expm1(-tau) + np.exp(log_Psing_c - tau)
 
 
 def lomb_scargle_simple(t, y, dy, **kwargs):

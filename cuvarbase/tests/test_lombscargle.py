@@ -278,3 +278,75 @@ class TestLombScargleSimpleWeights(object):
 
         passed_dy = captured['data'][0][2]
         assert_allclose(passed_dy, dy)  # raw uncertainties, not weights
+
+
+class TestFapBaluev(object):
+    """fap_baluev must not underflow to exactly 0 for significant
+    peaks (issue #14): for z near 1, both (1 - z)**(0.5 * N_K) and
+    exp(-tau) round to 1.0 and the final subtraction cancels
+    catastrophically.
+    """
+
+    def setup_method(self):
+        rand = np.random.RandomState(42)
+        self.t = np.sort(365 * rand.rand(100))
+        self.dy = 0.01 * (1 + 0.1 * rand.rand(100))
+        self.fmax = 10.0
+
+    def _fap_naive(self, t, dy, z, fmax, d_K=3, d_H=1):
+        # Direct evaluation of Baluev (2008); valid away from the
+        # z -> 1 underflow regime. Mirrors the pre-fix implementation.
+        from scipy.special import gammaln
+        N = len(t)
+        d = d_K - d_H
+        N_K = N - d_K
+        N_H = N - d_H
+        g = np.exp(gammaln(0.5 * N_H) - gammaln(0.5 * (N_K + 1)))
+        w = np.power(dy, -2)
+        tbar = np.dot(w, t) / sum(w)
+        Dt = np.dot(w, np.power(t - tbar, 2)) / sum(w)
+        Teff = np.sqrt(4 * np.pi * Dt)
+        A = (2 * np.pi ** 1.5) * fmax * Teff
+        eZ1 = (z / np.pi) ** 0.5 * (d - 1)
+        eZ2 = (1 - z) ** (0.5 * (N_K - 1))
+        tau = (g * A / (2 * np.pi)) * eZ1 * eZ2
+        Psing = 1 - (1 - z) ** (0.5 * N_K)
+        return 1 - Psing * np.exp(-tau)
+
+    def test_matches_naive_formula_at_moderate_z(self):
+        from ..lombscargle import fap_baluev
+        # The naive formula computes FAP as 1 - (1 - tiny), so its own
+        # precision is only ~1e-16/FAP relative; compare strictly where
+        # the reference itself is accurate, loosely at FAP ~ 1e-11.
+        z = np.array([0.05, 0.1, 0.2, 0.3])
+        fap = fap_baluev(self.t, self.dy, z, self.fmax)
+        ref = self._fap_naive(self.t, self.dy, z, self.fmax)
+        assert_allclose(fap, ref, rtol=1e-8)
+
+        z = np.array([0.5])
+        fap = fap_baluev(self.t, self.dy, z, self.fmax)
+        ref = self._fap_naive(self.t, self.dy, z, self.fmax)
+        assert_allclose(fap, ref, rtol=1e-4)
+
+    def test_no_underflow_to_zero_for_significant_peaks(self):
+        from ..lombscargle import fap_baluev
+        # N=100 -> N_K=97; z=0.95 gives FAP ~ 1e-59: representable in
+        # float64, but the naive formula returns exactly 0.0
+        fap = fap_baluev(self.t, self.dy, np.array([0.95, 0.99]),
+                         self.fmax)
+        assert np.all(fap > 0)
+        assert np.all(fap < 1e-20)
+
+    def test_monotonically_decreasing_in_z(self):
+        from ..lombscargle import fap_baluev
+        z = np.linspace(0.01, 0.995, 200)
+        fap = fap_baluev(self.t, self.dy, z, self.fmax)
+        assert np.all(np.diff(fap) <= 0)
+        assert np.all(fap > 0)
+
+    def test_z_edge_cases(self):
+        from ..lombscargle import fap_baluev
+        fap = fap_baluev(self.t, self.dy, np.array([0.0, 1.0]),
+                         self.fmax)
+        assert fap[0] == pytest.approx(1.0)
+        assert fap[1] >= 0.0
