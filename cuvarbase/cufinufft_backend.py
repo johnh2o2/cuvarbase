@@ -1,10 +1,19 @@
 """
-cuFINUFFT backend for GPU-accelerated NFFT in Lomb-Scargle periodogram.
+cuFINUFFT backend for the NFFT in the Lomb-Scargle periodogram.
 
-Replaces the custom Gaussian-spreading NFFT with cuFINUFFT's optimized
-type-1 (nonuniform to uniform) transform. cuFINUFFT uses exponential-of-
-semicircle kernel, bin-sorted shared-memory spreading, and Horner polynomial
-evaluation for ~10-100x faster spreading throughput.
+Optional cross-check backend (``use_cufinufft=True``) replacing the
+custom Gaussian-spreading NFFT with cuFINUFFT's type-1 (nonuniform to
+uniform) transform.
+
+.. note::
+
+    The custom NFFT kernel remains the default and, in cuvarbase's
+    benchmarks (Feb 2026, RTX A5000), was faster end-to-end: the
+    cuFINUFFT path ran at 0.63-0.84x the custom kernel's speed because
+    plan creation dominated each call. Plans are now cached (LRU,
+    keyed on problem shape) to amortize that cost; treat this backend
+    as a numerical cross-check unless you benchmark it on your own
+    workload.
 
 The key integration point is ``cufinufft_nfft_adjoint()``, which is a
 drop-in replacement for ``cunfft.nfft_adjoint_async()`` in the
@@ -12,6 +21,9 @@ Lomb-Scargle pipeline.
 
 Requires: pip install cufinufft>=2.2
 """
+import threading
+from collections import OrderedDict
+
 import numpy as np
 
 try:
@@ -21,6 +33,16 @@ except ImportError:
     HAS_CUFINUFFT = False
 
 import pycuda.gpuarray as gpuarray
+
+# LRU cache of cufinufft Plans keyed on (nf_total, eps, n_pts,
+# gpu_method). Plan creation (cuFFT plan + GPU workspace allocation)
+# dominated the per-call cost of this backend; reuse amortizes it.
+# Cached plans hold GPU memory: the cache is small and evicted plans
+# free their resources on garbage collection; call free_plan_cache()
+# to drop them eagerly (e.g. before tearing down the CUDA context).
+_PLAN_CACHE_MAX_SIZE = 8
+_plan_cache = OrderedDict()
+_plan_cache_lock = threading.Lock()
 
 
 def check_cufinufft():
@@ -32,8 +54,42 @@ def check_cufinufft():
         )
 
 
+def _get_plan(nf_total, eps, n_pts, gpu_method=1):
+    """Return a cached cufinufft Plan for this problem shape."""
+    key = (int(nf_total), float(eps), int(n_pts), int(gpu_method))
+    with _plan_cache_lock:
+        if key in _plan_cache:
+            _plan_cache.move_to_end(key)
+            return _plan_cache[key]
+
+    plan = cufinufft.Plan(
+        nufft_type=1,
+        n_modes=(int(nf_total),),
+        n_trans=1,
+        eps=eps,
+        dtype='complex64',
+        gpu_method=gpu_method,
+    )
+
+    with _plan_cache_lock:
+        _plan_cache[key] = plan
+        _plan_cache.move_to_end(key)
+        while len(_plan_cache) > _PLAN_CACHE_MAX_SIZE:
+            _plan_cache.popitem(last=False)
+
+    return plan
+
+
+def free_plan_cache():
+    """Drop all cached cufinufft plans, releasing their GPU resources
+    (via the plans' finalizers once unreferenced)."""
+    with _plan_cache_lock:
+        _plan_cache.clear()
+
+
 def cufinufft_nfft_adjoint(memory, minimum_frequency=0.0,
                            samples_per_peak=1.0, eps=1e-6,
+                           gpu_method=1,
                            transfer_to_device=True,
                            transfer_to_host=True, **kwargs):
     """
@@ -71,6 +127,9 @@ def cufinufft_nfft_adjoint(memory, minimum_frequency=0.0,
         Oversampling factor.
     eps : float, optional (default: 1e-6)
         Requested precision for cufinufft.
+    gpu_method : int, optional (default: 1)
+        cufinufft spreading method (1 = shared-memory subproblem,
+        2 = global-memory; see the cufinufft documentation).
     transfer_to_device : bool, optional (default: True)
         Transfer input data to GPU before computation.
     transfer_to_host : bool, optional (default: True)
@@ -117,15 +176,9 @@ def cufinufft_nfft_adjoint(memory, minimum_frequency=0.0,
     # Output buffer for full transform
     f_out = gpuarray.zeros(nf_total, dtype=np.complex64)
 
-    # Create and execute cufinufft plan
-    plan = cufinufft.Plan(
-        nufft_type=1,
-        n_modes=(nf_total,),
-        n_trans=1,
-        eps=eps,
-        dtype='complex64',
-        gpu_method=1,  # shared-memory subproblem method
-    )
+    # Execute with a cached plan (creation dominates the per-call
+    # cost); setpts re-bins the points for this call's data
+    plan = _get_plan(nf_total, eps, len(x_cu), gpu_method=gpu_method)
     plan.setpts(x_cu)
     plan.execute(c, f_out)
 

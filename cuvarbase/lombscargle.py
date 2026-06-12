@@ -417,6 +417,13 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     Parameters
     ----------
+    use_cufinufft: bool, optional (default: False)
+        Use the cuFINUFFT library for the NFFT instead of the custom
+        Gaussian-spreading kernel. Requires ``pip install
+        cufinufft>=2.2`` (raises ImportError otherwise). Provided as a
+        numerical cross-check backend: in cuvarbase's benchmarks the
+        custom kernel was faster end-to-end (see
+        ``cuvarbase.cufinufft_backend``).
     **kwargs: passed to ``NFFTAsyncProcess``
 
     Example

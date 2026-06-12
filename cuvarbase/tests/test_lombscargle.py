@@ -433,3 +433,83 @@ class TestLombScargleAsyncGating(object):
         with pytest.raises(ImportError, match="cufinufft"):
             ls.lomb_scargle_async(memory, functions, freqs,
                                   use_fft=False, use_cufinufft=True)
+
+
+class TestCufinufftPlanCache(object):
+    """cufinufft Plans were created (and never destroyed) on every
+    call — the dominant cost that made the backend slower than the
+    custom NFFT. Plans must be cached per problem shape."""
+
+    class _FakePlan(object):
+        instances = []
+
+        def __init__(self, **kwargs):
+            type(self).instances.append(kwargs)
+            self.setpts_calls = 0
+
+        def setpts(self, x):
+            self.setpts_calls += 1
+
+        def execute(self, c, out):
+            out[:] = 0
+
+    class _FakeNFFTMemory(object):
+        def __init__(self, ndata=64, nf=32):
+            rand = np.random.RandomState(2)
+            self.t_g = np.sort(rand.rand(ndata)).astype(np.float32)
+            self.y_g = rand.randn(ndata).astype(np.float32)
+            self.tmin = float(self.t_g.min())
+            self.tmax = float(self.t_g.max())
+            self.nf = nf
+            self.ghat_g = np.zeros(nf, dtype=np.complex64)
+            self.ghat_c = np.zeros(nf, dtype=np.complex64)
+
+        def transfer_data_to_gpu(self):
+            pass
+
+        def transfer_nfft_to_cpu(self):
+            pass
+
+    def _patched_backend(self, monkeypatch):
+        import types
+        from .. import cufinufft_backend as cb
+        self._FakePlan.instances = []
+        monkeypatch.setattr(cb, 'HAS_CUFINUFFT', True)
+        monkeypatch.setattr(cb, 'cufinufft',
+                            types.SimpleNamespace(Plan=self._FakePlan),
+                            raising=False)
+        monkeypatch.setattr(cb, 'gpuarray',
+                            types.SimpleNamespace(zeros=np.zeros))
+        cb.free_plan_cache()
+        return cb
+
+    def test_plan_reused_for_same_shape(self, monkeypatch):
+        cb = self._patched_backend(monkeypatch)
+        mem = self._FakeNFFTMemory()
+        cb.cufinufft_nfft_adjoint(mem, transfer_to_device=False,
+                                  transfer_to_host=False)
+        cb.cufinufft_nfft_adjoint(mem, transfer_to_device=False,
+                                  transfer_to_host=False)
+        assert len(self._FakePlan.instances) == 1
+        cb.free_plan_cache()
+
+    def test_new_plan_for_different_shape(self, monkeypatch):
+        cb = self._patched_backend(monkeypatch)
+        cb.cufinufft_nfft_adjoint(self._FakeNFFTMemory(nf=32),
+                                  transfer_to_device=False,
+                                  transfer_to_host=False)
+        cb.cufinufft_nfft_adjoint(self._FakeNFFTMemory(nf=64),
+                                  transfer_to_device=False,
+                                  transfer_to_host=False)
+        assert len(self._FakePlan.instances) == 2
+        cb.free_plan_cache()
+
+    def test_cache_eviction_bounded(self, monkeypatch):
+        cb = self._patched_backend(monkeypatch)
+        for nf in 16 * (1 + np.arange(cb._PLAN_CACHE_MAX_SIZE + 3)):
+            cb.cufinufft_nfft_adjoint(self._FakeNFFTMemory(nf=int(nf)),
+                                      transfer_to_device=False,
+                                      transfer_to_host=False)
+        assert len(cb._plan_cache) == cb._PLAN_CACHE_MAX_SIZE
+        cb.free_plan_cache()
+        assert len(cb._plan_cache) == 0
