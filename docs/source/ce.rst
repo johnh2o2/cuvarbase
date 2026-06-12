@@ -57,3 +57,20 @@ instead of ``run``, which will ensure that the memory limit (1 GB in this case) 
 
 
 .. [G2013] `Graham et al. 2013 <http://adsabs.harvard.edu/cgi-bin/bib_query?arXiv:1306.6664>`_
+
+Unsupported option combinations
+-------------------------------
+
+CE is in maintenance mode (see the module notice), and the following
+option combinations are **not implemented** — they raise
+``ValueError`` rather than silently misbehaving:
+
+* ``use_fast=True`` with ``weighted=True`` — the fast shared-memory
+  kernels have no weighted variant.
+* ``mag_overlap > 0`` with ``balanced_magbins=True`` — overlapping
+  magnitude bins are incompatible with the balanced-bin layout.
+* ``weighted=True`` with ``balanced_magbins=True`` or
+  ``compute_log_prob=True``.
+
+For an actively developed GPU conditional-entropy implementation, see
+`periodfind <https://github.com/scope-ml/periodfind>`_.

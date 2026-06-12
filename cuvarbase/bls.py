@@ -44,7 +44,7 @@ _kernel_cache_lock = threading.Lock()
 
 def _choose_block_size(ndata):
     """
-    Choose optimal block size based on data size.
+    Choose a CUDA block size based on data size.
 
     Parameters
     ----------
@@ -54,7 +54,16 @@ def _choose_block_size(ndata):
     Returns
     -------
     block_size : int
-        Optimal CUDA block size (32, 64, 128, or 256)
+        CUDA block size (32, 64, 128, or 256)
+
+    Notes
+    -----
+    The heuristic considers only ``ndata``; occupancy effects driven
+    by the number of phase bins (i.e. small ``qmin``) are ignored, so
+    the choice may be suboptimal for unusual ``ndata``/``nbins``
+    combinations. The adaptive-kernel speedups published in the README
+    (1.4-5.3x) were measured on Keplerian-style grids; outside that
+    regime, benchmark ``block_size`` yourself and pass it explicitly.
     """
     if ndata <= 32:
         return 32   # Single warp

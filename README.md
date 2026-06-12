@@ -129,7 +129,10 @@ This optimization makes large-scale BLS searches practical and efficient for all
 - Avoids binning and grid searching - directly tests all observation pairs as transit boundaries
 - New `eebls_transit` wrapper automatically selects between sparse and standard BLS
   - **Default: GPU sparse BLS** for small datasets (use_gpu=True)
-  - CPU fallback available (use_gpu=False)
+  - `use_gpu=False` runs the search itself on the CPU (`sparse_bls_cpu`),
+    but note that **importing cuvarbase still requires a working CUDA
+    GPU** (the package creates a CUDA context at import time), so this
+    is a per-call choice, not a way to run on GPU-less machines
 - Particularly useful for ground-based surveys with limited phase coverage
 
 **Citation for Sparse BLS**: If you use this method, please cite:
@@ -164,7 +167,8 @@ Currently includes implementations of:
   - Standard GPU-accelerated version (`eebls_gpu_fast()`)
   - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations)
     - GPU implementation: `sparse_bls_gpu()` (default)
-    - CPU implementation: `sparse_bls_cpu()` (fallback)
+    - CPU implementation: `sparse_bls_cpu()` (per-call alternative;
+      importing cuvarbase itself still requires a GPU)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
 - **Conditional Entropy period finder ([CE](http://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
   - **Maintenance mode**: CE works and will keep working, but no further development is planned here. For new projects that want an actively developed GPU conditional entropy (or AOV) search, we recommend [periodfind](https://github.com/scope-ml/periodfind) from the ZTF/SCoPe team
@@ -207,6 +211,13 @@ Future developments may include:
 - CUDA-capable GPU (NVIDIA)
 - CUDA Toolkit (11.x or 12.x recommended)
 - Python 3.9 or later
+
+Note: `import cuvarbase` creates a CUDA context, so a working GPU and
+driver are required even for the CPU helper functions (e.g.
+`sparse_bls_cpu`); there is no GPU-less mode. The import also pins
+CUDA device 0 — set `CUDA_DEVICE` before importing to select another
+device, and prefer spawning fresh processes over forking when using
+multiple GPUs.
 
 ### Dependencies
 
