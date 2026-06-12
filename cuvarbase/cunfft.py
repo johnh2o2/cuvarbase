@@ -265,6 +265,16 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         -----
         Pulled from <https://github.com/jakevdp/nfft>_.
 
+        .. warning::
+
+            This truncation-error bound is a known-inaccurate
+            heuristic: the proper bound depends on the L1 norm of the
+            true Fourier coefficients (NFFT3 guide, p. 11), which is
+            not available a priori. When ``autoset_m`` is in effect
+            the chosen filter radius may be smaller than the requested
+            tolerance strictly requires. Pass ``m`` explicitly if you
+            need a guaranteed accuracy level.
+
         """
 
         # TODO: this should be computed in terms of the L1-norm of the true
