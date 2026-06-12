@@ -18,13 +18,13 @@ import resource
 
 warnings.warn(
     "cuvarbase.tls is EXPERIMENTAL and not recommended for science use "
-    "in this release. Known issues: the fixed 30-point epoch (t0) grid "
-    "misses or degrades transits with duration < ~3% of the period "
-    "(most periods > ~3.5 d in Keplerian mode); light curves with more "
-    "than ~3,500 points exceed the kernel's shared-memory budget (a "
-    "ValueError is raised). See analysis/V1_AUDIT_AND_GAMEPLAN.md in "
-    "the repository. For validated transit searches use cuvarbase.bls "
-    "(eebls_transit).",
+    "in this release. The epoch (t0) grid is now duration-scaled and "
+    "failed periods are masked from the statistics, but the rework has "
+    "not yet been validated against the reference transitleastsquares "
+    "package. Light curves with more than ~3,500 points exceed the "
+    "kernel's shared-memory budget (a ValueError is raised). See "
+    "analysis/V1_AUDIT_AND_GAMEPLAN.md in the repository. For validated "
+    "transit searches use cuvarbase.bls (eebls_transit).",
     UserWarning)
 
 import pycuda.autoprimaryctx  # noqa: E402

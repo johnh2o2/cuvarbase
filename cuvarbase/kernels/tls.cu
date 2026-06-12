@@ -25,6 +25,30 @@
 #define PI 3.141592653589793f
 #define WARP_SIZE 32
 
+/*
+ * Epoch (t0) grid: the stride scales with the transit duration
+ * (stride = duration_phase / T0_OVERSAMPLE) so that narrow transits
+ * always overlap a tested epoch. The previous fixed 30-point grid
+ * missed transits narrower than ~1/30 of the period entirely.
+ * Mirrors cuvarbase.tls_grids.t0_grid_size().
+ */
+#ifndef T0_OVERSAMPLE
+#define T0_OVERSAMPLE 3.0f
+#endif
+#ifndef MIN_N_T0
+#define MIN_N_T0 30
+#endif
+#ifndef MAX_N_T0
+#define MAX_N_T0 20000
+#endif
+
+__device__ inline int t0_grid_size(float duration_phase) {
+    int n_t0 = (int)ceilf(T0_OVERSAMPLE / duration_phase);
+    if (n_t0 < MIN_N_T0) n_t0 = MIN_N_T0;
+    if (n_t0 > MAX_N_T0) n_t0 = MAX_N_T0;
+    return n_t0;
+}
+
 // Device utility functions
 __device__ inline float mod1(float x) {
     return x - floorf(x);
@@ -274,7 +298,8 @@ extern "C" __global__ void tls_search_kernel_keplerian(
         float duration_phase = expf(log_duration);
         float duration = duration_phase * period;
 
-        int n_t0 = 30;
+        // Duration-scaled epoch grid (see t0_grid_size above)
+        int n_t0 = t0_grid_size(duration_phase);
         for (int t0_idx = threadIdx.x; t0_idx < n_t0; t0_idx += blockDim.x) {
             float t0_phase = (float)t0_idx / n_t0;
             float depth = calculate_optimal_depth(y_sorted, dy_sorted, phases,
@@ -430,7 +455,8 @@ extern "C" __global__ void tls_search_kernel(
         float duration_phase = expf(log_duration);
         float duration = duration_phase * period;
 
-        int n_t0 = 30;
+        // Duration-scaled epoch grid (see t0_grid_size above)
+        int n_t0 = t0_grid_size(duration_phase);
         for (int t0_idx = threadIdx.x; t0_idx < n_t0; t0_idx += blockDim.x) {
             float t0_phase = (float)t0_idx / n_t0;
             float depth = calculate_optimal_depth(y_sorted, dy_sorted, phases,

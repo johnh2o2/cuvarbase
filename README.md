@@ -179,11 +179,11 @@ are not recommended for science use yet. They emit a `UserWarning` on import.
 
 - **Transit Least Squares ([TLS](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract))** (`cuvarbase.tls`) - GPU transit
   detection with optimal depth fitting and Ofir (2014) period grids.
-  Known issues: the fixed 30-point epoch grid misses short-duration
-  transits (most periods > ~3.5 d in Keplerian mode); light curves above
-  ~3,500 points exceed the kernel's shared-memory budget (a `ValueError`
-  is raised). Failed trial periods are masked out of the SDE/FAP
-  statistics. A rework is planned for v1.1.
+  The epoch grid is duration-scaled and failed trial periods are masked
+  out of the SDE/FAP statistics, but the rework has not yet been
+  validated against the reference `transitleastsquares` package. Light
+  curves above ~3,500 points exceed the kernel's shared-memory budget
+  (a `ValueError` is raised).
 A NUFFT-based Likelihood Ratio Test (matched-filter transit detection
 for correlated noise, contributed by **Jamila Taaki**) was previously
 listed here but has been removed from the released package: the

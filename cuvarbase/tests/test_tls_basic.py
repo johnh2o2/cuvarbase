@@ -576,3 +576,38 @@ class TestTemplateFallbackWarns:
                 n_template=100)
         assert len(template) == 100
         assert template.max() == pytest.approx(1.0)
+
+
+class TestT0GridDurationScaled:
+    """The epoch (t0) grid must scale with transit duration: the old
+    fixed 30-point grid missed transits narrower than 1/30 of the
+    period (audit: 8/8 injected epochs missed at P=100 d)."""
+
+    def test_grid_size_scales_with_duration(self):
+        assert tls_grids.t0_grid_size(0.2) == 30      # wide: floor
+        assert tls_grids.t0_grid_size(0.01) == 300
+        assert tls_grids.t0_grid_size(0.001) == 3000
+        assert tls_grids.t0_grid_size(1e-6) == 20000  # capped
+
+    def test_coverage_guarantee(self):
+        # Every possible transit epoch must lie within half a transit
+        # duration of a tested t0 (with margin: stride <= q/3).
+        rand = np.random.RandomState(11)
+        for q in (0.05, 0.008, 0.003):
+            n = tls_grids.t0_grid_size(q)
+            grid = np.arange(n) / n
+            epochs = rand.rand(500)
+            # circular distance to the nearest tested t0
+            dist = np.abs((epochs[:, None] - grid[None, :] + 0.5) % 1.0
+                          - 0.5).min(axis=1)
+            assert dist.max() <= 0.5 / n + 1e-12
+            assert 1.0 / n <= q / 3 + 1e-12
+
+    def test_kernel_source_uses_duration_scaled_grid(self):
+        # Both CUDA kernels must derive n_t0 from the duration; the
+        # GPU-side recovery test runs in the pod batch.
+        from cuvarbase.utils import find_kernel
+        src = open(find_kernel('tls')).read()
+        assert 'int n_t0 = 30;' not in src
+        assert src.count('t0_grid_size(duration_phase)') == 2
+        assert 'T0_OVERSAMPLE' in src
