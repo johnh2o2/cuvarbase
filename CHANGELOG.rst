@@ -18,6 +18,8 @@ What's new in cuvarbase
         * Optional cuFINUFFT backend (``use_cufinufft=True``) as a cross-check; the custom NFFT kernel remains faster
         * Fixed ``lomb_scargle_simple`` double-applying inverse-variance weights (largest-error points previously got the most weight)
         * Fixed ``fap_baluev`` returning exactly 0 for significant peaks (issue #14): the false-alarm probability is now evaluated in log space with ``expm1``, staying positive down to the float64 limit instead of underflowing at FAP ≲ 1e-16
+        * Fixed ``lomb_scargle_async`` (direct-sums branch) gating the device→host result copy on ``transfer_to_device`` instead of ``transfer_to_host``: callers with data already on the GPU got a stale/empty periodogram back, and the copy could not be suppressed
+        * ``lomb_scargle_async(use_cufinufft=True)`` now raises ImportError when cufinufft is not installed instead of silently running the custom NFFT path
         * Improved ``memory_requirement`` estimation (PR #59; fixes the previous NameError and now accounts for cuFFT work areas and per-batch buffers)
         * Lightcurves are normalized (mean-subtracted ``t`` and ``y``) before processing for numerical stability (PRs #57/#60)
     * **PDM** (community contribution by @astrobatty — PR #62)

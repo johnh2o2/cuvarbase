@@ -328,6 +328,11 @@ def lomb_scargle_async(memory, functions, freqs,
     lsp_c: ``np.array``
         The resulting periodgram (``memory.lsp_c``)
     """
+    if use_cufinufft and not HAS_CUFINUFFT:
+        raise ImportError(
+            "use_cufinufft=True but cufinufft is not installed. "
+            "Install with: pip install cufinufft>=2.2")
+
     (lomb, lomb_dirsum), nfft_funcs = functions
 
     df = freqs[1] - freqs[0]
@@ -364,7 +369,7 @@ def lomb_scargle_async(memory, functions, freqs,
                 memory.mode)
 
         lomb_dirsum.prepared_async_call(*args)
-        if transfer_to_device:
+        if transfer_to_host:
             memory.transfer_lsp_to_cpu()
         return memory.lsp_c
     else:
@@ -377,7 +382,7 @@ def lomb_scargle_async(memory, functions, freqs,
         nfft_kwargs['minimum_frequency'] = freqs[0]
         nfft_kwargs['samples_per_peak'] = samples_per_peak
 
-        if use_cufinufft and HAS_CUFINUFFT:
+        if use_cufinufft:
             # cuFINUFFT path: replace custom NFFT with cufinufft type-1
             cufinufft_nfft_adjoint(memory.nfft_mem_yw, **nfft_kwargs)
             cufinufft_nfft_adjoint(memory.nfft_mem_w, **nfft_kwargs)
