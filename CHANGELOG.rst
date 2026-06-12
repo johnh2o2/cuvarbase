@@ -8,7 +8,7 @@ What's new in cuvarbase
         * Sparse BLS (Panahi & Zucker 2021) on GPU and CPU, with ground-truth correctness tests; ``eebls_transit`` auto-selects sparse vs standard BLS by dataset size
         * ``sparse_bls_cpu`` vectorized with prefix sums (the previous pure-Python pair loop recomputed slice sums, O(N³) — minutes per frequency at the ndata=500 sparse threshold; now ~3 ms)
         * Multi-lightcurve batch mode: ``eebls_gpu_batch()`` + ``BLSBatchMemory`` (best for ndata < ~1000 per lightcurve)
-        * Keplerian frequency grids: ``cuvarbase.bls_frequencies.keplerian_freq_grid()`` — 4-37x fewer frequencies than uniform grids at survey baselines
+        * Keplerian frequency grids: ``cuvarbase.bls_frequencies.keplerian_freq_grid()`` — 4-37x fewer frequencies than uniform grids at survey baselines; ``return_qvals=True`` also returns the per-frequency Keplerian duration fraction, which ``eebls_gpu_batch`` accepts as array ``qmin``/``qmax`` for duration-constrained batch searches
         * Fixed ``mod1_fast`` integer overflow for t*f >= 2^31 (corrupted phases on long-baseline data)
         * **Fixed silent accuracy loss for absolute timestamps (e.g. BJD ~2.45e6 days):** all BLS paths now subtract ``min(t)`` in float64 before casting times to float32; previously the float32 phase fold lost nearly all phase information at BJD scale. **Convention change:** reported ``phi0`` solutions are now relative to ``min(t)``
         * Fixed ``reduction_max`` in the optimized kernel silently dropping half the per-block candidates (``use_optimized=True`` paths)
