@@ -12,7 +12,7 @@ The BLS algorithm underwent significant GPU optimizations to improve performance
 
 **Date**: October 2025
 **Branch**: `feature/optimize-bls-kernel`
-**Key Improvement**: 1.4-5.3x speedup on realistic frequency grids; up to **90x** in synthetic benchmarks of very small lightcurves (ndata < 64)
+**Key Improvement**: automatic block-size selection; ~1.0-1.3x over the fixed-block kernel in the v1.0 release benchmark (RTX A5000, Jun 2026, with warm kernel cache; see benchmarks/results/bls_adaptive_keplerian_benchmark_rtxa5000_jun2026.json). Earlier pre-release measurements showed 1.4-5.3x (up to 90x for ndata < 64), but those gains were dominated by per-call kernel handling that the thread-safe kernel cache now amortizes
 
 ### Problem Identified
 
@@ -54,7 +54,7 @@ Verified on RTX 4000 Ada Generation GPU with Keplerian frequency grids (realisti
 | **Dense ground-based** | 500 | 734k | 0.283 | 0.082 | **3.4x** |
 | **Space-based (TESS)** | 20k | 891k | 0.797 | 0.554 | **1.4x** |
 
-**Peak speedup**: **90x** for ndata < 64 (synthetic benchmarks only — realistic dense-grid gains are 1.4-5.3x)
+**Measured (v1.0 re-run)**: ~1.0-1.3x over the fixed-block kernel in the v1.0 release benchmark (RTX A5000, Jun 2026, with warm kernel cache; see benchmarks/results/bls_adaptive_keplerian_benchmark_rtxa5000_jun2026.json). Earlier pre-release measurements showed 1.4-5.3x (up to 90x for ndata < 64), but those gains were dominated by per-call kernel handling that the thread-safe kernel cache now amortizes
 
 ### GPU Architecture Portability
 
@@ -232,12 +232,12 @@ Process multiple frequency ranges per kernel launch to amortize launch overhead.
 
 | Optimization | Effort | Speedup | Status |
 |--------------|--------|---------|--------|
-| Dynamic block sizing | ✅ DONE | 1.4-5.3x realistic | v1.0 |
+| Dynamic block sizing | ✅ DONE | ~1.0-1.3x with warm kernel cache (was 1.4-5.3x pre-cache) | v1.0 |
 | Micro-optimizations | ✅ DONE | ~6% | v1.0 |
 | Thread-safety + LRU cache | ✅ DONE | No overhead | v1.0 |
 | CUDA streams | ⏳ TODO | 1.2-3x | Future |
 | Persistent kernels | ⏳ TODO | 5-10x | Future |
-| **Total achieved** | | **1.4-5.3x realistic, up to 90x synthetic (ndata<64)** | v1.0 |
+| **Total achieved** | | **see per-row notes; adaptive gains largely subsumed by kernel caching** | v1.0 |
 | **Remaining potential** | | **5-40x** | Future |
 
 ---

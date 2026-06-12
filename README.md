@@ -99,9 +99,15 @@ This represents a major modernization effort compared to the `master` branch:
 ### ⚡ Performance Improvements (Major Update)
 
 **Dramatically Faster BLS Transit Detection** — **257-354x faster** than astropy `BoxLeastSquares`, consistent across all 7 GPU architectures tested (V100 through H200):
-- Adaptive block sizing automatically optimizes GPU utilization based on dataset size
-  (1.4-5.3x over the fixed-block kernel on realistic grids; up to 90x for
-  very small lightcurves, ndata < 64)
+- Adaptive block sizing automatically selects the CUDA block size from
+  the dataset size. In the v1.0 release benchmark it measures parity to
+  ~1.3x over the fixed-block kernel on realistic Keplerian grids (RTX
+  A5000, Jun 2026;
+  `benchmarks/results/bls_adaptive_keplerian_benchmark_rtxa5000_jun2026.json`).
+  Earlier pre-release measurements showed 1.4-5.3x (up to 90x for tiny
+  lightcurves), but those gains shrank once thread-safe kernel caching
+  landed and amortized the per-call kernel handling the adaptive path
+  used to avoid
 - Particularly beneficial for ground-based surveys and sparse time series
 - Thread-safe kernel caching with LRU eviction for production environments
 - **New function**: `eebls_gpu_fast_adaptive()` - drop-in replacement with automatic optimization
