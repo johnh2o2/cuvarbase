@@ -5,14 +5,15 @@ What's new in cuvarbase
     * **BLS**
         * Optimized kernel variant (``bls_optimized.cu``) with bank-conflict fixes and warp shuffles; ``eebls_gpu_fast_optimized()`` and ``eebls_gpu_fast_adaptive()`` (automatic block sizing; the v1.0 re-benchmark with warm kernel cache measures ~1.0-1.3x over fixed blocks — earlier 1.4-5.3x gains were dominated by per-call kernel handling that the cache now amortizes)
         * Thread-safe kernel caching with LRU eviction
-        * Sparse BLS (Panahi & Zucker 2021) on GPU and CPU, with ground-truth correctness tests; ``eebls_transit`` auto-selects sparse vs standard BLS by dataset size
+        * ``eebls_gpu_fast`` (and ``_optimized``/``_adaptive``): the ``noverlap`` parameter is now honored — the periodogram is the elementwise max over ``noverlap`` passes with the phase-bin grid shifted by ``1/noverlap`` of the finest bin between passes. Previously ``noverlap`` was silently ignored on the fast path (its docstring recommended a manual ``dphi`` re-run workaround, now removed). Runtime scales linearly with ``noverlap`` (default 2); pass ``noverlap=1`` for the old single-pass behavior
+        * Sparse BLS (Panahi & Zucker 2021) on GPU and CPU, with ground-truth correctness tests; ``eebls_transit`` auto-selects sparse vs standard BLS by dataset size. The sparse path (kernels + CPU) honors per-frequency ``qmin``/``qmax`` duration bounds, and ``eebls_transit`` passes its Keplerian ``qmin_fac``/``qmax_fac`` constraints through, so results are comparable across the ``sparse_threshold`` boundary
         * ``sparse_bls_cpu`` vectorized with prefix sums (the previous pure-Python pair loop recomputed slice sums, O(N³) — minutes per frequency at the ndata=500 sparse threshold; now ~3 ms)
         * Multi-lightcurve batch mode: ``eebls_gpu_batch()`` + ``BLSBatchMemory`` (best for ndata < ~1000 per lightcurve)
         * Keplerian frequency grids: ``cuvarbase.bls_frequencies.keplerian_freq_grid()`` — 4-37x fewer frequencies than uniform grids at survey baselines; ``return_qvals=True`` also returns the per-frequency Keplerian duration fraction, which ``eebls_gpu_batch`` accepts as array ``qmin``/``qmax`` for duration-constrained batch searches
         * Fixed ``mod1_fast`` integer overflow for t*f >= 2^31 (corrupted phases on long-baseline data)
         * **Fixed silent accuracy loss for absolute timestamps (e.g. BJD ~2.45e6 days):** all BLS paths now subtract ``floor(min(t))`` in float64 before casting times to float32; previously the float32 phase fold lost nearly all phase information at BJD scale. **Convention change:** reported ``phi0`` solutions are now relative to ``floor(min(t))``
         * Fixed ``reduction_max`` in the optimized kernel silently dropping half the per-block candidates (``use_optimized=True`` paths)
-        * Fixed ``eebls_transit`` sparse path crashing with TypeError on documented kwargs (rho, samples_per_peak, ...); it now also warns that the sparse search ignores qmin_fac/qmax_fac
+        * Fixed ``eebls_transit`` sparse path crashing with TypeError on documented kwargs (rho, samples_per_peak, ...)
         * ``compile_bls`` validates block_size (power of 2, >= 32) and raises a clear error when no requested kernel functions are loadable; ``_reduction_max`` now applies the same validation (its old power-of-two assert was always true under Python 3 division)
     * **Lomb-Scargle / NFFT**
         * Memory classes refactored into ``cuvarbase.memory`` (behavior-preserving)
