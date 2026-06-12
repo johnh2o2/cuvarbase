@@ -6,6 +6,7 @@ What's new in cuvarbase
         * Optimized kernel variant (``bls_optimized.cu``) with bank-conflict fixes and warp shuffles; ``eebls_gpu_fast_optimized()`` and ``eebls_gpu_fast_adaptive()`` (automatic block sizing — 1.4-5.3x on realistic grids, larger gains for very small lightcurves)
         * Thread-safe kernel caching with LRU eviction
         * Sparse BLS (Panahi & Zucker 2021) on GPU and CPU, with ground-truth correctness tests; ``eebls_transit`` auto-selects sparse vs standard BLS by dataset size
+        * ``sparse_bls_cpu`` vectorized with prefix sums (the previous pure-Python pair loop recomputed slice sums, O(N³) — minutes per frequency at the ndata=500 sparse threshold; now ~3 ms)
         * Multi-lightcurve batch mode: ``eebls_gpu_batch()`` + ``BLSBatchMemory`` (best for ndata < ~1000 per lightcurve)
         * Keplerian frequency grids: ``cuvarbase.bls_frequencies.keplerian_freq_grid()`` — 4-37x fewer frequencies than uniform grids at survey baselines
         * Fixed ``mod1_fast`` integer overflow for t*f >= 2^31 (corrupted phases on long-baseline data)

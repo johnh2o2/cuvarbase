@@ -904,3 +904,20 @@ class TestReductionMaxValidation(object):
     def test_valid_block_size_launches(self):
         kern = self._call(64)
         assert len(kern.calls) >= 1
+
+
+class TestSparseBlsCpuVectorized:
+    """sparse_bls_cpu used to be a pure-Python O(N^3) loop (each pair
+    recomputed its slice sum) — minutes per frequency at the
+    ndata=500 sparse threshold. The vectorized scan must stay fast."""
+
+    def test_moderate_ndata_runs_in_seconds(self):
+        import time
+        t, y, dy = data(snr=20, q=0.05, phi0=0.4, freq=1.0,
+                        baseline=365., ndata=250)
+        start = time.time()
+        power, _ = sparse_bls_cpu(t, y, dy,
+                                  np.array([0.9, 1.0, 1.1]))
+        elapsed = time.time() - start
+        assert elapsed < 10.0  # pre-vectorization: minutes
+        assert int(np.argmax(power)) == 1
