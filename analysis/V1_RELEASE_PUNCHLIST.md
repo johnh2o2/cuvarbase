@@ -48,6 +48,10 @@ terminate, archive, and check these off.
 - [ ] TLS golden tests: pip install transitleastsquares (in addition
       to batman-package) on the pod; run test_tls_golden.py (4 tests:
       2 recovery + 2 reference comparisons)
+- [ ] cuFINUFFT plan caching: re-run the cufinufft_vs_custom section
+      of benchmark_new_features.py (pip install cufinufft) — record
+      whether caching moves the 0.63-0.84x ratio past 1x; correctness
+      cross-check vs custom NFFT still passes
 
 
 ## A. Errors — wrong results, crashes, broken API (publish blockers)
@@ -139,7 +143,7 @@ terminate, archive, and check these off.
 - [ ] **eebls_gpu_batch large-ndata regression: ~12x slower than the single-LC loop for TESS-like data — undiagnosed, unguarded, and contradicted by its own docs**
   - Evidence: benchmarks/results/benchmark_results_new_features.json (TESS-1sector batch_speedup=0.0847, Kepler 0.87); cuvarbase/bls.py:1886-1900 — verified at HEAD the docstring advertises only benefits, no caveat; docs/BENCHMARK_RESULTS.md:127-131 prose says 'as fast or faster' while its own table shows 12x slower; CHANGELOG.rst soft hint only; eebls_gpu_batch absent from docs/source/bls.rst
   - Merged three sweep findings (audit-disputed diagnosis, perf records, docs gap). Root cause never profiled (nsys/ncu planned for v1.1; the launch-config hypothesis was refuted). No commits to bls_batch.cu or eebls_gpu_batch since the Feb 2026 benchmark. Minimum v1.0 action: add docstring + Sphinx warning, fix the contradictory BENCHMARK_RESULTS prose, and consider a runtime warning or ndata-based fallback to the single-LC path. Diagnosis itself can stay v1.1 if documented.
-- [ ] **cuFINUFFT LS backend 0.63-0.84x the speed of the custom NFFT: per-call Plan creation, no caching, never destroyed — and its module docstring claims the opposite**
+- [x] **cuFINUFFT LS backend 0.63-0.84x the speed of the custom NFFT: per-call Plan creation, no caching, never destroyed — and its module docstring claims the opposite** — FIXED: LRU plan cache keyed on (nf_total, eps, n_pts, gpu_method) with cap 8 + free_plan_cache() for eager release; gpu_method exposed as a documented kwarg; module docstring rewritten honestly (cross-check backend, custom kernel faster in benchmarks); use_cufinufft documented in LombScargleAsyncProcess. TestCufinufftPlanCache (3 tests w/ fake plans, all fail pre-fix). Speedup re-measurement queued for the pod batch. Commit: 62ce387
   - Evidence: cuvarbase/cufinufft_backend.py:118-130 — verified at HEAD: fresh gpuarray output + cufinufft.Plan per invocation (called twice per periodogram, lombscargle.py:382-383); benchmark_results_new_features.json cufinufft_vs_custom 0.63-0.84 across 8 configs; cufinufft_backend.py:4-7 docstring claims '~10-100x faster spreading throughput'; use_cufinufft documented in no docstring or Sphinx page
   - Merged four sweep findings (audit, code-marker x2, perf records). Plan caching keyed on (nf_total, eps, n_pts) is the identified fix to flip the backend past 1x; gpu_method=1 is hard-coded and Plans rely on GC for GPU resource release. Docs side: BENCHMARK_RESULTS.md/CHANGELOG are honest but the module docstring is misleading and the parameter is undocumented in the API. Either implement caching or ship clearly labeled as a cross-check backend with the docstring corrected.
 - [ ] **Page-locked (pinned) host buffers never restored — allocate_pinned_arrays is a misnomer and async transfers silently serialize**
