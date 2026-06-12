@@ -376,9 +376,14 @@ class TestTLSBasicExecution:
         """Test that TLS search runs without errors."""
         from cuvarbase import tls
 
-        # Create simple synthetic data
+        # Create simple synthetic data. Note: y needs (tiny) noise —
+        # a perfectly flat lightcurve gives depth == 0 for every
+        # (t0, duration) candidate, so no trial period records a
+        # solution and tls_search_gpu raises RuntimeError (all
+        # periods masked as failed).
+        rand = np.random.RandomState(99)
         t = np.linspace(0, 100, 500)
-        y = np.ones(500)
+        y = np.ones(500) + 0.001 * rand.randn(500)
         dy = np.ones(500) * 0.001
 
         # Use small period range for speed

@@ -185,5 +185,5 @@ Selectable output conventions are tracked in
 `issue #17 <https://github.com/johnh2o2/cuvarbase/issues/17>`_.
 
 Reported ``phi0`` values are transit *start* phases measured relative
-to ``min(t)`` (observation times are epoch-subtracted internally to
+to ``floor(min(t))`` (observation times are epoch-subtracted internally to
 preserve float32 precision).
