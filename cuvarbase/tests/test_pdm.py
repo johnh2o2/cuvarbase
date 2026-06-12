@@ -138,3 +138,42 @@ def test_pdm_new_format():
     assert len(results_auto[0][1]) == len(results_auto[0][0])
 
     pdm_proc.finish()
+
+
+class TestCpuFunctionsDoNotMutateInputs(object):
+    """The CPU reference functions used to do `t -= mean(t)` in place,
+    silently modifying the caller's arrays."""
+
+    def _data(self):
+        rand = np.random.RandomState(7)
+        t = np.sort(10 * rand.rand(40))
+        y = np.cos(2 * np.pi * 2.0 * t) + 0.1 * rand.randn(40)
+        w = np.ones_like(y) / len(y)
+        return t, y, w
+
+    def test_binless_pdm_cpu(self):
+        from ..pdm import binless_pdm_cpu
+        t, y, w = self._data()
+        t0, y0, w0 = t.copy(), y.copy(), w.copy()
+        binless_pdm_cpu(t, y, w, np.array([1.0, 2.0]))
+        assert np.array_equal(t, t0)
+        assert np.array_equal(y, y0)
+        assert np.array_equal(w, w0)
+
+    def test_pdm2_cpu(self):
+        from ..pdm import pdm2_cpu
+        t, y, w = self._data()
+        t0, y0, w0 = t.copy(), y.copy(), w.copy()
+        pdm2_cpu(t, y, w, np.array([1.0, 2.0]))
+        assert np.array_equal(t, t0)
+        assert np.array_equal(y, y0)
+        assert np.array_equal(w, w0)
+
+    def test_pdm2_single_freq(self):
+        from ..pdm import pdm2_single_freq
+        t, y, w = self._data()
+        t0, y0, w0 = t.copy(), y.copy(), w.copy()
+        pdm2_single_freq(t, y, w, 2.0)
+        assert np.array_equal(t, t0)
+        assert np.array_equal(y, y0)
+        assert np.array_equal(w, w0)
