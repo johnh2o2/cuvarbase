@@ -142,18 +142,33 @@ The ``eebls_transit`` function automatically selects between sparse BLS (for sma
         use_sparse=True  # Force sparse BLS
     )
 
-You can also use sparse BLS directly with ``sparse_bls_cpu``:
+When ``eebls_transit`` selects the sparse path it applies the same
+per-frequency Keplerian duration bounds (``qmin_fac``/``qmax_fac``
+times the fiducial ``q_transit`` value) as the standard gridded
+search, so results are directly comparable across the
+``sparse_threshold`` boundary.
+
+You can also use sparse BLS directly with ``sparse_bls_cpu`` (or
+``sparse_bls_gpu``). By default all durations :math:`q \in (0, 0.5]`
+are searched; the optional ``qmin``/``qmax`` arguments (scalar or
+per-frequency arrays) restrict the candidate durations:
 
 .. code-block:: python
 
-    from cuvarbase.bls import sparse_bls_cpu
-    
+    from cuvarbase.bls import sparse_bls_cpu, q_transit
+
     # Define trial frequencies
     freqs = np.linspace(0.1, 10.0, 1000)
-    
-    # Run sparse BLS
+
+    # Run sparse BLS (unconstrained durations)
     powers, solutions = sparse_bls_cpu(t, y, dy, freqs)
-    
+
+    # ... or restrict durations to a Keplerian band
+    qvals = q_transit(freqs)
+    powers, solutions = sparse_bls_cpu(t, y, dy, freqs,
+                                       qmin=0.5 * qvals,
+                                       qmax=2.0 * qvals)
+
     # solutions is a list of (q, phi0) tuples for each frequency
     best_idx = np.argmax(powers)
     best_freq = freqs[best_idx]
