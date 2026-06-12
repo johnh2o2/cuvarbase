@@ -611,3 +611,16 @@ class TestT0GridDurationScaled:
         assert 'int n_t0 = 30;' not in src
         assert src.count('t0_grid_size(duration_phase)') == 2
         assert 'T0_OVERSAMPLE' in src
+
+
+class TestNoBitonicSort:
+    """The bitonic sort was provably incomplete for non-power-of-2
+    sizes AND its output order was never consumed (the depth/chi2
+    accumulations are order-independent) — pure wasted GPU work with
+    misleading naming. It must stay removed."""
+
+    def test_kernel_has_no_sort(self):
+        from cuvarbase.utils import find_kernel
+        src = open(find_kernel('tls')).read()
+        assert 'bitonic_sort_phases' not in src
+        assert 'y_sorted' not in src

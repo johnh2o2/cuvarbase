@@ -155,9 +155,11 @@ def compile_tls(block_size=_default_block_size):
 
     Notes
     -----
-    The kernels use bitonic sort for phase sorting and a limb-darkened
-    transit template loaded into shared memory for physically realistic
-    fitting. Works for datasets up to ~100,000 points.
+    The kernels stage the data and a limb-darkened transit template in
+    shared memory for physically realistic fitting (the depth/chi2
+    accumulations are order-independent, so no phase sort is needed).
+    The shared-memory layout caps datasets at ~3,500 points; see
+    tls_search_gpu, which raises ValueError above the budget.
 
     The 'keplerian' kernel variant accepts per-period qmin/qmax arrays
     to focus the duration search on physically plausible values.

@@ -1,8 +1,11 @@
 /*
  * Transit Least Squares (TLS) GPU kernel
  *
- * Optimized kernel using bitonic sort for phase sorting and a
- * limb-darkened transit template for physically realistic fitting.
+ * Kernel using a limb-darkened transit template for physically
+ * realistic fitting. Data are staged in shared memory; the depth and
+ * chi2 accumulations are order-independent, so no phase sort is
+ * needed (an earlier bitonic sort was pure wasted work and was also
+ * incomplete for non-power-of-2 sizes).
  *
  * The transit template is a 1D array mapping transit_coord in [-1, 1]
  * to normalized depth in [0, 1], precomputed on the CPU using batman
@@ -21,7 +24,6 @@
 #define BLOCK_SIZE 128
 #endif
 
-#define MAX_NDATA 100000
 #define PI 3.141592653589793f
 #define WARP_SIZE 32
 
@@ -52,63 +54,6 @@ __device__ inline int t0_grid_size(float duration_phase) {
 // Device utility functions
 __device__ inline float mod1(float x) {
     return x - floorf(x);
-}
-
-/**
- * Bitonic sort for phase-folded data
- * O(N log^2 N) parallel sort, requires padding to next power of 2
- */
-__device__ void bitonic_sort_phases(
-    float* phases,
-    float* y_sorted,
-    float* dy_sorted,
-    int ndata)
-{
-    int tid = threadIdx.x;
-    int stride = blockDim.x;
-
-    // Compute next power of 2 >= ndata
-    int n_pow2 = 1;
-    while (n_pow2 < ndata) n_pow2 <<= 1;
-
-    // Bitonic sort: outer loop over power-of-2 sizes
-    for (int k = 2; k <= n_pow2; k *= 2) {
-        for (int j = k / 2; j > 0; j /= 2) {
-            for (int i = tid; i < n_pow2; i += stride) {
-                int ixj = i ^ j;
-                if (ixj > i && ixj < ndata && i < ndata) {
-                    if ((i & k) == 0) {
-                        // Ascending
-                        if (phases[i] > phases[ixj]) {
-                            float temp = phases[i];
-                            phases[i] = phases[ixj];
-                            phases[ixj] = temp;
-                            temp = y_sorted[i];
-                            y_sorted[i] = y_sorted[ixj];
-                            y_sorted[ixj] = temp;
-                            temp = dy_sorted[i];
-                            dy_sorted[i] = dy_sorted[ixj];
-                            dy_sorted[ixj] = temp;
-                        }
-                    } else {
-                        // Descending
-                        if (phases[i] < phases[ixj]) {
-                            float temp = phases[i];
-                            phases[i] = phases[ixj];
-                            phases[ixj] = temp;
-                            temp = y_sorted[i];
-                            y_sorted[i] = y_sorted[ixj];
-                            y_sorted[ixj] = temp;
-                            temp = dy_sorted[i];
-                            dy_sorted[i] = dy_sorted[ixj];
-                            dy_sorted[ixj] = temp;
-                        }
-                    }
-                }
-            }
-            __syncthreads();
-        }
-    }
 }
 
 /**
@@ -148,9 +93,9 @@ __device__ float lookup_template(const float* s_template, int n_template,
  * with limb-darkened transit template.
  */
 __device__ float calculate_optimal_depth(
-    const float* y_sorted,
-    const float* dy_sorted,
-    const float* phases_sorted,
+    const float* y_sh,
+    const float* dy_sh,
+    const float* phases_sh,
     const float* s_template,
     int n_template,
     float duration_phase,
@@ -163,13 +108,13 @@ __device__ float calculate_optimal_depth(
     float half_dur = duration_phase * 0.5f;
 
     for (int i = 0; i < ndata; i++) {
-        float phase_rel = mod1(phases_sorted[i] - t0_phase + 0.5f) - 0.5f;
+        float phase_rel = mod1(phases_sh[i] - t0_phase + 0.5f) - 0.5f;
 
         if (fabsf(phase_rel) < half_dur) {
             float transit_coord = phase_rel / half_dur;
             float template_val = lookup_template(s_template, n_template, transit_coord);
-            float sigma2 = dy_sorted[i] * dy_sorted[i] + 1e-10f;
-            float y_residual = 1.0f - y_sorted[i];
+            float sigma2 = dy_sh[i] * dy_sh[i] + 1e-10f;
+            float y_residual = 1.0f - y_sh[i];
             numerator += y_residual * template_val / sigma2;
             denominator += template_val * template_val / sigma2;
         }
@@ -189,9 +134,9 @@ __device__ float calculate_optimal_depth(
  * using limb-darkened transit template.
  */
 __device__ float calculate_chi2(
-    const float* y_sorted,
-    const float* dy_sorted,
-    const float* phases_sorted,
+    const float* y_sh,
+    const float* dy_sh,
+    const float* phases_sh,
     const float* s_template,
     int n_template,
     float duration_phase,
@@ -203,7 +148,7 @@ __device__ float calculate_chi2(
     float half_dur = duration_phase * 0.5f;
 
     for (int i = 0; i < ndata; i++) {
-        float phase_rel = mod1(phases_sorted[i] - t0_phase + 0.5f) - 0.5f;
+        float phase_rel = mod1(phases_sh[i] - t0_phase + 0.5f) - 0.5f;
         float model_val;
         if (fabsf(phase_rel) < half_dur) {
             float transit_coord = phase_rel / half_dur;
@@ -212,8 +157,8 @@ __device__ float calculate_chi2(
         } else {
             model_val = 1.0f;
         }
-        float residual = y_sorted[i] - model_val;
-        float sigma2 = dy_sorted[i] * dy_sorted[i] + 1e-10f;
+        float residual = y_sh[i] - model_val;
+        float sigma2 = dy_sh[i] * dy_sh[i] + 1e-10f;
         chi2 += (residual * residual) / sigma2;
     }
 
@@ -225,7 +170,7 @@ __device__ float calculate_chi2(
  * Grid: (nperiods, 1, 1), Block: (BLOCK_SIZE, 1, 1)
  *
  * Shared memory layout:
- *   phases[ndata] | y_sorted[ndata] | dy_sorted[ndata] |
+ *   phases[ndata] | y_sh[ndata] | dy_sh[ndata] |
  *   template[n_template] | thread_chi2[blockDim] | thread_t0[blockDim] |
  *   thread_dur[blockDim] | thread_depth[blockDim]
  */
@@ -248,8 +193,8 @@ extern "C" __global__ void tls_search_kernel_keplerian(
 {
     extern __shared__ float shared_mem[];
     float* phases = shared_mem;
-    float* y_sorted = &shared_mem[ndata];
-    float* dy_sorted = &shared_mem[2 * ndata];
+    float* y_sh = &shared_mem[ndata];
+    float* dy_sh = &shared_mem[2 * ndata];
     float* s_template = &shared_mem[3 * ndata];
     float* thread_chi2 = &s_template[n_template];
     float* thread_t0 = &thread_chi2[blockDim.x];
@@ -275,15 +220,12 @@ extern "C" __global__ void tls_search_kernel_keplerian(
     }
     __syncthreads();
 
-    // Initialize y_sorted and dy_sorted arrays
+    // Stage y and dy in shared memory
     for (int i = threadIdx.x; i < ndata; i += blockDim.x) {
-        y_sorted[i] = y[i];
-        dy_sorted[i] = dy[i];
+        y_sh[i] = y[i];
+        dy_sh[i] = dy[i];
     }
     __syncthreads();
-
-    // Sort by phase using bitonic sort
-    bitonic_sort_phases(phases, y_sorted, dy_sorted, ndata);
 
     // Search over durations and T0 using Keplerian constraints
     float thread_min_chi2 = 1e30f;
@@ -302,12 +244,12 @@ extern "C" __global__ void tls_search_kernel_keplerian(
         int n_t0 = t0_grid_size(duration_phase);
         for (int t0_idx = threadIdx.x; t0_idx < n_t0; t0_idx += blockDim.x) {
             float t0_phase = (float)t0_idx / n_t0;
-            float depth = calculate_optimal_depth(y_sorted, dy_sorted, phases,
+            float depth = calculate_optimal_depth(y_sh, dy_sh, phases,
                                                    s_template, n_template,
                                                    duration_phase, t0_phase, ndata);
 
             if (depth > 0.0f && depth < 0.5f) {
-                float chi2 = calculate_chi2(y_sorted, dy_sorted, phases,
+                float chi2 = calculate_chi2(y_sh, dy_sh, phases,
                                              s_template, n_template,
                                              duration_phase, t0_phase, depth, ndata);
                 if (chi2 < thread_min_chi2) {
@@ -383,7 +325,7 @@ extern "C" __global__ void tls_search_kernel_keplerian(
  * Grid: (nperiods, 1, 1), Block: (BLOCK_SIZE, 1, 1)
  *
  * Shared memory layout:
- *   phases[ndata] | y_sorted[ndata] | dy_sorted[ndata] |
+ *   phases[ndata] | y_sh[ndata] | dy_sh[ndata] |
  *   template[n_template] | thread_chi2[blockDim] | thread_t0[blockDim] |
  *   thread_dur[blockDim] | thread_depth[blockDim]
  */
@@ -403,8 +345,8 @@ extern "C" __global__ void tls_search_kernel(
 {
     extern __shared__ float shared_mem[];
     float* phases = shared_mem;
-    float* y_sorted = &shared_mem[ndata];
-    float* dy_sorted = &shared_mem[2 * ndata];
+    float* y_sh = &shared_mem[ndata];
+    float* dy_sh = &shared_mem[2 * ndata];
     float* s_template = &shared_mem[3 * ndata];
     float* thread_chi2 = &s_template[n_template];
     float* thread_t0 = &thread_chi2[blockDim.x];
@@ -428,15 +370,12 @@ extern "C" __global__ void tls_search_kernel(
     }
     __syncthreads();
 
-    // Initialize y_sorted and dy_sorted arrays
+    // Stage y and dy in shared memory
     for (int i = threadIdx.x; i < ndata; i += blockDim.x) {
-        y_sorted[i] = y[i];
-        dy_sorted[i] = dy[i];
+        y_sh[i] = y[i];
+        dy_sh[i] = dy[i];
     }
     __syncthreads();
-
-    // Sort by phase using bitonic sort
-    bitonic_sort_phases(phases, y_sorted, dy_sorted, ndata);
 
     // Search over durations and T0
     float thread_min_chi2 = 1e30f;
@@ -459,12 +398,12 @@ extern "C" __global__ void tls_search_kernel(
         int n_t0 = t0_grid_size(duration_phase);
         for (int t0_idx = threadIdx.x; t0_idx < n_t0; t0_idx += blockDim.x) {
             float t0_phase = (float)t0_idx / n_t0;
-            float depth = calculate_optimal_depth(y_sorted, dy_sorted, phases,
+            float depth = calculate_optimal_depth(y_sh, dy_sh, phases,
                                                    s_template, n_template,
                                                    duration_phase, t0_phase, ndata);
 
             if (depth > 0.0f && depth < 0.5f) {
-                float chi2 = calculate_chi2(y_sorted, dy_sorted, phases,
+                float chi2 = calculate_chi2(y_sh, dy_sh, phases,
                                              s_template, n_template,
                                              duration_phase, t0_phase, depth, ndata);
                 if (chi2 < thread_min_chi2) {
