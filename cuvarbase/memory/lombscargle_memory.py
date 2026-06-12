@@ -189,7 +189,9 @@ class LombScargleMemory:
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
-        """Allocates pinned CPU memory for asynchronous transfer of result."""
+        """Allocate page-aligned (not page-locked) CPU memory for the
+        result (async transfers fall back to synchronous staged
+        copies)."""
         nf = kwargs.get('nf', self.nf)
         if not (nf is not None):
             raise RuntimeError(
@@ -202,12 +204,31 @@ class LombScargleMemory:
         return self
 
     def is_ready(self):
-        """Check if memory is ready (not implemented)."""
-        raise NotImplementedError()
+        """Verify all required memory is allocated for a run.
+
+        Raises RuntimeError if frequencies or device arrays are
+        missing or inconsistently sized (mirrors
+        ``NFFTMemory.is_ready``).
+        """
+        if self.nf is None:
+            raise RuntimeError(
+                "LombScargleMemory: nf is not set (call allocate "
+                "first)")
+        if self.lsp_g is None or len(self.lsp_g) < self.nf:
+            raise RuntimeError(
+                "LombScargleMemory: lsp_g is not allocated for "
+                "nf=%d" % self.nf)
+        if any(arr is None for arr in (self.t_g, self.yw_g, self.w_g)):
+            raise RuntimeError(
+                "LombScargleMemory: data arrays (t_g, yw_g, w_g) are "
+                "not allocated (call allocate_data first)")
+        if self.use_fft:
+            self.nfft_mem_yw.is_ready()
+            self.nfft_mem_w.is_ready()
 
     def allocate_buffered_data_arrays(self, **kwargs):
         """
-        Allocates pinned memory for lightcurves if we're reusing
+        Allocates page-aligned host memory for lightcurves if we're reusing
         this container.
         """
         n0 = kwargs.get('n0', self.n0)

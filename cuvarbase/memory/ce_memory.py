@@ -115,7 +115,11 @@ class ConditionalEntropyMemory:
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
-        """Allocate pinned CPU memory for async transfers."""
+        """Allocate page-aligned (not page-locked) CPU memory.
+
+        Despite the method name, the arrays are not pinned, so
+        async transfers fall back to synchronous staged copies.
+        """
         nf = kwargs.get('nf', self.nf)
         if not (nf is not None):
             raise RuntimeError(

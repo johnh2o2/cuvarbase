@@ -90,3 +90,54 @@ def test_ce_memory_unsupported_combos_value_error():
         ConditionalEntropyMemory(weighted=True, balanced_magbins=True)
     with pytest.raises(ValueError, match="compute_log_prob"):
         ConditionalEntropyMemory(weighted=True, compute_log_prob=True)
+
+
+class TestApiStubsImplemented(object):
+    """Public API stubs that raised NotImplementedError are now
+    implemented (or behave usefully)."""
+
+    def test_ce_memory_requirement_returns_bytes(self):
+        from ..ce import ConditionalEntropyAsyncProcess
+        proc = ConditionalEntropyAsyncProcess.__new__(
+            ConditionalEntropyAsyncProcess)
+        proc.phase_bins, proc.mag_bins = 10, 5
+        proc.weighted = False
+        proc.real_type = np.float32
+        small = proc.memory_requirement(100, 1000)
+        large = proc.memory_requirement(100, 100000)
+        assert small > 0
+        assert large > small
+        # histogram-dominated: 100k freqs * 50 bins * 4 bytes = 20 MB
+        assert large > 100000 * 50 * 4
+
+    def test_ls_memory_is_ready_raises_runtime_error(self):
+        from ..memory.lombscargle_memory import LombScargleMemory
+        mem = LombScargleMemory(2, None, 8, use_fft=False)
+        with pytest.raises(RuntimeError, match="nf is not set"):
+            mem.is_ready()
+
+
+class TestBatchApiHonesty(object):
+
+    def test_batched_run_const_nfreq_default_batch_size_is_1(self):
+        import inspect
+        from ..lombscargle import LombScargleAsyncProcess
+        sig = inspect.signature(
+            LombScargleAsyncProcess.batched_run_const_nfreq)
+        assert sig.parameters['batch_size'].default == 1
+
+    def test_batch_inefficiency_warning(self):
+        import warnings as _warnings
+        from ..bls import _warn_if_batch_inefficient
+        with pytest.warns(UserWarning, match="SLOWER"):
+            _warn_if_batch_inefficient(20000)
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("error", UserWarning)
+            _warn_if_batch_inefficient(500)  # must not warn
+
+    def test_bls_memory_host_array_naming(self):
+        from ..bls import BLSMemory
+        assert hasattr(BLSMemory, 'allocate_host_arrays')
+        # deprecated alias retained for compatibility
+        assert hasattr(BLSMemory, 'allocate_pinned_arrays')
+        assert 'NOT page-locked' in BLSMemory.allocate_host_arrays.__doc__

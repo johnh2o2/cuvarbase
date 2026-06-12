@@ -400,9 +400,30 @@ class BLSMemory:
 
         self.stream = stream
 
-        self.allocate_pinned_arrays(nfreqs=max_nfreqs, ndata=max_ndata)
+        self.allocate_host_arrays(nfreqs=max_nfreqs, ndata=max_ndata)
 
     def allocate_pinned_arrays(self, nfreqs=None, ndata=None):
+        """Deprecated alias for :meth:`allocate_host_arrays`.
+
+        Despite the historical name, these arrays were never
+        page-locked (pinned) — see ``allocate_host_arrays``.
+        """
+        warnings.warn("allocate_pinned_arrays is deprecated (the arrays "
+                      "are page-aligned, not page-locked); use "
+                      "allocate_host_arrays", DeprecationWarning)
+        return self.allocate_host_arrays(nfreqs=nfreqs, ndata=ndata)
+
+    def allocate_host_arrays(self, nfreqs=None, ndata=None):
+        """Allocate page-aligned host arrays for transfers.
+
+        .. note::
+
+            These arrays are aligned but NOT page-locked (pinned), so
+            ``set_async``/``get_async`` fall back to synchronous
+            staged copies and host<->device transfers do not overlap
+            with computation. Restoring true page-locked buffers is a
+            planned performance item.
+        """
         if nfreqs is None:
             nfreqs = int(self.max_nfreqs)
         if ndata is None:
@@ -1897,6 +1918,19 @@ def compile_bls_batch(block_size=_default_block_size, **kwargs):
     return functions
 
 
+def _warn_if_batch_inefficient(max_ndata, threshold=10000):
+    """Warn when batch mode is known to be slower than the single-LC
+    path (benchmarked ~12x slower at ndata=20,000; the regression is
+    undiagnosed)."""
+    if max_ndata > threshold:
+        warnings.warn(
+            "eebls_gpu_batch was measured ~12x SLOWER than a "
+            "single-lightcurve eebls_gpu_fast loop for large "
+            "lightcurves (ndata ~20,000; cause undiagnosed). With "
+            "ndata=%d, consider looping over eebls_gpu_fast instead."
+            % max_ndata, UserWarning)
+
+
 def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
                     noverlap=2, dlogq=0.3, dphi=0.0,
                     ignore_negative_delta_sols=False,
@@ -1943,10 +1977,23 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
     -------
     bls_results : list of ndarray
         BLS power array for each lightcurve, each shape (nfreq,).
+
+    Notes
+    -----
+    .. warning::
+
+        Batch mode pays off when per-lightcurve overhead dominates,
+        i.e. for *small* lightcurves: benchmarks (RTX A5000) measured
+        3.7x speedup over a single-LC ``eebls_gpu_fast`` loop at
+        ndata=150, 1.6x at 6,000 — but ~12x *slower* at ndata=20,000
+        (TESS scale; regression undiagnosed) and slightly slower at
+        65,000. A UserWarning is emitted when the largest lightcurve
+        exceeds ~10,000 points; prefer the single-LC path there.
     """
     freqs = np.asarray(freqs).astype(np.float32)
     nfreq = len(freqs)
     n_total = len(lightcurves)
+    _warn_if_batch_inefficient(max(len(lc[0]) for lc in lightcurves))
 
     # Group LCs by similar ndata to minimize padding
     lc_indices = list(range(n_total))

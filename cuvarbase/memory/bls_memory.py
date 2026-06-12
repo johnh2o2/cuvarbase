@@ -1,8 +1,9 @@
 """
 Memory management for batch BLS GPU operations.
 
-Handles padded multi-lightcurve data layout with pinned CPU arrays
-and GPU arrays for efficient batch processing.
+Handles padded multi-lightcurve data layout with page-aligned CPU
+arrays (NOT page-locked/pinned: async transfers fall back to
+synchronous staged copies) and GPU arrays for batch processing.
 """
 import resource
 import numpy as np
@@ -51,7 +52,7 @@ class BLSBatchMemory:
         # before the float32 cast (phases are relative to it)
         self.epochs = np.zeros(n_lcs, dtype=np.float64)
 
-        # Allocate pinned host arrays
+        # Allocate page-aligned (not page-locked) host arrays
         align = resource.getpagesize()
         total_data = self.max_ndata * self.n_lcs
         total_bls = self.nfreqs * self.n_lcs

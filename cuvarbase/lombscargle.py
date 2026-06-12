@@ -775,7 +775,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         results = [(f, r) for f, r in zip(frqs, results)]
         return results
 
-    def batched_run_const_nfreq(self, data, batch_size=10,
+    def batched_run_const_nfreq(self, data, batch_size=1,
                                 use_fft=True, freqs=None,
                                 only_return_best_freqs=False,
                                 ignore_freq_mask=None,
@@ -783,6 +783,17 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are
         the same for each lightcurve. Doesn't reallocate memory for each batch.
+
+        Parameters
+        ----------
+        batch_size: int, optional (default: 1)
+            Lightcurves processed per multi-stream batch. The default
+            of 1 is the fastest configuration in our benchmarks — all
+            published survey-throughput numbers (e.g. 4.4 ms/LC for
+            ZTF-scale grids) were measured at ``batch_size=1``; larger
+            values added multi-stream overhead and were slower in
+            every measured configuration (cause undiagnosed). Only
+            increase this if you benchmark it on your own workload.
 
         Notes
         -----

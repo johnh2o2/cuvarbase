@@ -127,7 +127,7 @@ Using Keplerian frequency grids (see Section 4):
 **When does batch mode help?** Batch mode (`eebls_gpu_batch`) amortizes per-LC overhead (memory allocation, kernel launch, host-device transfer). This matters when kernel execution time per LC is small relative to overhead — i.e., when N_obs is small:
 
 - **N_obs < 1000**: Batch mode gives 2-4x speedup (overhead-dominated regime)
-- **N_obs > 10000**: Single-LC loop is as fast or faster (compute-dominated regime)
+- **N_obs > 10000**: the single-LC loop is faster — dramatically so at TESS scale (batch ran ~12x slower at N_obs=20,000, an undiagnosed regression; see the table above). Use the single-LC path for large lightcurves.
 
 ### Survey-wide processing cost
 
