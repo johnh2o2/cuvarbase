@@ -125,7 +125,8 @@ Two optimized CUDA kernels in `cuvarbase/kernels/tls.cu`:
 Both kernels:
 - Use shared memory for phase-folded data and transit template
 - Minimize global memory accesses
-- Support datasets up to ~100,000 points
+- Are limited to ~3,500 data points by the 48 KB shared-memory budget
+  (`tls_search_gpu` raises a `ValueError` above the cap)
 
 ## API Reference
 
@@ -221,10 +222,12 @@ Where SR (Signal Residue) = 1 - chi2 / chi2_null.
 
 ## Known Limitations
 
-1. **Dataset Size**: Bitonic sort supports up to ~100,000 points
-   - Designed for typical astronomical light curves (500-20,000 points)
-   - For >100k points, consider binning or using CPU TLS
-   - Performance is optimal for ndata < 20,000
+1. **Dataset Size**: the shared-memory layout caps ndata at ~3,500
+   points with the default template/block sizes
+   - `tls_search_gpu` raises a `ValueError` above the 48 KB budget
+   - For larger light curves (e.g. TESS ~20k, Kepler ~65k points),
+     bin or split the data, or use the reference CPU
+     `transitleastsquares` package
 
 2. **Memory**: Requires ~(3N + n_template + 4*block_size) floats of shared memory per block
    - 5,000 points: ~60 KB + 4 KB template

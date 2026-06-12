@@ -12,14 +12,20 @@ References
        Searches", ApJ 580, L171
 """
 
+import warnings
+
 import numpy as np
 try:
     import batman
     BATMAN_AVAILABLE = True
 except ImportError:
     BATMAN_AVAILABLE = False
-    import warnings
     warnings.warn("batman package not available. Install with: pip install batman-package")
+
+
+def _warn_template_fallback(reason):
+    warnings.warn("batman transit template generation failed (%s); "
+                  "falling back to a trapezoid template" % (reason,))
 
 
 def create_reference_transit(n_samples=1000, limb_dark='quadratic',
@@ -316,7 +322,8 @@ def generate_transit_template(n_template=1000, limb_dark='quadratic',
             in_transit = flux < (1.0 - threshold)
 
             if not np.any(in_transit):
-                # Fallback to trapezoid if no transit detected
+                _warn_template_fallback(
+                    "no in-transit points in the batman model")
                 return _trapezoid_template(n_template)
 
             # Get the in-transit indices
@@ -333,6 +340,7 @@ def generate_transit_template(n_template=1000, limb_dark='quadratic',
             phase_half_width = 0.5 * (transit_phases[-1] - transit_phases[0])
 
             if phase_half_width < 1e-10:
+                _warn_template_fallback("degenerate transit width")
                 return _trapezoid_template(n_template)
 
             source_coords = (transit_phases - phase_center) / phase_half_width
@@ -343,6 +351,7 @@ def generate_transit_template(n_template=1000, limb_dark='quadratic',
             # Normalize so max = 1
             max_depth = np.max(depth_values)
             if max_depth < 1e-10:
+                _warn_template_fallback("degenerate transit depth")
                 return _trapezoid_template(n_template)
             depth_values /= max_depth
 
@@ -352,7 +361,8 @@ def generate_transit_template(n_template=1000, limb_dark='quadratic',
 
             return template.astype(np.float32)
 
-        except Exception:
+        except Exception as exc:
+            _warn_template_fallback(repr(exc))
             return _trapezoid_template(n_template)
     else:
         return _trapezoid_template(n_template)

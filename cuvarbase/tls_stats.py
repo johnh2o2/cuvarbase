@@ -141,7 +141,10 @@ def signal_to_noise(depth, depth_err=None, n_transits=1,
         Uncertainty in depth. If None, estimated from chi2 values or
         Poisson statistics as a last resort.
     n_transits : int, optional
-        Number of transits (default: 1)
+        Deprecated and unused. Earlier versions multiplied the SNR by
+        ``sqrt(n_transits)``, which double-counted transits whenever
+        ``depth_err`` reflected the full dataset (the only case this
+        function ever computes); retained for backward compatibility.
     chi2_null : float, optional
         Null hypothesis chi-squared (no transit). Used to estimate
         depth_err when depth_err is not provided.
@@ -155,11 +158,12 @@ def signal_to_noise(depth, depth_err=None, n_transits=1,
 
     Notes
     -----
-    SNR improves as sqrt(n_transits) for independent transits.
-
-    When depth_err is not provided, it is estimated as:
+    When depth_err is not provided, it is estimated as
     depth / sqrt(chi2_null - chi2_best) if chi2 values are given,
-    otherwise returns 0.
+    otherwise this returns 0. A depth_err derived from the
+    full-dataset delta-chi-squared already includes every in-transit
+    point across all transits, so no additional sqrt(n_transits)
+    scaling is applied.
     """
     if depth_err is None:
         if chi2_null is not None and chi2_best is not None:
@@ -174,9 +178,7 @@ def signal_to_noise(depth, depth_err=None, n_transits=1,
     if depth_err < 1e-10:
         return 0.0
 
-    snr = depth / depth_err * np.sqrt(n_transits)
-
-    return snr
+    return depth / depth_err
 
 
 def false_alarm_probability(SDE, method='empirical'):
@@ -189,8 +191,8 @@ def false_alarm_probability(SDE, method='empirical'):
         Signal Detection Efficiency
     method : str, optional
         Method for FAP estimation (default: 'empirical')
-        - 'empirical': From Hippke & Heller calibration
-        - 'gaussian': Assuming Gaussian noise
+        - 'empirical': ad-hoc piecewise heuristic (see Notes)
+        - 'gaussian': assuming Gaussian noise
 
     Returns
     -------
@@ -199,20 +201,21 @@ def false_alarm_probability(SDE, method='empirical'):
 
     Notes
     -----
-    Empirical calibration from Hippke & Heller (2019):
-    - SDE = 7 -> FAP ~ 1%
-    - SDE = 9 -> FAP ~ 0.1%
-    - SDE = 11 -> FAP ~ 0.01%
+    .. warning::
 
-    These values are approximate. For rigorous FAP estimation,
-    injection-recovery simulations are recommended.
+        The 'empirical' method is a hand-rolled piecewise heuristic.
+        It is NOT calibrated against any published injection-recovery
+        results (earlier versions of this docstring incorrectly
+        attributed it to Hippke & Heller 2019). Treat the returned
+        values as order-of-magnitude indicators at best; for any
+        quantitative claim, run injection-recovery simulations on
+        your own data.
     """
     if method == 'gaussian':
         # Gaussian approximation: FAP = 1 - erf(SDE/sqrt(2))
         FAP = 1.0 - stats.norm.cdf(SDE)
     else:
-        # Empirical calibration from Hippke & Heller (2019)
-        # Rough approximation based on their Figure 5
+        # Ad-hoc piecewise heuristic; no published calibration
         if SDE < 5:
             FAP = 1.0  # Very high FAP
         elif SDE < 7:

@@ -457,3 +457,122 @@ class TestTLSBasicExecution:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestSharedMemoryGuard:
+    """tls_search_gpu must fail loudly (before touching the GPU) when
+    the shared-memory layout exceeds the 48 KB per-block budget."""
+
+    def test_large_ndata_raises_value_error(self):
+        from cuvarbase.tls import tls_search_gpu
+        rand = np.random.RandomState(3)
+        ndata = 20000  # TESS-like; needs ~245 KB of shared memory
+        t = np.sort(27 * rand.rand(ndata))
+        y = 1 + 0.001 * rand.randn(ndata)
+        dy = 0.001 * np.ones(ndata)
+        with pytest.raises(ValueError, match="shared memory"):
+            tls_search_gpu(t, y, dy, periods=np.array([1.0, 2.0]))
+
+    def test_guard_accounts_for_template_size(self):
+        from cuvarbase.tls import tls_search_gpu
+        rand = np.random.RandomState(3)
+        # ndata below the default cap, but a huge template pushes the
+        # layout over the budget
+        ndata = 3000
+        t = np.sort(27 * rand.rand(ndata))
+        y = 1 + 0.001 * rand.randn(ndata)
+        dy = 0.001 * np.ones(ndata)
+        with pytest.raises(ValueError, match="shared memory"):
+            tls_search_gpu(t, y, dy, periods=np.array([1.0, 2.0]),
+                           n_template=4000)
+
+
+class TestFailedPeriodMasking:
+    """chi2 == 1e30 sentinels (failed periods) must be masked before
+    computing argmin/SDE/FAP."""
+
+    def _chi2_with_dip(self, nperiods=200, dip_idx=100):
+        chi2 = np.full(nperiods, 1000.0) + np.random.RandomState(5).randn(nperiods)
+        chi2[dip_idx] = 900.0  # clear transit signal
+        return chi2
+
+    def test_mask_warns_and_excludes_sentinels(self):
+        from cuvarbase.tls import _mask_failed_periods, TLS_CHI2_SENTINEL
+        chi2 = self._chi2_with_dip()
+        chi2[[3, 50, 150]] = TLS_CHI2_SENTINEL
+        with pytest.warns(UserWarning, match="3 of 200"):
+            valid = _mask_failed_periods(chi2)
+        assert valid.sum() == 197
+        assert not valid[3] and not valid[50] and not valid[150]
+
+    def test_all_failed_raises(self):
+        from cuvarbase.tls import _mask_failed_periods, TLS_CHI2_SENTINEL
+        chi2 = np.full(20, TLS_CHI2_SENTINEL)
+        with pytest.raises(RuntimeError, match="no valid solution"):
+            _mask_failed_periods(chi2)
+
+    def test_no_failures_no_warning(self):
+        import warnings as _warnings
+        from cuvarbase.tls import _mask_failed_periods
+        chi2 = self._chi2_with_dip()
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("error", UserWarning)
+            valid = _mask_failed_periods(chi2)
+        assert valid.all()
+
+    def test_sde_survives_sentinels_when_masked(self):
+        # The audit reproduced SDE collapsing 15.3 -> 0.06 when 1e30
+        # sentinels entered the statistics; masking must prevent that.
+        from cuvarbase.tls import _mask_failed_periods, TLS_CHI2_SENTINEL
+        chi2 = self._chi2_with_dip()
+        sde_clean, _, _ = tls_stats.signal_detection_efficiency(chi2)
+
+        chi2_corrupt = chi2.copy()
+        chi2_corrupt[::7] = TLS_CHI2_SENTINEL  # 29 failed periods
+        sde_corrupt, _, _ = tls_stats.signal_detection_efficiency(
+            chi2_corrupt)
+
+        with pytest.warns(UserWarning):
+            valid = _mask_failed_periods(chi2_corrupt)
+        sde_masked, _, _ = tls_stats.signal_detection_efficiency(
+            chi2_corrupt[valid])
+
+        assert sde_corrupt < 0.5 * sde_clean  # corruption is real
+        assert sde_masked > 0.8 * sde_clean   # masking restores it
+
+
+class TestSnrNotInflated:
+    """signal_to_noise must not multiply by sqrt(n_transits): the
+    chi2-based depth_err already includes every in-transit point."""
+
+    def test_n_transits_does_not_inflate(self):
+        snr1 = tls_stats.signal_to_noise(
+            0.01, chi2_null=200.0, chi2_best=100.0, n_transits=1)
+        snr9 = tls_stats.signal_to_noise(
+            0.01, chi2_null=200.0, chi2_best=100.0, n_transits=9)
+        assert snr1 == pytest.approx(np.sqrt(100.0))
+        assert snr9 == pytest.approx(snr1)
+
+    def test_explicit_depth_err(self):
+        snr = tls_stats.signal_to_noise(0.01, depth_err=0.002,
+                                        n_transits=16)
+        assert snr == pytest.approx(5.0)
+
+
+class TestTemplateFallbackWarns:
+    """generate_transit_template must warn (not silently degrade) when
+    batman fails at call time."""
+
+    def test_batman_exception_warns(self, monkeypatch):
+        monkeypatch.setattr(tls_models, 'BATMAN_AVAILABLE', True)
+
+        def _boom(**kwargs):
+            raise RuntimeError("batman exploded")
+
+        monkeypatch.setattr(tls_models, 'create_reference_transit',
+                            _boom)
+        with pytest.warns(UserWarning, match="trapezoid"):
+            template = tls_models.generate_transit_template(
+                n_template=100)
+        assert len(template) == 100
+        assert template.max() == pytest.approx(1.0)
