@@ -131,7 +131,10 @@ class LombScargleMemory:
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
 
-        assert(n0 is not None)
+        if not (n0 is not None):
+            raise RuntimeError(
+                "LombScargleMemory: requirement "
+                "`n0 is not None` not satisfied")
         self.t_g = gpuarray.zeros(n0, dtype=self.real_type)
         self.yw_g = gpuarray.zeros(n0, dtype=self.real_type)
         self.w_g = gpuarray.zeros(n0, dtype=self.real_type)
@@ -157,10 +160,16 @@ class LombScargleMemory:
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
-        assert(n0 is not None)
+        if not (n0 is not None):
+            raise RuntimeError(
+                "LombScargleMemory: requirement "
+                "`n0 is not None` not satisfied")
 
         self.nf = kwargs.get('nf', self.nf)
-        assert(self.nf is not None)
+        if not (self.nf is not None):
+            raise RuntimeError(
+                "LombScargleMemory: requirement "
+                "`self.nf is not None` not satisfied")
 
         if self.use_fft:
             if self.nfft_mem_yw.precomp_psi:
@@ -182,7 +191,10 @@ class LombScargleMemory:
     def allocate_pinned_cpu(self, **kwargs):
         """Allocates pinned CPU memory for asynchronous transfer of result."""
         nf = kwargs.get('nf', self.nf)
-        assert(nf is not None)
+        if not (nf is not None):
+            raise RuntimeError(
+                "LombScargleMemory: requirement "
+                "`nf is not None` not satisfied")
 
         self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
                                         alignment=resource.getpagesize())
@@ -201,7 +213,10 @@ class LombScargleMemory:
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
-        assert(n0 is not None)
+        if not (n0 is not None):
+            raise RuntimeError(
+                "LombScargleMemory: requirement "
+                "`n0 is not None` not satisfied")
 
         self.t = cuda.aligned_zeros(shape=(n0,),
                                     dtype=self.real_type,
@@ -220,7 +235,10 @@ class LombScargleMemory:
     def allocate(self, **kwargs):
         """Allocate all memory necessary."""
         self.nf = kwargs.get('nf', self.nf)
-        assert(self.nf is not None)
+        if not (self.nf is not None):
+            raise RuntimeError(
+                "LombScargleMemory: requirement "
+                "`self.nf is not None` not satisfied")
 
         self.allocate_data(**kwargs)
         self.allocate_grids(**kwargs)
@@ -244,11 +262,17 @@ class LombScargleMemory:
 
         self.n0 = kwargs.get('n0', len(t))
         if dy is not None:
-            assert('w' not in kwargs)
+            if not ('w' not in kwargs):
+                raise ValueError(
+                    "LombScargleMemory: requirement "
+                    "`'w' not in kwargs` not satisfied")
             w = weights(dy)
 
         if y is not None:
-            assert('yw' not in kwargs)
+            if not ('yw' not in kwargs):
+                raise ValueError(
+                    "LombScargleMemory: requirement "
+                    "`'yw' not in kwargs` not satisfied")
 
             self.ybar = np.dot(y, w)
             yw = np.multiply(w, y - self.ybar)
@@ -264,7 +288,10 @@ class LombScargleMemory:
                 if self.buffered_transfer:
                     self.allocate_buffered_data_arrays(**kwargs)
 
-            assert(self.n0 <= len(self.t))
+            if not (self.n0 <= len(self.t)):
+                raise RuntimeError(
+                    "LombScargleMemory: requirement "
+                    "`self.n0 <= len(self.t)` not satisfied")
 
             self.t[:self.n0] = t[:self.n0]
             self.yw[:self.n0] = yw[:self.n0]
@@ -295,7 +322,10 @@ class LombScargleMemory:
         """Transfers the lightcurve to the GPU."""
         t, yw, w = self.t, self.yw, self.w
 
-        assert(not any([arr is None for arr in [t, yw, w]]))
+        if not (not any([arr is None for arr in [t, yw, w]])):
+            raise RuntimeError(
+                "LombScargleMemory: requirement "
+                "`not any([arr is None for arr in [t, yw, w]])` not satisfied")
 
         # Do asynchronous data transfer
         self.t_g.set_async(t, stream=self.stream)

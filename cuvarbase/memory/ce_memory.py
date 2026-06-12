@@ -51,11 +51,11 @@ class ConditionalEntropyMemory:
         self.balanced_magbins = kwargs.get('balanced_magbins', False)
 
         if self.weighted and self.balanced_magbins:
-            raise Exception("simultaneous balanced_magbins and weighted"
+            raise ValueError("simultaneous balanced_magbins and weighted"
                             " options is not currently supported")
 
         if self.weighted and self.compute_log_prob:
-            raise Exception("simultaneous compute_log_prob and weighted"
+            raise ValueError("simultaneous compute_log_prob and weighted"
                             " options is not currently supported")
         self.n0_buffer = kwargs.get('n0_buffer', None)
         self.buffered_transfer = kwargs.get('buffered_transfer', False)
@@ -89,7 +89,10 @@ class ConditionalEntropyMemory:
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
-        assert(n0 is not None)
+        if not (n0 is not None):
+            raise RuntimeError(
+                "ConditionalEntropyMemory: requirement "
+                "`n0 is not None` not satisfied")
 
         kw = dict(dtype=self.real_type,
                   alignment=resource.getpagesize())
@@ -114,7 +117,10 @@ class ConditionalEntropyMemory:
     def allocate_pinned_cpu(self, **kwargs):
         """Allocate pinned CPU memory for async transfers."""
         nf = kwargs.get('nf', self.nf)
-        assert(nf is not None)
+        if not (nf is not None):
+            raise RuntimeError(
+                "ConditionalEntropyMemory: requirement "
+                "`nf is not None` not satisfied")
 
         self.ce_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
                                        alignment=resource.getpagesize())
@@ -127,7 +133,10 @@ class ConditionalEntropyMemory:
         if self.buffered_transfer:
             n0 = kwargs.get('n0_buffer', self.n0_buffer)
 
-        assert(n0 is not None)
+        if not (n0 is not None):
+            raise RuntimeError(
+                "ConditionalEntropyMemory: requirement "
+                "`n0 is not None` not satisfied")
         self.t_g = gpuarray.zeros(n0, dtype=self.real_type)
         self.y_g = gpuarray.zeros(n0, dtype=self.ytype)
         if self.weighted:
@@ -136,7 +145,10 @@ class ConditionalEntropyMemory:
     def allocate_bins(self, **kwargs):
         """Allocate GPU memory for histogram bins."""
         nf = kwargs.get('nf', self.nf)
-        assert(nf is not None)
+        if not (nf is not None):
+            raise RuntimeError(
+                "ConditionalEntropyMemory: requirement "
+                "`nf is not None` not satisfied")
 
         self.nbins = nf * self.phase_bins * self.mag_bins
 
@@ -155,7 +167,10 @@ class ConditionalEntropyMemory:
     def allocate_freqs(self, **kwargs):
         """Allocate GPU memory for frequency array."""
         nf = kwargs.get('nf', self.nf)
-        assert(nf is not None)
+        if not (nf is not None):
+            raise RuntimeError(
+                "ConditionalEntropyMemory: requirement "
+                "`nf is not None` not satisfied")
         self.freqs_g = gpuarray.zeros(nf, dtype=self.real_type)
         if self.ce_g is None:
             self.ce_g = gpuarray.zeros(nf, dtype=self.real_type)
@@ -168,7 +183,10 @@ class ConditionalEntropyMemory:
         if self.freqs is not None:
             self.freqs = np.asarray(self.freqs).astype(self.real_type)
 
-        assert(self.nf is not None)
+        if not (self.nf is not None):
+            raise RuntimeError(
+                "ConditionalEntropyMemory: requirement "
+                "`self.nf is not None` not satisfied")
 
         self.allocate_data(**kwargs)
         self.allocate_bins(**kwargs)
@@ -182,13 +200,19 @@ class ConditionalEntropyMemory:
 
     def transfer_data_to_gpu(self, **kwargs):
         """Transfer data from CPU to GPU asynchronously."""
-        assert(not any([x is None for x in [self.t, self.y]]))
+        if not (not any([x is None for x in [self.t, self.y]])):
+            raise RuntimeError(
+                "ConditionalEntropyMemory: requirement "
+                "`not any([x is None for x in [self.t, self.y]])` not satisfied")
 
         self.t_g.set_async(self.t, stream=self.stream)
         self.y_g.set_async(self.y, stream=self.stream)
 
         if self.weighted:
-            assert(self.dy is not None)
+            if not (self.dy is not None):
+                raise RuntimeError(
+                    "ConditionalEntropyMemory: requirement "
+                    "`self.dy is not None` not satisfied")
             self.dy_g.set_async(self.dy, stream=self.stream)
 
         if self.balanced_magbins:
@@ -201,7 +225,10 @@ class ConditionalEntropyMemory:
     def transfer_freqs_to_gpu(self, **kwargs):
         """Transfer frequency array to GPU."""
         freqs = kwargs.get('freqs', self.freqs)
-        assert(freqs is not None)
+        if not (freqs is not None):
+            raise ValueError(
+                "ConditionalEntropyMemory: requirement "
+                "`freqs is not None` not satisfied")
 
         self.freqs_g.set_async(freqs, stream=self.stream)
 
@@ -223,7 +250,10 @@ class ConditionalEntropyMemory:
         yinds = np.argsort(y)
         ybins = np.zeros(len(y))
 
-        assert len(y) >= self.mag_bins
+        if len(y) < self.mag_bins:
+            raise ValueError(
+                "balanced_magbins requires at least mag_bins=%d "
+                "observations; got %d" % (self.mag_bins, len(y)))
 
         di = len(y) / self.mag_bins
         mag_bwf = np.zeros(self.mag_bins)
@@ -293,7 +323,10 @@ class ConditionalEntropyMemory:
                 if self.buffered_transfer:
                     self.allocate_buffered_data_arrays(**kwargs)
 
-            assert(self.n0 <= len(self.t))
+            if not (self.n0 <= len(self.t)):
+                raise RuntimeError(
+                    "ConditionalEntropyMemory: requirement "
+                    "`self.n0 <= len(self.t)` not satisfied")
 
             self.t[:self.n0] = t[:self.n0]
             self.y[:self.n0] = y[:self.n0]

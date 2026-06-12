@@ -40,7 +40,11 @@ def check_k0(freqs, k0=None, rtol=1E-2, atol=1E-7):
     k0 = k0 if k0 is not None else get_k0(freqs)
     df = freqs[1] - freqs[0]
     f0 = k0 * df
-    assert(abs(f0 - freqs[0]) < rtol * df + atol)
+    if not (abs(f0 - freqs[0]) < rtol * df + atol):
+        raise ValueError(
+            "freqs[0]=%g is not k0 * df for integer k0 (df=%g): the GPU "
+            "Lomb-Scargle requires freqs = df * (k0 + arange(nf))"
+            % (freqs[0], df))
 
 
 def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
@@ -337,7 +341,10 @@ def lomb_scargle_async(memory, functions, freqs,
 
     df = freqs[1] - freqs[0]
     samples_per_peak = 1./((memory.tmax - memory.tmin) * df)
-    assert(get_k0(freqs) == memory.k0)
+    if not (get_k0(freqs) == memory.k0):
+        raise ValueError(
+            "freqs does not match the grid this memory was set up for "
+            "(k0 mismatch: %d != %d)" % (get_k0(freqs), memory.k0))
 
     stream = memory.stream
 
@@ -458,7 +465,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         self.nharmonics = kwargs.get('nharmonics', 1)
 
         if self.nharmonics > 1:
-            raise Exception("Only 1 harmonic is supported right now")
+            raise NotImplementedError(
+                "Only 1 harmonic is supported right now")
 
         if self.use_cufinufft and not HAS_CUFINUFFT:
             raise ImportError(
@@ -598,8 +606,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if freqs is not None:
             k0 = get_k0(freqs)
             nf = len(freqs)
-        if nf is not None:
-            assert k0 is not None
+        if nf is not None and k0 is None:
+            raise ValueError("k0 must be given when nf is specified "
+                             "without freqs")
 
         m = self.nfft_proc.get_m(nf)
 
@@ -730,7 +739,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         elif not isinstance(frqs, list):
             frqs = [frqs] * len(data)
 
-        assert(len(frqs) == len(data))
+        if len(frqs) != len(data):
+            raise ValueError(
+                "number of frequency grids (%d) does not match number of "
+            "lightcurves (%d)" % (len(frqs), len(data)))
 
         dfs = [frq[1] - frq[0] for frq in frqs]
         k0s = [get_k0(frq) for frq in frqs]
