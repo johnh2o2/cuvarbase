@@ -208,3 +208,19 @@ Example: Batches of lightcurves
 .. [Vanicek1969] `Vaníček, P. 1969, APSS, 4, 387 <http://adsabs.harvard.edu/abs/1969Ap&SS...4..387V>`_
 .. [Scargle1982] `Scargle, J. D. 1982, ApJ, 263, 835 <http://adsabs.harvard.edu/abs/1982ApJ...263..835S>`_
 .. [Lomb1976] `Lomb, N. R. 1976, APSS, 39, 447 <http://adsabs.harvard.edu/abs/1976Ap%26SS..39..447L>`_
+Power-spectrum convention
+-------------------------
+
+The GPU Lomb-Scargle returns the standard normalized periodogram
+
+.. math::
+
+    P(f) = 1 - \chi^2(f) / \chi^2_0
+
+(equivalently the ``normalization='standard'`` convention of
+``astropy.timeseries.LombScargle``), where :math:`\chi^2(f)` is the
+best-fit sinusoid's weighted residual sum and :math:`\chi^2_0` that of
+the constant model. With ``floating_mean=True`` (the default) this is
+the *generalized* (floating-mean) Lomb-Scargle of Zechmeister &
+Kürster (2009). Values are directly comparable to astropy's defaults;
+see the unit tests (``test_lombscargle.py``) which assert agreement.
