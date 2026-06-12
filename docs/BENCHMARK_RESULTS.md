@@ -95,7 +95,7 @@ Projects that are sometimes confused with GPU BLS but are fundamentally differen
 | **fBLS** (Shahaf et al. 2022) | Fast Folding BLS (O(N log N)) | No (CPU) | Yes — same BLS output, faster algorithm |
 | **TLS** (Hippke & Heller 2019) | Transit-shaped template (not box) | No (CPU) | No — different model, more sensitive |
 
-The closest CPU competitor is **fBLS** at ~6 seconds for 65K datapoints / 100K frequencies. cuvarbase's GPU BLS does the same in ~1 second.
+The closest CPU competitor is **fBLS** at ~6 seconds for 65K datapoints / 100K frequencies (Shahaf et al. 2022, their table 1). cuvarbase's single-LC GPU BLS measured ~0.17 s/LC at the same scale (Kepler row of the batch-vs-single table below: 6 LC/s, 65K points, 131K Keplerian frequencies, RTX A5000; `benchmarks/results/benchmark_results_new_features.json`).
 
 ### Standard BLS across 7 GPU architectures
 
