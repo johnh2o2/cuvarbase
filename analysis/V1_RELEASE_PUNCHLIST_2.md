@@ -40,11 +40,14 @@ include `pip install batman-package transitleastsquares cufinufft`,
 via API; archive in analysis/)
 - [ ] (standing) full suite + check_release_gate.py +
       benchmark_new_features.py --tests-only green on the final RC
+- [ ] A1: sparse q-bounds GPU parity — test_sparse_bls_gpu_q_bounds
+      (full + simple kernels) and the full sparse GPU test group must
+      pass on pod (kernel signature changed: +qmin_arr/+qmax_arr)
 - [ ] items accumulate here as work proceeds
 
 ## A. Contained code items (do first)
 
-- [ ] **A1. Sparse-path per-frequency q bounds** — wire qmin/qmax
+- [x] **A1. Sparse-path per-frequency q bounds** — wire qmin/qmax
       (per-frequency arrays) into sparse_bls.cu kernels AND
       sparse_bls_cpu, so eebls_transit's sparse path honors
       qmin_fac/qmax_fac/Keplerian constraints; remove the
@@ -53,6 +56,12 @@ via API; archive in analysis/)
       (brute-force test with bounded q); GPU matches CPU; the
       eebls_transit warning is retired; docs updated (bls.rst,
       docstrings). GPU queue: sparse kernel parity test.
+      **DONE 665dbbd** — qmin/qmax (scalar or per-frequency) added to
+      both kernels + sparse_bls_cpu/gpu; eebls_transit passes
+      Keplerian bounds through and the UserWarning is retired;
+      bounded brute-force parity + per-frequency + validation +
+      no-warning tests added; bls.rst sparse section updated. GPU
+      parity queued (signature change → pod must recompile kernels).
 - [ ] **A2. noverlap for eebls_gpu_fast** — add the noverlap
       parameter (phase-offset oversampling) to the fast path,
       removing the documented dphi re-run workaround. Accept:
