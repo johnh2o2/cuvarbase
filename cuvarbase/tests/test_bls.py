@@ -479,7 +479,8 @@ class TestBLS(object):
     # ---- Sparse BLS tests: ground-truth correctness ----
 
     @staticmethod
-    def _brute_force_bls(t, y, dy, freq, ignore_negative_delta_sols=False):
+    def _brute_force_bls(t, y, dy, freq, ignore_negative_delta_sols=False,
+                         qmin=0.0, qmax=0.5):
         """Exhaustive BLS over all observation-pair transit boundaries."""
         t = np.asarray(t, dtype=np.float32)
         y = np.asarray(y, dtype=np.float32)
@@ -508,7 +509,7 @@ class TestBLS(object):
                     q = 0.5 * (phi_s[j] + phi_s[j - 1]) - phi_s[i]
                 else:
                     q = phi_s[ndata - 1] - phi_s[i] + 1e-7
-                if q <= 0 or q > 0.5:
+                if q <= 0 or q < qmin or q > qmax:
                     continue
                 W = W_acc
                 YW = YW_acc - ybar * W
@@ -534,7 +535,7 @@ class TestBLS(object):
                     q = (1.0 - phi0) + 0.5 * (phi_s[k - 1] + phi_s[k])
                 else:
                     q = 1.0 - phi0 + 1e-7
-                if q <= 0 or q > 0.5:
+                if q <= 0 or q < qmin or q > qmax:
                     continue
                 W = W_tail + W_head
                 YW = (YW_tail + YW_head) - ybar * W
@@ -650,6 +651,93 @@ class TestBLS(object):
         assert np.abs(power[0] - bf_power) < 1e-5, \
             f"sparse={power[0]:.8f} != brute={bf_power:.8f}"
 
+    # ---- Sparse BLS q-bound (qmin/qmax) tests ----
+
+    @pytest.mark.parametrize("freq", [1.0, 2.0])
+    @pytest.mark.parametrize("qbounds", [(0.02, 0.08), (0.05, 0.15)])
+    @pytest.mark.parametrize("ndata", [50, 100])
+    def test_sparse_bls_cpu_q_bounds_vs_brute(self, freq, qbounds, ndata):
+        """sparse_bls_cpu with q bounds matches the bounded brute force."""
+        qmin, qmax = qbounds
+        t, y, dy = data(snr=30, q=0.1, phi0=0.4, freq=freq,
+                        baseline=365., ndata=ndata)
+
+        freqs = np.array([freq], dtype=np.float32)
+        power, sols = sparse_bls_cpu(t, y, dy, freqs, qmin=qmin, qmax=qmax)
+        bf_power, _, _ = self._brute_force_bls(t, y, dy, freq,
+                                               qmin=qmin, qmax=qmax)
+
+        assert np.abs(power[0] - bf_power) < 1e-5, \
+            f"sparse={power[0]:.8f}, brute={bf_power:.8f}"
+        q_found, _ = sols[0]
+        if power[0] > 0:
+            assert qmin <= q_found <= qmax
+
+    def test_sparse_bls_cpu_q_bounds_change_solution(self):
+        """A qmax below the injected duration must exclude the
+        unbounded optimum (bounds demonstrably constrain the search)."""
+        t, y, dy = data(snr=50, q=0.2, phi0=0.3, freq=1.0,
+                        baseline=365., ndata=100)
+        freqs = np.array([1.0])
+
+        power_free, sols_free = sparse_bls_cpu(t, y, dy, freqs)
+        power_bound, sols_bound = sparse_bls_cpu(t, y, dy, freqs,
+                                                 qmin=0.01, qmax=0.05)
+
+        assert sols_free[0][0] > 0.05  # unbounded finds the q~0.2 dip
+        assert power_bound[0] < power_free[0]
+        if power_bound[0] > 0:
+            assert 0.01 <= sols_bound[0][0] <= 0.05
+
+    def test_sparse_bls_cpu_q_bounds_per_frequency(self):
+        """Per-frequency qmin/qmax arrays bound each frequency
+        independently."""
+        t, y, dy = data(snr=30, q=0.1, phi0=0.4, freq=1.0,
+                        baseline=365., ndata=80)
+        freqs = np.array([0.8, 1.0, 1.25])
+        qmins = np.array([0.01, 0.05, 0.02])
+        qmaxes = np.array([0.05, 0.15, 0.3])
+
+        power, sols = sparse_bls_cpu(t, y, dy, freqs,
+                                     qmin=qmins, qmax=qmaxes)
+
+        for i in range(len(freqs)):
+            bf_power, _, _ = self._brute_force_bls(
+                t, y, dy, freqs[i], qmin=qmins[i], qmax=qmaxes[i])
+            assert np.abs(power[i] - bf_power) < 1e-5, \
+                f"freq={freqs[i]}: sparse={power[i]:.8f}, " \
+                f"brute={bf_power:.8f}"
+            if power[i] > 0:
+                assert qmins[i] <= sols[i][0] <= qmaxes[i]
+
+    def test_sparse_bls_cpu_q_bounds_bad_length_raises(self):
+        t, y, dy = data(ndata=50)
+        freqs = np.array([0.9, 1.0, 1.1])
+        with pytest.raises(ValueError, match="qmin"):
+            sparse_bls_cpu(t, y, dy, freqs, qmin=np.array([0.01, 0.02]))
+        with pytest.raises(ValueError, match="qmax"):
+            sparse_bls_cpu(t, y, dy, freqs, qmax=np.array([0.1] * 5))
+
+    @pytest.mark.parametrize("use_simple", [False, True])
+    def test_sparse_bls_gpu_q_bounds(self, use_simple):
+        """GPU sparse BLS honors per-frequency q bounds (matches CPU)."""
+        t, y, dy = data(snr=30, q=0.1, phi0=0.3, freq=1.0,
+                        baseline=365., ndata=80)
+        freqs = np.linspace(0.95, 1.05, 11)
+        qmins = np.full(len(freqs), 0.03)
+        qmaxes = np.full(len(freqs), 0.2)
+
+        power_cpu, _ = sparse_bls_cpu(t, y, dy, freqs,
+                                      qmin=qmins, qmax=qmaxes)
+        power_gpu, sols_gpu = sparse_bls_gpu(t, y, dy, freqs,
+                                             qmin=qmins, qmax=qmaxes,
+                                             use_simple=use_simple)
+
+        assert_allclose(power_cpu, power_gpu, rtol=1e-3, atol=1e-5)
+        for (q_g, _), p in zip(sols_gpu, power_gpu):
+            if p > 0:
+                assert qmins[0] - 1e-6 <= q_g <= qmaxes[0] + 1e-6
+
     @pytest.mark.parametrize("freq", [1.0, 2.0])
     @pytest.mark.parametrize("q", [0.02, 0.1])
     @pytest.mark.parametrize("phi0", [0.0, 0.5])
@@ -751,7 +839,7 @@ class TestEeblsTransitSparseKwargs(object):
     """Regression tests: eebls_transit's sparse path must tolerate the
     documented pass-through kwargs (rho, samples_per_peak, dlogq, ...)
     instead of crashing with TypeError (sparse_bls_gpu has a closed
-    signature), and must warn when q constraints are silently ignored."""
+    signature), and must honor the Keplerian q constraints."""
 
     def _data(self, ndata=100):
         t, y, dy = data(snr=20, q=0.05, phi0=0.3, freq=1.0,
@@ -780,11 +868,24 @@ class TestEeblsTransitSparseKwargs(object):
         assert len(freqs) == len(powers)
         assert np.all(np.isfinite(powers))
 
-    def test_sparse_path_warns_when_q_constraints_ignored(self):
+    def test_sparse_path_honors_q_constraints(self):
+        # The sparse path applies the same per-frequency Keplerian
+        # qmin_fac/qmax_fac bounds as the standard path (no more
+        # discontinuity warning across the sparse_threshold boundary).
+        import warnings as _warnings
         t, y, dy = self._data()
-        with pytest.warns(UserWarning, match="ignores qmin_fac"):
-            eebls_transit(t, y, dy, qmin_fac=0.3,
-                          fmin=0.95, fmax=1.05, use_gpu=False)
+        qmin_fac, qmax_fac = 0.3, 1.5
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("error", UserWarning)
+            freqs, powers, sols = eebls_transit(
+                t, y, dy, qmin_fac=qmin_fac, qmax_fac=qmax_fac,
+                fmin=0.95, fmax=1.05, use_gpu=False)
+
+        qvals = q_transit(freqs)
+        for (q_found, _), p, qv in zip(sols, powers, qvals):
+            if p > 0:
+                assert qmin_fac * qv - 1e-6 <= q_found
+                assert q_found <= qmax_fac * qv + 1e-6
 
     def test_standard_path_unaffected(self):
         # No warning and no kwargs filtering on the standard path

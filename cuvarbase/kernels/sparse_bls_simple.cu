@@ -202,7 +202,7 @@ __global__ void sparse_bls_kernel_simple(
                     q = sh_phi[N - 1] - phi0 + 1e-7f;
                 }
 
-                if (q <= 0.f || q > 0.5f) continue;
+                if (q <= 0.f || q < qmin_f || q > qmax_f) continue;
 
                 // Sum weights and yw for obs i..j-1
                 for (unsigned int m = i; m < j && m < N; m++) {
@@ -233,7 +233,7 @@ __global__ void sparse_bls_kernel_simple(
                     q = 1.f - phi0 + 1e-7f;
                 }
 
-                if (q <= 0.f || q > 0.5f) continue;
+                if (q <= 0.f || q < qmin_f || q > qmax_f) continue;
 
                 // Sum from i to end
                 for (unsigned int m = i; m < N; m++) {

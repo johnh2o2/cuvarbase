@@ -99,6 +99,8 @@ __global__ void sparse_bls_kernel(
     const float* __restrict__ y,
     const float* __restrict__ dy,
     const float* __restrict__ freqs,
+    const float* __restrict__ qmin_arr,
+    const float* __restrict__ qmax_arr,
     unsigned int ndata,
     unsigned int nfreqs,
     unsigned int ignore_negative_delta_sols,
@@ -124,6 +126,8 @@ __global__ void sparse_bls_kernel(
 
     while (freq_idx < nfreqs) {
         float freq = freqs[freq_idx];
+        float qmin_f = qmin_arr[freq_idx];
+        float qmax_f = qmax_arr[freq_idx];
 
         // Step 1: Load data and compute phases
         for (unsigned int i = tid; i < ndata; i += blockDim.x) {
@@ -242,7 +246,7 @@ __global__ void sparse_bls_kernel(
                     q = sh_phi[N - 1] - phi0 + 1e-7f;
                 }
 
-                if (q <= 0.f || q > 0.5f) continue;
+                if (q <= 0.f || q < qmin_f || q > qmax_f) continue;
 
                 // Use prefix sums for O(1) range query: sum of w[i..j-1]
                 unsigned int last = (j < N) ? j - 1 : N - 1;
@@ -268,7 +272,7 @@ __global__ void sparse_bls_kernel(
                     q = 1.f - phi0 + 1e-7f;
                 }
 
-                if (q <= 0.f || q > 0.5f) continue;
+                if (q <= 0.f || q < qmin_f || q > qmax_f) continue;
 
                 // W = sum(w[i..N-1]) + sum(w[0..k-1])
                 W = sh_cumsum_w[N - 1] - (i > 0 ? sh_cumsum_w[i - 1] : 0.f);

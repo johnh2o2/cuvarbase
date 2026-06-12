@@ -1449,14 +1449,31 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     return 0 if W < 1e-9 else (YW ** 2) / (W * (1 - W)) / YY
 
 
-def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
+def _broadcast_q_bound(value, nfreqs, default, name):
+    """Broadcast a transit-duration bound (scalar or per-frequency
+    array; ``None`` means ``default``) to a float array of length
+    ``nfreqs``."""
+    if value is None:
+        value = default
+    arr = np.atleast_1d(np.asarray(value, dtype=np.float64))
+    if len(arr) == 1:
+        arr = np.full(nfreqs, arr[0])
+    elif len(arr) != nfreqs:
+        raise ValueError("%s must be a scalar or have the same length "
+                         "as freqs (%d); got length %d"
+                         % (name, nfreqs, len(arr)))
+    return arr
+
+
+def sparse_bls_cpu(t, y, dy, freqs, qmin=None, qmax=None,
+                   ignore_negative_delta_sols=False):
     """
     Sparse BLS implementation for CPU (no binning, tests all pairs of observations).
-    
+
     This is more efficient than traditional BLS when the number of observations
     is small, as it avoids redundant grid searching over finely-grained parameter
     grids. Based on https://arxiv.org/abs/2103.06193
-    
+
     Parameters
     ----------
     t: array_like, float
@@ -1467,9 +1484,18 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
         Observation uncertainties
     freqs: array_like, float
         Frequencies to test
+    qmin: float or array_like, optional (default: None)
+        Minimum transit duration (in phase) to consider. A scalar
+        applies to all frequencies; an array gives a per-frequency
+        bound (same length as ``freqs``, e.g. Keplerian
+        ``q_transit(freqs) * qmin_fac``). ``None`` means no lower
+        bound (all ``q > 0``).
+    qmax: float or array_like, optional (default: None)
+        Maximum transit duration (in phase), scalar or per-frequency.
+        ``None`` means the algorithm's standard upper cutoff of 0.5.
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore solutions with negative delta (inverted dips)
-    
+
     Returns
     -------
     bls: array_like, float
@@ -1485,6 +1511,9 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
 
     ndata = len(t)
     nfreqs = len(freqs)
+
+    qmins = _broadcast_q_bound(qmin, nfreqs, 0.0, 'qmin')
+    qmaxes = _broadcast_q_bound(qmax, nfreqs, 0.5, 'qmax')
 
     # Precompute weights (constant across all frequencies)
     w = np.power(dy, -2).astype(np.float32)
@@ -1507,6 +1536,9 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
     i_idx = np.arange(ndata)
 
     for i_freq, freq in enumerate(freqs):
+        qmin_f = qmins[i_freq]
+        qmax_f = qmaxes[i_freq]
+
         # Compute phases and sort
         phi = (t * freq) % 1.0
         order = np.argsort(phi)
@@ -1549,7 +1581,7 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
         powers = []
         for W, YW, q, valid in ((W_nw, YW_nw, q_nw, valid_nw),
                                 (W_w, YW_w, q_w, valid_w)):
-            valid = (valid & (q > 0) & (q <= 0.5)
+            valid = (valid & (q > 0) & (q >= qmin_f) & (q <= qmax_f)
                      & (W > 1e-9) & (W < 1.0 - 1e-9))
             if ignore_negative_delta_sols:
                 valid &= (YW <= 0)
@@ -1608,7 +1640,8 @@ def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwarg
     return kernel
 
 
-def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
+def sparse_bls_gpu(t, y, dy, freqs, qmin=None, qmax=None,
+                   ignore_negative_delta_sols=False,
                    block_size=64, max_ndata=None,
                    stream=None, kernel=None, use_simple=False):
     """
@@ -1630,6 +1663,13 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
         Observation uncertainties
     freqs: array_like, float
         Frequencies to test
+    qmin: float or array_like, optional (default: None)
+        Minimum transit duration (in phase) to consider; scalar or
+        per-frequency array (same length as ``freqs``). ``None`` means
+        no lower bound (all ``q > 0``).
+    qmax: float or array_like, optional (default: None)
+        Maximum transit duration (in phase), scalar or per-frequency.
+        ``None`` means the algorithm's standard upper cutoff of 0.5.
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore solutions with negative delta (inverted dips)
     block_size: int, optional (default: 64)
@@ -1661,6 +1701,11 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
     ndata = len(t)
     nfreqs = len(freqs)
 
+    qmins = _broadcast_q_bound(qmin, nfreqs, 0.0,
+                               'qmin').astype(np.float32)
+    qmaxes = _broadcast_q_bound(qmax, nfreqs, 0.5,
+                                'qmax').astype(np.float32)
+
     if max_ndata is None:
         max_ndata = ndata
 
@@ -1674,6 +1719,8 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
     y_g = gpuarray.to_gpu(y)
     dy_g = gpuarray.to_gpu(dy)
     freqs_g = gpuarray.to_gpu(freqs)
+    qmin_g = gpuarray.to_gpu(qmins)
+    qmax_g = gpuarray.to_gpu(qmaxes)
 
     bls_powers_g = gpuarray.zeros(nfreqs, dtype=np.float32)
     best_q_g = gpuarray.zeros(nfreqs, dtype=np.float32)
@@ -1706,7 +1753,7 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
 
     # Call kernel without prepare() to avoid resource issues
     kernel(
-        t_g, y_g, dy_g, freqs_g,
+        t_g, y_g, dy_g, freqs_g, qmin_g, qmax_g,
         np.uint32(ndata), np.uint32(nfreqs),
         np.uint32(ignore_negative_delta_sols),
         bls_powers_g, best_q_g, best_phi_g,
@@ -1787,15 +1834,15 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         (``block_size``, ``max_ndata``, ``stream``, ``kernel``,
         ``use_simple``) are forwarded to it.
 
-        .. warning::
+        .. note::
 
-            The sparse-BLS path (default for ``ndata < sparse_threshold``)
-            searches *all* transit durations ``q`` in ``(0, 0.5]`` and
-            ignores the Keplerian constraints ``qmin_fac``/``qmax_fac``
-            (and ``use_fast``). Results are therefore not directly
-            comparable across the ``sparse_threshold`` boundary. Pass
-            ``use_sparse=False`` to force the standard q-constrained
-            search.
+            The sparse-BLS path (default for ``ndata <
+            sparse_threshold``) honors the same per-frequency Keplerian
+            ``qmin_fac``/``qmax_fac`` duration bounds as the standard
+            path, so results are comparable across the
+            ``sparse_threshold`` boundary. ``use_fast`` only selects
+            between the standard (non-sparse) implementations; pass
+            ``use_sparse=False`` to force a standard grid search.
 
     Returns
     -------
@@ -1830,17 +1877,14 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     if qvals is None:
         qvals = q_transit(freqs, **kwargs)
 
+    qmins = np.asarray(qvals) * qmin_fac
+    qmaxes = np.asarray(qvals) * qmax_fac
+
     # Use sparse BLS for small datasets
     if use_sparse:
-        # The sparse kernels search all q in (0, 0.5]; the Keplerian
-        # qmin_fac/qmax_fac constraints (and use_fast) do not apply here.
-        if qmin_fac != 0.5 or qmax_fac != 2.0 or use_fast:
-            warnings.warn("eebls_transit is using sparse BLS (ndata < "
-                          "sparse_threshold), which searches all transit "
-                          "durations q in (0, 0.5] and ignores qmin_fac, "
-                          "qmax_fac, and use_fast. Pass use_sparse=False "
-                          "to force the standard q-constrained search.",
-                          UserWarning)
+        # The sparse path honors the same per-frequency Keplerian
+        # q bounds as the standard path; use_fast only selects
+        # between the standard implementations.
         if use_gpu:
             # Forward only the kwargs sparse_bls_gpu accepts; the rest
             # (rho, samples_per_peak, dlogq, ...) belong to the frequency
@@ -1850,18 +1894,18 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
             sparse_kwargs = {k: v for k, v in kwargs.items()
                              if k in sparse_keys}
             powers, sols = sparse_bls_gpu(t, y, dy, freqs,
+                                          qmin=qmins, qmax=qmaxes,
                                           ignore_negative_delta_sols=ignore_negative_delta_sols,
                                           **sparse_kwargs)
         else:
             # Use CPU sparse BLS (fallback)
             powers, sols = sparse_bls_cpu(t, y, dy, freqs,
+                                          qmin=qmins, qmax=qmaxes,
                                           ignore_negative_delta_sols=ignore_negative_delta_sols)
         return freqs, powers, sols
-    
+
     # Use GPU BLS for larger datasets
-    qmins = qvals * qmin_fac
-    qmaxes = qvals * qmax_fac
-    
+
     if use_fast:
         powers = eebls_gpu_fast(t, y, dy, freqs,
                                 qmin=qmins, qmax=qmaxes,
