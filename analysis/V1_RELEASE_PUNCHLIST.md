@@ -54,10 +54,10 @@ terminate, archive, and check these off.
 - [x] **use_cufinufft=True silently ignored by module-level lomb_scargle_async when cufinufft is not installed** — FIXED: ImportError raised at the top of lomb_scargle_async (same message as the class init); monkeypatched HAS_CUFINUFFT test asserts the raise. Commit: 7647d3e
   - Evidence: cuvarbase/lombscargle.py:380 — verified at HEAD: `if use_cufinufft and HAS_CUFINUFFT:`; the ImportError guard exists only in LombScargleAsyncProcess.__init__ (lines 451-454)
   - A direct call to the module-level function with use_cufinufft=True on a system without cufinufft silently runs the custom-NFFT path with no warning — silent behavior substitution rather than an error. Fix: raise or warn at the module-level gate.
-- [ ] **PDM CPU reference functions mutate caller's input arrays in place**
+- [x] **PDM CPU reference functions mutate caller's input arrays in place** — FIXED: `t = t - np.mean(t)` (copies) in binless_pdm_cpu, pdm2_cpu, pdm2_single_freq; TestCpuFunctionsDoNotMutateInputs asserts inputs unchanged (failed pre-fix). Commit: 047cb65
   - Evidence: cuvarbase/pdm.py:87-88, 100-101, 112-113 — verified at HEAD: binless_pdm_cpu, pdm2_cpu, pdm2_single_freq all do `t -= np.mean(t); y -= np.mean(y)` on their arguments
   - Public module-level functions modify the user's float arrays as a side effect (no copy). The GPU run() path is unaffected (normalize_light_curves copies). Fix is `t = t - np.mean(t)` in three places.
-- [ ] **Dead always-true 'power of 2' assert in _reduction_max leaves an unguarded silent-wrong-results path**
+- [x] **Dead always-true 'power of 2' assert in _reduction_max leaves an unguarded silent-wrong-results path** — FIXED: dead assert replaced with _validate_block_size() (ValueError on non-power-of-2/<32/non-int); also fixed latent float division `grid_size / nfreq` → `//`; TestReductionMaxValidation with fake kernel (failed pre-fix). Commit: 047cb65
   - Evidence: cuvarbase/bls.py:159-161 — verified at HEAD: `assert(block_size - 2 * (block_size / 2) == 0)` (always true under Python 3 true division); acknowledged in commit 66739b4 message
   - The main validation hole was fixed by _validate_block_size in compile_bls (bls.py:277-289), but _reduction_max still trusts its block_size argument: a caller passing precompiled `functions` with a mismatched block_size kwarg gets silently wrong tree reductions (kernels require the compiled power-of-two size). Low severity (expert-path misuse only) but a trivial fix: delete the dead assert and validate at the call site.
 
