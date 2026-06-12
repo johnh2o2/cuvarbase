@@ -5,6 +5,7 @@ from numpy.testing import assert_allclose
 from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
                   single_bls, eebls_gpu_custom, eebls_gpu_fast, \
+                  eebls_gpu_fast_optimized, \
                   sparse_bls_cpu, sparse_bls_gpu, eebls_transit
 
 
@@ -900,6 +901,54 @@ class TestEeblsTransitSparseKwargs(object):
                 pytest.fail("standard path should not warn")
             except Exception:
                 pass  # GPU unavailable (stubbed)
+
+
+class TestEeblsGpuFastNoverlap(object):
+    """eebls_gpu_fast(noverlap=k) must equal the elementwise max over
+    k dphi-shifted single passes (the manual re-run procedure the
+    docstring used to recommend; previously noverlap was silently
+    ignored on the fast path)."""
+
+    def _data(self):
+        return data(snr=30, q=0.05, phi0=0.317, freq=1.0,
+                    baseline=365., ndata=300)
+
+    def test_noverlap_validation(self):
+        # Runs CPU-side: validation precedes any GPU work.
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 20)
+        for bad in (0, -1, 1.5, "2"):
+            with pytest.raises(ValueError, match="noverlap"):
+                eebls_gpu_fast(t, y, dy, freqs, noverlap=bad)
+        with pytest.raises(ValueError, match="noverlap"):
+            eebls_gpu_fast_optimized(t, y, dy, freqs, noverlap=0)
+
+    @pytest.mark.parametrize("use_optimized", [False, True])
+    def test_noverlap_matches_manual_dphi_runs(self, use_optimized):
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+        fn = eebls_gpu_fast_optimized if use_optimized else eebls_gpu_fast
+        k = 3
+        kw = dict(qmin=0.01, qmax=0.1, dlogq=0.2)
+
+        power_k = fn(t, y, dy, freqs, noverlap=k, **kw)
+        manual = np.max([fn(t, y, dy, freqs, noverlap=1,
+                            dphi=float(i) / k, **kw)
+                         for i in range(k)], axis=0)
+
+        assert_allclose(power_k, manual, rtol=1e-4, atol=1e-6)
+
+    def test_noverlap_never_decreases_power(self):
+        # Pass 0 of the noverlap=3 run is exactly the noverlap=1 run,
+        # so the elementwise max can only gain power.
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+        kw = dict(qmin=0.01, qmax=0.1)
+
+        p1 = eebls_gpu_fast(t, y, dy, freqs, noverlap=1, **kw)
+        p3 = eebls_gpu_fast(t, y, dy, freqs, noverlap=3, **kw)
+
+        assert np.all(p3 >= p1 - 1e-6)
 
 
 class TestCompileBlsValidation(object):

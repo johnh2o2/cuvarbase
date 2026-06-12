@@ -542,6 +542,141 @@ class BLSMemory:
                          **kwargs)
 
 
+def _validate_noverlap(noverlap):
+    """noverlap must be a positive integer (number of phase-shifted
+    passes on the fast BLS paths)."""
+    if not isinstance(noverlap, (int, np.integer)) or noverlap < 1:
+        raise ValueError("noverlap must be a positive integer, got %r"
+                         % (noverlap,))
+
+
+def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
+                         qmin=1e-2, qmax=0.5,
+                         ignore_negative_delta_sols=False,
+                         functions=None, stream=None, dlogq=0.3,
+                         memory=None, noverlap=2, max_nblocks=5000,
+                         force_nblocks=None, dphi=0.0,
+                         shmem_lim=None, freq_batch_size=None,
+                         transfer_to_device=True,
+                         transfer_to_host=True, **kwargs):
+    """Shared implementation behind :func:`eebls_gpu_fast` and
+    :func:`eebls_gpu_fast_optimized`; see their docstrings for the
+    parameter descriptions."""
+    _validate_noverlap(noverlap)
+
+    if functions is None:
+        # Use the thread-safe LRU kernel cache (compilation costs ~150 ms
+        # per call otherwise). Fall back to a direct compile only for
+        # non-default compile options that aren't part of the cache key.
+        if kwargs.get('prepare', True):
+            functions = _get_cached_kernels(
+                kwargs.get('block_size', _default_block_size),
+                use_optimized, [fname])
+        else:
+            ckw = dict(kwargs)
+            ckw.setdefault('use_optimized', use_optimized)
+            functions = compile_bls(function_names=[fname], **ckw)
+
+    func = functions[fname]
+
+    if shmem_lim is None:
+        att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
+        shmem_lim = pycuda.autoprimaryctx.device.get_attribute(att)
+
+    if memory is None:
+        memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
+                                    freqs=freqs, stream=stream,
+                                    transfer=True,
+                                    **kwargs)
+    elif transfer_to_device:
+        memory.setdata(t, y, dy, qmin=qmin, qmax=qmax,
+                       freqs=freqs, transfer=True,
+                       **kwargs)
+
+    float_size = np.float32(1).nbytes
+    block_size = kwargs.get('block_size', _default_block_size)
+
+    if freq_batch_size is None:
+        freq_batch_size = len(freqs)
+
+    block = (block_size, 1, 1)
+
+    # minimum q value that we can handle with the shared memory limit
+    qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
+
+    # Phase oversampling: the kernel's box start positions step one
+    # fine phase bin, so a single pass undersamples boxes whose width
+    # is near the finest bin. Run ``noverlap`` passes with the bin
+    # grid shifted by 1/noverlap of a bin each time and keep the
+    # elementwise max -- equivalent to the manual dphi re-run
+    # procedure this replaces.
+    best_bls_g = None
+    for i_pass in range(noverlap):
+        dphi_pass = dphi + float(i_pass) / noverlap
+
+        i_freq = 0
+        while (i_freq < len(freqs)):
+            j_freq = min([i_freq + freq_batch_size, len(freqs)])
+            nfreqs = j_freq - i_freq
+
+            max_nbins = max(memory.nbinsf[i_freq:j_freq])
+
+            mem_req = (block_size + 2 * max_nbins) * float_size
+
+            if mem_req > shmem_lim:
+                s = "qmin = %.2e requires too much shared memory." \
+                    % (1. / max_nbins)
+                s += " Either try a larger value of qmin (> %e)" % (qmin_min)
+                s += " or avoid using %s." % (
+                    'eebls_gpu_fast_optimized' if use_optimized
+                    else 'eebls_gpu_fast')
+                raise ValueError(s)
+            nblocks = min([nfreqs, max_nblocks])
+            if force_nblocks is not None:
+                nblocks = force_nblocks
+
+            grid = (nblocks, 1)
+            args = (grid, block)
+            if stream is not None:
+                args += (stream,)
+            args += (memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr)
+            args += (memory.bls_g.ptr, memory.freqs_g.ptr)
+            args += (memory.nbins0_g.ptr, memory.nbinsf_g.ptr)
+            args += (np.uint32(len(t)), np.uint32(nfreqs),
+                     np.uint32(i_freq))
+            # The kernel's own noverlap argument is a no-op in the
+            # compiled (linear bin spacing) branch; phase oversampling
+            # is implemented by the dphi-shifted passes above.
+            args += (np.uint32(max_nbins), np.uint32(1))
+            args += (np.float32(dlogq), np.float32(dphi_pass))
+            args += (np.uint32(ignore_negative_delta_sols),)
+
+            if stream is not None:
+                func.prepared_async_call(*args, shared_size=int(mem_req))
+            else:
+                func.prepared_call(*args, shared_size=int(mem_req))
+
+            i_freq = j_freq
+
+        if noverlap > 1:
+            if best_bls_g is None:
+                best_bls_g = memory.bls_g.copy()
+            else:
+                gpuarray.maximum(memory.bls_g, best_bls_g,
+                                 out=best_bls_g, stream=stream)
+
+    if best_bls_g is not None:
+        cuda.memcpy_dtod(memory.bls_g.gpudata, best_bls_g.gpudata,
+                         best_bls_g.nbytes)
+
+    if transfer_to_host:
+        memory.transfer_data_to_cpu()
+        if stream is not None:
+            stream.synchronize()
+
+    return memory.bls
+
+
 def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    ignore_negative_delta_sols=False,
                    functions=None, stream=None, dlogq=0.3,
@@ -573,14 +708,6 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         No extra global memory is needed, meaning you likely do *not* need
         to use ``large_run`` with this function.
 
-    .. note::
-
-        There is no ``noverlap`` parameter here yet. This is only a problem
-        if the optimal ``q`` value is close to ``qmin``. To alleviate this,
-        you can run this function ``noverlap`` times with
-        ``dphi = i/noverlap`` for the ``i``-th run. Then take the best solution
-        of all runs.
-
     Parameters
     ----------
     t: array_like, float
@@ -597,11 +724,17 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         maximum q values to search at each frequency
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
+    noverlap: int, optional (default: 2)
+        Phase-offset oversampling: the periodogram is the elementwise
+        maximum over ``noverlap`` passes, with the phase-bin grid
+        shifted by ``1/noverlap`` of the finest bin width between
+        passes. This recovers box solutions whose phase offset falls
+        between bin boundaries (important when the best ``q`` is close
+        to ``qmin``); runtime scales linearly with ``noverlap``.
+        ``noverlap=1`` is a single unshifted pass.
     dphi: float, optional (default: 0.)
-        Phase offset (in units of the finest grid spacing). If you
-        want ``noverlap`` bins at the smallest ``q`` value, run this
-        function ``noverlap`` times, with ``dphi = i / noverlap``
-        for the ``i``-th run and take the best solution for all the runs.
+        Base phase-bin offset in units of the finest grid spacing;
+        pass ``i_pass`` adds ``i_pass / noverlap`` to it.
     dlogq: float
         The logarithmic spacing of the q values to use. If negative,
         the q values increase by ``dq = qmin``.
@@ -635,93 +768,17 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         :math:`1 - \chi_2(\omega) / \chi_2(constant)`
 
     """
-    fname = 'full_bls_no_sol'
-
-    if functions is None:
-        # Use the thread-safe LRU kernel cache (compilation costs ~150 ms
-        # per call otherwise). Fall back to a direct compile only for
-        # non-default compile options that aren't part of the cache key.
-        if kwargs.get('prepare', True):
-            functions = _get_cached_kernels(
-                kwargs.get('block_size', _default_block_size),
-                kwargs.get('use_optimized', False),
-                [fname])
-        else:
-            functions = compile_bls(function_names=[fname], **kwargs)
-
-    func = functions[fname]
-
-    if shmem_lim is None:
-        dev = pycuda.autoprimaryctx.device
-        att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
-        shmem_lim = pycuda.autoprimaryctx.device.get_attribute(att)
-
-    if memory is None:
-        memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
-                                    freqs=freqs, stream=stream,
-                                    transfer=True,
-                                    **kwargs)
-    elif transfer_to_device:
-        memory.setdata(t, y, dy, qmin=qmin, qmax=qmax,
-                       freqs=freqs, transfer=True,
-                       **kwargs)
-
-    float_size = np.float32(1).nbytes
-    block_size = kwargs.get('block_size', _default_block_size)
-
-    if freq_batch_size is None:
-        freq_batch_size = len(freqs)
-
-    nbatches = int(np.ceil(len(freqs) / freq_batch_size))
-    block = (block_size, 1, 1)
-
-    # minimum q value that we can handle with the shared memory limit
-    qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
-    i_freq = 0
-    while(i_freq < len(freqs)):
-        j_freq = min([i_freq + freq_batch_size, len(freqs)])
-        nfreqs = j_freq - i_freq
-
-        max_nbins = max(memory.nbinsf[i_freq:j_freq])
-
-        mem_req = (block_size + 2 * max_nbins) * float_size
-
-        if mem_req > shmem_lim:
-            s = "qmin = %.2e requires too much shared memory." % (1./max_nbins)
-            s += " Either try a larger value of qmin (> %e)" % (qmin_min)
-            s += " or avoid using eebls_gpu_fast."
-            raise ValueError(s)
-        # nblocks = int((2 * max_shmem / (mem_req + 4 * float_size)))
-        nblocks = min([nfreqs, max_nblocks])
-        if force_nblocks is not None:
-            nblocks = force_nblocks
-
-        grid = (nblocks, 1)
-        args = (grid, block)
-        if stream is not None:
-            args += (stream,)
-        args += (memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr)
-        args += (memory.bls_g.ptr, memory.freqs_g.ptr)
-        args += (memory.nbins0_g.ptr, memory.nbinsf_g.ptr)
-        args += (np.uint32(len(t)), np.uint32(nfreqs),
-                 np.uint32(i_freq))
-        args += (np.uint32(max_nbins), np.uint32(noverlap))
-        args += (np.float32(dlogq), np.float32(dphi))
-        args += (np.uint32(ignore_negative_delta_sols),)
-
-        if stream is not None:
-            func.prepared_async_call(*args, shared_size=int(mem_req))
-        else:
-            func.prepared_call(*args, shared_size=int(mem_req))
-
-        i_freq = j_freq
-
-    if transfer_to_host:
-        memory.transfer_data_to_cpu()
-        if stream is not None:
-            stream.synchronize()
-
-    return memory.bls
+    return _eebls_gpu_fast_impl(
+        t, y, dy, freqs, 'full_bls_no_sol',
+        kwargs.pop('use_optimized', False),
+        qmin=qmin, qmax=qmax,
+        ignore_negative_delta_sols=ignore_negative_delta_sols,
+        functions=functions, stream=stream, dlogq=dlogq,
+        memory=memory, noverlap=noverlap, max_nblocks=max_nblocks,
+        force_nblocks=force_nblocks, dphi=dphi,
+        shmem_lim=shmem_lim, freq_batch_size=freq_batch_size,
+        transfer_to_device=transfer_to_device,
+        transfer_to_host=transfer_to_host, **kwargs)
 
 
 def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
@@ -760,8 +817,11 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         maximum q values to search at each frequency
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
+    noverlap: int, optional (default: 2)
+        Phase-offset oversampling (elementwise max over ``noverlap``
+        bin-grid-shifted passes); see :func:`eebls_gpu_fast`.
     dphi: float, optional (default: 0.)
-        Phase offset (in units of the finest grid spacing)
+        Base phase-bin offset (in units of the finest grid spacing)
     dlogq: float
         The logarithmic spacing of the q values to use
     functions: dict
@@ -790,90 +850,17 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         :math:`1 - \chi_2(\omega) / \chi_2(constant)`
 
     """
-    fname = 'full_bls_no_sol_optimized'
-
-    if functions is None:
-        if kwargs.get('prepare', True):
-            functions = _get_cached_kernels(
-                kwargs.get('block_size', _default_block_size),
-                True,  # use_optimized
-                [fname])
-        else:
-            functions = compile_bls(function_names=[fname],
-                                    use_optimized=True, **kwargs)
-
-    func = functions[fname]
-
-    if shmem_lim is None:
-        dev = pycuda.autoprimaryctx.device
-        att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
-        shmem_lim = pycuda.autoprimaryctx.device.get_attribute(att)
-
-    if memory is None:
-        memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
-                                    freqs=freqs, stream=stream,
-                                    transfer=True,
-                                    **kwargs)
-    elif transfer_to_device:
-        memory.setdata(t, y, dy, qmin=qmin, qmax=qmax,
-                       freqs=freqs, transfer=True,
-                       **kwargs)
-
-    float_size = np.float32(1).nbytes
-    block_size = kwargs.get('block_size', _default_block_size)
-
-    if freq_batch_size is None:
-        freq_batch_size = len(freqs)
-
-    nbatches = int(np.ceil(len(freqs) / freq_batch_size))
-    block = (block_size, 1, 1)
-
-    # minimum q value that we can handle with the shared memory limit
-    qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
-    i_freq = 0
-    while(i_freq < len(freqs)):
-        j_freq = min([i_freq + freq_batch_size, len(freqs)])
-        nfreqs = j_freq - i_freq
-
-        max_nbins = max(memory.nbinsf[i_freq:j_freq])
-
-        mem_req = (block_size + 2 * max_nbins) * float_size
-
-        if mem_req > shmem_lim:
-            s = "qmin = %.2e requires too much shared memory." % (1./max_nbins)
-            s += " Either try a larger value of qmin (> %e)" % (qmin_min)
-            s += " or avoid using eebls_gpu_fast_optimized."
-            raise ValueError(s)
-        nblocks = min([nfreqs, max_nblocks])
-        if force_nblocks is not None:
-            nblocks = force_nblocks
-
-        grid = (nblocks, 1)
-        args = (grid, block)
-        if stream is not None:
-            args += (stream,)
-        args += (memory.t_g.ptr, memory.yw_g.ptr, memory.w_g.ptr)
-        args += (memory.bls_g.ptr, memory.freqs_g.ptr)
-        args += (memory.nbins0_g.ptr, memory.nbinsf_g.ptr)
-        args += (np.uint32(len(t)), np.uint32(nfreqs),
-                 np.uint32(i_freq))
-        args += (np.uint32(max_nbins), np.uint32(noverlap))
-        args += (np.float32(dlogq), np.float32(dphi))
-        args += (np.uint32(ignore_negative_delta_sols),)
-
-        if stream is not None:
-            func.prepared_async_call(*args, shared_size=int(mem_req))
-        else:
-            func.prepared_call(*args, shared_size=int(mem_req))
-
-        i_freq = j_freq
-
-    if transfer_to_host:
-        memory.transfer_data_to_cpu()
-        if stream is not None:
-            stream.synchronize()
-
-    return memory.bls
+    kwargs.pop('use_optimized', None)
+    return _eebls_gpu_fast_impl(
+        t, y, dy, freqs, 'full_bls_no_sol_optimized', True,
+        qmin=qmin, qmax=qmax,
+        ignore_negative_delta_sols=ignore_negative_delta_sols,
+        functions=functions, stream=stream, dlogq=dlogq,
+        memory=memory, noverlap=noverlap, max_nblocks=max_nblocks,
+        force_nblocks=force_nblocks, dphi=dphi,
+        shmem_lim=shmem_lim, freq_batch_size=freq_batch_size,
+        transfer_to_device=transfer_to_device,
+        transfer_to_host=transfer_to_host, **kwargs)
 
 
 def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
