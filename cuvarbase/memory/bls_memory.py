@@ -10,6 +10,8 @@ import numpy as np
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 
+from ..utils import subtract_epoch
+
 
 class BLSBatchMemory:
     """
@@ -44,6 +46,10 @@ class BLSBatchMemory:
 
         # Per-LC normalization factors
         self.yy = np.zeros(n_lcs, dtype=np.float64)
+
+        # Per-LC epochs: min(t) subtracted from each lightcurve's times
+        # before the float32 cast (phases are relative to it)
+        self.epochs = np.zeros(n_lcs, dtype=np.float64)
 
         # Allocate pinned host arrays
         align = resource.getpagesize()
@@ -131,7 +137,9 @@ class BLSBatchMemory:
         dy : array_like
             Observation uncertainties.
         """
-        t = np.asarray(t, dtype=self.rtype)
+        # Epoch-subtract in float64 before the float32 cast: absolute
+        # timestamps (e.g. BJD) would otherwise destroy the phase fold.
+        t, epoch = subtract_epoch(t)
         y = np.asarray(y, dtype=np.float64)
         dy = np.asarray(dy, dtype=np.float64)
         ndata = len(t)
@@ -141,6 +149,7 @@ class BLSBatchMemory:
             f"ndata={ndata} > max_ndata={self.max_ndata}")
 
         self.ndata_per_lc[idx] = np.uint32(ndata)
+        self.epochs[idx] = epoch
 
         offset = idx * self.max_ndata
 
@@ -153,7 +162,7 @@ class BLSBatchMemory:
         self.yy[idx] = np.dot(w, (y - ybar) ** 2)
 
         # Store (use float64 for computation, cast to float32 for GPU)
-        self.t[offset:offset + ndata] = t
+        self.t[offset:offset + ndata] = t.astype(self.rtype)
         self.yw[offset:offset + ndata] = ((y - ybar) * w).astype(self.rtype)
         self.w[offset:offset + ndata] = w.astype(self.rtype)
 
