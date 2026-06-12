@@ -871,3 +871,36 @@ class TestEpochHandling(object):
                              qmin=0.01, qmax=0.1)
         assert max(p_rel) > 0.5
         assert_allclose(p_raw, p_rel, rtol=1e-3, atol=1e-3)
+
+
+class TestReductionMaxValidation(object):
+    """_reduction_max used to 'validate' block_size with an assert that
+    is always true under Python 3 division; a mismatched block_size
+    silently corrupts the tree reduction on the GPU."""
+
+    class _FakePtr(object):
+        ptr = 0
+
+    class _FakeKernel(object):
+        def __init__(self):
+            self.calls = []
+
+        def prepared_async_call(self, *args):
+            self.calls.append(args)
+
+    def _call(self, block_size):
+        from ..bls import _reduction_max
+        kern = self._FakeKernel()
+        _reduction_max(kern, self._FakePtr(), self._FakePtr(),
+                       4, 64, None, self._FakePtr(), self._FakePtr(),
+                       0, block_size)
+        return kern
+
+    def test_non_power_of_two_block_size_raises(self):
+        for bad in (48, 100, 0, -64, 2.5, "256"):
+            with pytest.raises(ValueError):
+                self._call(bad)
+
+    def test_valid_block_size_launches(self):
+        kern = self._call(64)
+        assert len(kern.calls) >= 1

@@ -12,7 +12,7 @@ What's new in cuvarbase
         * **Fixed silent accuracy loss for absolute timestamps (e.g. BJD ~2.45e6 days):** all BLS paths now subtract ``min(t)`` in float64 before casting times to float32; previously the float32 phase fold lost nearly all phase information at BJD scale. **Convention change:** reported ``phi0`` solutions are now relative to ``min(t)``
         * Fixed ``reduction_max`` in the optimized kernel silently dropping half the per-block candidates (``use_optimized=True`` paths)
         * Fixed ``eebls_transit`` sparse path crashing with TypeError on documented kwargs (rho, samples_per_peak, ...); it now also warns that the sparse search ignores qmin_fac/qmax_fac
-        * ``compile_bls`` validates block_size (power of 2, >= 32) and raises a clear error when no requested kernel functions are loadable
+        * ``compile_bls`` validates block_size (power of 2, >= 32) and raises a clear error when no requested kernel functions are loadable; ``_reduction_max`` now applies the same validation (its old power-of-two assert was always true under Python 3 division)
     * **Lomb-Scargle / NFFT**
         * Memory classes refactored into ``cuvarbase.memory`` (behavior-preserving)
         * Optional cuFINUFFT backend (``use_cufinufft=True``) as a cross-check; the custom NFFT kernel remains faster
@@ -26,6 +26,7 @@ What's new in cuvarbase
         * Fast shared-memory CUDA kernels for all four variants: ``binned_step_fast``, ``binned_linterp_fast``, ``binless_tophat_fast``, ``binless_gauss_fast``
         * Backward-compatible ``(t, y, err)`` input API for ``PDMAsyncProcess.run()`` with automatic frequency grids; the legacy ``(t, y, w, freqs)`` format is deprecated (emits DeprecationWarning)
         * Unit tests for all kernel variants and new Sphinx documentation (``docs/source/pdm.rst``)
+        * Fixed the CPU reference functions (``binless_pdm_cpu``, ``pdm2_cpu``, ``pdm2_single_freq``) mutating the caller's ``t``/``y`` arrays in place
     * **Conditional Entropy** (community contribution — PR #61)
         * Optional log-probability periodogram via ``compute_log_prob=True``
         * Lightcurves normalized before processing; 32-bit overflow guard for large ``nfreq x ndata`` runs; clear error for the unsupported ``use_fast`` + ``weighted`` combination

@@ -157,8 +157,11 @@ _function_signatures = {
 def _reduction_max(max_func, arr, arr_args, nfreq, nbins,
                    stream, final_arr, final_argmax_arr,
                    final_index, block_size):
-    # assert power of 2
-    assert(block_size - 2 * (block_size / 2) == 0)
+    # The reduction kernels require the compiled power-of-two block
+    # size; a mismatched block_size silently corrupts the tree
+    # reduction. (The old `assert(block_size - 2*(block_size/2) == 0)`
+    # was always true under Python 3 division.)
+    _validate_block_size(block_size)
 
     block = (block_size, 1, 1)
     grid_size = int(np.ceil(float(nbins) / block_size)) * nfreq
@@ -175,7 +178,7 @@ def _reduction_max(max_func, arr, arr_args, nfreq, nbins,
                                      arr.ptr, arr_args.ptr, np.uint32(0), init)
         init = np.uint32(0)
 
-        nbins0 = grid_size / nfreq
+        nbins0 = grid_size // nfreq
         grid_size = int(np.ceil(float(nbins0) / block_size)) * nfreq
         grid = (grid_size, 1)
 
