@@ -17,7 +17,7 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
 from .core import GPUAsyncProcess
-from .utils import find_kernel, _module_reader
+from .utils import find_kernel, _module_reader, subtract_epoch
 from .memory.bls_memory import BLSBatchMemory
 
 import resource
@@ -382,6 +382,10 @@ class BLSMemory:
 
         self.rtype = np.float32
 
+        # min(t) subtracted from the times before the float32 cast
+        # (phases are measured relative to it)
+        self.epoch = None
+
         self.stream = stream
 
         self.allocate_pinned_arrays(nfreqs=max_nfreqs, ndata=max_ndata)
@@ -462,7 +466,10 @@ class BLSMemory:
             self.nbinsf = (np.ones_like(self.freqs)/qmin).astype(np.uint32)
             self.nbins0 = (np.ones_like(self.freqs)/qmax).astype(np.uint32)
 
-        self.t[:len(t)] = np.asarray(t).astype(self.rtype)[:]
+        # Epoch-subtract in float64 before the float32 cast: absolute
+        # timestamps (e.g. BJD) would otherwise destroy the phase fold.
+        t, self.epoch = subtract_epoch(t)
+        self.t[:len(t)] = t.astype(self.rtype)[:]
 
         w = np.power(dy, -2)
         w /= sum(w)
@@ -956,7 +963,9 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     q_values: array_like
         Set of q values to search at each trial frequency
     phi_values: float or array_like
-        Set of phi values to search at each trial frequency
+        Set of phi values to search at each trial frequency; phases
+        are measured relative to ``min(t)`` (times are epoch-subtracted
+        before folding)
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     nstreams: int, optional (default: 5)
@@ -1028,7 +1037,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
 
-    t_g = gpuarray.to_gpu(np.array(t).astype(np.float32))
+    t_g = gpuarray.to_gpu(subtract_epoch(t)[0].astype(np.float32))
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
@@ -1194,7 +1203,9 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     bls: array_like, float
         BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
     qphi_sols: list of ``(q, phi)`` tuples
-        Best ``(q, phi)`` solution at each frequency
+        Best ``(q, phi)`` solution at each frequency; ``phi`` is
+        measured relative to ``min(t)`` (times are epoch-subtracted
+        before folding to preserve float32 precision)
 
     """
 
@@ -1254,7 +1265,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
 
-    t_g = gpuarray.to_gpu(np.array(t).astype(np.float32))
+    t_g = gpuarray.to_gpu(subtract_epoch(t)[0].astype(np.float32))
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
@@ -1373,7 +1384,9 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     q: float
         Transit duration in phase
     phi0: float
-        Phase offset of transit
+        Phase offset of transit, relative to ``min(t)`` (times are
+        epoch-subtracted before folding, consistent with the GPU
+        functions in this module)
     ignore_negative_delta_sols:
         Whether or not to ignore solutions with negative delta (inverted dips)
 
@@ -1383,7 +1396,7 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
         BLS power for this set of parameters
     """
 
-    phi = np.asarray(t).astype(np.float32) * np.float32(freq)
+    phi = subtract_epoch(t)[0].astype(np.float32) * np.float32(freq)
     phi -= np.float32(phi0)
     phi -= np.floor(phi)
 
@@ -1429,9 +1442,10 @@ def sparse_bls_cpu(t, y, dy, freqs, ignore_negative_delta_sols=False):
     bls: array_like, float
         BLS power at each frequency
     solutions: list of (q, phi0) tuples
-        Best (q, phi0) solution at each frequency
+        Best (q, phi0) solution at each frequency; ``phi0`` is measured
+        relative to ``min(t)``
     """
-    t = np.asarray(t).astype(np.float32)
+    t = subtract_epoch(t)[0].astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
     freqs = np.asarray(freqs).astype(np.float32)
@@ -1615,10 +1629,11 @@ def sparse_bls_gpu(t, y, dy, freqs, ignore_negative_delta_sols=False,
     bls_powers: array_like, float
         BLS power at each frequency
     solutions: list of (q, phi0) tuples
-        Best (q, phi0) solution at each frequency
+        Best (q, phi0) solution at each frequency; ``phi0`` is measured
+        relative to ``min(t)``
     """
-    # Convert to numpy arrays
-    t = np.asarray(t).astype(np.float32)
+    # Convert to numpy arrays (epoch-subtract before the float32 cast)
+    t = subtract_epoch(t)[0].astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
     freqs = np.asarray(freqs).astype(np.float32)

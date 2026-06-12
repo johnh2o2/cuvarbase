@@ -175,6 +175,10 @@ class TestBLS(object):
         
         freq, q, phi0 = solution.freq, solution.q, solution.phi0
 
+        # single_bls folds epoch-subtracted times (phases relative to
+        # min(t)); shift the injected absolute-time phase to match
+        phi0 = (phi0 - np.min(t) * freq) % 1.0
+
         bls_default = single_bls(t, y_neg, dy, freq, q, phi0)
         bls0 = single_bls(t, y_neg, dy, freq, q, phi0, ignore_negative_delta_sols=False)
         bls_ignore = single_bls(t, y_neg, dy, freq, q, phi0, 
@@ -796,3 +800,74 @@ class TestCompileBlsValidation(object):
         with pytest.raises(ValueError, match="no loadable functions"):
             compile_bls(function_names=['full_bls_no_sol_optimized'],
                         use_optimized=False)
+
+
+class TestEpochHandling(object):
+    """Times must be epoch-subtracted before any float32 cast.
+
+    With raw BJD-scale timestamps (~2.45e6 days), float32 phase folding
+    loses essentially all phase information: float32 carries ~7
+    significant digits, so the fractional part of ``t * freq`` is
+    dominated by rounding error. All BLS paths subtract ``min(t)`` (in
+    float64) before casting, and phases are reported relative to it.
+    """
+
+    bjd_offset = 2455197.5
+
+    def _signal(self, ndata=120, baseline=365., freq=0.3, q=0.05,
+                phi0=0.3, snr=50., sigma=0.01, seed=42):
+        rand = np.random.RandomState(seed)
+        t = baseline * np.sort(rand.rand(ndata))
+        t -= t.min()  # absolute and epoch-relative phases coincide
+        delta = snr * sigma / np.sqrt(ndata * q * (1 - q))
+        phi = (t * freq) % 1.0
+        y = -delta * ((phi > phi0) & (phi < phi0 + q)).astype(float)
+        y += sigma * rand.randn(ndata)
+        dy = sigma * np.ones(ndata)
+        return t, y, dy, freq, q, phi0
+
+    def test_single_bls_bjd_invariance(self):
+        t, y, dy, freq, q, phi0 = self._signal()
+        p_rel = single_bls(t, y, dy, freq, q, phi0)
+        p_raw = single_bls(t + self.bjd_offset, y, dy, freq, q, phi0)
+        assert p_rel > 0.5  # signal actually detected
+        assert abs(p_raw - p_rel) < 1e-3 * p_rel
+
+    def test_sparse_bls_cpu_bjd_invariance(self):
+        t, y, dy, freq, q, phi0 = self._signal(ndata=60)
+        freqs = np.array([0.9 * freq, freq, 1.1 * freq])
+        p_rel, _ = sparse_bls_cpu(t, y, dy, freqs)
+        p_raw, _ = sparse_bls_cpu(t + self.bjd_offset, y, dy, freqs)
+        assert p_rel[1] > 0.5
+        assert_allclose(p_raw, p_rel, rtol=1e-3, atol=1e-4)
+
+    def test_bls_memory_epoch_subtraction(self):
+        # Runs on GPU only (BLSMemory allocates pinned arrays); the
+        # conftest stub converts it to a skip on CPU-only machines.
+        from ..bls import BLSMemory
+        t, y, dy, freq, q, phi0 = self._signal()
+        freqs = np.linspace(0.2, 0.4, 10)
+        mem = BLSMemory.fromdata(t + self.bjd_offset, y, dy,
+                                 qmin=1e-2, qmax=0.5, freqs=freqs,
+                                 transfer=False)
+        assert_allclose(mem.t[:len(t)], t.astype(np.float32), atol=1e-3)
+        assert mem.epoch == pytest.approx(self.bjd_offset + t.min())
+
+    def test_bls_batch_memory_epoch_subtraction(self):
+        # Runs on GPU only (pinned host arrays); skipped on CPU.
+        from ..memory.bls_memory import BLSBatchMemory
+        t, y, dy, freq, q, phi0 = self._signal()
+        mem = BLSBatchMemory(len(t), 1, 8)
+        mem.set_lightcurve(0, t + self.bjd_offset, y, dy)
+        assert_allclose(mem.t[:len(t)], t.astype(np.float32), atol=1e-3)
+        assert mem.epochs[0] == pytest.approx(self.bjd_offset + t.min())
+
+    def test_eebls_gpu_bjd_invariance(self):
+        # Full GPU path; skipped on CPU-only machines.
+        t, y, dy, freq, q, phi0 = self._signal()
+        freqs = np.linspace(0.95 * freq, 1.05 * freq, 50)
+        p_rel, _ = eebls_gpu(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+        p_raw, _ = eebls_gpu(t + self.bjd_offset, y, dy, freqs,
+                             qmin=0.01, qmax=0.1)
+        assert max(p_rel) > 0.5
+        assert_allclose(p_raw, p_rel, rtol=1e-3, atol=1e-3)

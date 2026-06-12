@@ -9,6 +9,34 @@ def weights(err):
     return w/np.sum(w)
 
 
+def subtract_epoch(t):
+    """
+    Shift observation times so that they start at zero.
+
+    Returns ``(t - min(t), min(t))``, with the subtraction performed in
+    float64. Phase folding on the GPU happens in single precision, so
+    for absolute timestamps (e.g. BJD ~ 2,455,000 days) the product
+    ``float32(t) * freq`` loses nearly all phase information; times must
+    be epoch-subtracted *before* any cast to float32. As a consequence,
+    all phases (``phi0`` solutions) are measured relative to ``min(t)``.
+
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times
+
+    Returns
+    -------
+    t_shifted: ndarray, float64
+        ``t - min(t)``
+    epoch: float
+        ``min(t)``, the epoch that was subtracted
+    """
+    t = np.asarray(t, dtype=np.float64)
+    epoch = t.min()
+    return t - epoch, epoch
+
+
 def find_kernel(name):
     # Resolve relative to this file rather than importlib.resources:
     # setuptools PEP-660 editable installs hand files("cuvarbase") a
