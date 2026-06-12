@@ -33,7 +33,7 @@ What's new in cuvarbase
         * CE is now in **maintenance mode**: it keeps working, but no new development is planned — for an actively developed GPU CE/AOV search see `periodfind <https://github.com/scope-ml/periodfind>`_
     * **Experimental** (UserWarning on import; not recommended for science use yet)
         * GPU Transit Least Squares (``cuvarbase.tls``) with Ofir (2014) period grids — known epoch-grid and shared-memory limitations, rework planned for v1.1
-        * NUFFT-LRT matched filter (``cuvarbase.nufft_lrt``, contributed by Jamila Taaki) — currently CPU-bound with a grid-span limitation
+        * NUFFT-LRT matched filter (contributed by Jamila Taaki) — **removed from the released package**: the implementation computed on the CPU (its CUDA kernels were compiled but never invoked) and silently ignored data beyond ``median(dt) * nf`` from the first observation, truncating multi-season baselines. Source preserved on the ``feature/nufft-lrt-experimental`` branch pending a GPU rewire
     * **Packaging / infrastructure**
         * **BREAKING:** requires Python 3.9+
         * Fixed wheel/sdist omitting the ``base``/``memory`` subpackages (pip installs of the v1.0 branch were unimportable)
