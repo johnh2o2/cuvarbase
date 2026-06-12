@@ -149,7 +149,7 @@ terminate, archive, and check these off.
 - [ ] **Page-locked (pinned) host buffers never restored — allocate_pinned_arrays is a misnomer and async transfers silently serialize**
   - Evidence: cuvarbase/bls.py:395-417 — 'allocate_pinned_arrays' uses cuda.aligned_zeros (aligned, NOT page-locked); no pagelocked_*/register_host_memory anywhere in cuvarbase/; audit attributes removal to a false premise in commit 4e6e232
   - set_async/get_async fall back to synchronous staged copies, defeating the multi-stream architecture. Restore cuda.pagelocked_* (or register_host_memory) or rename and document the behavior.
-- [ ] **sparse_bls_cpu still pure-Python O(N^2 x Nf) nested loops — unusable CPU fallback**
+- [x] **sparse_bls_cpu still pure-Python O(N^2 x Nf) nested loops — unusable CPU fallback** — FIXED: prefix-sum + broadcast vectorization (the old loop was actually O(N^3): per-pair slice sums); now ~3 ms/freq at ndata=500 vs minutes before. Passes all existing brute-force equivalence/wrapping/optimality tests unchanged; TestSparseBlsCpuVectorized adds a perf regression guard (ndata=250 in seconds; old code times out). Commit: d7e2b43
   - Evidence: cuvarbase/bls.py:1406, 1470-1507 (for i in range(ndata) / for j in range(i+1, ndata+1)); audit §3 medium item 'vectorize (~100x)'
   - This is the CPU path backing sparse ground-truth comparisons and the README-advertised no-GPU fallback (which is itself unreachable — see the eager-pycuda item in B). Numpy-cumsum vectorization is a known ~100x, contained change.
 - [ ] **Adaptive block-size heuristic considers only ndata, not nbins**
