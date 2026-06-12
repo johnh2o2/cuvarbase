@@ -15,7 +15,7 @@ What's new in cuvarbase
         * ``compile_bls`` validates block_size (power of 2, >= 32) and raises a clear error when no requested kernel functions are loadable; ``_reduction_max`` now applies the same validation (its old power-of-two assert was always true under Python 3 division)
     * **Lomb-Scargle / NFFT**
         * Memory classes refactored into ``cuvarbase.memory`` (behavior-preserving)
-        * Optional cuFINUFFT backend (``use_cufinufft=True``) as a cross-check; the custom NFFT kernel remains faster
+        * Optional cuFINUFFT backend (``use_cufinufft=True``) as a cross-check; the custom NFFT kernel remains the default. cufinufft Plans are now cached per problem shape (creation dominated the per-call cost, making the backend 0.63-0.84x the custom kernel's speed); ``free_plan_cache()`` releases the cached GPU resources
         * Fixed ``lomb_scargle_simple`` double-applying inverse-variance weights (largest-error points previously got the most weight)
         * Fixed ``fap_baluev`` returning exactly 0 for significant peaks (issue #14): the false-alarm probability is now evaluated in log space with ``expm1``, staying positive down to the float64 limit instead of underflowing at FAP ≲ 1e-16
         * Fixed ``lomb_scargle_async`` (direct-sums branch) gating the device→host result copy on ``transfer_to_device`` instead of ``transfer_to_host``: callers with data already on the GPU got a stale/empty periodogram back, and the copy could not be suppressed
