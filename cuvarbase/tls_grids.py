@@ -404,6 +404,38 @@ def t0_grid(period, duration, n_transits=None, oversampling=5):
     return t0_values
 
 
+def t0_grid_size(duration_phase, oversample=3.0, n_min=30, n_max=20000):
+    """
+    Number of transit-epoch (t0) trial positions for a fractional
+    transit duration.
+
+    This is the Python mirror of the grid used inside the CUDA kernels
+    (``kernels/tls.cu::t0_grid_size``): the epoch stride is
+    ``duration_phase / oversample``, so every possible transit epoch
+    lies well within half a duration of a tested t0. The previous
+    fixed 30-point grid missed transits narrower than ~1/30 of the
+    period entirely (most periods > ~3.5 d in Keplerian mode).
+
+    Parameters
+    ----------
+    duration_phase : float
+        Transit duration as a fraction of the period (q)
+    oversample : float, optional
+        Tested epochs per transit duration (default: 3)
+    n_min : int, optional
+        Grid-size floor (default: 30, the old fixed grid)
+    n_max : int, optional
+        Grid-size cap bounding kernel runtime (default: 20000)
+
+    Returns
+    -------
+    n_t0 : int
+        Number of evenly spaced t0 positions in [0, 1)
+    """
+    n = int(np.ceil(oversample / float(duration_phase)))
+    return int(np.clip(n, n_min, n_max))
+
+
 def validate_stellar_parameters(R_star=1.0, M_star=1.0,
                                 R_star_min=0.13, R_star_max=3.5,
                                 M_star_min=0.1, M_star_max=2.0):
