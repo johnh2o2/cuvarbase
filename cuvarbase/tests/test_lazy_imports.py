@@ -48,3 +48,15 @@ def test_import_survives_broken_skcuda():
         cwd=repo_root, capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stderr
     assert 'OK' in result.stdout
+
+
+def test_nufft_lrt_removed_from_package():
+    # NUFFT-LRT was cut from the v1.0 wheel (source preserved on the
+    # feature/nufft-lrt-experimental branch); the package must not
+    # expose it anymore.
+    import cuvarbase
+    assert 'NUFFTLRTAsyncProcess' not in cuvarbase.__all__
+    with pytest.raises(AttributeError):
+        cuvarbase.nufft_lrt
+    with pytest.raises(ImportError):
+        import cuvarbase.nufft_lrt  # noqa: F401

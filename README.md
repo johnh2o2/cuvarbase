@@ -183,13 +183,13 @@ are not recommended for science use yet. They emit a `UserWarning` on import.
   transits (most periods > ~3.5 d in Keplerian mode); light curves above
   ~3,500 points exceed the kernel's shared-memory budget; statistics can
   be corrupted by failed periods. A rework is planned for v1.1.
-- **NUFFT-based Likelihood Ratio Test** (`cuvarbase.nufft_lrt`) - Matched-filter
-  transit detection for correlated noise, based on the method of
-  Taaki, Kamalabadi & Kemball (2020) and contributed by **Jamila Taaki**
-  ([@xiaziyna](https://github.com/xiaziyna)). Known issues: the current
-  implementation computes on the CPU (the CUDA kernels are compiled but
-  unused) and ignores data beyond `median(dt) * nf` from the first
-  observation, which silently truncates multi-season baselines.
+A NUFFT-based Likelihood Ratio Test (matched-filter transit detection
+for correlated noise, contributed by **Jamila Taaki**) was previously
+listed here but has been removed from the released package: the
+implementation computed on the CPU and silently truncated multi-season
+baselines. The source is preserved on the
+[`feature/nufft-lrt-experimental`](https://github.com/johnh2o2/cuvarbase/tree/feature/nufft-lrt-experimental)
+branch pending a GPU rewire.
 
 ### Planned Features
 
@@ -342,7 +342,7 @@ This project has benefited from contributions and support from many people in th
 - Gaspar Bakos
 - Kevin Burdge
 - Attila Bodi
-- **Jamila Taaki** - for contributing the NUFFT-based Likelihood Ratio Test (LRT) implementation for transit detection with correlated noise. Her work on adaptive matched filtering in the frequency domain has significantly expanded cuvarbase's capabilities for handling realistic astrophysical noise. See [docs/NUFFT_LRT_README.md](docs/NUFFT_LRT_README.md) and her papers:
+- **Jamila Taaki** - for contributing the NUFFT-based Likelihood Ratio Test (LRT) implementation for transit detection with correlated noise (currently on the [`feature/nufft-lrt-experimental`](https://github.com/johnh2o2/cuvarbase/tree/feature/nufft-lrt-experimental) branch pending a GPU rewire). See her papers:
   - Taaki, J. S., Kamalabadi, F., & Kemball, A. (2020). *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization.*
   - Reference implementation: https://github.com/star-skelly/code_nova_exoghosts
 - All users and contributors who have helped make cuvarbase useful to the astronomy community
