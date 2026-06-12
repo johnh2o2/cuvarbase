@@ -43,6 +43,10 @@ via API; archive in analysis/)
 - [ ] A1: sparse q-bounds GPU parity — test_sparse_bls_gpu_q_bounds
       (full + simple kernels) and the full sparse GPU test group must
       pass on pod (kernel signature changed: +qmin_arr/+qmax_arr)
+- [ ] A2: noverlap multi-pass — TestEeblsGpuFastNoverlap GPU tests
+      (manual-dphi equivalence for standard + optimized, monotonic
+      power) + full fast-path test group (refactor touched both entry
+      points)
 - [ ] items accumulate here as work proceeds
 
 ## A. Contained code items (do first)
@@ -62,11 +66,20 @@ via API; archive in analysis/)
       bounded brute-force parity + per-frequency + validation +
       no-warning tests added; bls.rst sparse section updated. GPU
       parity queued (signature change → pod must recompile kernels).
-- [ ] **A2. noverlap for eebls_gpu_fast** — add the noverlap
+- [x] **A2. noverlap for eebls_gpu_fast** — add the noverlap
       parameter (phase-offset oversampling) to the fast path,
       removing the documented dphi re-run workaround. Accept:
       eebls_gpu_fast(noverlap=k) matches the k-shifted-dphi manual
       procedure; docstring admission removed.
+      **DONE 9fb7b1e** — the kernels' noverlap arg was a silent no-op
+      in the compiled (non-LOG) branch; implemented as noverlap
+      dphi-shifted passes combined by on-GPU elementwise max in a
+      shared _eebls_gpu_fast_impl (standard + optimized now share one
+      body). Docstring admission removed; noverlap documented +
+      validated (ValueError, CPU-side test); CHANGELOG entry (also
+      retired the stale A1 sparse-warning line). Behavior note:
+      default noverlap=2 now really does 2 passes (~2x kernel time);
+      noverlap=1 restores the old behavior.
 - [ ] **A3. estimate_m L1-norm truncation bound** — implement the
       NFFT3-guide bound (the package's only TODO, cunfft.py); keep
       the old heuristic as fallback flag if the bound is costly.
