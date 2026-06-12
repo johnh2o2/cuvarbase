@@ -13,6 +13,28 @@ Rules of engagement:
 - One packed release: work lands on v1.0-fixes; the v1.0.0 tag moves
   to the final commit at publish time (nothing external references
   today's tag).
+- Checking a box requires: the fix committed, a test that fails
+  before / passes after (where testable), the commit hash noted next
+  to the item, and any GPU-dependent verification added to the queue
+  below rather than provisioning a pod per item.
+
+## GPU verification queue
+
+Items whose verification needs real hardware. Worked in batches: when
+~5+ accumulate (or all CPU-side work is done), provision ONE pod, run
+the full suite + check_release_gate.py + everything queued here,
+terminate, archive, and check these off.
+
+- [ ] (standing) full pytest suite + check_release_gate.py +
+      benchmark_new_features.py --tests-only must pass on the final
+      release candidate, with batman-package installed this time so
+      the 5 TLS accuracy tests actually run
+- [ ] re-run scripts/benchmark_adaptive_bls.py and commit the output
+      JSON (backs the 1.4-5.3x README claim — bucket D traceability)
+- [ ] LS comparison vs astropy 8.0 (LRA default) or version-caveat
+      the published tables — bucket D, audit §6 risk 1
+- [ ] nsys profile of eebls_gpu_batch at TESS scale (bucket C
+      regression diagnosis)
 
 
 ## A. Errors — wrong results, crashes, broken API (publish blockers)
