@@ -1,3 +1,10 @@
+# SUPERSEDED 2026-06-12 — see analysis/V1_RELEASE_PUNCHLIST_2.md
+
+All T4 'deferred to v1.1+' items were promoted to v1.0
+requirements by maintainer decision; T1/T2 and the promoted items
+are now tracked in V1_RELEASE_PUNCHLIST_2.md. This file is kept
+for the detailed T1 sub-task lists it contains.
+
 # v1.0 final pass — remaining tasks (June 12, 2026)
 
 Successor to analysis/V1_RELEASE_PUNCHLIST.md (closed 2026-06-12, all

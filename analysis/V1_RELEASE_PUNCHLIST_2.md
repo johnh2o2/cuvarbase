@@ -1,0 +1,227 @@
+# v1.0 release punchlist #2 (June 12, 2026)
+
+Maintainer decision 2026-06-12: **all previously-deferred "v1.1+"
+debt items are now v1.0 requirements.** This punchlist absorbs
+analysis/V1_FINAL_TASKS.md (T1 docs, T2 benchmarks) and promotes the
+entire T4 deferred-debt inventory. Predecessor:
+analysis/V1_RELEASE_PUNCHLIST.md (closed, 45/45; GPU validation
+608/608 in analysis/v1.0-rc-gpu-validation/).
+
+Rules of engagement (carried from punchlist #1):
+- Checking a box requires: fix committed, a test that fails before /
+  passes after (where testable), commit hash noted, GPU-dependent
+  verification queued below (batched pod sessions — never one pod per
+  item).
+- Work lands on v1.0-fixes; fast-forward v1.0; CI green before the
+  next item.
+- NEVER without explicit maintainer go: publish to PyPI, merge
+  master, move the v1.0.0 tag, touch b8-* RunPod pods.
+
+⚠️ DECISIONS NEEDED (conflict with earlier standing decisions — set
+these in the loop prompt before starting):
+- **D1 NUFFT-LRT**: earlier decision was CUT from the wheel. The
+  deferred-item promotion implies reinstating it after a GPU rewire
+  (item C3). Confirm: rework & reinstate for v1.0, or keep cut?
+- **D2 API renaming (#30)**: earlier disposition (posted publicly on
+  the issue hours ago) deferred renaming to a major cycle with
+  deprecation aliases. Confirm: actually rename for v1.0, or keep
+  deferred?
+- **D3 Benchmark protocol**: analysis/BENCHMARK_PROTOCOL_V1.md awaits
+  sign-off; pod spend gated on it. Confirm approved (≲$5, ~1 day).
+- **D4 CETRA benchmark**: promoting the deferred "benchmark vs CETRA"
+  item adds a CETRA comparison to the campaign (different algorithm —
+  framed as time-to-equivalent-detection, not power comparison).
+  Confirm in/out of scope for v1.0.
+
+## GPU verification queue
+(batch on ONE pod when ~5+ accumulate or all CPU-side work done;
+include `pip install batman-package transitleastsquares cufinufft`,
+`apt-get install rsync` before setup-remote.sh; terminate + verify
+via API; archive in analysis/)
+- [ ] (standing) full suite + check_release_gate.py +
+      benchmark_new_features.py --tests-only green on the final RC
+- [ ] items accumulate here as work proceeds
+
+## A. Contained code items (do first)
+
+- [ ] **A1. Sparse-path per-frequency q bounds** — wire qmin/qmax
+      (per-frequency arrays) into sparse_bls.cu kernels AND
+      sparse_bls_cpu, so eebls_transit's sparse path honors
+      qmin_fac/qmax_fac/Keplerian constraints; remove the
+      discontinuity UserWarning once behavior matches across the
+      sparse_threshold boundary. Accept: CPU sparse honors q bounds
+      (brute-force test with bounded q); GPU matches CPU; the
+      eebls_transit warning is retired; docs updated (bls.rst,
+      docstrings). GPU queue: sparse kernel parity test.
+- [ ] **A2. noverlap for eebls_gpu_fast** — add the noverlap
+      parameter (phase-offset oversampling) to the fast path,
+      removing the documented dphi re-run workaround. Accept:
+      eebls_gpu_fast(noverlap=k) matches the k-shifted-dphi manual
+      procedure; docstring admission removed.
+- [ ] **A3. estimate_m L1-norm truncation bound** — implement the
+      NFFT3-guide bound (the package's only TODO, cunfft.py); keep
+      the old heuristic as fallback flag if the bound is costly.
+      Accept: unit test comparing achieved NFFT error vs requested
+      tol on synthetic data (CPU nfft reference); docstring warning
+      replaced with the real bound's statement.
+- [ ] **A4. nbins-aware block-size heuristic** — extend
+      _choose_block_size to consider nbins (qmin) occupancy; or
+      demonstrate empirically (pod microbenchmark) that ndata-only is
+      within ~10% of best and document that instead. Accept: data-
+      backed either way; heuristic doc updated.
+- [ ] **A5. Selectable power conventions (#17)** — add a
+      `convention=` kwarg ('chi2ratio' default, 'snr', 'loglik'?)
+      to the BLS entry points mapping the existing outputs;
+      document equivalences vs astropy objectives in bls.rst.
+      Accept: conversions unit-tested against astropy on shared
+      grids; issue #17 closable at release.
+- [ ] **A6. Kernel templating merge (bls.cu/bls_optimized.cu)** —
+      single-source the shared device functions (Jinja-style include
+      via _module_reader cpp_defs or a common .cuh inlined at load);
+      keep the drift-guard test as the invariant. Accept: shared
+      functions defined once; both kernels compile + gate passes on
+      pod; drift test simplified to assert the include mechanism.
+
+## B. Architecture items
+
+- [ ] **B1. Lazy CUDA context creation** — remove eager
+      `import pycuda.autoprimaryctx` from cuvarbase/__init__.py and
+      module tops; initialize the primary context on first GPU use
+      (helper in core/base; honor CUDA_DEVICE). Accept:
+      `import cuvarbase` + sparse_bls_cpu/single_bls/fap_baluev run
+      on a GPU-less machine WITHOUT the conftest stubs (new CI job
+      proves it: pip install pycuda is still required at import? —
+      goal: no CUDA context, document whether pycuda-the-package
+      remains an import dependency); all GPU paths still pass on pod;
+      README CPU-helper caveat updated/removed.
+- [ ] **B2. scikit-cuda replacement (#63)** — replace skcuda.fft
+      (cuFFT) in cunfft.py/lombscargle.py with cupy.cuda.cufft OR a
+      minimal direct cuFFT ctypes binding (decide by spike: cupy adds
+      a heavy dep; direct binding is ~200 lines for C2C 1D batched).
+      Keep _skcuda_compat shim until removal is complete, then drop
+      skcuda from deps. Accept: LS/NFFT suite green on pod with
+      scikit-cuda UNINSTALLED; perf within ±10% of skcuda baseline
+      (measure both); #63 closable; CHANGELOG known-limitation
+      removed. Supersedes the deferral comment posted on #63
+      (post follow-up at release).
+- [ ] **B3. True pinned host buffers** — restore page-locked memory
+      (cuda.pagelocked_empty or register_host_memory) in
+      BLSMemory/BLSBatchMemory/NFFT/LS/CE memory classes behind a
+      `pinned=True` default with graceful fallback; rename docs
+      accordingly (allocate_host_arrays docs already honest).
+      Accept: async transfer overlap demonstrated on pod (CUDA-event
+      timeline or bandwidthTest-style measurement showing
+      async-vs-sync delta); suite green; no regression for
+      non-pinned fallback.
+
+## C. Feature completion items
+
+- [ ] **C1. PDM batch API + large_run + benchmark (#33)** —
+      batched_run_const_nfreq-equivalent for PDMAsyncProcess,
+      memory-capped large_run, and a PDM GPU-vs-CPU benchmark
+      (add to campaign scenarios). Accept: batch matches per-LC
+      results; large_run respects max_memory on pod; benchmark JSON
+      committed; #33 checkboxes closable (supersedes the re-scope
+      comment — post follow-up at release).
+- [ ] **C2. Multiharmonic GLS on GPU** — extend the LS kernel to
+      nharmonics>1 (the CPU helpers mhdirect_sums/mhgls_from_sums
+      already define the math; kernel computes the 2H-sums via NFFT
+      of higher harmonics — same NFFT plan at h*f). Accept: GPU
+      multiharmonic matches the existing CPU mhgls reference
+      (corr>0.999) for H=2,3 on pod; NotImplementedError removed;
+      README planned-features updated.
+- [ ] **C3. ⚠️ D1: NUFFT-LRT GPU rewire** (only if D1=reinstate) —
+      wire the existing compiled kernels (preserved on
+      feature/nufft-lrt-experimental) into compute_nufft via cunfft;
+      fix the grid-span defect (uniform grid must cover the full
+      baseline or use the NFFT path); restore module + tests to the
+      wheel; coordinate/credit @xiaziyna. Accept: GPU path actually
+      executes on device (profiled); multi-season test (perturbing
+      late-season data changes output); accuracy vs CPU reference.
+
+## D. TLS science-ready (beyond punchlist-1 fixes)
+
+- [ ] **D1. Expose t0 fidelity** — make T0_OVERSAMPLE a Python-level
+      parameter (kernel #define via cpp_defs); document the
+      sensitivity/speed trade (reference TLS uses ~33x finer
+      stepping). Accept: parameter plumbed + tested; default
+      documented.
+- [ ] **D2. Lift the ~3,500-point cap** — tile the shared-memory
+      layout (chunked data passes or global-memory fallback kernel)
+      so native TESS 10-min/200-s cadence fits; keep the fast path
+      for small ndata. Accept: ndata=12,000 runs on pod, matches
+      binned-equivalent results within tolerance; guard message
+      updated to the new bound; QLP-feasibility note updated.
+- [ ] **D3. TLS injection-recovery validation** — campaign on pod:
+      injected transits across (P, depth, ndata) grid, recovery vs
+      reference transitleastsquares at matched fidelity; decide
+      experimental-flag removal on results. Accept: validation
+      report in analysis/; warning text updated to reflect validated
+      domain (or kept with documented gaps).
+
+## E. Diagnosis items
+
+- [ ] **E1. eebls_gpu_batch large-ndata regression** — profile on pod
+      (nsys via pip nvidia-nsight-systems or apt cuda-nsight-systems;
+      fallback: CUDA-event stage timing inside the batch path);
+      identify root cause; fix it OR implement automatic
+      single-LC-path fallback above the crossover; update the
+      runtime warning/docs to the diagnosis. Accept: TESS-scale
+      batch ≥ parity with single-LC loop, or auto-fallback +
+      documented root cause.
+- [ ] **E2. LS batch_size>1 multi-stream overhead** — same treatment:
+      stage timing, root cause, fix or document; revisit the
+      batch_size=1 default if fixed.
+
+## F. Benchmark campaign (T2; gated on D3 sign-off)
+
+- [ ] **F1. Execute analysis/BENCHMARK_PROTOCOL_V1.md** (after B/C/D
+      items that affect perf land — campaign measures the final RC):
+      7 scenarios, BLS v1.0 vs origin/master vs astropy; TLS vs
+      transitleastsquares at two fidelities; QLP tables; raw JSON +
+      env pins committed.
+- [ ] **F2. ⚠️ D4: CETRA comparison** (only if in scope) — install
+      CETRA, design time-to-equivalent-detection framing (different
+      algorithm: no power comparison), add as scenario S8.
+- [ ] **F3. Rewrite README/BENCHMARK_RESULTS claims from new data**;
+      retire superseded numbers (21-390x pre-v1.0 note, adaptive
+      claims already corrected).
+
+## G. Documentation refresh (T1; finale after APIs settle)
+
+- [ ] **G1. Keplerian citations** (T1.a — full insertion list in
+      V1_FINAL_TASKS.md): SM03 + Ofir 2014 across bls.py,
+      bls_frequencies.py, bls.rst; fix 4 wrong Ofir titles; reconcile
+      fmax0 8.6307 vs 8.612 + derived-constant note. (Independent of
+      API changes — can run early.)
+- [ ] **G2. README content fixes** (T1.b): PyPI v0.2.5 blocker
+      handling, selling-point reorder (QLP/257-354x/$33 to first
+      screenful; BibTeX + personal note down), periodograms/ claim,
+      notebooks/ pointer, Testing-section fix, misc. (Reorder only;
+      no voice changes.)
+- [ ] **G3. Sphinx sources + conf.py** (T1.c): drop
+      only_directives, add autodoc mocks, fix install.rst/ce.rst/
+      lomb.rst/figure scripts/tau typo/fap stub/complexity claim,
+      modernize conf.py vestiges; add pages for new v1.0 APIs.
+- [ ] **G4. gh-pages rebuild + clean republish**: modern Sphinx,
+      SAME alabaster theme/logo/sidebars; orphan commit purging the
+      169 MB of junk; regenerate the 4 GPU figures on the final pod
+      session; keep .nojekyll; THEN update README/pyproject doc
+      links. Clean-env render check.
+- [ ] **G5. Docstring audit + notebooks (#29 full scope)** — all
+      public APIs docstring-audited; the 3 walkthrough notebooks
+      re-run against v1.0 APIs (on pod) and committed with outputs;
+      #29 closable.
+
+## H. Release closing moves (unchanged; explicit go required)
+- [ ] H1. master merge, tag move, wheel build + smoke test, PyPI
+- [ ] H2. tracker pass: #14 #15 #17 #19 #28 #29 #30 #32 #33 #63
+      closures/updates per landed work
+- [ ] H3. JOSS (now further motivated: QLP DRN 003 credits cuvarbase
+      only via a GitHub footnote — nothing citable), ASCL update
+      (ascl:2210.030 exists), co-maintainer invite
+
+## Explicitly NOT in scope (aspirational roadmap — say the word)
+GPU Fast Template Periodogram; astropy method= registration; LSDB
+worked example; wavelet transforms; PDM/GLS spectrograms; astropy-8.0
+LS re-run (blocked: not released).
