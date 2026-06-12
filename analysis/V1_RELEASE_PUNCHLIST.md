@@ -38,6 +38,9 @@ terminate, archive, and check these off.
 - [ ] BJD epoch-subtraction fix: run the 3 GPU tests in
       test_bls.py::TestEpochHandling (BLSMemory/BLSBatchMemory storage +
       eebls_gpu BJD invariance) — they skip on CPU
+- [ ] TLS phase-1 hardening end-to-end: shared-mem guard does NOT fire
+      for ndata ~3,000 (kernel launches OK), and a run with some failed
+      periods produces masked NaNs + sane SDE on hardware
 
 
 ## A. Errors — wrong results, crashes, broken API (publish blockers)
@@ -66,16 +69,16 @@ terminate, archive, and check these off.
 - [ ] **TLS: hard-coded n_t0=30 epoch grid misses narrow transits (Keplerian mode effectively broken for P > ~3.5 d)**
   - Evidence: cuvarbase/kernels/tls.cu:277-279 and 433-435 (int n_t0 = 30); disclosed in import warning tls.py:19-28 and README.md:180-185
   - Both TLS kernels test only 30 epochs per period; transit windows narrower than 1/30 of phase mostly never overlap a tested epoch (audit simulation: 8/8 epochs missed at P=100d). Fix (duration-scaled t0 stride) deferred to the v1.1 rework. Dedupe note: the consolidated 'TLS module' finding was folded into this and the two following items.
-- [ ] **TLS: shared-memory layout caps ndata at ~3,500 with no launch-time guard; TLS_GPU_README body still claims 100,000-point support**
+- [x] **TLS: shared-memory layout caps ndata at ~3,500 with no launch-time guard; TLS_GPU_README body still claims 100,000-point support** — FIXED: ValueError guard before kernel compile (accounts for ndata, n_template, block_size); both TLS_GPU_README claim lines corrected; TestSharedMemoryGuard (2 tests, CPU). Commit: fdfd01a
   - Evidence: cuvarbase/tls.py:536 (shared_mem_size = (3*ndata + n_template + 4*block_size)*4); verified at HEAD: docs/TLS_GPU_README.md:128 ('Support datasets up to ~100,000 points') and :224 still assert the claim the line-7 banner calls aspirational
   - TESS (~20K) and Kepler (~65K) light curves exceed the 48KB shared-memory budget and fail at kernel launch; no Python-side ValueError guard exists. Minimum v1.0 action even if TLS stays experimental: add the guard and fix the two README body lines.
-- [ ] **TLS: chi2=1e30 sentinel for failed periods corrupts SDE/FAP (no host-side masking)**
+- [x] **TLS: chi2=1e30 sentinel for failed periods corrupts SDE/FAP (no host-side masking)** — FIXED: _mask_failed_periods() warns + excludes sentinels from argmin/SDE/FAP (raises if all fail); failed periods are NaN in returned chi2/power/SR with valid_periods + n_failed_periods keys; TestFailedPeriodMasking (4 tests incl. SDE-restoration). End-to-end GPU check queued. Commit: fdfd01a
   - Evidence: cuvarbase/kernels/tls.cu:265,417; no 1e30/isfinite/mask handling in cuvarbase/tls.py or cuvarbase/tls_stats.py
   - Failed periods write the 1e30 initializer into the chi2 output; audit reproduced SDE collapsing 15.3 -> 0.06 and FAP -> 1.0. Disclosed in the import warning; masking fix deferred to v1.1 — but host-side masking is cheap and would defuse the worst statistic corruption now.
-- [ ] **TLS: signal_to_noise inflated by sqrt(n_transits)**
+- [x] **TLS: signal_to_noise inflated by sqrt(n_transits)** — FIXED: factor removed (chi2-based depth_err already covers all in-transit points); n_transits param retained but documented deprecated/unused; TestSnrNotInflated. Commit: fdfd01a
   - Evidence: cuvarbase/tls_stats.py:177 (snr = depth / depth_err * np.sqrt(n_transits))
   - Audit-confirmed SNR inflation unchanged at HEAD. Part of the descoped TLS stats surface; on the v1.1 rework list.
-- [ ] **TLS: FAP 'empirical calibration' constants are invented approximations attributed to Hippke & Heller**
+- [x] **TLS: FAP 'empirical calibration' constants are invented approximations attributed to Hippke & Heller** — FIXED: attribution removed; docstring now carries a warning block stating the heuristic is hand-rolled/uncalibrated and recommends injection-recovery (docs change, no test). Commit: fdfd01a
   - Evidence: cuvarbase/tls_stats.py:214-225 (piecewise 10**(-0.5*(SDE-5)) / 10**(-(SDE-5)) attributed to Hippke & Heller 2019 Fig 5)
   - false_alarm_probability ships hand-rolled constants the audit found invented. Docstring says 'approximate' and recommends injection-recovery, but the function returns authoritative-looking numbers with a false citation. If TLS ships experimental, at least remove the attribution.
 - [ ] **TLS: bitonic sort provably incomplete for non-power-of-2 sizes (wasted GPU work, misleading naming)**
@@ -84,7 +87,7 @@ terminate, archive, and check these off.
 - [ ] **TLS: no golden accuracy test vs transitleastsquares; the 5 batman-dependent tests were skipped in the v1.0.0 GPU gate**
   - Evidence: analysis/v1.0.0-gpu-validation/README.md — verified: '568 passed, 5 skipped... The 5 skips are batman-package tests'; skipif markers at cuvarbase/tests/test_tls_basic.py:127,136,149,170
   - test_tls_basic.py exists but the promised accuracy comparison against the reference transitleastsquares package does not, and the batman tests never ran on GPU (optional dep not installed on the pod). TLS shipped experimental with zero end-to-end GPU accuracy validation. If TLS is not cut, install batman on the validation pod and rerun before release.
-- [ ] **tls_models silently swallows all batman exceptions and substitutes a trapezoid template**
+- [x] **tls_models silently swallows all batman exceptions and substitutes a trapezoid template** — FIXED: _warn_template_fallback() warns with the failure reason in all four silent-fallback paths (broad except + 3 degenerate-model cases); TestTemplateFallbackWarns (monkeypatched batman failure). Commit: fdfd01a
   - Evidence: cuvarbase/tls_models.py:355-356 (broad `except Exception:` returning trapezoid fallback); silent fallback also at :319; only the missing-package case warns (import-time, :22)
   - Any batman failure at call time (bad params, numerical issue) silently degrades template quality with no warning or log. The only broad except in the package outside tests. Add a warnings.warn in the except before release or as part of the v1.1 TLS rework.
 - [x] **NUFFT-LRT: all computation on CPU — 6 compiled CUDA kernels never invoked (GPU+nvcc required for nothing); README body still says 'GPU Accelerated'** — CUT from the wheel per standing decision: module/kernel/tests/examples/docs removed, source preserved on feature/nufft-lrt-experimental (pushed), README+CHANGELOG updated (credit kept, points at branch), close-out note posted on issue #36, lazy-import regression test asserts the package no longer exposes it. Commit: 96b6f7b
