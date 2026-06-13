@@ -308,11 +308,29 @@ ALL PASSED.
 
 ## G. Documentation refresh (T1; finale after APIs settle)
 
-- [ ] **G1. Keplerian citations** (T1.a — full insertion list in
+- [x] **G1. Keplerian citations** (T1.a — full insertion list in
       V1_FINAL_TASKS.md): SM03 + Ofir 2014 across bls.py,
       bls_frequencies.py, bls.rst; fix 4 wrong Ofir titles; reconcile
       fmax0 8.6307 vs 8.612 + derived-constant note. (Independent of
       API changes — can run early.)
+      **DONE <hash>** — both titles web-verified: SM03 = "A Unique
+      Solution of Planet and Star Parameters from an Extrasolar Planet
+      Transit Light Curve" (ApJ 585, 1038); Ofir 2014 = "Optimizing the
+      search for transiting planets in long time series" (A&A 561, A138,
+      arXiv:1307.7330) — the wrong title that 3 spots carried is
+      actually Hippke & Heller 2019's real title. Added [SM03]_/[O2014]_
+      to bls.py module docstring + new docstrings on
+      q_transit/freq_transit/fmax_transit0/fmin_transit/fmax_transit
+      (with the fmax0 = sqrt(G·rho/3pi) derivation) + transit_autofreq
+      Notes (Ofir eq. 4); bls_frequencies.py module/_q_transit/
+      keplerian_freq_grid; bls.rst (shortcut→SM03, period-spacing→O2014,
+      8.612↔8.6307 reconciliation, References section with targets).
+      Fixed wrong Ofir titles: tls_grids.py, TLS_GPU_README.md (×2),
+      TLS_GPU_IMPLEMENTATION_PLAN.md (was a GW title). New test
+      test_keplerian_relations.py (3): fmax0 derived-constant check,
+      q/freq round-trip (SM03 inverse), and a citation guard that fails
+      if H&H's title is pasted on Ofir again (fails-before: tls_grids.py
+      had it). Suite 192 passed; flake8 clean. No GPU dep.
 - [ ] **G2. README content fixes** (T1.b): PyPI v0.2.5 blocker
       handling, selling-point reorder (QLP/257-354x/$33 to first
       screenful; BibTeX + personal note down), periodograms/ claim,

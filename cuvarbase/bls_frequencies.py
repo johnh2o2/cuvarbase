@@ -1,9 +1,16 @@
 """
 Frequency grid utilities for BLS transit searches.
 
-Provides Keplerian-aware frequency grids (Ofir 2014) that exploit the
-physical relationship between orbital period and transit duration to
-minimize the number of trial frequencies while maintaining sensitivity.
+Provides Keplerian-aware frequency grids that exploit the physical
+relationship between orbital period and transit duration to minimize the
+number of trial frequencies while maintaining sensitivity.
+
+The transit-duration/period relation is Seager & Mallen-Ornelas (2003),
+ApJ 585, 1038, "A Unique Solution of Planet and Star Parameters from an
+Extrasolar Planet Transit Light Curve" (eq. 3). The duty-cycle-based
+frequency spacing is Ofir (2014), A&A 561, A138, "Optimizing the search
+for transiting planets in long time series" (eq. 4; arXiv:1307.7330).
+Consistent with :func:`cuvarbase.bls.transit_autofreq`.
 """
 import numpy as np
 
@@ -12,8 +19,14 @@ def _q_transit(freq, rho=1.0):
     """
     Keplerian transit duration fraction q = T_dur / P.
 
-    For a central transit of a planet on a circular orbit:
+    For a central transit (impact parameter 0) of a planet on a circular
+    orbit, Seager & Mallen-Ornelas (2003) eq. (3) reduces to::
+
         q = arcsin((f / f_max0)^(2/3)) / pi
+
+    where ``f_max0 = sqrt(G rho_star / 3pi)`` is the surface-orbit
+    frequency (``8.6307 * sqrt(rho)`` cycles/day, a derived constant --
+    see :func:`cuvarbase.bls.fmax_transit0`).
 
     Parameters
     ----------
@@ -44,8 +57,9 @@ def keplerian_freq_grid(period_min, period_max, baseline,
     fewer frequencies at low frequencies (long periods) where transits are
     longer and the resolution requirement is coarser.
 
-    Based on the frequency spacing in Ofir (2014) and consistent with
-    cuvarbase.bls.transit_autofreq.
+    This is the duty-cycle-based spacing of Ofir (2014), A&A 561, A138,
+    eq. (4) (``df = q(f) / (oversampling * T)``), consistent with
+    :func:`cuvarbase.bls.transit_autofreq`.
 
     Parameters
     ----------
