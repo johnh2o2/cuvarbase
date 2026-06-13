@@ -250,19 +250,37 @@ class TestNFFT(object):
     def test_nfft_against_existing_impl_unscaled_uncentered_spp5(self):
         self.nfft_against_direct_sums(samples_per_peak=5, scaled=False, f0=0.)
 
-    @pytest.mark.parametrize("use_double,tol", [(True, 1e-6),
-                                                (False, 1e-2)])
+    @pytest.mark.parametrize("use_double,tol", [(False, 1e-2),
+                                                (True, 1e-2)])
     def test_autoset_m_l1_bound_meets_tolerance(self, use_double, tol):
-        # With autoset_m, the data-driven L1-norm bound must achieve
-        # the requested absolute error tolerance against exact direct
-        # sums. Note ||y||_1 (~80) < nf (500) here, so the chosen m is
-        # *smaller* than the old N-based heuristic -- this validates
-        # the rigorous-but-tighter direction.
+        # autoset_m sizes the filter radius m from the data-driven
+        # L1-norm *truncation* bound (cunfft.estimate_m). We check both
+        # that estimate_m returns the closed-form bound value and that
+        # the realized GPU NFFT then meets the requested absolute
+        # tolerance against the exact DFT.
+        #
+        # tol is held at 1e-2 for both precisions: the realized NFFT
+        # error floors near ~1e-3 absolute (a deconvolution/finite-
+        # precision term, independent of m and essentially the same in
+        # single and double precision -- see estimate_m's docstring), so
+        # a tighter tol would not be achievable and would not test the
+        # truncation bound. Note ||y||_1 (~67) < nf (500) here, so the
+        # chosen m is *smaller* than the old N-based heuristic -- this
+        # validates the rigorous-but-tighter direction.
         t, tsc, y, err = data()
         nf = int(nfft_sigma * len(t))
+        sigma = 2
 
-        proc = NFFTAsyncProcess(sigma=2, autoset_m=True, tol=tol,
+        proc = NFFTAsyncProcess(sigma=sigma, autoset_m=True, tol=tol,
                                 use_double=use_double)
+
+        # estimate_m returns the smallest m with
+        #   4 exp(-m pi (1 - 1/(2 sigma - 1))) ||y||_1 <= tol
+        l1 = float(np.sum(np.abs(y)))
+        D = np.pi * (1. - 1. / (2. * sigma - 1.))
+        m_expected = max(1, int(np.ceil(-np.log(0.25 * tol / l1) / D)))
+        assert proc.estimate_m(y=y) == m_expected
+
         results = proc.run([(tsc, y, nf)],
                            minimum_frequency=-int(nf / 2),
                            samples_per_peak=spp)

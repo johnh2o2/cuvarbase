@@ -279,8 +279,18 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
         so given the data ``y``, ``m`` is set to the smallest integer
         with :math:`4 e^{-m \\pi (1 - 1/(2\\sigma-1))} \\|y\\|_1 \\le`
-        ``tol`` -- a guaranteed *absolute* error bound on every output
-        coefficient.
+        ``tol`` -- a bound on the window-*truncation* component of the
+        error. Note this bounds only that component: the realized error
+        of this NFFT (versus the exact DFT) also carries a
+        deconvolution/finite-precision contribution that floors the
+        achievable absolute accuracy at roughly ``1e-3`` (about
+        ``1e-5`` relative), independent of ``m``, in both single and
+        double precision. Requesting ``tol`` below that floor still
+        drives the truncation term down but cannot reduce the total
+        error further (and very large ``m`` eventually *increases* it,
+        as the wide Gaussian amplifies grid noise). The bound is the
+        right knob for the truncation term; it is not a guarantee on
+        total accuracy below the floor.
 
         When ``y`` is unavailable, this falls back to the historical
         heuristic (from `jakevdp/nfft
