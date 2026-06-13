@@ -247,14 +247,20 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         D = (np.pi * (1. - 1. / (2. * sigma - 1.)))
         return int(np.ceil(-np.log(0.25 * C) / D))
 
-    def estimate_m(self, N):
+    def estimate_m(self, N=None, y=None):
         """
-        Estimate ``m`` based on an error tolerance of ``self.tol``.
+        Choose the filter radius ``m`` to meet the error tolerance
+        ``self.m_tol``.
 
         Parameters
         ----------
-        N: int
-            size of NFFT
+        N: int, optional
+            Size of the NFFT. Required when ``y`` is not given
+            (heuristic fallback below).
+        y: array_like, optional
+            The input coefficients of the adjoint NFFT (the
+            observations). When given, ``m`` is chosen from the
+            rigorous L1-norm error bound below.
 
         Returns
         -------
@@ -263,34 +269,51 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
         Notes
         -----
-        Pulled from <https://github.com/jakevdp/nfft>_.
+        The approximation error of the (adjoint) NFFT with a Gaussian
+        window satisfies (NFFT3 guide, p. 11, eq. (5.9); Steidl 1998)
 
-        .. warning::
+        .. math::
 
-            This truncation-error bound is a known-inaccurate
-            heuristic: the proper bound depends on the L1 norm of the
-            true Fourier coefficients (NFFT3 guide, p. 11), which is
-            not available a priori. When ``autoset_m`` is in effect
-            the chosen filter radius may be smaller than the requested
-            tolerance strictly requires. Pass ``m`` explicitly if you
-            need a guaranteed accuracy level.
+            \\max_k |E_k| \\le 4 e^{-m \\pi (1 - 1/(2\\sigma - 1))}
+            \\, \\|y\\|_1
 
+        so given the data ``y``, ``m`` is set to the smallest integer
+        with :math:`4 e^{-m \\pi (1 - 1/(2\\sigma-1))} \\|y\\|_1 \\le`
+        ``tol`` -- a guaranteed *absolute* error bound on every output
+        coefficient.
+
+        When ``y`` is unavailable, this falls back to the historical
+        heuristic (from `jakevdp/nfft
+        <https://github.com/jakevdp/nfft>`_) that substitutes ``N``
+        for :math:`\\|y\\|_1`, which guarantees the tolerance only
+        when ``max|y| <= 1``.
         """
+        if y is not None:
+            l1 = float(np.sum(np.absolute(y)))
+            if l1 <= 0:
+                # zero input: the transform is exactly zero for any m
+                return 1
+            return max(1, self.m_from_C(self.m_tol / l1, self.sigma))
 
-        # TODO: this should be computed in terms of the L1-norm of the true
-        #   Fourier coefficients... see p. 11 of
-        #   https://www-user.tu-chemnitz.de/~potts/nfft/guide/nfft3.pdf
-        #   Need to think about how to estimate the value of m more accurately
+        if N is None:
+            raise ValueError("estimate_m requires N when y is not given")
         return self.m_from_C(self.m_tol / N, self.sigma)
 
-    def get_m(self, N=None):
-        """ 
+    def get_m(self, N=None, y=None):
+        """
         Returns the ``m`` value for ``N`` frequencies.
 
         Parameters
         ----------
         N: int
-            Number of frequencies, only needed if ``autoset_m`` is ``False``.
+            Number of frequencies, only needed if ``autoset_m`` is ``True``
+            and ``y`` is not given.
+        y: array_like, optional
+            Adjoint-NFFT input coefficients; when given (and
+            ``autoset_m`` is ``True``), ``m`` comes from the rigorous
+            L1-norm bound in :func:`estimate_m`. Callers that size
+            shared buffers before seeing the data (e.g. the
+            Lomb-Scargle memory layouts) use the ``N`` fallback.
 
         Returns
         -------
@@ -298,7 +321,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             The filter radius (in grid points)
         """
         if self.autoset_m:
-            return self.estimate_m(N)
+            return self.estimate_m(N=N, y=y)
         else:
             return self.m
 
@@ -365,7 +388,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
         for i, (t, y, nf) in enumerate(data):
 
-            m = self.get_m(nf)
+            m = self.get_m(nf, y=y)
 
             mem = NFFTMemory(self.sigma, self.streams[i], m,
                              use_double=self.use_double, **kwargs)

@@ -250,6 +250,34 @@ class TestNFFT(object):
     def test_nfft_against_existing_impl_unscaled_uncentered_spp5(self):
         self.nfft_against_direct_sums(samples_per_peak=5, scaled=False, f0=0.)
 
+    @pytest.mark.parametrize("use_double,tol", [(True, 1e-6),
+                                                (False, 1e-2)])
+    def test_autoset_m_l1_bound_meets_tolerance(self, use_double, tol):
+        # With autoset_m, the data-driven L1-norm bound must achieve
+        # the requested absolute error tolerance against exact direct
+        # sums. Note ||y||_1 (~80) < nf (500) here, so the chosen m is
+        # *smaller* than the old N-based heuristic -- this validates
+        # the rigorous-but-tighter direction.
+        t, tsc, y, err = data()
+        nf = int(nfft_sigma * len(t))
+
+        proc = NFFTAsyncProcess(sigma=2, autoset_m=True, tol=tol,
+                                use_double=use_double)
+        results = proc.run([(tsc, y, nf)],
+                           minimum_frequency=-int(nf / 2),
+                           samples_per_peak=spp)
+        proc.finish()
+        gpu_nfft = results[0]
+
+        freqs = -int(nf / 2) + np.arange(nf)
+        direct_dft = direct_sums(tsc, y, freqs)
+
+        # float32 gridding/FFT roundoff adds noise unrelated to the
+        # truncation bound under test
+        roundoff = 1e-10 if use_double else 5e-6
+        err_max = np.max(np.absolute(direct_dft - gpu_nfft))
+        assert err_max <= tol + roundoff * np.sum(np.abs(y))
+
     def test_nfft_adjoint_async(self, f0=0., ndata=10,
                                 batch_size=3, use_double=False):
         datas = []
