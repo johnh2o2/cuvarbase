@@ -50,6 +50,10 @@ via API; archive in analysis/)
 - [ ] A3: autoset-m tolerance — test_autoset_m_l1_bound_meets_tolerance
       (float64 tol=1e-6, float32 tol=1e-2) vs direct sums; validates
       the tighter-m direction (||y||_1 < N)
+- [ ] A4: run scripts/benchmark_block_size.py (full grid, both
+      kernels) on the A5000; commit JSON to
+      benchmark_results_by_gpu/; then close A4 (extend heuristic if
+      any cell >10%, else document)
 - [ ] items accumulate here as work proceeds
 
 ## A. Contained code items (do first)
@@ -103,6 +107,12 @@ via API; archive in analysis/)
       demonstrate empirically (pod microbenchmark) that ndata-only is
       within ~10% of best and document that instead. Accept: data-
       backed either way; heuristic doc updated.
+      **PREPPED ff637c3** — scripts/benchmark_block_size.py sweeps
+      (ndata × qmin × block_size) on both fast kernels with
+      preallocated memory (kernel-only timing), reports per-cell
+      heuristic-vs-best penalty + >10% offenders. Decision (extend
+      heuristic vs document) and the box close on the pod data —
+      queued below.
 - [ ] **A5. Selectable power conventions (#17)** — add a
       `convention=` kwarg ('chi2ratio' default, 'snr', 'loglik'?)
       to the BLS entry points mapping the existing outputs;
