@@ -6,7 +6,7 @@ from scipy import fftpack
 from pycuda.tools import mark_cuda_test
 from pycuda import gpuarray
 
-import skcuda.fft as cufft
+from .. import _cufft as cufft
 
 pytest.importorskip(
     "nfft", reason="the optional 'nfft' package is the CPU reference "

@@ -1,7 +1,8 @@
-"""Lazy-import contract: `import cuvarbase` and the BLS/CE surface must
-work even when scikit-cuda is broken (e.g. scikit-cuda 0.5.3 on
-numpy >= 1.24). Only the NFFT/Lomb-Scargle modules may require skcuda,
-and only at attribute-access time."""
+"""Lazy-import contract: `import cuvarbase` and every public process
+must import even when scikit-cuda is broken/absent. As of v1.0 the cuFFT
+binding is in-house (`cuvarbase._cufft`), so NO cuvarbase module imports
+scikit-cuda anymore -- not even Lomb-Scargle/NFFT (they need libcufft
+only when a transform actually runs)."""
 import os
 import subprocess
 import sys
@@ -29,13 +30,12 @@ from cuvarbase import bls
 assert callable(cuvarbase.eebls_gpu)
 from cuvarbase import ConditionalEntropyAsyncProcess
 assert cuvarbase.BLSMemory is bls.BLSMemory
-try:
-    cuvarbase.LombScargleAsyncProcess
-except ImportError:
-    pass  # expected: LS genuinely needs skcuda's cufft
-else:
-    raise SystemExit('LombScargle access should raise ImportError '
-                     'when skcuda is broken')
+# Since v1.0 the cuFFT binding is in-house, so Lomb-Scargle no longer
+# imports scikit-cuda: accessing it must succeed even with skcuda broken.
+assert callable(cuvarbase.LombScargleAsyncProcess), \
+    'LombScargleAsyncProcess should import without scikit-cuda'
+assert callable(cuvarbase.NFFTAsyncProcess), \
+    'NFFTAsyncProcess should import without scikit-cuda'
 print('OK')
 """
 

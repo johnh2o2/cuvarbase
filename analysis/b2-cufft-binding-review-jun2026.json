@@ -1,0 +1,43 @@
+{
+  "review": "B2 in-house cuFFT ctypes binding (_cufft.py) adversarial correctness review (5 dimensions)",
+  "date": "2026-06-13",
+  "dimensions": 5,
+  "total_findings": 44,
+  "blockers": [],
+  "wrong_or_risky": [
+    {
+      "item": "__del__ does not make CUDA context current before cufftDestroy",
+      "verdict": "risky",
+      "evidence": "At interpreter shutdown pycuda.autoprimaryctx (imported at cuvarbase __init__) may be torn down before Plan.__del__ runs; cufftDestroy then operates with no current/valid context. try/except Exception catches Python errors only, NOT a C-level segfault inside libcufft. In practice cufftDestroy tolerates a torn-down context (returns an error / no-op), and the _lib-is-not-None guard prevents calling an unloaded lib, so this is a low-severity residual risk inherent to ctypes+CUDA finalizers, not a pointer/handle-type corruption bug. Normal (explicit-free) path is unaffected.",
+      "severity": "minor",
+      "fix": "Optional hardening: in __del__, only call cufftDestroy if a CUDA context is still active, e.g. guard with a try around pycuda.driver.Context.get_current() (or a module-level _shutting_down flag set via atexit) and skip destroy when None; leaks at process exit are reclaimed by the OS anyway. Not required for correctness.",
+      "dimension": "lifecycle-pointers"
+    },
+    {
+      "item": "Transitive deps of libcufft must resolve at dlopen (libcudart.so.12, libcublas, libcublasLt, libnvJitLink for CUDA 12)",
+      "verdict": "risky",
+      "evidence": "CDLL('libcufft.so.11') triggers the loader to resolve cuFFT's NEEDED entries. If cuFFT is present but a sibling (e.g. nvidia-cublas-cu12 / libnvJitLink) is not on the loader path, dlopen fails and the OSError surfaces as 'could not load libcufft ... Last error: <dep>.so: cannot open shared object' (_cufft.py:90-96) -- the message names the dependency, not cufft, which can mislead. Common in pip-only installs (nvidia-cufft-cu12 without all siblings) and in mixed-toolkit images.",
+      "severity": "minor",
+      "fix": "Keep the broad except OSError but enrich the ImportError to hint at missing CUDA runtime siblings / LD_LIBRARY_PATH; optionally CDLL(name, mode=ctypes.RTLD_GLOBAL) so deps loaded by pycuda (libcudart) are visible. Not a blocker because the failure is loud and the pod path works.",
+      "dimension": "lib-loading"
+    },
+    {
+      "item": "Dynamic loader search path for versioned SONAME (LD_LIBRARY_PATH)",
+      "verdict": "risky",
+      "evidence": "CDLL('libcufft.so.11') relies entirely on the dynamic loader: ld.so.cache/ldconfig dirs or LD_LIBRARY_PATH. On the RunPod CUDA 12.4 image libcufft.so.11 lives in /usr/local/cuda-12.4/lib64, which is NOT in the default ld.so.conf. The project's own harness works because scripts export LD_LIBRARY_PATH=${CUDA_DIR}/lib64 before pytest (run-remote.sh:41, test-remote.sh:43, setup-remote.sh:46). An end user who pip-installs cuvarbase and imports it without setting LD_LIBRARY_PATH (and without a dev-package ldconfig entry) gets ImportError despite cuFFT being installed under the toolkit.",
+      "severity": "minor",
+      "fix": "As a fallback, probe well-known toolkit dirs (glob /usr/local/cuda*/lib64/libcufft.so.* and the nvidia/cufft/lib site-packages dir from the pip wheel) and CDLL the absolute path; document that LD_LIBRARY_PATH must include CUDA lib64 for runtime-only installs.",
+      "dimension": "lib-loading"
+    },
+    {
+      "item": "Candidate ordering / wrong-version risk when multiple toolkits coexist",
+      "verdict": "risky",
+      "evidence": "_cufft.py:80-82 tries unversioned 'libcufft.so' first, then .so.11, .so.10, .so.12; first successful CDLL wins (break at line 89). If a dev-package 'libcufft.so' symlink from a different toolkit is on the path it is preferred over the runtime .so.11 actually intended. On the single-toolkit CUDA 12.4 pod this is benign (only .so.11 resolves), but in mixed environments it can bind an unintended major version.",
+      "severity": "minor",
+      "fix": "Prefer the loader's own resolution via find_library result first (already done), then order versioned SONAMEs by the detected CUDA major (e.g. from pycuda.driver.get_version()) instead of a fixed .so.11-before-.so.10/.12 list; or rely on LD_LIBRARY_PATH ordering and drop the unversioned-first preference.",
+      "dimension": "lib-loading"
+    }
+  ],
+  "verdict": "0 blockers, 0 wrong, 0 unsure. All ctypes signatures/constants/pointer-types/integration verified CORRECT vs the cuFFT C API. 4 minor RISKY findings, all in library DISCOVERY (not FFT correctness): __del__-at-shutdown, transitive-dep dlopen, LD_LIBRARY_PATH for versioned SONAME, mixed-toolkit version ordering.",
+  "resolution": "Hardened _load(): glob pip-wheel (nvidia/cufft/lib) + CUDA toolkit lib64 dirs for absolute-path discovery, RTLD_GLOBAL, enriched ImportError. Added atexit _shutting_down guard so Plan.__del__ skips cufftDestroy during interpreter shutdown. Core binding correctness unchanged (was already correct)."
+}
