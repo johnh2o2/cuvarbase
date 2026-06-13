@@ -30,6 +30,7 @@ What's new in cuvarbase
         * Fast shared-memory CUDA kernels for all four variants: ``binned_step_fast``, ``binned_linterp_fast``, ``binless_tophat_fast``, ``binless_gauss_fast``
         * Backward-compatible ``(t, y, err)`` input API for ``PDMAsyncProcess.run()`` with automatic frequency grids; the legacy ``(t, y, w, freqs)`` format is deprecated (emits DeprecationWarning)
         * Unit tests for all kernel variants and new Sphinx documentation (``docs/source/pdm.rst``)
+        * Batch APIs (issue #33): ``PDMAsyncProcess.batched_run_const_nfreq`` processes a lightcurve collection in memory-bounded chunks that share one frequency grid (peak GPU memory scales with ``batch_size``, not the number of lightcurves), and ``large_run`` auto-picks ``batch_size`` from the free GPU memory. A ``scripts/benchmark_pdm.py`` GPU-vs-CPU benchmark + correctness check was added
         * Fixed the CPU reference functions (``binless_pdm_cpu``, ``pdm2_cpu``, ``pdm2_single_freq``) mutating the caller's ``t``/``y`` arrays in place
     * **Conditional Entropy** (community contribution — PR #61)
         * Optional log-probability periodogram via ``compute_log_prob=True``

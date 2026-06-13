@@ -369,3 +369,89 @@ class PDMAsyncProcess(GPUAsyncProcess):
         if is_deprecated:
             return results
         return list(zip(frqs, results))
+
+    @staticmethod
+    def _bytes_per_lc(max_ndata, nf):
+        """Approximate GPU bytes for one lightcurve's PDM buffers.
+
+        t_g, y_g, w_g (``max_ndata`` float32 each) plus freqs_g and pow_g
+        (``nf`` float32 each).
+        """
+        return (3 * int(max_ndata) + 2 * int(nf)) * 4
+
+    def _batch_size_from_memory(self, max_ndata, nf, n_lcs, max_memory=None):
+        """Largest batch (number of lightcurves held on the GPU at once)
+        that fits in ``max_memory`` bytes; capped at ``n_lcs`` and >= 1.
+
+        ``max_memory`` defaults to 90% of the device's free memory.
+        """
+        if max_memory is None:
+            free, _total = cuda.mem_get_info()
+            max_memory = int(0.9 * free)
+        per_lc = self._bytes_per_lc(max_ndata, nf)
+        batch_size = max(1, int(max_memory // per_lc))
+        return min(batch_size, int(n_lcs))
+
+    def batched_run_const_nfreq(self, data, batch_size=10, freqs=None,
+                                **kwargs):
+        """Run PDM on many lightcurves that share one frequency grid.
+
+        Processes ``data`` in chunks of ``batch_size`` lightcurves,
+        synchronizing and freeing each chunk's GPU memory before the next
+        (so peak GPU memory scales with ``batch_size``, not
+        ``len(data)``), and resolves the shared frequency grid once.
+        Results match per-lightcurve :meth:`run`.
+
+        Parameters
+        ----------
+        data : list of (t, y, err)
+        batch_size : int, optional (default: 10)
+            Lightcurves resident on the GPU per chunk.
+        freqs : array_like, optional
+            Shared frequency grid. If None, it is derived once from the
+            longest-baseline lightcurve via ``autofrequency`` and reused.
+        **kwargs :
+            Passed to :meth:`run` (e.g. ``kind``, ``nbins``, ``dphi``,
+            ``block_size``).
+
+        Returns
+        -------
+        list of (freqs, power)
+        """
+        if len(data) == 0:
+            return []
+        if freqs is None:
+            dmax = max(data, key=lambda d: np.max(d[0]) - np.min(d[0]))
+            freqs = autofrequency(dmax[0], **kwargs)
+        freqs = np.asarray(freqs).astype(np.float32)
+
+        results = []
+        for start in range(0, len(data), int(batch_size)):
+            chunk = data[start:start + int(batch_size)]
+            chunk_res = self.run(chunk, freqs=freqs, **kwargs)
+            self.finish()
+            for _f, p in chunk_res:
+                results.append((freqs, np.copy(p)))
+        return results
+
+    def large_run(self, data, freqs=None, max_memory=None, **kwargs):
+        """Memory-capped batched PDM for lightcurve collections too large
+        to fit on the GPU at once.
+
+        Picks ``batch_size`` so that no more than ``max_memory`` bytes
+        (default: 90% of free GPU memory) of lightcurve buffers are
+        resident at a time, then defers to :meth:`batched_run_const_nfreq`.
+        Results match per-lightcurve :meth:`run`.
+        """
+        if len(data) == 0:
+            return []
+        if freqs is None:
+            dmax = max(data, key=lambda d: np.max(d[0]) - np.min(d[0]))
+            freqs = autofrequency(dmax[0], **kwargs)
+        freqs = np.asarray(freqs).astype(np.float32)
+
+        max_ndata = max(len(d[0]) for d in data)
+        batch_size = self._batch_size_from_memory(
+            max_ndata, len(freqs), len(data), max_memory=max_memory)
+        return self.batched_run_const_nfreq(
+            data, batch_size=batch_size, freqs=freqs, **kwargs)
