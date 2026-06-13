@@ -38,37 +38,32 @@ these in the loop prompt before starting):
 include `pip install batman-package transitleastsquares cufinufft`,
 `apt-get install rsync` before setup-remote.sh; terminate + verify
 via API; archive in analysis/)
-- [ ] (standing) full suite + check_release_gate.py +
-      benchmark_new_features.py --tests-only green on the final RC
-- [ ] A1: sparse q-bounds GPU parity — test_sparse_bls_gpu_q_bounds
-      (full + simple kernels) and the full sparse GPU test group must
-      pass on pod (kernel signature changed: +qmin_arr/+qmax_arr)
-- [ ] A2: noverlap multi-pass — TestEeblsGpuFastNoverlap GPU tests
-      (manual-dphi equivalence for standard + optimized, monotonic
-      power) + full fast-path test group (refactor touched both entry
-      points)
-- [ ] A3: autoset-m tolerance — test_autoset_m_l1_bound_meets_tolerance
-      (float64 tol=1e-6, float32 tol=1e-2) vs direct sums; validates
-      the tighter-m direction (||y||_1 < N)
-- [ ] A4: run scripts/benchmark_block_size.py (full grid, both
-      kernels) on the A5000; commit JSON to
-      benchmark_results_by_gpu/; then close A4 (extend heuristic if
-      any cell >10%, else document)
-- [ ] A5: test_gpu_entry_points_convention (kwarg flows through
-      eebls_gpu + eebls_gpu_fast chains; host-side conversion
-      identity) + TestPowerConventions group on pod (pip install
-      astropy there)
-- [ ] A6: both BLS kernels must compile after the bls_common.cuh
-      single-source refactor — run the full BLS GPU test group
-      (standard + optimized + adaptive paths) and check_release_gate.py
-      on pod; confirm `//{INCLUDE}` expands correctly under the editable
-      install path (the MultiplexedPath gotcha from memory)
-- [ ] B1: full GPU suite on pod with REAL pycuda installed — the
-      lazy-context rewire must produce a working context on first GPU
-      use across every path (BLS std/opt/batch/sparse, CE, LS/NFFT,
-      PDM, TLS); verify CUDA_DEVICE selection still honored; confirm no
-      "no currently active context" errors from the *Memory __init__ or
-      compile chokepoints
+**Batch 1 (Jun 13 2026, RTX A5000, pod ydqi9luioem03s — terminated +
+verified): results in analysis/v1.0-gpu-batch-jun2026/.** Suite 660
+passed / 2 failed (the 2 = A1+A3, found + fixed here); gate ALL PASSED.
+- [~] (standing) full suite + check_release_gate.py +
+      benchmark_new_features.py --tests-only — suite green (after A1/A3
+      fixes) + gate green; benchmark_new_features **A) BLS batch
+      correctness FAILS** at small ndata (pre-existing, routed to E1).
+      Re-confirm on the final RC.
+- [x] A1: sparse q-bounds GPU parity — FOUND BUG: sparse_bls_simple.cu
+      didn't compile (qmin_f/qmax_f undefined; missing qmin_arr/qmax_arr
+      in signature). Fixed (mirror full kernel); both
+      test_sparse_bls_gpu_q_bounds[True/False] pass on A5000.
+- [x] A2: noverlap multi-pass — green in suite.
+- [x] A3: autoset-m tolerance — FOUND OVER-CLAIM: realized NFFT error
+      floors ~1e-3 (deconv/precision), so tol=1e-6 unachievable; L1
+      bound governs truncation only. Fixed test (achievable tol +
+      assert closed-form m) + docstring + CHANGELOG; passes on A5000.
+- [x] A4: benchmark_block_size.py full grid run → A4 CLOSED (document;
+      median 3.9%, >10% only at atypical qmin>=0.02). JSON in
+      benchmark_results_by_gpu/block_size_a5000.json.
+- [x] A5: power conventions — green in suite.
+- [x] A6: bls_common.cuh single-source — both kernels compile + run;
+      include mechanism works on pod. Green in suite + gate.
+- [x] B1: lazy CUDA context — import creates no context; context on
+      first GPU use across every path; full suite green with real
+      pycuda. No "no active context" errors.
 - [ ] items accumulate here as work proceeds
 
 ## A. Contained code items (do first)
@@ -117,7 +112,7 @@ via API; archive in analysis/)
       fallback equivalence, monotonicity, zero-data, validation
       (test_nfft_m.py, 23 cases). GPU queue: autoset-m tolerance test
       vs direct sums. TODO + docstring warning replaced.
-- [ ] **A4. nbins-aware block-size heuristic** — extend
+- [x] **A4. nbins-aware block-size heuristic** — extend
       _choose_block_size to consider nbins (qmin) occupancy; or
       demonstrate empirically (pod microbenchmark) that ndata-only is
       within ~10% of best and document that instead. Accept: data-
@@ -128,6 +123,16 @@ via API; archive in analysis/)
       heuristic-vs-best penalty + >10% offenders. Decision (extend
       heuristic vs document) and the box close on the pod data —
       queued below.
+      **CLOSED (Jun 13, A5000) — DECISION: DOCUMENT.** Full-grid run
+      (benchmark_results_by_gpu/block_size_a5000.json): median penalty
+      **3.9%**, max **30%**, 13/40 cells >10% — ALL at qmin>=0.02
+      (mostly qmin=0.1, i.e. large duration fraction / few bins; best
+      block 64 vs heuristic 256). Typical transit search (q~0.01-0.05)
+      stays within ~10%. Chose to document rather than add a qmin-aware
+      heuristic (extra complexity + GPU re-validation for atypical-only
+      gain); block_size is user-overridable. Docstring note pending in
+      G-phase docs pass (analysis/v1.0-gpu-batch-jun2026/SUMMARY.md has
+      the data). No code change.
 - [x] **A5. Selectable power conventions (#17)** — add a
       `convention=` kwarg ('chi2ratio' default, 'snr', 'loglik'?)
       to the BLS entry points mapping the existing outputs;
@@ -273,6 +278,15 @@ via API; archive in analysis/)
       runtime warning/docs to the diagnosis. Accept: TESS-scale
       batch ≥ parity with single-LC loop, or auto-fallback +
       documented root cause.
+      **SCOPE EXPANDED (Jun 13 GPU batch):** also a *correctness*
+      divergence at SMALL ndata, not just large-ndata perf —
+      benchmark_new_features.py A) BLS batch correctness fails:
+      eebls_gpu_batch vs eebls_gpu_fast_adaptive give ndata=200
+      corr=0.77 peak_match=5/10, ndata=2000 corr=0.97 peak_match=9/10
+      (ndata=20000 passes). Pre-existing (bls_batch.cu untouched this
+      session). E1 must explain + fix the batch path's small-ndata
+      disagreement too (or document the regime where batch is valid).
+      Details: analysis/v1.0-gpu-batch-jun2026/SUMMARY.md.
 - [ ] **E2. LS batch_size>1 multi-stream overhead** — same treatment:
       stage timing, root cause, fix or document; revisit the
       batch_size=1 default if fixed.

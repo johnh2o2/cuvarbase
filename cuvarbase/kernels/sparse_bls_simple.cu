@@ -45,6 +45,8 @@ __global__ void sparse_bls_kernel_simple(
     const float* __restrict__ y,
     const float* __restrict__ dy,
     const float* __restrict__ freqs,
+    const float* __restrict__ qmin_arr,
+    const float* __restrict__ qmax_arr,
     unsigned int ndata,
     unsigned int nfreqs,
     unsigned int ignore_negative_delta_sols,
@@ -67,6 +69,8 @@ __global__ void sparse_bls_kernel_simple(
 
     while (freq_idx < nfreqs) {
         float freq = freqs[freq_idx];
+        float qmin_f = qmin_arr[freq_idx];
+        float qmax_f = qmax_arr[freq_idx];
 
         // Step 1: Load data and compute phases (parallel)
         for (unsigned int i = tid; i < ndata; i += blockDim.x) {
