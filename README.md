@@ -1,57 +1,8 @@
 # cuvarbase
 
-[![PyPI version](https://badge.fury.io/py/cuvarbase.svg)](https://badge.fury.io/py/cuvarbase)
-
 **GPU-accelerated time series analysis tools for astronomy**
 
-## Citation
-
-If you use cuvarbase in your research, please cite:
-
-**Hoffman, J. (2022). cuvarbase: GPU-Accelerated Variability Algorithms. Astrophysics Source Code Library, record ascl:2210.030.**
-
-Available at: https://ui.adsabs.harvard.edu/abs/2022ascl.soft10030H/abstract
-
-BibTeX:
-```bibtex
-@MISC{2022ascl.soft10030H,
-       author = {{Hoffman}, John},
-        title = "{cuvarbase: GPU-Accelerated Variability Algorithms}",
-     keywords = {Software},
- howpublished = {Astrophysics Source Code Library, record ascl:2210.030},
-         year = 2022,
-        month = oct,
-          eid = {ascl:2210.030},
-       adsurl = {https://ui.adsabs.harvard.edu/abs/2022ascl.soft10030H},
-      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-}
-```
-
-## About
-
-`cuvarbase` is a Python library that uses [PyCUDA](https://mathema.tician.de/software/pycuda/) to implement several time series analysis tools used in astronomy on GPUs. It provides GPU-accelerated implementations of period-finding and variability analysis algorithms for astronomical time series data.
-
-Created by John Hoffman, (c) 2017
-
-### A Personal Note
-
-This project was created as part of a PhD thesis, intended mainly for myself and against the very wise advice of two advisors trying to help me stay on track. Joel Hartman -- legendary author of `vartools` -- and Gaspar Bakos both showed me an incredible amount of patience. I had promised Gaspar a catalog of variable stars from HAT telescopes, something that should have taken maybe a month but instead took years due to an irrational and irresponsible level of perfectionism, and even at the end wasn't comprehensive or useful, and which I never published. To both of you: thank you.
-
-Much to my absolute delight this repository has -- organically! -- become useful to several people in the astro community; an ADS search reveals 23 papers with ~430 citations as of October 2025 using cuvarbase in some shape or form. The biggest source of pride was seeing the Quick Look Pipeline adopt cuvarbase for TESS ([Kunimoto et al. 2023](https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract)).
-
-Though usage is modest, to put this in personal context it is by far the most useful product of my PhD, and the fact that, amidst a lot of bumbling about for 5 years accomplishing very little, something productive somehow found its way into my thesis has given me a lot of relief and happiness.
-
-I want to personally thank people who have given their time and support to this project, including Kevin Burdge, Attila Bodi, Jamila Taaki, and to everyone in the community that has used this tool.
-
-### Future Plans and Call for Contributors
-
-In the years since 2017, I moved away from astrophysics and life has gone on. I have regrettably had very little time to update this repository. The code quality -- abstractions, documentation, etc -- are reflective of my level of skill back then, which was quite rudimentary.
-
-In 2025, for the first time, coding agents like `copilot` are finally at a level of quality that even a limited time investment in updating this repository can bring a lot of return. I would really like to encourage people interested to become official **contributors** so that I can pass the torch onto the larger community.
-
-It would be nice to incorporate additional capabilities and algorithms, and improve robustness and portability, to make this library a much more professional and easy-to-use tool. Especially nowadays, with the world awash in GPUs and with the scale of time-series data becoming many orders of magnitude larger than it was 10 years ago, something like `cuvarbase` seems even more relevant today than it was back then. (Where others have built better tools for a given method — e.g. [periodfind](https://github.com/scope-ml/periodfind) for conditional entropy — we would rather point you to them than duplicate the effort.)
-
-**If you're interested in contributing, please see our [Contributing Guide](CONTRIBUTING.md)!**
+> **Note:** the current PyPI release (`0.2.5`) predates this v1.0 rewrite. Until v1.0.0 is published to PyPI, install from source (see [Installation](#installation)).
 
 ## Performance at Survey Scale
 
@@ -65,7 +16,7 @@ The headline numbers, all traceable to benchmark data in this repository:
 
 ### BLS Transit Search
 
-cuvarbase provides a production-validated GPU implementation of the standard BLS algorithm ([Kovacs et al. 2002](http://adsabs.harvard.edu/abs/2002A%26A...391..369K)) — the implementation behind the TESS QLP transit search. Combined with Keplerian frequency grids:
+cuvarbase provides a production-validated GPU implementation of the standard BLS algorithm ([Kovacs et al. 2002](https://adsabs.harvard.edu/abs/2002A%26A...391..369K)) — the implementation behind the TESS QLP transit search. Combined with Keplerian frequency grids:
 
 | Survey | Lightcurves | N_freq (Keplerian) | Throughput | Total cost |
 |--------|------------:|-------------------:|-----------:|-----------:|
@@ -92,83 +43,18 @@ frequencies) and batched workloads. Use nifty-ls for one-off small searches.
 
 See [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for methodology, competitive analysis, and cost projections.
 
-## What's New in v1.0
+## About
 
-This represents a major modernization effort compared to the `master` branch:
+`cuvarbase` is a Python library that uses [PyCUDA](https://mathema.tician.de/software/pycuda/) to implement several time series analysis tools used in astronomy on GPUs. It provides GPU-accelerated implementations of period-finding and variability analysis algorithms for astronomical time series data.
 
-### ⚡ Performance Improvements (Major Update)
-
-**Dramatically Faster BLS Transit Detection** — **257-354x faster** than astropy `BoxLeastSquares`, consistent across all 7 GPU architectures tested (V100 through H200):
-- Adaptive block sizing automatically selects the CUDA block size from
-  the dataset size. In the v1.0 release benchmark it measures parity to
-  ~1.3x over the fixed-block kernel on realistic Keplerian grids (RTX
-  A5000, Jun 2026;
-  `benchmarks/results/bls_adaptive_keplerian_benchmark_rtxa5000_jun2026.json`).
-  Earlier pre-release measurements showed 1.4-5.3x (up to 90x for tiny
-  lightcurves), but those gains shrank once thread-safe kernel caching
-  landed and amortized the per-call kernel handling the adaptive path
-  used to avoid
-- Particularly beneficial for ground-based surveys and sparse time series
-- Thread-safe kernel caching with LRU eviction for production environments
-- **New function**: `eebls_gpu_fast_adaptive()` - drop-in replacement with automatic optimization
-- Best cost-efficiency: RTX 4000 Ada at **$0.14 per million lightcurves**
-- See [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for full results across GPUs
-
-This optimization makes large-scale BLS searches practical and efficient for all-sky surveys.
-
-### Breaking Changes
-- **Dropped Python 2.7 support** - now requires Python 3.9+
-- Removed `future` package dependency and all Python 2 compatibility code
-- Updated minimum dependency versions: numpy>=1.17, scipy>=1.3
-
-### New Features
-
-**Community contributions** (PRs #57-#62, with particular thanks to [@astrobatty](https://github.com/astrobatty)):
-- **PDM overhaul**: fast shared-memory CUDA kernels for all four PDM variants, a backward-compatible `(t, y, err)` input API for `PDMAsyncProcess.run()` with automatic frequency grids, unit tests, and new [documentation](https://johnh2o2.github.io/cuvarbase/) — PDM is now a tested, documented, first-class method (and to our knowledge still the only GPU PDM available anywhere)
-- **Conditional entropy**: optional log-probability periodogram (`compute_log_prob=True`), input normalization before processing, a 32-bit overflow guard for large `nfreq x ndata` runs, and a clear error for the unsupported `use_fast` + `weighted` combination
-- **Lomb-Scargle**: improved GPU memory estimation (now accounts for cuFFT work areas and per-batch buffers) and lightcurve normalization for numerical stability
-
-**Sparse BLS implementation** for efficient transit detection on small datasets:
-- Based on algorithm from [Panahi & Zucker (2021)](https://arxiv.org/abs/2103.06193)
-- **Both GPU (`sparse_bls_gpu`) and CPU (`sparse_bls_cpu`) implementations available**
-- Optimized for datasets with < 500 observations
-- Avoids binning and grid searching - directly tests all observation pairs as transit boundaries
-- New `eebls_transit` wrapper automatically selects between sparse and standard BLS
-  - **Default: GPU sparse BLS** for small datasets (use_gpu=True)
-  - `use_gpu=False` runs the search itself on the CPU (`sparse_bls_cpu`),
-    but note that **importing cuvarbase still requires a working CUDA
-    GPU** (the package creates a CUDA context at import time), so this
-    is a per-call choice, not a way to run on GPU-less machines
-- Particularly useful for ground-based surveys with limited phase coverage
-
-**Citation for Sparse BLS**: If you use this method, please cite:
-- Panahi, A., & Zucker, S. (2021). *Sparse BLS: A sparse-modeling approach to the Box-fitting Least Squares periodogram.* [arXiv:2103.06193](https://arxiv.org/abs/2103.06193)
-
-**Refactored codebase organization**:
-- Cleaner module structure: `base/`, `memory/`, and `periodograms/`
-- Better maintainability and extensibility
-
-### Improvements
-- Modern Python packaging with `pyproject.toml`
-- Docker support for easier installation with CUDA 11.8
-- GitHub Actions CI: CPU test suite (GPU tests stubbed/skipped) on Python 3.9-3.12, plus a build-wheel-install-import packaging check; GPU kernels validated manually before releases
-- Cleaner, more maintainable codebase (89 lines of compatibility code removed)
-- Updated documentation and contributing guidelines
-
-### Additional Documentation
-- [Benchmark Results](docs/BENCHMARK_RESULTS.md) - Survey-scale performance, competitive analysis, and cost projections
-- [Benchmarking Guide](docs/BENCHMARKING.md) - Performance testing methodology
-- [RunPod Development](docs/RUNPOD_DEVELOPMENT.md) - Cloud GPU development setup
-- [BLS Optimization History](docs/BLS_OPTIMIZATION.md) - Thread-safety, memory management, and GPU optimizations
-
-For a complete list of changes, see [CHANGELOG.rst](CHANGELOG.rst).
+Created by John Hoffman, (c) 2017
 
 ## Features
 
 Currently includes implementations of:
 
 - **Generalized [Lomb-Scargle](https://arxiv.org/abs/0901.2573) periodogram** - Fast period finding for unevenly sampled data
-- **Box Least Squares ([BLS](http://adsabs.harvard.edu/abs/2002A%26A...391..369K))** - Transit detection algorithm
+- **Box Least Squares ([BLS](https://adsabs.harvard.edu/abs/2002A%26A...391..369K))** - Transit detection algorithm
   - **Adaptive GPU version** with automatic block-size tuning (`eebls_gpu_fast_adaptive()`)
   - Standard GPU-accelerated version (`eebls_gpu_fast()`)
   - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations)
@@ -177,7 +63,7 @@ Currently includes implementations of:
       runs on a GPU-less machine — no CUDA context is created until a
       GPU search actually runs)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
-- **Conditional Entropy period finder ([CE](http://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
+- **Conditional Entropy period finder ([CE](https://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
   - **Maintenance mode**: CE works and will keep working, but no further development is planned here. For new projects that want an actively developed GPU conditional entropy (or AOV) search, we recommend [periodfind](https://github.com/scope-ml/periodfind) from the ZTF/SCoPe team
 - **Phase Dispersion Minimization ([PDM](http://www.stellingwerf.com/rfs-bin/index.cgi?action=PageView&id=29))** - Statistical period finding
   - Binned (step and linear-interpolation) and binless (tophat and Gaussian kernel) variants, each with fast shared-memory kernels
@@ -185,8 +71,8 @@ Currently includes implementations of:
 
 ### Experimental Features
 
-These modules ship in this release but have **known correctness issues** and
-are not recommended for science use yet. They emit a `UserWarning` on import.
+This module ships in this release but has **known correctness issues** and
+is not recommended for science use yet. It emits a `UserWarning` on import.
 
 - **Transit Least Squares ([TLS](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract))** (`cuvarbase.tls`) - GPU transit
   detection with optimal depth fitting and Ofir (2014) period grids.
@@ -195,6 +81,7 @@ are not recommended for science use yet. They emit a `UserWarning` on import.
   validated against the reference `transitleastsquares` package. Light
   curves above ~3,500 points exceed the kernel's shared-memory budget
   (a `ValueError` is raised).
+
 A NUFFT-based Likelihood Ratio Test (matched-filter transit detection
 for correlated noise, contributed by **Jamila Taaki**) was previously
 listed here but has been removed from the released package: the
@@ -241,14 +128,18 @@ spawning fresh processes over forking when using multiple GPUs.
 - [matplotlib](https://matplotlib.org/) - For plotting utilities
 - [nfft](https://github.com/jakevdp/nfft) - For unit testing
 - [astropy](http://www.astropy.org/) - For unit testing
-
-### Install from PyPI
-
-```bash
-pip install cuvarbase
-```
+- [cufinufft](https://github.com/flatironinstitute/cufinufft) - Optional alternative NFFT backend for Lomb-Scargle (`use_cufinufft=True`)
 
 ### Install from source
+
+Until v1.0.0 is published to PyPI (the current PyPI release is the older
+`0.2.5`), install the v1.0 line directly from GitHub:
+
+```bash
+pip install "git+https://github.com/johnh2o2/cuvarbase.git@v1.0"
+```
+
+Or for a development checkout:
 
 ```bash
 git clone https://github.com/johnh2o2/cuvarbase.git
@@ -294,7 +185,7 @@ print(f"Best period: {1/best_freq:.2f} (expected: 2.5)")
 power_adaptive = bls.eebls_gpu_fast_adaptive(t, y, dy, freqs)
 ```
 
-For more advanced usage including Lomb-Scargle and Conditional Entropy, see the [full documentation](https://johnh2o2.github.io/cuvarbase/) and [examples/](examples/).
+For more advanced usage including Lomb-Scargle, Conditional Entropy, and PDM walkthroughs, see the [full documentation](https://johnh2o2.github.io/cuvarbase/) and the runnable notebooks in [notebooks/](notebooks/). (The [examples/](examples/) directory currently holds only the TLS example.)
 
 ## Using Multiple GPUs
 
@@ -305,6 +196,77 @@ CUDA_DEVICE=1 python script.py
 ```
 
 If anyone is interested in implementing a multi-device load-balancing solution, they are encouraged to do so! At some point this may become important, but for the time being manually splitting up the jobs to different GPUs will have to suffice.
+
+## What's New in v1.0
+
+v1.0 is a major modernization of cuvarbase — the first major release since the `0.2.x` line on PyPI. Highlights:
+
+### ⚡ Performance Improvements (Major Update)
+
+**Dramatically Faster BLS Transit Detection** — **257-354x faster** than astropy `BoxLeastSquares`, consistent across all 7 GPU architectures tested (V100 through H200):
+- Adaptive block sizing automatically selects the CUDA block size from
+  the dataset size. In the v1.0 release benchmark it measures parity to
+  ~1.3x over the fixed-block kernel on realistic Keplerian grids (RTX
+  A5000, Jun 2026;
+  `benchmarks/results/bls_adaptive_keplerian_benchmark_rtxa5000_jun2026.json`).
+  Earlier pre-release measurements showed 1.4-5.3x (up to 90x for tiny
+  lightcurves), but those gains shrank once thread-safe kernel caching
+  landed and amortized the per-call kernel handling the adaptive path
+  used to avoid
+- Particularly beneficial for ground-based surveys and sparse time series
+- Thread-safe kernel caching with LRU eviction for production environments
+- **New function**: `eebls_gpu_fast_adaptive()` - drop-in replacement with automatic optimization
+- Best cost-efficiency: RTX 4000 Ada at **$0.14 per million lightcurves**
+- See [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for full results across GPUs
+
+This optimization makes large-scale BLS searches practical and efficient for all-sky surveys.
+
+### Breaking Changes
+- **Dropped Python 2.7 support** - now requires Python 3.9+
+- Removed `future` package dependency and all Python 2 compatibility code
+- Updated minimum dependency versions: numpy>=1.17, scipy>=1.3
+
+### New Features
+
+**Community contributions** (PRs #57-#62, with particular thanks to [@astrobatty](https://github.com/astrobatty)):
+- **PDM overhaul**: fast shared-memory CUDA kernels for all four PDM variants, a backward-compatible `(t, y, err)` input API for `PDMAsyncProcess.run()` with automatic frequency grids, unit tests, and new [documentation](https://johnh2o2.github.io/cuvarbase/) — PDM is now a tested, documented, first-class method (and to our knowledge still the only GPU PDM available anywhere)
+- **Conditional entropy**: optional log-probability periodogram (`compute_log_prob=True`), input normalization before processing, a 32-bit overflow guard for large `nfreq x ndata` runs, and a clear error for the unsupported `use_fast` + `weighted` combination
+- **Lomb-Scargle**: improved GPU memory estimation (now accounts for cuFFT work areas and per-batch buffers) and lightcurve normalization for numerical stability
+
+**Sparse BLS implementation** for efficient transit detection on small datasets:
+- Based on algorithm from [Panahi & Zucker (2021)](https://arxiv.org/abs/2103.06193)
+- **Both GPU (`sparse_bls_gpu`) and CPU (`sparse_bls_cpu`) implementations available**
+- Optimized for datasets with < 500 observations
+- Avoids binning and grid searching - directly tests all observation pairs as transit boundaries
+- New `eebls_transit` wrapper automatically selects between sparse and standard BLS
+  - **Default: GPU sparse BLS** for small datasets (use_gpu=True)
+  - `use_gpu=False` runs the search itself on the CPU (`sparse_bls_cpu`).
+    Since v1.0 `import cuvarbase` no longer creates a CUDA context, so the
+    CPU helpers run on GPU-less machines (the `pycuda` package must still
+    be installed, but no GPU is touched until a GPU search runs)
+- Particularly useful for ground-based surveys with limited phase coverage
+
+**Citation for Sparse BLS**: If you use this method, please cite:
+- Panahi, A., & Zucker, S. (2021). *Sparse BLS: A sparse-modeling approach to the Box-fitting Least Squares periodogram.* [arXiv:2103.06193](https://arxiv.org/abs/2103.06193)
+
+**Refactored codebase organization**:
+- Cleaner module structure: `base/` and `memory/`
+- Better maintainability and extensibility
+
+### Improvements
+- Modern Python packaging with `pyproject.toml`
+- Docker support for easier installation with CUDA 11.8
+- GitHub Actions CI: CPU test suite (GPU tests stubbed/skipped) on Python 3.9-3.12, plus a build-wheel-install-import packaging check; GPU kernels validated manually before releases
+- Cleaner, more maintainable codebase (89 lines of compatibility code removed)
+- Updated documentation and contributing guidelines
+
+### Additional Documentation
+- [Benchmark Results](docs/BENCHMARK_RESULTS.md) - Survey-scale performance, competitive analysis, and cost projections
+- [Benchmarking Guide](docs/BENCHMARKING.md) - Performance testing methodology
+- [RunPod Development](docs/RUNPOD_DEVELOPMENT.md) - Cloud GPU development setup
+- [BLS Optimization History](docs/BLS_OPTIMIZATION.md) - Thread-safety, memory management, and GPU optimizations
+
+For a complete list of changes, see [CHANGELOG.rst](CHANGELOG.rst).
 
 ## Contributing
 
@@ -352,7 +314,50 @@ Run tests with:
 pytest cuvarbase/tests/
 ```
 
-Note: Tests require a CUDA-capable GPU and may take several minutes to complete.
+The test suite runs **on CPU**: the root `conftest.py` stubs `pycuda`/`scikit-cuda`, so the pure-CPU tests run anywhere and the GPU-dependent tests skip (this is what CI does on Python 3.9-3.12). A CUDA-capable GPU is needed only to exercise the GPU kernels themselves, which are validated manually before releases.
+
+## Citation
+
+If you use cuvarbase in your research, please cite:
+
+**Hoffman, J. (2022). cuvarbase: GPU-Accelerated Variability Algorithms. Astrophysics Source Code Library, record ascl:2210.030.**
+
+Available at: https://ui.adsabs.harvard.edu/abs/2022ascl.soft10030H/abstract
+
+BibTeX:
+```bibtex
+@MISC{2022ascl.soft10030H,
+       author = {{Hoffman}, John},
+        title = "{cuvarbase: GPU-Accelerated Variability Algorithms}",
+     keywords = {Software},
+ howpublished = {Astrophysics Source Code Library, record ascl:2210.030},
+         year = 2022,
+        month = oct,
+          eid = {ascl:2210.030},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2022ascl.soft10030H},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+```
+
+## A Personal Note
+
+This project was created as part of a PhD thesis, intended mainly for myself and against the very wise advice of two advisors trying to help me stay on track. Joel Hartman -- legendary author of `vartools` -- and Gaspar Bakos both showed me an incredible amount of patience. I had promised Gaspar a catalog of variable stars from HAT telescopes, something that should have taken maybe a month but instead took years due to an irrational and irresponsible level of perfectionism, and even at the end wasn't comprehensive or useful, and which I never published. To both of you: thank you.
+
+Much to my absolute delight this repository has -- organically! -- become useful to several people in the astro community; an ADS search in late 2025 found roughly two dozen papers (~430 citations) using cuvarbase in some shape or form. The biggest source of pride was seeing the Quick Look Pipeline adopt cuvarbase for TESS ([Kunimoto et al. 2023](https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract)).
+
+Though usage is modest, to put this in personal context it is by far the most useful product of my PhD, and the fact that, amidst a lot of bumbling about for 5 years accomplishing very little, something productive somehow found its way into my thesis has given me a lot of relief and happiness.
+
+I want to personally thank people who have given their time and support to this project, including Kevin Burdge, Attila Bodi, Jamila Taaki, and to everyone in the community that has used this tool.
+
+## Future Plans and Call for Contributors
+
+In the years since 2017, I moved away from astrophysics and life has gone on. I have regrettably had very little time to update this repository. The code quality -- abstractions, documentation, etc -- are reflective of my level of skill back then, which was quite rudimentary.
+
+In 2025, for the first time, coding agents like `copilot` are finally at a level of quality that even a limited time investment in updating this repository can bring a lot of return. I would really like to encourage people interested to become official **contributors** so that I can pass the torch onto the larger community.
+
+It would be nice to incorporate additional capabilities and algorithms, and improve robustness and portability, to make this library a much more professional and easy-to-use tool. Especially nowadays, with the world awash in GPUs and with the scale of time-series data becoming many orders of magnitude larger than it was 10 years ago, something like `cuvarbase` seems even more relevant today than it was back then. (Where others have built better tools for a given method — e.g. [periodfind](https://github.com/scope-ml/periodfind) for conditional entropy — we would rather point you to them than duplicate the effort.)
+
+**If you're interested in contributing, please see our [Contributing Guide](CONTRIBUTING.md)!**
 
 ## License
 
