@@ -1,13 +1,13 @@
 """
 Memory management for Lomb-Scargle periodogram computations.
 """
-import resource
 import numpy as np
 
-import pycuda.driver as cuda
+import pycuda.driver as cuda  # noqa: F401  (used by transfer methods)
 import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
+from ._host import host_array
 from .nfft_memory import NFFTMemory
 
 
@@ -62,6 +62,9 @@ class LombScargleMemory:
         self.window = kwargs.get('window', False)
         self.nharmonics = kwargs.get('nharmonics', 1)
         self.use_fft = kwargs.get('use_fft', True)
+        # Pinned (page-locked) host buffers by default for async overlap;
+        # graceful fallback to page-aligned if pinning fails.
+        self.pinned = kwargs.get('pinned', True)
 
         self.other_settings = {}
         self.other_settings.update(kwargs)
@@ -194,17 +197,15 @@ class LombScargleMemory:
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
-        """Allocate page-aligned (not page-locked) CPU memory for the
-        result (async transfers fall back to synchronous staged
-        copies)."""
+        """Allocate the host result buffer (page-locked by default;
+        falls back to page-aligned if pinning fails)."""
         nf = kwargs.get('nf', self.nf)
         if not (nf is not None):
             raise RuntimeError(
                 "LombScargleMemory: requirement "
                 "`nf is not None` not satisfied")
 
-        self.lsp_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
-                                        alignment=resource.getpagesize())
+        self.lsp_c = host_array((nf,), self.real_type, pinned=self.pinned)
 
         return self
 
@@ -233,8 +234,8 @@ class LombScargleMemory:
 
     def allocate_buffered_data_arrays(self, **kwargs):
         """
-        Allocates page-aligned host memory for lightcurves if we're reusing
-        this container.
+        Allocate host memory for lightcurves if we're reusing this
+        container (page-locked by default; page-aligned fallback).
         """
         n0 = kwargs.get('n0', self.n0)
         if self.buffered_transfer:
@@ -244,17 +245,9 @@ class LombScargleMemory:
                 "LombScargleMemory: requirement "
                 "`n0 is not None` not satisfied")
 
-        self.t = cuda.aligned_zeros(shape=(n0,),
-                                    dtype=self.real_type,
-                                    alignment=resource.getpagesize())
-
-        self.yw = cuda.aligned_zeros(shape=(n0,),
-                                     dtype=self.real_type,
-                                     alignment=resource.getpagesize())
-
-        self.w = cuda.aligned_zeros(shape=(n0,),
-                                    dtype=self.real_type,
-                                    alignment=resource.getpagesize())
+        self.t = host_array((n0,), self.real_type, pinned=self.pinned)
+        self.yw = host_array((n0,), self.real_type, pinned=self.pinned)
+        self.w = host_array((n0,), self.real_type, pinned=self.pinned)
 
         return self
 
