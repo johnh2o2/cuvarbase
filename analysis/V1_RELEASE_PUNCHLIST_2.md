@@ -313,7 +313,7 @@ ALL PASSED.
       bls_frequencies.py, bls.rst; fix 4 wrong Ofir titles; reconcile
       fmax0 8.6307 vs 8.612 + derived-constant note. (Independent of
       API changes — can run early.)
-      **DONE <hash>** — both titles web-verified: SM03 = "A Unique
+      **DONE b13deec** — both titles web-verified: SM03 = "A Unique
       Solution of Planet and Star Parameters from an Extrasolar Planet
       Transit Light Curve" (ApJ 585, 1038); Ofir 2014 = "Optimizing the
       search for transiting planets in long time series" (A&A 561, A138,
