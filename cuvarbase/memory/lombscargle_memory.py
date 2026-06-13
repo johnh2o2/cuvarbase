@@ -7,6 +7,7 @@ import numpy as np
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 
+from ..base import ensure_context
 from .nfft_memory import NFFTMemory
 
 
@@ -47,6 +48,10 @@ class LombScargleMemory:
         Additional parameters
     """
     def __init__(self, sigma, stream, m, **kwargs):
+        # Constructing GPU memory is a "first GPU use" -- retain the CUDA
+        # primary context now (no longer created eagerly at import). This
+        # __init__ allocates reg_g immediately, so the context must exist.
+        ensure_context()
 
         self.sigma = sigma
         self.stream = stream

@@ -7,6 +7,7 @@ import numpy as np
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 
+from ..base import ensure_context
 from .._skcuda_compat import ensure_numpy_aliases
 ensure_numpy_aliases()  # scikit-cuda 0.5.3 breaks on numpy >= 1.24 without this
 import skcuda.fft as cufft  # noqa: E402
@@ -35,6 +36,9 @@ class NFFTMemory:
     
     def __init__(self, sigma, stream, m, use_double=False,
                  precomp_psi=True, **kwargs):
+        # Constructing GPU memory is a "first GPU use" -- retain the CUDA
+        # primary context now (no longer created eagerly at import).
+        ensure_context()
 
         self.sigma = sigma
         self.stream = stream

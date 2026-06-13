@@ -11,6 +11,7 @@ import numpy as np
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 
+from ..base import ensure_context
 from ..utils import subtract_epoch
 
 
@@ -39,6 +40,9 @@ class BLSBatchMemory:
     """
 
     def __init__(self, max_ndata, n_lcs, nfreqs, stream=None):
+        # Constructing GPU memory is a "first GPU use" -- retain the CUDA
+        # primary context now (no longer created eagerly at import).
+        ensure_context()
         self.max_ndata = int(max_ndata)
         self.n_lcs = int(n_lcs)
         self.nfreqs = int(nfreqs)

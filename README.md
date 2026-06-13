@@ -174,7 +174,8 @@ Currently includes implementations of:
   - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations)
     - GPU implementation: `sparse_bls_gpu()` (default)
     - CPU implementation: `sparse_bls_cpu()` (per-call alternative;
-      importing cuvarbase itself still requires a GPU)
+      runs on a GPU-less machine — no CUDA context is created until a
+      GPU search actually runs)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
 - **Conditional Entropy period finder ([CE](http://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
   - **Maintenance mode**: CE works and will keep working, but no further development is planned here. For new projects that want an actively developed GPU conditional entropy (or AOV) search, we recommend [periodfind](https://github.com/scope-ml/periodfind) from the ZTF/SCoPe team
@@ -218,12 +219,17 @@ Future developments may include:
 - CUDA Toolkit (11.x or 12.x recommended)
 - Python 3.9 or later
 
-Note: `import cuvarbase` creates a CUDA context, so a working GPU and
-driver are required even for the CPU helper functions (e.g.
-`sparse_bls_cpu`); there is no GPU-less mode. The import also pins
-CUDA device 0 — set `CUDA_DEVICE` before importing to select another
-device, and prefer spawning fresh processes over forking when using
-multiple GPUs.
+Note: `import cuvarbase` does **not** create a CUDA context or require a
+GPU — the primary context is retained lazily on first GPU use (compiling
+a kernel, constructing a periodogram process, or calling a GPU search
+function). So `import cuvarbase` and the CPU-only helpers (e.g.
+`sparse_bls_cpu`, `single_bls`, `fap_baluev`) run on a GPU-less machine.
+The GPU modules still `import pycuda.driver` at module top, so the
+`pycuda` package must be installed to use them, but importing them
+allocates no context. Device selection follows the `CUDA_DEVICE`
+environment variable, read at first GPU use (not at import) — set it
+before the first GPU call to select a device other than 0, and prefer
+spawning fresh processes over forking when using multiple GPUs.
 
 ### Dependencies
 

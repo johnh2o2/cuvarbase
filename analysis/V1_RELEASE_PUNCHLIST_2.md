@@ -63,6 +63,12 @@ via API; archive in analysis/)
       (standard + optimized + adaptive paths) and check_release_gate.py
       on pod; confirm `//{INCLUDE}` expands correctly under the editable
       install path (the MultiplexedPath gotcha from memory)
+- [ ] B1: full GPU suite on pod with REAL pycuda installed — the
+      lazy-context rewire must produce a working context on first GPU
+      use across every path (BLS std/opt/batch/sparse, CE, LS/NFFT,
+      PDM, TLS); verify CUDA_DEVICE selection still honored; confirm no
+      "no currently active context" errors from the *Memory __init__ or
+      compile chokepoints
 - [ ] items accumulate here as work proceeds
 
 ## A. Contained code items (do first)
@@ -162,7 +168,7 @@ via API; archive in analysis/)
 
 ## B. Architecture items
 
-- [ ] **B1. Lazy CUDA context creation** — remove eager
+- [x] **B1. Lazy CUDA context creation** — remove eager
       `import pycuda.autoprimaryctx` from cuvarbase/__init__.py and
       module tops; initialize the primary context on first GPU use
       (helper in core/base; honor CUDA_DEVICE). Accept:
@@ -172,6 +178,26 @@ via API; archive in analysis/)
       goal: no CUDA context, document whether pycuda-the-package
       remains an import dependency); all GPU paths still pass on pod;
       README CPU-helper caveat updated/removed.
+      **DONE <hash>** — new helper `cuvarbase.base.ensure_context()`
+      (base/context.py) retains the primary context lazily on first GPU
+      use (defers to pycuda.autoprimaryctx; CUDA_DEVICE honored via its
+      make_default_context). Eager import removed from __init__.py +
+      bls/ce/tls tops; wired ensure_context() into GPUAsyncProcess
+      .__init__ (covers ce/pdm/cunfft/lombscargle processes), the 4 BLS
+      compile fns incl. _get_cached_kernels (cache-hit self-guarantee),
+      compile_tls, all 6 *Memory __init__ (BLS/BLSBatch/CE/NFFT/LS/TLS),
+      cufinufft_nfft_adjoint, and the .device reads. An 11-module
+      adversarial gap-hunt (analysis/b1-lazy-context-audit-jun2026.json)
+      confirmed NO module does GPU work at import and found 2 blockers
+      (LombScargleMemory/TLSMemory direct construction) + memory
+      edge-cases, all closed by the *Memory __init__ guards. pycuda
+      package still required by GPU modules (import pycuda.driver),
+      documented in README + CHANGELOG. New CPU contract tests
+      (test_lazy_imports): import without pycuda; no context until first
+      GPU use (CPU helper single_bls verified context-free). Packaging
+      smoke (ci_wheel_smoke.py) now proves GPU-less import with pycuda
+      genuinely absent. GPU queue: full GPU suite must pass on pod with
+      real pycuda (context lifecycle exercised).
 - [ ] **B2. scikit-cuda replacement (#63)** — replace skcuda.fft
       (cuFFT) in cunfft.py/lombscargle.py with cupy.cuda.cufft OR a
       minimal direct cuFFT ctypes binding (decide by spike: cupy adds

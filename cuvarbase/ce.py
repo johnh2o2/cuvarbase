@@ -15,11 +15,9 @@ import numpy as np
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
-#import pycuda.autoinit
-import pycuda.autoprimaryctx
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess
+from .core import GPUAsyncProcess, ensure_context
 from .utils import _module_reader, find_kernel, normalize_light_curves
 from .utils import autofrequency as utils_autofreq
 from .memory import ConditionalEntropyMemory
@@ -97,9 +95,9 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         ce_logp, ce_std, ce_wt = functions
 
     if shmem_lim is None:
-        dev = pycuda.autoprimaryctx.device
+        dev = ensure_context().device
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
-        shmem_lim = pycuda.autoprimaryctx.device.get_attribute(att)
+        shmem_lim = dev.get_attribute(att)
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
