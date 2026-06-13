@@ -77,6 +77,10 @@ ALL PASSED.
       regression), (b) demonstrate async-vs-sync overlap (CUDA-event
       timeline or a host->device bandwidth delta pinned vs pinned=False),
       (c) confirm pinned=False fallback path still works.
+- [ ] C1: PDM batch API — on the A5000: batched_run_const_nfreq +
+      large_run results match per-LC run() (corr ~1); large_run honors a
+      small max_memory (forces batch_size>1 chunking); run
+      scripts/benchmark_pdm.py and commit JSON to benchmarks/results/.
 
 ## A. Contained code items (do first)
 
@@ -268,13 +272,27 @@ ALL PASSED.
 
 ## C. Feature completion items
 
-- [ ] **C1. PDM batch API + large_run + benchmark (#33)** —
+- [x] **C1. PDM batch API + large_run + benchmark (#33)** —
       batched_run_const_nfreq-equivalent for PDMAsyncProcess,
       memory-capped large_run, and a PDM GPU-vs-CPU benchmark
       (add to campaign scenarios). Accept: batch matches per-LC
       results; large_run respects max_memory on pod; benchmark JSON
       committed; #33 checkboxes closable (supersedes the re-scope
       comment — post follow-up at release).
+      **DONE 254f219** — PDMAsyncProcess.batched_run_const_nfreq
+      (chunked, shared-grid, memory-bounded: peak mem ~ batch_size, not
+      len(data); correct-by-construction = per-chunk run() with results
+      copied out) + large_run (auto batch_size from 90% free GPU mem via
+      cuda.mem_get_info; _bytes_per_lc/_batch_size_from_memory factored).
+      scripts/benchmark_pdm.py: GPU(PDMAsyncProcess) vs CPU(pdm2_cpu)
+      correctness (theta-corr + recovery) + (ndata×nfreq) throughput,
+      JSON out, --tests-only. test_pdm_batch.py (4 CPU tests via mocked
+      run): batch-size arithmetic, chunking+const-freq reuse, empty,
+      large_run dispatch. Suite 205 passed; flake8 clean. NOTE: chose a
+      chunked (reallocate-per-batch) design over LS-style buffer reuse —
+      lower risk given no local GPU, same memory-bound + const-grid win;
+      buffer reuse is a possible future optimization. GPU queue +
+      benchmark-JSON commit pending batch 2; #33 closable at release.
 - [ ] **C2. Multiharmonic GLS on GPU** — extend the LS kernel to
       nharmonics>1 (the CPU helpers mhdirect_sums/mhgls_from_sums
       already define the math; kernel computes the 2H-sums via NFFT
