@@ -8,9 +8,7 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
-from .._skcuda_compat import ensure_numpy_aliases
-ensure_numpy_aliases()  # scikit-cuda 0.5.3 breaks on numpy >= 1.24 without this
-import skcuda.fft as cufft  # noqa: E402
+from .. import _cufft as cufft
 
 
 class NFFTMemory:

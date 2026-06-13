@@ -13,11 +13,7 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 # import pycuda.autoinit
 
-from ._skcuda_compat import ensure_numpy_aliases
-
-ensure_numpy_aliases()  # must run before any skcuda import (numpy >= 1.24)
-
-import skcuda.fft as cufft  # noqa: E402
+from . import _cufft as cufft
 
 from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader, normalize_light_curves
