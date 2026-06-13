@@ -47,6 +47,9 @@ via API; archive in analysis/)
       (manual-dphi equivalence for standard + optimized, monotonic
       power) + full fast-path test group (refactor touched both entry
       points)
+- [ ] A3: autoset-m tolerance — test_autoset_m_l1_bound_meets_tolerance
+      (float64 tol=1e-6, float32 tol=1e-2) vs direct sums; validates
+      the tighter-m direction (||y||_1 < N)
 - [ ] items accumulate here as work proceeds
 
 ## A. Contained code items (do first)
@@ -80,12 +83,21 @@ via API; archive in analysis/)
       retired the stale A1 sparse-warning line). Behavior note:
       default noverlap=2 now really does 2 passes (~2x kernel time);
       noverlap=1 restores the old behavior.
-- [ ] **A3. estimate_m L1-norm truncation bound** — implement the
+- [x] **A3. estimate_m L1-norm truncation bound** — implement the
       NFFT3-guide bound (the package's only TODO, cunfft.py); keep
       the old heuristic as fallback flag if the bound is costly.
       Accept: unit test comparing achieved NFFT error vs requested
       tol on synthetic data (CPU nfft reference); docstring warning
       replaced with the real bound's statement.
+      **DONE 6df6bfb** — estimate_m(N=None, y=None): with y, m = the
+      smallest integer with 4·exp(-m·D)·||y||_1 <= tol (rigorous
+      absolute bound; the bound is O(N) so no cost flag needed); the
+      N-based heuristic remains the no-data fallback (used by the LS
+      buffer-sizing call sites, documented). cunfft.allocate passes y.
+      Local tests: bound rigor + minimality across tol/sigma/scale,
+      fallback equivalence, monotonicity, zero-data, validation
+      (test_nfft_m.py, 23 cases). GPU queue: autoset-m tolerance test
+      vs direct sums. TODO + docstring warning replaced.
 - [ ] **A4. nbins-aware block-size heuristic** — extend
       _choose_block_size to consider nbins (qmin) occupancy; or
       demonstrate empirically (pod microbenchmark) that ndata-only is
