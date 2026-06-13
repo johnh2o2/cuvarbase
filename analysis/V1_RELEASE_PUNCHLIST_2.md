@@ -39,8 +39,9 @@ include `pip install batman-package transitleastsquares cufinufft`,
 `apt-get install rsync` before setup-remote.sh; terminate + verify
 via API; archive in analysis/)
 **Batch 1 (Jun 13 2026, RTX A5000, pod ydqi9luioem03s — terminated +
-verified): results in analysis/v1.0-gpu-batch-jun2026/.** Suite 660
-passed / 2 failed (the 2 = A1+A3, found + fixed here); gate ALL PASSED.
+verified; fixes in c6baf13): results in analysis/v1.0-gpu-batch-jun2026/.**
+Suite 660 passed / 2 failed (the 2 = A1+A3, found + fixed here); gate
+ALL PASSED.
 - [~] (standing) full suite + check_release_gate.py +
       benchmark_new_features.py --tests-only — suite green (after A1/A3
       fixes) + gate green; benchmark_new_features **A) BLS batch
