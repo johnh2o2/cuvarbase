@@ -54,6 +54,10 @@ via API; archive in analysis/)
       kernels) on the A5000; commit JSON to
       benchmark_results_by_gpu/; then close A4 (extend heuristic if
       any cell >10%, else document)
+- [ ] A5: test_gpu_entry_points_convention (kwarg flows through
+      eebls_gpu + eebls_gpu_fast chains; host-side conversion
+      identity) + TestPowerConventions group on pod (pip install
+      astropy there)
 - [ ] items accumulate here as work proceeds
 
 ## A. Contained code items (do first)
@@ -113,12 +117,23 @@ via API; archive in analysis/)
       heuristic-vs-best penalty + >10% offenders. Decision (extend
       heuristic vs document) and the box close on the pod data —
       queued below.
-- [ ] **A5. Selectable power conventions (#17)** — add a
+- [x] **A5. Selectable power conventions (#17)** — add a
       `convention=` kwarg ('chi2ratio' default, 'snr', 'loglik'?)
       to the BLS entry points mapping the existing outputs;
       document equivalences vs astropy objectives in bls.rst.
       Accept: conversions unit-tested against astropy on shared
       grids; issue #17 closable at release.
+      **DONE 4f82e24** — convert_bls_power() + convention= on
+      eebls_gpu, eebls_gpu_custom, fast impl (+3 wrappers via
+      kwargs), eebls_gpu_batch (per-LC), sparse_bls_cpu/gpu,
+      eebls_transit (both paths; transit_gpu inherits via kwargs).
+      Derived + verified vs astropy method='slow' on shared
+      solutions: 'snr' = sqrt(chi2_0·P) EXACTLY equals astropy
+      objective='snr'; 'loglik' = chi2_0·P/2 (constant-mean
+      reference); astropy objective='likelihood' = ours/(1-r)
+      (out-of-transit reference) — relation tested with r from the
+      solution mask. bls.rst section rewritten; CHANGELOG; #17
+      closable at release (H2). GPU queue: kwarg-flow smoke test.
 - [ ] **A6. Kernel templating merge (bls.cu/bls_optimized.cu)** —
       single-source the shared device functions (Jinja-style include
       via _module_reader cpp_defs or a common .cuh inlined at load);
