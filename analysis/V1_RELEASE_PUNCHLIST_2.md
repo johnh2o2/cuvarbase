@@ -72,6 +72,11 @@ ALL PASSED.
       ±10% of a scikit-cuda baseline (pip install scikit-cuda there and
       compare an LS run both ways). If green → drop scikit-cuda dep +
       _skcuda_compat + numpy patch, close #63.
+- [ ] B3: pinned host buffers (cuvarbase.memory._host) — on the A5000:
+      (a) full suite green with pinned=True default (no transfer
+      regression), (b) demonstrate async-vs-sync overlap (CUDA-event
+      timeline or a host->device bandwidth delta pinned vs pinned=False),
+      (c) confirm pinned=False fallback path still works.
 
 ## A. Contained code items (do first)
 
@@ -237,7 +242,7 @@ ALL PASSED.
       ±10% of skcuda → then drop scikit-cuda dep + _skcuda_compat shim +
       numpy patch, remove CHANGELOG limitation, close #63. skcuda kept in
       deps for now only as the perf baseline.
-- [ ] **B3. True pinned host buffers** — restore page-locked memory
+- [x] **B3. True pinned host buffers** — restore page-locked memory
       (cuda.pagelocked_empty or register_host_memory) in
       BLSMemory/BLSBatchMemory/NFFT/LS/CE memory classes behind a
       `pinned=True` default with graceful fallback; rename docs
@@ -246,6 +251,20 @@ ALL PASSED.
       timeline or bandwidthTest-style measurement showing
       async-vs-sync delta); suite green; no regression for
       non-pinned fallback.
+      **DONE c40f9be** — new cuvarbase/memory/_host.py:host_array(shape,
+      dtype, pinned=True) uses cuda.pagelocked_zeros with graceful
+      fallback to cuda.aligned_zeros (warns once). Wired into all 6
+      *Memory classes (BLS/BLSBatch/NFFT/LS/CE/TLS — each gains a
+      pinned=True kwarg) + the PDM result buffer; removed the now-dead
+      `import resource` from those modules. Fallback design: attempts the
+      aligned allocator inside the pinned except-handler and only warns
+      if it succeeds, so a GPU-less run (both stubbed) propagates + skips
+      cleanly with no spurious warning. test_host_array.py (4) covers
+      pinned-default / fallback+warn / no-warn-when-fallback-fails /
+      pinned=False; the batch-API honesty test flipped from "NOT
+      page-locked" to page-locked-by-default-with-fallback. Suite 201
+      passed; flake8 clean. GPU queue: demonstrate async-vs-sync overlap
+      + confirm no fallback regression on pod.
 
 ## C. Feature completion items
 
