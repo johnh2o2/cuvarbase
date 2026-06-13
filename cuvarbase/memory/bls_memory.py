@@ -5,13 +5,13 @@ Handles padded multi-lightcurve data layout with page-aligned CPU
 arrays (NOT page-locked/pinned: async transfers fall back to
 synchronous staged copies) and GPU arrays for batch processing.
 """
-import resource
 import numpy as np
 
-import pycuda.driver as cuda
+import pycuda.driver as cuda  # noqa: F401  (kept for transfer methods / API)
 import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
+from ._host import host_array
 from ..utils import subtract_epoch
 
 
@@ -39,7 +39,7 @@ class BLSBatchMemory:
         CUDA stream for async transfers.
     """
 
-    def __init__(self, max_ndata, n_lcs, nfreqs, stream=None):
+    def __init__(self, max_ndata, n_lcs, nfreqs, stream=None, pinned=True):
         # Constructing GPU memory is a "first GPU use" -- retain the CUDA
         # primary context now (no longer created eagerly at import).
         ensure_context()
@@ -48,6 +48,9 @@ class BLSBatchMemory:
         self.nfreqs = int(nfreqs)
         self.stream = stream
         self.rtype = np.float32
+        # Pinned (page-locked) host buffers by default for async overlap;
+        # graceful fallback to page-aligned if pinning fails.
+        self.pinned = pinned
 
         # Per-LC normalization factors
         self.yy = np.zeros(n_lcs, dtype=np.float64)
@@ -56,29 +59,21 @@ class BLSBatchMemory:
         # before the float32 cast (phases are relative to it)
         self.epochs = np.zeros(n_lcs, dtype=np.float64)
 
-        # Allocate page-aligned (not page-locked) host arrays
-        align = resource.getpagesize()
+        # Pinned (or page-aligned fallback) host arrays
+        p = self.pinned
         total_data = self.max_ndata * self.n_lcs
         total_bls = self.nfreqs * self.n_lcs
 
-        self.t = cuda.aligned_zeros(
-            shape=(total_data,), dtype=self.rtype, alignment=align)
-        self.yw = cuda.aligned_zeros(
-            shape=(total_data,), dtype=self.rtype, alignment=align)
-        self.w = cuda.aligned_zeros(
-            shape=(total_data,), dtype=self.rtype, alignment=align)
-        self.ndata_per_lc = cuda.aligned_zeros(
-            shape=(self.n_lcs,), dtype=np.uint32, alignment=align)
+        self.t = host_array((total_data,), self.rtype, pinned=p)
+        self.yw = host_array((total_data,), self.rtype, pinned=p)
+        self.w = host_array((total_data,), self.rtype, pinned=p)
+        self.ndata_per_lc = host_array((self.n_lcs,), np.uint32, pinned=p)
 
-        self.freqs = cuda.aligned_zeros(
-            shape=(self.nfreqs,), dtype=self.rtype, alignment=align)
-        self.nbins0 = cuda.aligned_zeros(
-            shape=(self.nfreqs,), dtype=np.uint32, alignment=align)
-        self.nbinsf = cuda.aligned_zeros(
-            shape=(self.nfreqs,), dtype=np.uint32, alignment=align)
+        self.freqs = host_array((self.nfreqs,), self.rtype, pinned=p)
+        self.nbins0 = host_array((self.nfreqs,), np.uint32, pinned=p)
+        self.nbinsf = host_array((self.nfreqs,), np.uint32, pinned=p)
 
-        self.bls = cuda.aligned_zeros(
-            shape=(total_bls,), dtype=self.rtype, alignment=align)
+        self.bls = host_array((total_bls,), self.rtype, pinned=p)
 
         # GPU arrays (allocated on first transfer)
         self.t_g = None

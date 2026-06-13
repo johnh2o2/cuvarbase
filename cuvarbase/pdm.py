@@ -1,5 +1,4 @@
 import numpy as np
-import resource
 import warnings
 from typing import Literal
 
@@ -8,6 +7,7 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
 from .core import GPUAsyncProcess
+from .memory._host import host_array
 from .utils import weights, find_kernel, dphase, normalize_light_curves, autofrequency
 
 
@@ -247,9 +247,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
         for t, y, w, freqs in plot_data:
 
-            pow_cpu = cuda.aligned_zeros(shape=(len(freqs),),
-                                         dtype=np.float32,
-                                         alignment=resource.getpagesize())
+            pow_cpu = host_array((len(freqs),), np.float32)
 
             t_g, y_g, w_g = None, None, None
             if len(t) > 0:

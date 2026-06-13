@@ -14,7 +14,6 @@ import sys
 import threading
 import warnings
 from collections import OrderedDict
-import resource
 
 warnings.warn(
     "cuvarbase.tls is EXPERIMENTAL and not recommended for science use "
@@ -34,6 +33,7 @@ from pycuda.compiler import SourceModule  # noqa: E402
 import numpy as np
 
 from .base import ensure_context  # noqa: E402
+from .memory._host import host_array  # noqa: E402
 from .utils import find_kernel, _module_reader
 from . import tls_grids
 from . import tls_models
@@ -221,6 +221,9 @@ class TLSMemory:
         self.max_nperiods = max_nperiods
         self.stream = stream
         self.rtype = np.float32
+        # Pinned (page-locked) host buffers by default for async overlap;
+        # graceful fallback to page-aligned if pinning fails.
+        self.pinned = kwargs.get('pinned', True)
 
         # CPU pinned memory for fast transfers
         self.t = None
@@ -243,49 +246,24 @@ class TLSMemory:
         self.allocate_pinned_arrays()
 
     def allocate_pinned_arrays(self):
-        """Allocate page-aligned pinned memory on CPU for fast transfers."""
-        pagesize = resource.getpagesize()
+        """Allocate host transfer buffers (page-locked by default, with a
+        page-aligned fallback if pinning fails)."""
+        p = self.pinned
+        nd, npd = (self.max_ndata,), (self.max_nperiods,)
 
-        self.t = cuda.aligned_zeros(shape=(self.max_ndata,),
-                                    dtype=self.rtype,
-                                    alignment=pagesize)
+        self.t = host_array(nd, self.rtype, pinned=p)
+        self.y = host_array(nd, self.rtype, pinned=p)
+        self.dy = host_array(nd, self.rtype, pinned=p)
 
-        self.y = cuda.aligned_zeros(shape=(self.max_ndata,),
-                                    dtype=self.rtype,
-                                    alignment=pagesize)
-
-        self.dy = cuda.aligned_zeros(shape=(self.max_ndata,),
-                                     dtype=self.rtype,
-                                     alignment=pagesize)
-
-        self.periods = cuda.aligned_zeros(shape=(self.max_nperiods,),
-                                         dtype=self.rtype,
-                                         alignment=pagesize)
-
-        self.chi2 = cuda.aligned_zeros(shape=(self.max_nperiods,),
-                                      dtype=self.rtype,
-                                      alignment=pagesize)
-
-        self.best_t0 = cuda.aligned_zeros(shape=(self.max_nperiods,),
-                                         dtype=self.rtype,
-                                         alignment=pagesize)
-
-        self.best_duration = cuda.aligned_zeros(shape=(self.max_nperiods,),
-                                               dtype=self.rtype,
-                                               alignment=pagesize)
-
-        self.best_depth = cuda.aligned_zeros(shape=(self.max_nperiods,),
-                                            dtype=self.rtype,
-                                            alignment=pagesize)
+        self.periods = host_array(npd, self.rtype, pinned=p)
+        self.chi2 = host_array(npd, self.rtype, pinned=p)
+        self.best_t0 = host_array(npd, self.rtype, pinned=p)
+        self.best_duration = host_array(npd, self.rtype, pinned=p)
+        self.best_depth = host_array(npd, self.rtype, pinned=p)
 
         # Keplerian duration constraints
-        self.qmin = cuda.aligned_zeros(shape=(self.max_nperiods,),
-                                      dtype=self.rtype,
-                                      alignment=pagesize)
-
-        self.qmax = cuda.aligned_zeros(shape=(self.max_nperiods,),
-                                      dtype=self.rtype,
-                                      alignment=pagesize)
+        self.qmin = host_array(npd, self.rtype, pinned=p)
+        self.qmax = host_array(npd, self.rtype, pinned=p)
 
     def allocate_gpu_arrays(self, ndata=None, nperiods=None):
         """Allocate GPU memory."""

@@ -1,13 +1,13 @@
 """
 Memory management for Conditional Entropy period-finding operations.
 """
-import resource
 import numpy as np
 
-import pycuda.driver as cuda
+import pycuda.driver as cuda  # noqa: F401  (used by transfer methods)
 import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
+from ._host import host_array
 
 
 class ConditionalEntropyMemory:
@@ -55,6 +55,10 @@ class ConditionalEntropyMemory:
 
         self.balanced_magbins = kwargs.get('balanced_magbins', False)
 
+        # Pinned (page-locked) host buffers by default for async overlap;
+        # graceful fallback to page-aligned if pinning fails.
+        self.pinned = kwargs.get('pinned', True)
+
         if self.weighted and self.balanced_magbins:
             raise ValueError("simultaneous balanced_magbins and weighted"
                             " options is not currently supported")
@@ -99,40 +103,32 @@ class ConditionalEntropyMemory:
                 "ConditionalEntropyMemory: requirement "
                 "`n0 is not None` not satisfied")
 
-        kw = dict(dtype=self.real_type,
-                  alignment=resource.getpagesize())
-
-        self.t = cuda.aligned_zeros(shape=(n0,), **kw)
-
-        self.y = cuda.aligned_zeros(shape=(n0,),
-                                    dtype=self.ytype,
-                                    alignment=resource.getpagesize())
+        p = self.pinned
+        self.t = host_array((n0,), self.real_type, pinned=p)
+        self.y = host_array((n0,), self.ytype, pinned=p)
 
         if self.weighted:
-            self.dy = cuda.aligned_zeros(shape=(n0,), **kw)
+            self.dy = host_array((n0,), self.real_type, pinned=p)
 
         if self.balanced_magbins:
-            self.mag_bwf = cuda.aligned_zeros(shape=(self.mag_bins,), **kw)
+            self.mag_bwf = host_array((self.mag_bins,), self.real_type,
+                                      pinned=p)
 
         if self.compute_log_prob:
-            self.mag_bin_fracs = cuda.aligned_zeros(shape=(self.mag_bins,),
-                                                    **kw)
+            self.mag_bin_fracs = host_array((self.mag_bins,), self.real_type,
+                                            pinned=p)
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
-        """Allocate page-aligned (not page-locked) CPU memory.
-
-        Despite the method name, the arrays are not pinned, so
-        async transfers fall back to synchronous staged copies.
-        """
+        """Allocate the host result buffer (page-locked by default;
+        falls back to page-aligned if pinning fails)."""
         nf = kwargs.get('nf', self.nf)
         if not (nf is not None):
             raise RuntimeError(
                 "ConditionalEntropyMemory: requirement "
                 "`nf is not None` not satisfied")
 
-        self.ce_c = cuda.aligned_zeros(shape=(nf,), dtype=self.real_type,
-                                       alignment=resource.getpagesize())
+        self.ce_c = host_array((nf,), self.real_type, pinned=self.pinned)
 
         return self
 

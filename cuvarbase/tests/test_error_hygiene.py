@@ -140,4 +140,10 @@ class TestBatchApiHonesty(object):
         assert hasattr(BLSMemory, 'allocate_host_arrays')
         # deprecated alias retained for compatibility
         assert hasattr(BLSMemory, 'allocate_pinned_arrays')
-        assert 'NOT page-locked' in BLSMemory.allocate_host_arrays.__doc__
+        # B3: host arrays are now page-locked (pinned) by default, with a
+        # graceful fallback to page-aligned memory if pinning fails. The
+        # docstring must reflect that (and no longer claim "NOT page-locked").
+        doc = BLSMemory.allocate_host_arrays.__doc__
+        assert 'page-locked' in doc
+        assert 'NOT page-locked' not in doc
+        assert 'fall back' in doc

@@ -1,13 +1,13 @@
 """
 Memory management for NFFT (Non-equispaced Fast Fourier Transform) operations.
 """
-import resource
 import numpy as np
 
-import pycuda.driver as cuda
+import pycuda.driver as cuda  # noqa: F401  (used by transfer methods)
 import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
+from ._host import host_array
 from .. import _cufft as cufft
 
 
@@ -43,6 +43,9 @@ class NFFTMemory:
         self.m = m
         self.use_double = use_double
         self.precomp_psi = precomp_psi
+        # Pinned (page-locked) host buffer by default; falls back to
+        # page-aligned if pinning fails.
+        self.pinned = kwargs.get('pinned', True)
 
         # set datatypes
         self.real_type = np.float32 if not self.use_double \
@@ -121,10 +124,11 @@ class NFFTMemory:
         return self
 
     def allocate_pinned_cpu(self, **kwargs):
-        """Allocate page-aligned (not page-locked) CPU memory.
+        """Allocate the host result buffer (page-locked by default).
 
-        Despite the method name, the arrays are not pinned, so
-        async transfers fall back to synchronous staged copies.
+        With ``pinned=True`` (default) the array is page-locked so
+        ``get_async`` overlaps with computation; falls back to
+        page-aligned memory if pinning fails.
         """
         self.nf = kwargs.get('nf', self.nf)
 
@@ -132,9 +136,8 @@ class NFFTMemory:
             raise RuntimeError(
                 "NFFTMemory: requirement "
                 "`self.nf is not None` not satisfied")
-        self.ghat_c = cuda.aligned_zeros(shape=(self.nf,),
-                                         dtype=self.complex_type,
-                                         alignment=resource.getpagesize())
+        self.ghat_c = host_array((self.nf,), self.complex_type,
+                                 pinned=self.pinned)
 
         return self
 

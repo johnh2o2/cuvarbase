@@ -25,6 +25,7 @@ from pycuda.compiler import SourceModule
 from .core import GPUAsyncProcess, ensure_context
 from .utils import find_kernel, _module_reader, subtract_epoch
 from .memory.bls_memory import BLSBatchMemory
+from .memory._host import host_array
 
 import resource
 import numpy as np
@@ -462,58 +463,37 @@ class BLSMemory:
 
         self.stream = stream
 
+        # Pinned (page-locked) host buffers by default for true async
+        # transfer overlap; falls back to page-aligned if pinning fails.
+        self.pinned = kwargs.get('pinned', True)
+
         self.allocate_host_arrays(nfreqs=max_nfreqs, ndata=max_ndata)
 
     def allocate_pinned_arrays(self, nfreqs=None, ndata=None):
-        """Deprecated alias for :meth:`allocate_host_arrays`.
-
-        Despite the historical name, these arrays were never
-        page-locked (pinned) — see ``allocate_host_arrays``.
-        """
-        warnings.warn("allocate_pinned_arrays is deprecated (the arrays "
-                      "are page-aligned, not page-locked); use "
+        """Deprecated alias for :meth:`allocate_host_arrays`."""
+        warnings.warn("allocate_pinned_arrays is deprecated; use "
                       "allocate_host_arrays", DeprecationWarning)
         return self.allocate_host_arrays(nfreqs=nfreqs, ndata=ndata)
 
     def allocate_host_arrays(self, nfreqs=None, ndata=None):
-        """Allocate page-aligned host arrays for transfers.
+        """Allocate host arrays for transfers.
 
-        .. note::
-
-            These arrays are aligned but NOT page-locked (pinned), so
-            ``set_async``/``get_async`` fall back to synchronous
-            staged copies and host<->device transfers do not overlap
-            with computation. Restoring true page-locked buffers is a
-            planned performance item.
+        By default (``pinned=True``) these are page-locked so
+        ``set_async``/``get_async`` transfers overlap with computation;
+        if pinning fails they fall back to page-aligned memory (see
+        :func:`cuvarbase.memory._host.host_array`).
         """
         if nfreqs is None:
             nfreqs = int(self.max_nfreqs)
         if ndata is None:
             ndata = int(self.max_ndata)
 
-        self.bls = cuda.aligned_zeros(shape=(nfreqs,),
-                                      dtype=self.rtype,
-                                      alignment=resource.getpagesize())
-
-        self.nbins0 = cuda.aligned_zeros(shape=(nfreqs,),
-                                         dtype=np.int32,
-                                         alignment=resource.getpagesize())
-
-        self.nbinsf = cuda.aligned_zeros(shape=(nfreqs,),
-                                         dtype=np.int32,
-                                         alignment=resource.getpagesize())
-
-        self.t = cuda.aligned_zeros(shape=(ndata,),
-                                    dtype=self.rtype,
-                                    alignment=resource.getpagesize())
-
-        self.yw = cuda.aligned_zeros(shape=(ndata,),
-                                     dtype=self.rtype,
-                                     alignment=resource.getpagesize())
-
-        self.w = cuda.aligned_zeros(shape=(ndata,),
-                                    dtype=self.rtype,
-                                    alignment=resource.getpagesize())
+        self.bls = host_array((nfreqs,), self.rtype, pinned=self.pinned)
+        self.nbins0 = host_array((nfreqs,), np.int32, pinned=self.pinned)
+        self.nbinsf = host_array((nfreqs,), np.int32, pinned=self.pinned)
+        self.t = host_array((ndata,), self.rtype, pinned=self.pinned)
+        self.yw = host_array((ndata,), self.rtype, pinned=self.pinned)
+        self.w = host_array((ndata,), self.rtype, pinned=self.pinned)
 
     def allocate_freqs(self, nfreqs=None):
         if nfreqs is None:
