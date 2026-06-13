@@ -331,11 +331,28 @@ ALL PASSED.
       q/freq round-trip (SM03 inverse), and a citation guard that fails
       if H&H's title is pasted on Ofir again (fails-before: tls_grids.py
       had it). Suite 192 passed; flake8 clean. No GPU dep.
-- [ ] **G2. README content fixes** (T1.b): PyPI v0.2.5 blocker
+- [x] **G2. README content fixes** (T1.b): PyPI v0.2.5 blocker
       handling, selling-point reorder (QLP/257-354x/$33 to first
       screenful; BibTeX + personal note down), periodograms/ claim,
       notebooks/ pointer, Testing-section fix, misc. (Reorder only;
       no voice changes.)
+      **DONE <hash>** — full-file rewrite verified to preserve every
+      prose block verbatim (content-diff vs HEAD: 19 dropped lines all
+      intentional edits, 22 added all intentional — big blocks moved
+      intact). Performance/QLP/257-354x/$33 now the first screenful;
+      Citation BibTeX + Personal Note + Future Plans moved below the
+      technical sections (promoted to ## since no longer under About).
+      Fixes: removed stale PyPI badge + replaced `pip install cuvarbase`
+      with `git+...@v1.0` (the 0.2.5 blocker); dropped the nonexistent
+      `periodograms/` module claim; examples→notebooks/ pointer;
+      Testing section now says CPU-runnable (conftest stubs, CI);
+      "What's New" no longer framed relative to master; citation-count
+      de-dated (~two dozen, late 2025); added cufinufft optional extra;
+      singular "module" for experimental TLS; 3 http→https ADS links;
+      and corrected the sparse-BLS bullet that still claimed import
+      requires a GPU (now reflects B1). New test_readme_consistency.py
+      (5 guards, fails-before: README had all 5 issues). Suite 197
+      passed; flake8 clean. No GPU dep.
 - [ ] **G3. Sphinx sources + conf.py** (T1.c): drop
       only_directives, add autodoc mocks, fix install.rst/ce.rst/
       lomb.rst/figure scripts/tau typo/fap stub/complexity claim,
