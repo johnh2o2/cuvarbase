@@ -2,7 +2,15 @@
 Implementation of the box-least squares periodogram [K2002]_
 and variants.
 
-.. [K2002] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
+The Keplerian transit-search helpers (:func:`q_transit`,
+:func:`freq_transit`, :func:`transit_autofreq`, :func:`eebls_transit`)
+assume the transiting body orbits at the host star's mean density. That
+assumption fixes the transit-duration/period relation [SM03]_ and, with
+it, the optimal frequency-grid spacing for a transit search [O2014]_.
+
+.. [K2002] `Kovacs et al. 2002, A&A 391, 369 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
+.. [SM03] `Seager & Mallen-Ornelas 2003, ApJ 585, 1038 <https://ui.adsabs.harvard.edu/abs/2003ApJ...585.1038S>`_, "A Unique Solution of Planet and Star Parameters from an Extrasolar Planet Transit Light Curve" (eq. 3-4)
+.. [O2014] `Ofir 2014, A&A 561, A138 <https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O>`_, "Optimizing the search for transiting planets in long time series" (arXiv:1307.7330; corrigendum A&A 597, C2)
 
 """
 import sys
@@ -205,6 +213,13 @@ def _reduction_max(max_func, arr, arr_args, nfreq, nbins,
 
 
 def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
+    """Minimum search frequency for a Keplerian transit grid.
+
+    The larger of (a) the frequency whose Keplerian duration holds at
+    least ``min_obs_per_transit`` samples and (b) ``2 / T`` (two cycles
+    over the baseline ``T``), the latter being the long-period limit of
+    Ofir (2014), Sect. 3.1 [O2014]_.
+    """
     T = max(t) - min(t)
     qmin = float(min_obs_per_transit) / len(t)
 
@@ -214,10 +229,28 @@ def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
 
 
 def fmax_transit0(rho=1., **kwargs):
+    """Orbital frequency of a body grazing the stellar surface.
+
+    This is the natural high-frequency cutoff for a transit search: the
+    Keplerian frequency of a circular orbit at the stellar radius,
+    :math:`f_{\\max,0} = \\sqrt{G \\rho_\\star / 3\\pi}` (period =
+    free-fall/orbit time at the surface). For ``rho = 1`` (solar mean
+    density) this evaluates to ``8.6307`` cycles/day -- a *derived*
+    constant, not a literature value. (Ofir 2014 [O2014]_ instead caps
+    at the Roche-limit frequency ``fmax0 / 3**1.5``.)
+    """
     return 8.6307 * np.sqrt(rho)
 
 
 def q_transit(freq, rho=1., **kwargs):
+    """Keplerian transit-duration fraction ``q`` at a given frequency.
+
+    Assuming a central transit (inclination 90 deg, impact parameter 0)
+    of a body orbiting at the host's mean density, the fractional transit
+    duration is :math:`q = \\arcsin[(f / f_{\\max,0})^{2/3}] / \\pi`.
+    This is Seager & Mallen-Ornelas (2003) eq. (3) reduced to ``b = 0``
+    [SM03]_, with ``fmax0`` from :func:`fmax_transit0`.
+    """
     fmax0 = fmax_transit0(rho=rho)
 
     f23 = np.power(freq / fmax0, 2./3.)
@@ -226,11 +259,21 @@ def q_transit(freq, rho=1., **kwargs):
 
 
 def freq_transit(q, rho=1., **kwargs):
+    """Frequency at which the Keplerian transit fraction equals ``q``.
+
+    Inverse of :func:`q_transit`:
+    :math:`f = f_{\\max,0}\\,\\sin(\\pi q)^{3/2}` [SM03]_.
+    """
     fmax0 = fmax_transit0(rho=rho)
     return fmax0 * (np.sin(np.pi * q) ** 1.5)
 
 
 def fmax_transit(rho=1., qmax=0.5, **kwargs):
+    """Maximum search frequency, capped by the surface-orbit cutoff.
+
+    The smaller of :func:`fmax_transit0` and the frequency whose
+    Keplerian duration reaches ``qmax`` [SM03]_.
+    """
     fmax0 = fmax_transit0(rho=rho)
     return min([fmax0, freq_transit(qmax, rho=rho, **kwargs)])
 
@@ -270,6 +313,14 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
         The frequency grid
     q0vals: array_like
         The list of Keplerian :math:`q` values.
+
+    Notes
+    -----
+    The grid is spaced by :math:`\\Delta f = q(f) / (\\mathrm{OS}\\,T)`,
+    Ofir (2014) eq. (4) [O2014]_ (with ``OS = samples_per_peak``): the
+    local frequency resolution is set by the transit duty cycle ``q(f)``,
+    so the grid is denser at high frequencies. This is far coarser than a
+    uniform grid while still Nyquist-sampling every trial transit.
 
     """
     if qmax_fac is None:

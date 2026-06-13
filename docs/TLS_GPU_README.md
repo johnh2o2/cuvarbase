@@ -98,7 +98,7 @@ periods = tls_grids.period_grid_ofir(
 )
 ```
 
-**Reference:** Ofir (2014), "An optimized transit detection algorithm to search for periodic transits of small planets", A&A 561, A138
+**Reference:** Ofir (2014), "Optimizing the search for transiting planets in long time series", A&A 561, A138 (arXiv:1307.7330)
 
 ### 4. GPU Memory Management
 
@@ -288,7 +288,7 @@ Tests cover:
 2. **Kovacs et al. (2002)**: "A box-fitting algorithm in the search for periodic transits", A&A 391, 369
    - BLS algorithm (TLS is a refinement)
 
-3. **Ofir (2014)**: "An optimized transit detection algorithm to search for periodic transits of small planets", A&A 561, A138
+3. **Ofir (2014)**: "Optimizing the search for transiting planets in long time series", A&A 561, A138 (arXiv:1307.7330)
    - Optimal period grid sampling
 
 4. **Smith et al. (2025)**: "CETRA: GPU-accelerated transit detection"

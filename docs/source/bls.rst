@@ -24,6 +24,8 @@ Using ``cuvarbase`` BLS
 A shortcut: assuming orbital mechanics
 --------------------------------------
 
+The derivation below follows Seager & Mallén-Ornelas (2003) [SM03]_: their eq. (3) relates the transit duration to the orbital period for a body transiting a star of a given mean density, and eq. (4) is the Kepler's-third-law step used here.
+
 If you assume :math:`R_p\ll R_{\star}`, :math:`M_p\ll M_{\star}`, :math:`L_p\ll L_{\star}`, and :math:`e\ll 1`,  where :math:`e` is the ellipticity of the planetary orbit, :math:`L` is the luminosity, :math:`R` is the radius, and :math:`M` mass, you can eliminate a free parameter.
 
 This is because the orbital period obeys `Kepler's third law <https://en.wikipedia.org/wiki/Kepler's_laws_of_planetary_motion#Third_law>`_,
@@ -89,14 +91,18 @@ For a typical Lomb-Scargle periodogram, the frequency spacing is :math:`\delta f
 However, if you can use the assumption that the transit is caused by an edge-on transit of a circularly orbiting planet, we not only eliminate a degree of freedom, but (assuming :math:`\sin{\pi q}\approx \pi q`)
 
 .. math::
-	
+
 	\delta f \propto q \propto f^{2/3}
 
-The minimum frequency you could hope to measure a transit period would be :math:`f_{\rm min} \approx 2/T`, and the maximum frequency is determined by :math:`\sin{\pi q} < 1` which implies
+This duty-cycle-aware spacing :math:`\delta f \approx q(f) / (\mathrm{OS}\,T)` is the optimal transit-search grid of Ofir (2014) [O2014]_ (his eq. 4, with oversampling :math:`\mathrm{OS}`); it is implemented in :func:`cuvarbase.bls.transit_autofreq` and :func:`cuvarbase.bls_frequencies.keplerian_freq_grid`.
+
+The minimum frequency you could hope to measure a transit period would be :math:`f_{\rm min} \approx 2/T` (Ofir 2014, Sect. 3.1 [O2014]_), and the maximum frequency is determined by :math:`\sin{\pi q} < 1` which implies
 
 .. math::
 
 	f_{max} = 8.612~{\rm c/day}~\times \left(1 - \frac{3r}{2} + \frac{m}{2} -\dots{}\right) \sqrt{\frac{\rho_{\star}}{\rho_{\odot}}}
+
+The leading coefficient is the surface-orbit frequency :math:`f_{\max,0} = \sqrt{G\rho_\star / 3\pi}` evaluated at solar mean density (the :math:`r, m \to 0` limit). ``cuvarbase`` uses the value ``8.6307`` c/day for this constant (see :func:`cuvarbase.bls.fmax_transit0`); the ``8.612`` here is the same derived quantity, the ~0.2% difference being the precision of the adopted :math:`G` and :math:`\rho_\odot`. It is a *derived* constant, not a literature value.
 
 
 For a 10 year baseline, this translates to :math:`2.7\times 10^5` trial frequencies. The number of trial frequencies needed to perform Lomb-Scargle over this frequency range is only about :math:`3.1\times 10^4`, so 8-10 times less. However, if we were to search the *entire* range of possible :math:`q` values at each trial frequency instead of making a Keplerian assumption, we would instead require :math:`5.35\times 10^8` trial frequencies, so the Keplerian assumption reduces the number of frequencies by over 1,000.
@@ -226,3 +232,15 @@ available via :func:`cuvarbase.bls.convert_bls_power`:
 Reported ``phi0`` values are transit *start* phases measured relative
 to ``floor(min(t))`` (observation times are epoch-subtracted internally to
 preserve float32 precision).
+
+
+References
+----------
+
+.. [SM03] Seager, S. & Mallén-Ornelas, G. (2003), "A Unique Solution of
+   Planet and Star Parameters from an Extrasolar Planet Transit Light
+   Curve", ApJ 585, 1038 (DOI 10.1086/346105).
+.. [O2014] Ofir, A. (2014), "Optimizing the search for transiting
+   planets in long time series", A&A 561, A138
+   (DOI 10.1051/0004-6361/201220860; arXiv:1307.7330; corrigendum
+   A&A 597, C2).

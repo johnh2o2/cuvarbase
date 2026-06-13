@@ -865,8 +865,8 @@ cuvarbase/
    - arXiv:1901.02015
    - A&A 623, A39
 
-2. **Ofir (2014)** - "Algorithmic considerations for continuous GW search"
-   - A&A 561, A138
+2. **Ofir (2014)** - "Optimizing the search for transiting planets in long time series"
+   - A&A 561, A138 (arXiv:1307.7330)
    - Period sampling algorithm
 
 3. **Mandel & Agol (2002)** - "Analytic Light Curves for Planetary Transit Searches"
