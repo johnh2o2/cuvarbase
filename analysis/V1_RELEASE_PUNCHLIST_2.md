@@ -107,7 +107,7 @@ via API; archive in analysis/)
       demonstrate empirically (pod microbenchmark) that ndata-only is
       within ~10% of best and document that instead. Accept: data-
       backed either way; heuristic doc updated.
-      **PREPPED ff637c3** — scripts/benchmark_block_size.py sweeps
+      **PREPPED 90bac8d** — scripts/benchmark_block_size.py sweeps
       (ndata × qmin × block_size) on both fast kernels with
       preallocated memory (kernel-only timing), reports per-cell
       heuristic-vs-best penalty + >10% offenders. Decision (extend
