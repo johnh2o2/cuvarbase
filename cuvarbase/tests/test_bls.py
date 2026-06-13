@@ -951,6 +951,156 @@ class TestEeblsGpuFastNoverlap(object):
         assert np.all(p3 >= p1 - 1e-6)
 
 
+class TestPowerConventions(object):
+    """convert_bls_power + the convention= kwarg (#17): conversions
+    validated against astropy.timeseries.BoxLeastSquares definitions
+    on shared (period, duration, phase) solutions."""
+
+    def _data(self, ndata=120, freq=1.0, q=0.06, phi0=0.42, seed=7):
+        rand = np.random.RandomState(seed)
+        t = np.sort(365.0 * rand.rand(ndata))
+        t -= np.floor(t.min())
+        sigma = 0.01
+        y = np.zeros(ndata)
+        phi = (t * freq) % 1.0
+        y[(phi > phi0) & (phi < phi0 + q)] -= 12 * sigma / np.sqrt(
+            ndata * q)
+        y += sigma * rand.randn(ndata)
+        dy = sigma * np.ones(ndata)
+        return t, y, dy
+
+    @staticmethod
+    def _chi2_0(y, dy):
+        w = np.power(np.asarray(dy, dtype=np.float64), -2)
+        ybar = np.dot(w, y) / np.sum(w)
+        return float(np.dot(w, (np.asarray(y) - ybar) ** 2))
+
+    def test_invalid_convention_raises(self):
+        from ..bls import convert_bls_power
+        t, y, dy = self._data()
+        with pytest.raises(ValueError, match="convention"):
+            convert_bls_power(0.5, y, dy, convention='banana')
+        with pytest.raises(ValueError, match="convention"):
+            sparse_bls_cpu(t, y, dy, np.array([1.0]),
+                           convention='banana')
+        with pytest.raises(ValueError, match="convention"):
+            eebls_gpu_fast(t, y, dy, np.array([1.0]),
+                           convention='banana')
+
+    def test_chi2ratio_is_identity(self):
+        from ..bls import convert_bls_power
+        t, y, dy = self._data()
+        p = np.array([0.0, 0.1, 0.5])
+        assert convert_bls_power(p, y, dy) is p
+
+    def test_conversion_definitions(self):
+        from ..bls import convert_bls_power
+        t, y, dy = self._data()
+        chi2_0 = self._chi2_0(y, dy)
+        p = np.array([0.0, 0.05, 0.3])
+        assert_allclose(convert_bls_power(p, y, dy, 'snr'),
+                        np.sqrt(chi2_0 * p))
+        assert_allclose(convert_bls_power(p, y, dy, 'loglik'),
+                        0.5 * chi2_0 * p)
+
+    def _astropy_results(self, t, y, dy, objective):
+        astropy_ts = pytest.importorskip('astropy.timeseries')
+        model = astropy_ts.BoxLeastSquares(t, y, dy=dy)
+        periods = np.linspace(0.95, 1.05, 9)
+        durations = np.array([0.04, 0.06, 0.08])
+        return model.power(periods, durations, method='slow',
+                           oversample=10, objective=objective)
+
+    def _our_power_at(self, t, y, dy, period, duration, transit_time):
+        # Evaluate the native power at astropy's exact solution.
+        # astropy's transit_time is mid-transit; single_bls phases are
+        # relative to floor(min(t)) and phi0 is the transit start.
+        freq = 1.0 / period
+        q = duration / period
+        epoch = np.floor(t.min())
+        phi0 = ((transit_time - 0.5 * duration - epoch) * freq) % 1.0
+        return single_bls(t, y, dy, freq, q, phi0), q
+
+    def test_snr_matches_astropy(self):
+        from ..bls import convert_bls_power
+        t, y, dy = self._data()
+        res = self._astropy_results(t, y, dy, 'snr')
+        for i in range(len(res.period)):
+            p_native, _ = self._our_power_at(
+                t, y, dy, res.period[i], res.duration[i],
+                res.transit_time[i])
+            snr = convert_bls_power(p_native, y, dy, 'snr')
+            assert np.abs(snr - res.power[i]) <= 2e-3 * abs(res.power[i]), \
+                f"period={res.period[i]}: ours={snr}, astropy={res.power[i]}"
+
+    def test_loglik_matches_astropy_up_to_reference(self):
+        # astropy's likelihood objective uses the out-of-transit level
+        # as the null reference, so its power equals our 'loglik'
+        # (constant-weighted-mean reference) divided by (1 - r), with
+        # r the in-transit fraction of total statistical weight.
+        from ..bls import convert_bls_power
+        t, y, dy = self._data()
+        res = self._astropy_results(t, y, dy, 'likelihood')
+        w = np.power(dy, -2.0)
+        for i in range(len(res.period)):
+            p_native, q = self._our_power_at(
+                t, y, dy, res.period[i], res.duration[i],
+                res.transit_time[i])
+            loglik = convert_bls_power(p_native, y, dy, 'loglik')
+
+            period, dur = res.period[i], res.duration[i]
+            hp = 0.5 * period
+            t0 = (res.transit_time[i] - t.min()) % period
+            m_in = np.abs((t - t.min() - t0 + hp) % period - hp) \
+                < 0.5 * dur
+            r = np.sum(w[m_in]) / np.sum(w)
+
+            expected = res.power[i] * (1.0 - r)
+            assert np.abs(loglik - expected) <= 2e-3 * abs(expected), \
+                f"period={period}: ours={loglik}, astropy(1-r)={expected}"
+
+    def test_sparse_cpu_convention_consistency(self):
+        from ..bls import convert_bls_power
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 11)
+        p_native, sols = sparse_bls_cpu(t, y, dy, freqs)
+        p_snr, sols_snr = sparse_bls_cpu(t, y, dy, freqs,
+                                         convention='snr')
+        assert_allclose(p_snr, convert_bls_power(p_native, y, dy, 'snr'),
+                        rtol=1e-6)
+        # solutions are convention-independent
+        assert sols == sols_snr
+
+    def test_eebls_transit_sparse_path_convention(self):
+        t, y, dy = self._data()
+        freqs, p_native, _ = eebls_transit(t, y, dy, fmin=0.95,
+                                           fmax=1.05, use_gpu=False)
+        freqs2, p_loglik, _ = eebls_transit(t, y, dy, fmin=0.95,
+                                            fmax=1.05, use_gpu=False,
+                                            convention='loglik')
+        chi2_0 = self._chi2_0(y, dy)
+        assert_allclose(p_loglik, 0.5 * chi2_0 * p_native, rtol=1e-6)
+
+    def test_gpu_entry_points_convention(self):
+        # GPU smoke test (pod): the kwarg flows through the standard
+        # and fast call chains and converts the returned host array.
+        from ..bls import convert_bls_power
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 50)
+
+        p0, sols = eebls_gpu(t, y, dy, freqs, qmin=0.01, qmax=0.2)
+        p_snr, _ = eebls_gpu(t, y, dy, freqs, qmin=0.01, qmax=0.2,
+                             convention='snr')
+        assert_allclose(p_snr, convert_bls_power(p0, y, dy, 'snr'),
+                        rtol=1e-4, atol=1e-6)
+
+        f0 = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.2)
+        f_log = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.2,
+                               convention='loglik')
+        assert_allclose(f_log, convert_bls_power(f0, y, dy, 'loglik'),
+                        rtol=1e-4, atol=1e-6)
+
+
 class TestCompileBlsValidation(object):
     """compile_bls should fail loudly on bad block sizes and on filter
     results that would otherwise surface as confusing KeyErrors."""

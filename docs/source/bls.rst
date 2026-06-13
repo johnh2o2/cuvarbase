@@ -180,7 +180,7 @@ per-frequency arrays) restrict the candidate durations:
 Power-spectrum convention
 -------------------------
 
-All BLS functions in cuvarbase report
+By default, all BLS functions in cuvarbase report
 
 .. math::
 
@@ -191,13 +191,37 @@ the best-fit box at frequency :math:`f` and :math:`\chi^2_0` is that
 of a constant (weighted-mean) model. :math:`P` is dimensionless and
 lies in :math:`[0, 1]`, with 1 meaning the box model fits perfectly.
 
-This differs from ``astropy.timeseries.BoxLeastSquares``, whose
-default ``objective='likelihood'`` returns the log-likelihood
-improvement, and whose ``objective='snr'`` returns the
-signal-to-noise of the depth; numerical values are **not** directly
-comparable between the two packages, although peak locations are.
-Selectable output conventions are tracked in
-`issue #17 <https://github.com/johnh2o2/cuvarbase/issues/17>`_.
+The BLS entry points accept a ``convention=`` keyword (issue
+`#17 <https://github.com/johnh2o2/cuvarbase/issues/17>`_) selecting
+among exact transformations of this quantity:
+
+* ``'chi2ratio'`` (default): :math:`P` as above.
+* ``'snr'``: :math:`\sqrt{\chi^2_0\,P}`, the (unsigned)
+  signal-to-noise ratio of the best-fit transit depth,
+  :math:`|\hat{\delta}|/\sigma_{\hat\delta}`. At the same
+  (period, duration, phase) this equals the power returned by
+  ``astropy.timeseries.BoxLeastSquares`` with ``objective='snr'``
+  (astropy reports it signed and only keeps flux dips).
+* ``'loglik'``: :math:`\chi^2_0\,P / 2`, the improvement in Gaussian
+  log-likelihood of the best two-level (in/out-of-transit) model over
+  the constant weighted-mean model. Astropy's
+  ``objective='likelihood'`` instead measures the improvement against
+  the *out-of-transit level* reference, which equals this value
+  divided by :math:`(1 - r)` where :math:`r` is the in-transit
+  fraction of the total statistical weight; for transit-like signals
+  (:math:`q \ll 1`) the two agree closely.
+
+These equivalences are verified against astropy in the test suite on
+shared (period, duration, phase) solutions. Standalone conversion is
+available via :func:`cuvarbase.bls.convert_bls_power`:
+
+.. code-block:: python
+
+    from cuvarbase.bls import eebls_transit, convert_bls_power
+
+    freqs, p, sols = eebls_transit(t, y, dy, convention='snr')
+    # ... or convert an existing chi2ratio periodogram:
+    p_loglik = convert_bls_power(p_chi2ratio, y, dy, 'loglik')
 
 Reported ``phi0`` values are transit *start* phases measured relative
 to ``floor(min(t))`` (observation times are epoch-subtracted internally to

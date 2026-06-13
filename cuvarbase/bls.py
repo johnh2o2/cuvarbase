@@ -558,11 +558,17 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
                          force_nblocks=None, dphi=0.0,
                          shmem_lim=None, freq_batch_size=None,
                          transfer_to_device=True,
-                         transfer_to_host=True, **kwargs):
+                         transfer_to_host=True,
+                         convention='chi2ratio', **kwargs):
     """Shared implementation behind :func:`eebls_gpu_fast` and
     :func:`eebls_gpu_fast_optimized`; see their docstrings for the
     parameter descriptions."""
     _validate_noverlap(noverlap)
+    _validate_convention(convention)
+    if convention != 'chi2ratio' and not transfer_to_host:
+        raise ValueError("convention=%r requires transfer_to_host=True "
+                         "(the device-side periodogram is always "
+                         "'chi2ratio')" % (convention,))
 
     if functions is None:
         # Use the thread-safe LRU kernel cache (compilation costs ~150 ms
@@ -673,6 +679,8 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
         memory.transfer_data_to_cpu()
         if stream is not None:
             stream.synchronize()
+        return convert_bls_power(memory.bls, y, dy,
+                                 convention=convention)
 
     return memory.bls
 
@@ -732,6 +740,11 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         between bin boundaries (important when the best ``q`` is close
         to ``qmin``); runtime scales linearly with ``noverlap``.
         ``noverlap=1`` is a single unshifted pass.
+    convention: str, optional (default: 'chi2ratio')
+        Power-spectrum convention for the returned periodogram
+        ('chi2ratio', 'snr' or 'loglik'); see
+        :func:`convert_bls_power`. Requires ``transfer_to_host=True``
+        for non-default values.
     dphi: float, optional (default: 0.)
         Base phase-bin offset in units of the finest grid spacing;
         pass ``i_pass`` adds ``i_pass / noverlap`` to it.
@@ -964,7 +977,7 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
                      ignore_negative_delta_sols=False,
                      freq_batch_size=None, nstreams=5, max_memory=None,
-                     functions=None, **kwargs):
+                     functions=None, convention='chi2ratio', **kwargs):
     """
     Box-Least Squares, with custom q and phi values. Useful
     if you're honing the initial solution or testing between
@@ -1148,7 +1161,9 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
     qphi_sols = list(zip(best_q, best_phi))
 
-    return bls_g.get()/YY, qphi_sols
+    return (convert_bls_power(bls_g.get() / YY, y, dy,
+                              convention=convention),
+            qphi_sols)
 
 
 def dnbins(nbins, dlogq):
@@ -1181,7 +1196,8 @@ def count_tot_nbins(nbins0, nbinsf, dlogq):
 def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
               ignore_negative_delta_sols=False,
               nstreams=5, noverlap=3, dlogq=0.2, max_memory=None,
-              freq_batch_size=None, functions=None, **kwargs):
+              freq_batch_size=None, functions=None,
+              convention='chi2ratio', **kwargs):
 
     """
     Box-Least Squares, accelerated with PyCUDA
@@ -1217,11 +1233,16 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         as returned by ``pycuda.driver.mem_get_info`` if this is ``None``.
     functions: tuple of CUDA functions
         returned by ``compile_bls``
+    convention: str, optional (default: 'chi2ratio')
+        Power-spectrum convention for the returned periodogram
+        ('chi2ratio', 'snr' or 'loglik'); see
+        :func:`convert_bls_power`.
 
     Returns
     -------
     bls: array_like, float
-        BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
+        BLS periodogram; in the default convention, normalized to
+        :math:`1 - \chi^2(f) / \chi^2_0`
     qphi_sols: list of ``(q, phi)`` tuples
         Best ``(q, phi)`` solution at each frequency; ``phi`` is
         measured relative to ``floor(min(t))`` (times are epoch-subtracted
@@ -1233,6 +1254,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         if isinstance(arr, float) or isinstance(arr, int):
             return arr
         return ext(arr[slice(imin, imax)])
+
+    _validate_convention(convention)
 
     functions = functions if functions is not None \
         else compile_bls(**kwargs)
@@ -1383,7 +1406,9 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     qphi_sols = list(zip(best_q, best_phi))
 
-    return bls_g.get()/YY, qphi_sols
+    return (convert_bls_power(bls_g.get() / YY, y, dy,
+                              convention=convention),
+            qphi_sols)
 
 
 def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
@@ -1436,6 +1461,80 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     return 0 if W < 1e-9 else (YW ** 2) / (W * (1 - W)) / YY
 
 
+_BLS_POWER_CONVENTIONS = ('chi2ratio', 'snr', 'loglik')
+
+
+def _chi2_null(y, dy):
+    """Weighted chi-squared of the constant (weighted-mean) model,
+    computed in float64; the normalization connecting the BLS power
+    conventions."""
+    y = np.asarray(y, dtype=np.float64)
+    w = np.power(np.asarray(dy, dtype=np.float64), -2)
+    ybar = np.dot(w, y) / np.sum(w)
+    return float(np.dot(w, np.power(y - ybar, 2)))
+
+
+def _validate_convention(convention):
+    if convention not in _BLS_POWER_CONVENTIONS:
+        raise ValueError("convention must be one of %s, got %r"
+                         % (_BLS_POWER_CONVENTIONS, convention))
+
+
+def convert_bls_power(power, y, dy, convention='chi2ratio'):
+    """
+    Convert the native BLS power to another power-spectrum convention.
+
+    The native convention ('chi2ratio') is
+
+    .. math::
+
+        P = 1 - \\chi^2 / \\chi^2_0
+
+    where :math:`\\chi^2` is the weighted sum of squared residuals of
+    the best-fit box and :math:`\\chi^2_0` that of the constant
+    (weighted-mean) model.
+
+    Parameters
+    ----------
+    power: array_like or float
+        BLS power(s) in the native 'chi2ratio' convention.
+    y: array_like, float
+        Observations (used to compute :math:`\\chi^2_0`).
+    dy: array_like, float
+        Observation uncertainties.
+    convention: str, optional (default: 'chi2ratio')
+        One of:
+
+        * ``'chi2ratio'``: the native power, returned unchanged.
+        * ``'snr'``: :math:`\\sqrt{\\chi^2_0 P}` -- the unsigned
+          signal-to-noise of the best-fit transit depth,
+          :math:`|\\hat{\\delta}| / \\sigma_{\\hat{\\delta}}`. Equals
+          ``astropy.timeseries.BoxLeastSquares`` power with
+          ``objective='snr'`` at the same (period, duration, phase)
+          (astropy reports it signed and keeps dips only).
+        * ``'loglik'``: :math:`\\chi^2_0 P / 2` -- the improvement in
+          Gaussian log-likelihood of the best two-level (in/out of
+          transit) model over the constant weighted-mean model.
+          Note: astropy's ``objective='likelihood'`` power uses the
+          out-of-transit level as its reference instead, so it equals
+          this value divided by :math:`(1 - r)`, with :math:`r` the
+          in-transit fraction of the total statistical weight; the
+          two agree in the transit limit :math:`q \\ll 1`.
+
+    Returns
+    -------
+    power: array_like or float
+        Power(s) in the requested convention.
+    """
+    _validate_convention(convention)
+    if convention == 'chi2ratio':
+        return power
+    chi2_0 = _chi2_null(y, dy)
+    if convention == 'snr':
+        return np.sqrt(chi2_0 * np.asarray(power))
+    return 0.5 * chi2_0 * np.asarray(power)  # 'loglik'
+
+
 def _broadcast_q_bound(value, nfreqs, default, name):
     """Broadcast a transit-duration bound (scalar or per-frequency
     array; ``None`` means ``default``) to a float array of length
@@ -1453,7 +1552,8 @@ def _broadcast_q_bound(value, nfreqs, default, name):
 
 
 def sparse_bls_cpu(t, y, dy, freqs, qmin=None, qmax=None,
-                   ignore_negative_delta_sols=False):
+                   ignore_negative_delta_sols=False,
+                   convention='chi2ratio'):
     """
     Sparse BLS implementation for CPU (no binning, tests all pairs of observations).
 
@@ -1482,6 +1582,9 @@ def sparse_bls_cpu(t, y, dy, freqs, qmin=None, qmax=None,
         ``None`` means the algorithm's standard upper cutoff of 0.5.
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore solutions with negative delta (inverted dips)
+    convention: str, optional (default: 'chi2ratio')
+        Power-spectrum convention for the returned powers ('chi2ratio',
+        'snr' or 'loglik'); see :func:`convert_bls_power`.
 
     Returns
     -------
@@ -1491,6 +1594,8 @@ def sparse_bls_cpu(t, y, dy, freqs, qmin=None, qmax=None,
         Best (q, phi0) solution at each frequency; ``phi0`` is measured
         relative to ``floor(min(t))``
     """
+    _validate_convention(convention)
+
     t = subtract_epoch(t)[0].astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
@@ -1592,7 +1697,8 @@ def sparse_bls_cpu(t, y, dy, freqs, qmin=None, qmax=None,
             best_phi[i_freq] = phi_s[ii]
 
     solutions = list(zip(best_q, best_phi))
-    return bls_powers, solutions
+    return (convert_bls_power(bls_powers, y, dy, convention=convention),
+            solutions)
 
 
 def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwargs):
@@ -1630,7 +1736,8 @@ def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwarg
 def sparse_bls_gpu(t, y, dy, freqs, qmin=None, qmax=None,
                    ignore_negative_delta_sols=False,
                    block_size=64, max_ndata=None,
-                   stream=None, kernel=None, use_simple=False):
+                   stream=None, kernel=None, use_simple=False,
+                   convention='chi2ratio'):
     """
     GPU-accelerated sparse BLS implementation.
 
@@ -1670,6 +1777,9 @@ def sparse_bls_gpu(t, y, dy, freqs, qmin=None, qmax=None,
         Pre-compiled kernel. If None, compiles kernel automatically.
     use_simple: bool, optional (default: False)
         Use simple kernel (bubble sort). Passed to compile_sparse_bls.
+    convention: str, optional (default: 'chi2ratio')
+        Power-spectrum convention for the returned powers ('chi2ratio',
+        'snr' or 'loglik'); see :func:`convert_bls_power`.
 
     Returns
     -------
@@ -1679,6 +1789,8 @@ def sparse_bls_gpu(t, y, dy, freqs, qmin=None, qmax=None,
         Best (q, phi0) solution at each frequency; ``phi0`` is measured
         relative to ``floor(min(t))``
     """
+    _validate_convention(convention)
+
     # Convert to numpy arrays (epoch-subtract before the float32 cast)
     t = subtract_epoch(t)[0].astype(np.float32)
     y = np.asarray(y).astype(np.float32)
@@ -1755,7 +1867,8 @@ def sparse_bls_gpu(t, y, dy, freqs, qmin=None, qmax=None,
     best_phi = best_phi_g.get()
 
     solutions = list(zip(best_q, best_phi))
-    return bls_powers, solutions
+    return (convert_bls_power(bls_powers, y, dy, convention=convention),
+            solutions)
 
 
 def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
@@ -1819,7 +1932,10 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         `fmax_transit`, `fmin_transit`, and `transit_autofreq`. On the
         sparse path, only the kwargs that `sparse_bls_gpu` accepts
         (``block_size``, ``max_ndata``, ``stream``, ``kernel``,
-        ``use_simple``) are forwarded to it.
+        ``use_simple``, ``convention``) are forwarded to it. A
+        ``convention=`` kwarg ('chi2ratio', 'snr' or 'loglik'; see
+        :func:`convert_bls_power`) selects the power-spectrum
+        convention on every path.
 
         .. note::
 
@@ -1877,7 +1993,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
             # (rho, samples_per_peak, dlogq, ...) belong to the frequency
             # grid helpers or standard-BLS layers above.
             sparse_keys = ('block_size', 'max_ndata', 'stream', 'kernel',
-                           'use_simple')
+                           'use_simple', 'convention')
             sparse_kwargs = {k: v for k, v in kwargs.items()
                              if k in sparse_keys}
             powers, sols = sparse_bls_gpu(t, y, dy, freqs,
@@ -1886,9 +2002,10 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                                           **sparse_kwargs)
         else:
             # Use CPU sparse BLS (fallback)
-            powers, sols = sparse_bls_cpu(t, y, dy, freqs,
-                                          qmin=qmins, qmax=qmaxes,
-                                          ignore_negative_delta_sols=ignore_negative_delta_sols)
+            powers, sols = sparse_bls_cpu(
+                t, y, dy, freqs, qmin=qmins, qmax=qmaxes,
+                ignore_negative_delta_sols=ignore_negative_delta_sols,
+                convention=kwargs.get('convention', 'chi2ratio'))
         return freqs, powers, sols
 
     # Use GPU BLS for larger datasets
@@ -1966,7 +2083,7 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
                     noverlap=2, dlogq=0.3, dphi=0.0,
                     ignore_negative_delta_sols=False,
                     max_batch_lcs=256, block_size=None,
-                    functions=None, **kwargs):
+                    functions=None, convention='chi2ratio', **kwargs):
     """
     Process multiple lightcurves in batched GPU operations.
 
@@ -2024,6 +2141,7 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
     freqs = np.asarray(freqs).astype(np.float32)
     nfreq = len(freqs)
     n_total = len(lightcurves)
+    _validate_convention(convention)
     _warn_if_batch_inefficient(max(len(lc[0]) for lc in lightcurves))
 
     # Group LCs by similar ndata to minimize padding
@@ -2115,7 +2233,9 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
 
         # Store results in original order
         for j, orig_idx in enumerate(batch_indices):
-            all_results[orig_idx] = batch_results[j]
+            _, y_j, dy_j = lightcurves[orig_idx]
+            all_results[orig_idx] = convert_bls_power(
+                batch_results[j], y_j, dy_j, convention=convention)
 
         i = batch_end
 
