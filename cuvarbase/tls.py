@@ -27,13 +27,13 @@ warnings.warn(
     "transit searches use cuvarbase.bls (eebls_transit).",
     UserWarning)
 
-import pycuda.autoprimaryctx  # noqa: E402
-import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
-from pycuda.compiler import SourceModule
+import pycuda.driver as cuda  # noqa: E402
+import pycuda.gpuarray as gpuarray  # noqa: E402
+from pycuda.compiler import SourceModule  # noqa: E402
 
 import numpy as np
 
+from .base import ensure_context  # noqa: E402
 from .utils import find_kernel, _module_reader
 from . import tls_grids
 from . import tls_models
@@ -164,6 +164,9 @@ def compile_tls(block_size=_default_block_size):
     The 'keplerian' kernel variant accepts per-period qmin/qmax arrays
     to focus the duration search on physically plausible values.
     """
+    # Compiling a kernel needs an active CUDA context (lazily created).
+    ensure_context()
+
     cppd = dict(BLOCK_SIZE=block_size)
 
     kernel_name = 'tls'
@@ -211,6 +214,9 @@ class TLSMemory:
     """
 
     def __init__(self, max_ndata, max_nperiods, stream=None, **kwargs):
+        # Constructing GPU memory is a "first GPU use" -- retain the CUDA
+        # primary context now (no longer created eagerly at import).
+        ensure_context()
         self.max_ndata = max_ndata
         self.max_nperiods = max_nperiods
         self.stream = stream

@@ -7,6 +7,8 @@ import numpy as np
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 
+from ..base import ensure_context
+
 
 class ConditionalEntropyMemory:
     """
@@ -34,6 +36,9 @@ class ConditionalEntropyMemory:
     """
     
     def __init__(self, **kwargs):
+        # Constructing GPU memory is a "first GPU use" -- retain the CUDA
+        # primary context now (no longer created eagerly at import).
+        ensure_context()
         self.phase_bins = kwargs.get('phase_bins', 10)
         self.mag_bins = kwargs.get('mag_bins', 5)
         self.phase_overlap = kwargs.get('phase_overlap', 0)

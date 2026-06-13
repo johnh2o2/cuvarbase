@@ -6,5 +6,6 @@ periodogram implementations.
 """
 
 from .async_process import GPUAsyncProcess
+from .context import ensure_context
 
-__all__ = ['GPUAsyncProcess']
+__all__ = ['GPUAsyncProcess', 'ensure_context']

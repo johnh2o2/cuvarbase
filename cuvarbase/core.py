@@ -6,6 +6,6 @@ base module. New code should import from cuvarbase.base instead.
 """
 
 # Import from new location for backward compatibility
-from .base import GPUAsyncProcess
+from .base import GPUAsyncProcess, ensure_context
 
-__all__ = ['GPUAsyncProcess']
+__all__ = ['GPUAsyncProcess', 'ensure_context']

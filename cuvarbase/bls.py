@@ -10,13 +10,11 @@ import threading
 import warnings
 from collections import OrderedDict
 
-#import pycuda.autoinit
-import pycuda.autoprimaryctx
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess
+from .core import GPUAsyncProcess, ensure_context
 from .utils import find_kernel, _module_reader, subtract_epoch
 from .memory.bls_memory import BLSBatchMemory
 
@@ -104,6 +102,13 @@ def _get_cached_kernels(block_size, use_optimized=False, function_names=None):
     """
     if function_names is None:
         function_names = _all_function_names
+
+    # Ensure a CUDA context exists before returning kernels, even on a
+    # cache hit (compile_bls only runs on a miss): callers go straight on
+    # to launches/memory allocation, so kernel acquisition must
+    # self-guarantee the context rather than rely on a warm-cache having
+    # been compiled in this process. Idempotent/cached after first call.
+    ensure_context()
 
     # Create cache key from block size, optimization flag, and function names
     key = (block_size, use_optimized, tuple(sorted(function_names)))
@@ -329,6 +334,9 @@ def compile_bls(block_size=_default_block_size,
     """
     _validate_block_size(block_size)
 
+    # Compiling a kernel needs an active CUDA context (lazily created).
+    ensure_context()
+
     # Read kernel
     cppd = dict(BLOCK_SIZE=block_size)
     kernel_name = 'bls_optimized' if use_optimized else 'bls'
@@ -371,6 +379,9 @@ def compile_bls(block_size=_default_block_size,
 
 class BLSMemory:
     def __init__(self, max_ndata, max_nfreqs, stream=None, **kwargs):
+        # Constructing GPU memory is a "first GPU use" -- retain the CUDA
+        # primary context now (no longer created eagerly at import).
+        ensure_context()
         self.max_ndata = max_ndata
         self.max_nfreqs = max_nfreqs
         self.t = None
@@ -587,7 +598,7 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
 
     if shmem_lim is None:
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
-        shmem_lim = pycuda.autoprimaryctx.device.get_attribute(att)
+        shmem_lim = ensure_context().device.get_attribute(att)
 
     if memory is None:
         memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
@@ -1718,6 +1729,9 @@ def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwarg
     kernel: PyCUDA function
         The compiled sparse_bls_kernel function
     """
+    # Compiling a kernel needs an active CUDA context (lazily created).
+    ensure_context()
+
     kernel_name = 'sparse_bls_simple' if use_simple else 'sparse_bls'
     cppd = dict(BLOCK_SIZE=block_size)
     kernel_txt = _module_reader(find_kernel(kernel_name),
@@ -2054,6 +2068,9 @@ def compile_bls_batch(block_size=_default_block_size, **kwargs):
     """
     _validate_block_size(block_size)
 
+    # Compiling a kernel needs an active CUDA context (lazily created).
+    ensure_context()
+
     cppd = dict(BLOCK_SIZE=block_size)
     kernel_txt = _module_reader(find_kernel('bls_batch'), cpp_defs=cppd)
     module = SourceModule(kernel_txt, options=['--use_fast_math'])
@@ -2167,7 +2184,7 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
 
     shmem_lim = kwargs.get('shmem_lim', None)
     if shmem_lim is None:
-        dev = pycuda.autoprimaryctx.device
+        dev = ensure_context().device
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
         shmem_lim = dev.get_attribute(att)
 

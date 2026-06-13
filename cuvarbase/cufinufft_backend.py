@@ -34,6 +34,8 @@ except ImportError:
 
 import pycuda.gpuarray as gpuarray
 
+from .base import ensure_context
+
 # LRU cache of cufinufft Plans keyed on (nf_total, eps, n_pts,
 # gpu_method). Plan creation (cuFFT plan + GPU workspace allocation)
 # dominated the per-call cost of this backend; reuse amortizes it.
@@ -141,6 +143,10 @@ def cufinufft_nfft_adjoint(memory, minimum_frequency=0.0,
         The NFFT result on CPU (only if transfer_to_host=True).
     """
     check_cufinufft()
+
+    # Creating cufinufft Plans and touching GPU arrays needs an active
+    # CUDA context (lazily created; idempotent after first call).
+    ensure_context()
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()

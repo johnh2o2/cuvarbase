@@ -1,11 +1,15 @@
 import numpy as np
 from ..utils import gaussian_window, tophat_window, get_autofreqs
+from .context import ensure_context
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
 
 class GPUAsyncProcess:
     def __init__(self, *args, **kwargs):
+        # Constructing any GPU process is a "first GPU use" -- retain the
+        # CUDA primary context now (no longer done eagerly at import).
+        ensure_context()
         self.reader = kwargs.get('reader', None)
         self.nstreams = kwargs.get('nstreams', None)
         self.function_kwargs = kwargs.get('function_kwargs', {})

@@ -1,5 +1,9 @@
-# import pycuda.autoinit causes problems when running e.g. FFT
-import pycuda.autoprimaryctx
+# The CUDA primary context is created lazily on first GPU use (see
+# cuvarbase.base.ensure_context), NOT at import. `import cuvarbase` and
+# the CPU-only helpers therefore require neither a GPU nor a CUDA
+# context. The GPU modules still import pycuda.driver at module top, so
+# the pycuda package remains a dependency for them -- but importing them
+# no longer allocates a context.
 
 # Version
 __version__ = "1.0.0"
