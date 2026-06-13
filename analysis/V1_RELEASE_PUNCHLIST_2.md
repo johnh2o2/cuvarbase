@@ -178,7 +178,7 @@ via API; archive in analysis/)
       goal: no CUDA context, document whether pycuda-the-package
       remains an import dependency); all GPU paths still pass on pod;
       README CPU-helper caveat updated/removed.
-      **DONE <hash>** — new helper `cuvarbase.base.ensure_context()`
+      **DONE ccd5bc9** — new helper `cuvarbase.base.ensure_context()`
       (base/context.py) retains the primary context lazily on first GPU
       use (defers to pycuda.autoprimaryctx; CUDA_DEVICE honored via its
       make_default_context). Eager import removed from __init__.py +
