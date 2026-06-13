@@ -65,7 +65,13 @@ ALL PASSED.
 - [x] B1: lazy CUDA context — import creates no context; context on
       first GPU use across every path; full suite green with real
       pycuda. No "no active context" errors.
-- [ ] items accumulate here as work proceeds
+**Batch 2 queue (accumulating; CPU-side landed, GPU-pending):**
+- [ ] B2: in-house cuFFT binding (cuvarbase._cufft) — on an A5000 with
+      libcufft: (a) test_nfft FFT-vs-fftpack check passes (binding
+      correctness), (b) full LS + NFFT GPU suite green, (c) perf within
+      ±10% of a scikit-cuda baseline (pip install scikit-cuda there and
+      compare an LS run both ways). If green → drop scikit-cuda dep +
+      _skcuda_compat + numpy patch, close #63.
 
 ## A. Contained code items (do first)
 
@@ -214,6 +220,23 @@ ALL PASSED.
       (measure both); #63 closable; CHANGELOG known-limitation
       removed. Supersedes the deferral comment posted on #63
       (post follow-up at release).
+      **IMPLEMENTED (CPU) 1194127 — box open pending GPU validation +
+      dep drop.** DECISION: direct ctypes binding over cupy (cupy is a
+      heavy CUDA-version-specific dep; the cuFFT surface used is 3 calls;
+      skcuda was itself a ctypes binding). New cuvarbase/_cufft.py binds
+      libcufft (Plan/fft/ifft/cufftEstimate1d, C2C+Z2Z, lazy lib load);
+      cunfft/lombscargle/nfft_memory + test_nfft now use it, so NO module
+      imports scikit-cuda (lazy-import test flipped: LS/NFFT import with
+      skcuda broken). Adversarially reviewed vs the cuFFT C API (5 dims,
+      web-verified, 0 blockers; analysis/b2-cufft-binding-review-jun2026
+      .json) — all signatures/constants/pointers correct; 4 minor
+      lib-discovery findings fixed (glob pip-wheel + toolkit lib64,
+      RTLD_GLOBAL, LD_LIBRARY_PATH-aware error, atexit __del__ guard).
+      Suite 197 passed; flake8 clean. REMAINING (after pod batch 2):
+      binding-vs-fftpack parity + full LS/NFFT suite green + perf within
+      ±10% of skcuda → then drop scikit-cuda dep + _skcuda_compat shim +
+      numpy patch, remove CHANGELOG limitation, close #63. skcuda kept in
+      deps for now only as the perf baseline.
 - [ ] **B3. True pinned host buffers** — restore page-locked memory
       (cuda.pagelocked_empty or register_host_memory) in
       BLSMemory/BLSBatchMemory/NFFT/LS/CE memory classes behind a
