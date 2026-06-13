@@ -336,7 +336,7 @@ ALL PASSED.
       screenful; BibTeX + personal note down), periodograms/ claim,
       notebooks/ pointer, Testing-section fix, misc. (Reorder only;
       no voice changes.)
-      **DONE <hash>** — full-file rewrite verified to preserve every
+      **DONE 2cbe81c** — full-file rewrite verified to preserve every
       prose block verbatim (content-diff vs HEAD: 19 dropped lines all
       intentional edits, 22 added all intentional — big blocks moved
       intact). Performance/QLP/257-354x/$33 now the first screenful;
