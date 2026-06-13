@@ -145,7 +145,7 @@ via API; archive in analysis/)
       keep the drift-guard test as the invariant. Accept: shared
       functions defined once; both kernels compile + gate passes on
       pod; drift test simplified to assert the include mechanism.
-      **DONE bf2c34b** — added a Python-side `//{INCLUDE bls_common.cuh}`
+      **DONE 5ee3a88** — added a Python-side `//{INCLUDE bls_common.cuh}`
       directive (expanded by utils._module_reader at load time; nvcc
       never sees an #include since pycuda compiles from the assembled
       string). The 13 shared device/global functions now live once in
