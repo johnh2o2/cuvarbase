@@ -53,6 +53,7 @@ What's new in cuvarbase
         * GitHub Actions CI: CPU test suite (108 tests; GPU tests stubbed/skipped) on Python 3.9-3.12 + build-wheel-install-import packaging check; flake8 error class enforced
         * Root ``conftest.py`` stubs pycuda/skcuda so the suite runs on GPU-less machines
         * Removed vestigial ``cuvarbase.periodograms`` scaffolding
+        * Single-sourced the device/global functions shared by ``bls.cu`` and ``bls_optimized.cu`` into ``bls_common.cuh``, inlined via a ``//{INCLUDE ...}`` directive expanded at load time (``_module_reader``). Removes the drift hazard that once let the ``reduction_max`` s>32 bug be fixed in only one copy; the kernel-drift test now asserts the include mechanism. No behavior change — every assembled function body is byte-identical to the pre-refactor source
         * Benchmark suite (``scripts/benchmark_*.py``) and multi-GPU results in ``docs/BENCHMARK_RESULTS.md``
     * **Docs**
         * Performance claims re-grounded in measured data (257-354x vs astropy BoxLeastSquares across 7 GPU architectures for standard BLS; honest small-problem caveats for LS)

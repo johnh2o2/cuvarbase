@@ -55,7 +55,7 @@ Repository = "https://github.com/johnh2o2/cuvarbase"
 include = ["cuvarbase*"]
 
 [tool.setuptools.package-data]
-cuvarbase = ["kernels/*.cu"]
+cuvarbase = ["kernels/*.cu", "kernels/*.cuh"]
 
 [tool.setuptools.dynamic]
 version = {attr = "cuvarbase.__version__"}
