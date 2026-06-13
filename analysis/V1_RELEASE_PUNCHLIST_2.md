@@ -58,6 +58,11 @@ via API; archive in analysis/)
       eebls_gpu + eebls_gpu_fast chains; host-side conversion
       identity) + TestPowerConventions group on pod (pip install
       astropy there)
+- [ ] A6: both BLS kernels must compile after the bls_common.cuh
+      single-source refactor — run the full BLS GPU test group
+      (standard + optimized + adaptive paths) and check_release_gate.py
+      on pod; confirm `//{INCLUDE}` expands correctly under the editable
+      install path (the MultiplexedPath gotcha from memory)
 - [ ] items accumulate here as work proceeds
 
 ## A. Contained code items (do first)
@@ -134,12 +139,26 @@ via API; archive in analysis/)
       (out-of-transit reference) — relation tested with r from the
       solution mask. bls.rst section rewritten; CHANGELOG; #17
       closable at release (H2). GPU queue: kwarg-flow smoke test.
-- [ ] **A6. Kernel templating merge (bls.cu/bls_optimized.cu)** —
+- [x] **A6. Kernel templating merge (bls.cu/bls_optimized.cu)** —
       single-source the shared device functions (Jinja-style include
       via _module_reader cpp_defs or a common .cuh inlined at load);
       keep the drift-guard test as the invariant. Accept: shared
       functions defined once; both kernels compile + gate passes on
       pod; drift test simplified to assert the include mechanism.
+      **DONE bf2c34b** — added a Python-side `//{INCLUDE bls_common.cuh}`
+      directive (expanded by utils._module_reader at load time; nvcc
+      never sees an #include since pycuda compiles from the assembled
+      string). The 13 shared device/global functions now live once in
+      kernels/bls_common.cuh; bls.cu keeps only full_bls_no_sol +
+      full-tree reduction_max, bls_optimized.cu only
+      full_bls_no_sol_optimized + warp-shuffle reduction_max
+      (mod1_fast→mod1, identical body). Drift test rewritten to assert
+      the include mechanism (directive present, shared funcs defined
+      once and never redefined in either .cu, directive expands). No
+      behavior change: every assembled function body is byte-identical
+      (normalized) to the pre-refactor HEAD (verified in-script). GPU
+      queue: both kernels must compile + gate pass on pod (the assembled
+      source changed shape).
 
 ## B. Architecture items
 

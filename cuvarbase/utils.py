@@ -1,5 +1,6 @@
 from copy import deepcopy
 import os
+import re
 import numpy as np
 
 
@@ -55,8 +56,37 @@ def find_kernel(name):
                         'kernels', f'{name}.cu')
 
 
+# ``//{INCLUDE filename}`` directive: inlined by _module_reader at load
+# time, resolved relative to the including file's directory. This lets
+# shared device code live in a single source file (e.g. bls_common.cuh)
+# without an nvcc include path -- pycuda's SourceModule compiles from the
+# assembled string, so nvcc never sees an #include of our own files.
+_INCLUDE_RE = re.compile(r'^[ \t]*//\{INCLUDE\s+([^\s}]+)\}[ \t]*$', re.M)
+
+
+def _expand_includes(txt, base_dir, _seen=None):
+    """Recursively inline ``//{INCLUDE filename}`` directives."""
+    if _seen is None:
+        _seen = set()
+
+    def _sub(match):
+        name = match.group(1)
+        real = os.path.abspath(os.path.join(base_dir, name))
+        if real in _seen:
+            raise ValueError("circular kernel include: %s" % name)
+        _seen.add(real)
+        with open(real, 'r') as f:
+            included = f.read()
+        return _expand_includes(included, os.path.dirname(real), _seen)
+
+    return _INCLUDE_RE.sub(_sub, txt)
+
+
 def _module_reader(fname, cpp_defs=None):
     txt = open(fname, 'r').read()
+
+    # Inline shared device code before any other substitution.
+    txt = _expand_includes(txt, os.path.dirname(os.path.abspath(fname)))
 
     if cpp_defs is None:
         return txt
