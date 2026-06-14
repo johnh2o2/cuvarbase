@@ -96,7 +96,6 @@ Future developments may include:
 
 - (Weighted) wavelet transforms
 - Spectrograms (for PDM and GLS)
-- Multiharmonic extensions for GLS
 
 ## Installation
 
