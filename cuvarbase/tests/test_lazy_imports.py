@@ -128,13 +128,11 @@ def test_no_cuda_context_until_first_gpu_use():
     assert 'OK' in result.stdout
 
 
-def test_nufft_lrt_removed_from_package():
-    # NUFFT-LRT was cut from the v1.0 wheel (source preserved on the
-    # feature/nufft-lrt-experimental branch); the package must not
-    # expose it anymore.
+def test_nufft_lrt_restored_to_package():
+    # NUFFT-LRT (contributed by Jamila Taaki / @xiaziyna) is reinstated in
+    # v1.0 with the GPU NFFT rewire; the package must expose it again.
     import cuvarbase
-    assert 'NUFFTLRTAsyncProcess' not in cuvarbase.__all__
-    with pytest.raises(AttributeError):
-        cuvarbase.nufft_lrt
-    with pytest.raises(ImportError):
-        import cuvarbase.nufft_lrt  # noqa: F401
+    assert 'NUFFTLRTAsyncProcess' in cuvarbase.__all__
+    assert callable(cuvarbase.NUFFTLRTAsyncProcess)
+    assert callable(cuvarbase.NUFFTLRTMemory)
+    import cuvarbase.nufft_lrt  # noqa: F401

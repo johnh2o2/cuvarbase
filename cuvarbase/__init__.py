@@ -28,15 +28,14 @@ _LAZY_ATTRS = {
     'LombScargleAsyncProcess': '.lombscargle',
     'lomb_scargle_async': '.lombscargle',
     'PDMAsyncProcess': '.pdm',
+    'NUFFTLRTAsyncProcess': '.nufft_lrt',
+    'NUFFTLRTMemory': '.nufft_lrt',
 }
 
-# NUFFT-LRT was cut from the v1.0 wheel (CPU-bound implementation with
-# a uniform-grid-span limitation); the source lives on the
-# feature/nufft-lrt-experimental branch pending a GPU rewire.
 _SUBMODULES = {
     'base', 'memory', 'core', 'utils',
     'bls', 'bls_frequencies', 'ce', 'cunfft', 'lombscargle', 'pdm',
-    'cufinufft_backend',
+    'cufinufft_backend', 'nufft_lrt',
     'tls', 'tls_grids', 'tls_models', 'tls_stats',
 }
 
@@ -49,6 +48,8 @@ __all__ = [
     'ConditionalEntropyAsyncProcess',
     'LombScargleAsyncProcess',
     'PDMAsyncProcess',
+    'NUFFTLRTAsyncProcess',
+    'NUFFTLRTMemory',
 ]
 
 
