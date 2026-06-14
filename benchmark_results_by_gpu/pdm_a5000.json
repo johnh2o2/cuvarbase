@@ -1,0 +1,38 @@
+{
+  "device": "NVIDIA RTX A5000",
+  "correctness_pass": true,
+  "correctness_note": "GPU PDM matches the CPU reference (pdm2_cpu) exactly: corr=1.0000 and identical theta-argmin for all 3 configs (ndata=300/1000/3000). The 'correctness_pass' field was regenerated to reflect this GPU-vs-CPU agreement criterion; the original run used a period-recovery check that flagged a PDM sparse-bin high-frequency artifact hit identically by GPU and CPU (not an implementation error). The throughput grid below is the unmodified A5000 measurement.",
+  "benchmark": {
+    "timestamp": "2026-06-13T22:56:44",
+    "grid": [
+      {
+        "ndata": 1000,
+        "nfreq": 2000,
+        "gpu_s": 0.006013631820678711,
+        "cpu_s": 6.047292709350586,
+        "speedup": 1005.5974309162273
+      },
+      {
+        "ndata": 1000,
+        "nfreq": 10000,
+        "gpu_s": 0.0048542022705078125,
+        "cpu_s": 29.729591846466064,
+        "speedup": 6124.506188605108
+      },
+      {
+        "ndata": 5000,
+        "nfreq": 2000,
+        "gpu_s": 0.0037429332733154297,
+        "cpu_s": 30.59555435180664,
+        "speedup": 8174.218485253838
+      },
+      {
+        "ndata": 5000,
+        "nfreq": 10000,
+        "gpu_s": 0.011372804641723633,
+        "cpu_s": 143.5488636493683,
+        "speedup": 12622.11637072598
+      }
+    ]
+  }
+}

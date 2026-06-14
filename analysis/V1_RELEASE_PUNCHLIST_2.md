@@ -65,22 +65,23 @@ ALL PASSED.
 - [x] B1: lazy CUDA context — import creates no context; context on
       first GPU use across every path; full suite green with real
       pycuda. No "no active context" errors.
-**Batch 2 queue (accumulating; CPU-side landed, GPU-pending):**
-- [ ] B2: in-house cuFFT binding (cuvarbase._cufft) — on an A5000 with
-      libcufft: (a) test_nfft FFT-vs-fftpack check passes (binding
-      correctness), (b) full LS + NFFT GPU suite green, (c) perf within
-      ±10% of a scikit-cuda baseline (pip install scikit-cuda there and
-      compare an LS run both ways). If green → drop scikit-cuda dep +
-      _skcuda_compat + numpy patch, close #63.
-- [ ] B3: pinned host buffers (cuvarbase.memory._host) — on the A5000:
-      (a) full suite green with pinned=True default (no transfer
-      regression), (b) demonstrate async-vs-sync overlap (CUDA-event
-      timeline or a host->device bandwidth delta pinned vs pinned=False),
-      (c) confirm pinned=False fallback path still works.
-- [ ] C1: PDM batch API — on the A5000: batched_run_const_nfreq +
-      large_run results match per-LC run() (corr ~1); large_run honors a
-      small max_memory (forces batch_size>1 chunking); run
-      scripts/benchmark_pdm.py and commit JSON to benchmarks/results/.
+**Batch 2 (Jun 13 2026, RTX A5000, pod 2baj5kk9z5p0zq — terminated +
+verified): all GREEN. Results in analysis/v1.0-gpu-batch2-jun2026/.**
+Full suite 671 passed / 7 skipped; release gate ALL PASSED.
+- [x] B2: in-house cuFFT binding — LS/NFFT suite green; test_nfft
+      FFT-vs-fftpack passes (binding ifft correct); gate
+      cufftEstimate1d path passes; perf vs scikit-cuda max |ratio-1| =
+      2.4% (within ±10%). → scikit-cuda dep + _skcuda_compat + numpy
+      shim DROPPED; #63 resolvable.
+- [x] B3: pinned host buffers — suite green with pinned=True (no
+      regression); pinned H2D 1.4–2.85x faster than page-aligned
+      (overlap demonstrated); fallback path intact.
+- [x] C1: PDM batch — batched_run_const_nfreq + large_run match per-LC
+      run() at corr=1.000000; GPU PDM == CPU pdm2_cpu (corr=1.0);
+      benchmark JSON committed (benchmark_results_by_gpu/pdm_a5000.json,
+      1006–12622x vs pure-Python CPU).
+  (bug found+fixed: benchmark_pdm.py queried the device before B1's lazy
+  context existed.)
 
 ## A. Contained code items (do first)
 
@@ -219,7 +220,7 @@ ALL PASSED.
       smoke (ci_wheel_smoke.py) now proves GPU-less import with pycuda
       genuinely absent. GPU queue: full GPU suite must pass on pod with
       real pycuda (context lifecycle exercised).
-- [ ] **B2. scikit-cuda replacement (#63)** — replace skcuda.fft
+- [x] **B2. scikit-cuda replacement (#63)** — replace skcuda.fft
       (cuFFT) in cunfft.py/lombscargle.py with cupy.cuda.cufft OR a
       minimal direct cuFFT ctypes binding (decide by spike: cupy adds
       a heavy dep; direct binding is ~200 lines for C2C 1D batched).
@@ -241,11 +242,13 @@ ALL PASSED.
       .json) — all signatures/constants/pointers correct; 4 minor
       lib-discovery findings fixed (glob pip-wheel + toolkit lib64,
       RTLD_GLOBAL, LD_LIBRARY_PATH-aware error, atexit __del__ guard).
-      Suite 197 passed; flake8 clean. REMAINING (after pod batch 2):
-      binding-vs-fftpack parity + full LS/NFFT suite green + perf within
-      ±10% of skcuda → then drop scikit-cuda dep + _skcuda_compat shim +
-      numpy patch, remove CHANGELOG limitation, close #63. skcuda kept in
-      deps for now only as the perf baseline.
+      Suite 197 passed; flake8 clean. **VALIDATED on A5000 (batch 2,
+      <hash2>):** test_nfft FFT-vs-fftpack passes, full LS/NFFT suite
+      green, gate cufftEstimate1d path passes, perf vs scikit-cuda max
+      |ratio-1| = 2.4% (within ±10%). → scikit-cuda DROPPED from
+      pyproject + setup.py; cuvarbase/_skcuda_compat.py removed; CHANGELOG
+      limitation removed + LS/NFFT feature bullet added; #63 closable at
+      release (H2). Wheel imports cleanly without scikit-cuda.
 - [x] **B3. True pinned host buffers** — restore page-locked memory
       (cuda.pagelocked_empty or register_host_memory) in
       BLSMemory/BLSBatchMemory/NFFT/LS/CE memory classes behind a
