@@ -104,7 +104,7 @@ def _choose_block_size(ndata):
         return 128  # Max for TLS (vs 256 for BLS)
 
 
-def _get_cached_kernels(block_size):
+def _get_cached_kernels(block_size, t0_oversample=3.0):
     """
     Get compiled TLS kernel from cache.
 
@@ -112,13 +112,17 @@ def _get_cached_kernels(block_size):
     ----------
     block_size : int
         CUDA block size
+    t0_oversample : float, optional (default: 3.0)
+        Transit-epoch oversampling baked into the kernel's
+        ``T0_OVERSAMPLE`` define; part of the cache key, so distinct
+        values compile (and cache) distinct kernels.
 
     Returns
     -------
     kernel : PyCUDA function
         Compiled kernel function
     """
-    key = block_size
+    key = (block_size, float(t0_oversample))
 
     with _kernel_cache_lock:
         if key in _kernel_cache:
@@ -126,7 +130,8 @@ def _get_cached_kernels(block_size):
             return _kernel_cache[key]
 
         # Compile kernel
-        compiled = compile_tls(block_size=block_size)
+        compiled = compile_tls(block_size=block_size,
+                               t0_oversample=t0_oversample)
 
         # Add to cache
         _kernel_cache[key] = compiled
@@ -139,7 +144,7 @@ def _get_cached_kernels(block_size):
         return compiled
 
 
-def compile_tls(block_size=_default_block_size):
+def compile_tls(block_size=_default_block_size, t0_oversample=3.0):
     """
     Compile TLS CUDA kernels.
 
@@ -147,6 +152,16 @@ def compile_tls(block_size=_default_block_size):
     ----------
     block_size : int, optional
         CUDA block size (default: 128)
+    t0_oversample : float, optional (default: 3.0)
+        Transit-epoch (t0) oversampling: the on-device epoch stride is
+        ``duration_phase / t0_oversample``, so larger values test a finer
+        grid of transit times -- more sensitive to the exact epoch (and
+        to narrow transits) at a roughly linear cost in kernel time.
+        This compiles the kernel's ``T0_OVERSAMPLE`` ``#define`` and
+        mirrors :func:`cuvarbase.tls_grids.t0_grid_size`'s ``oversample``.
+        The reference ``transitleastsquares`` package steps t0 about 33x
+        finer than a duration; the default of 3 trades fidelity for
+        speed.
 
     Returns
     -------
@@ -167,7 +182,8 @@ def compile_tls(block_size=_default_block_size):
     # Compiling a kernel needs an active CUDA context (lazily created).
     ensure_context()
 
-    cppd = dict(BLOCK_SIZE=block_size)
+    cppd = dict(BLOCK_SIZE=block_size,
+                T0_OVERSAMPLE=float(t0_oversample))
 
     kernel_name = 'tls'
     kernel_txt = _module_reader(find_kernel(kernel_name), cpp_defs=cppd)
@@ -415,7 +431,7 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
                    oversampling_factor=3, duration_grid_step=1.1,
                    R_planet_min=0.5, R_planet_max=5.0,
                    limb_dark='quadratic', u=[0.4804, 0.1867],
-                   block_size=None,
+                   block_size=None, t0_oversample=3.0,
                    kernel=None, memory=None, stream=None,
                    transfer_to_device=True, transfer_to_host=True,
                    **kwargs):
@@ -461,6 +477,16 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         Limb darkening coefficients (default: [0.4804, 0.1867])
     block_size : int, optional
         CUDA block size (auto-selected if None)
+    t0_oversample : float, optional (default: 3.0)
+        Transit-epoch (t0) trial positions tested per transit duration.
+        The on-device epoch stride is ``duration_phase / t0_oversample``;
+        larger values resolve the transit time more finely (and recover
+        narrower transits) at a roughly linear increase in kernel time.
+        The reference ``transitleastsquares`` steps ~33x finer than a
+        duration; the default of 3 favors speed. Distinct values compile
+        and cache distinct kernels. See
+        :func:`cuvarbase.tls_grids.t0_grid_size` for the resulting grid
+        size.
     kernel : PyCUDA function, optional
         Pre-compiled kernel
     memory : TLSMemory, optional
@@ -540,7 +566,7 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
 
     # Get or compile kernels
     if kernel is None:
-        kernels = _get_cached_kernels(block_size)
+        kernels = _get_cached_kernels(block_size, t0_oversample=t0_oversample)
         kernel = kernels['keplerian'] if use_keplerian else kernels['standard']
 
     # Allocate or use existing memory
