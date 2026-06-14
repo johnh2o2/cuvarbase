@@ -80,33 +80,64 @@ def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
 
     ns = np.arange(2 * nharms + 1)
 
-    def sgn(n):
-        return 1 if n == 0 else np.sign(n)
-
     c = [np.dot(w, np.cos(n * phase)) for n in ns]
     s = [np.dot(w, np.sin(n * phase)) for n in ns]
 
-    yc = [np.dot(yw, np.cos(n * phase)) for n in ns[1:nharms+1]]
-    ys = [np.dot(yw, np.sin(n * phase)) for n in ns[1:nharms+1]]
-
-    cc = [[0.5 * (c[n+m] + c[abs(n-m)]) for m in ns[1:nharms+1]] for n in ns[1:nharms+1]]
-
-    cs = [[0.5 * (s[n+m] - sgn(n-m) * s[abs(n-m)]) for m in ns[1:nharms+1]] for n in ns[1:nharms+1]]
-
-    ss = [[0.5 * (c[abs(n-m)] - c[n+m]) for m in ns[1:nharms+1]] for n in ns[1:nharms+1]]
-
-    C = np.asarray(c)[1:nharms+1]
-    S = np.asarray(s)[1:nharms+1]
+    yc = np.asarray([np.dot(yw, np.cos(n * phase))
+                     for n in ns[1:nharms+1]])
+    ys = np.asarray([np.dot(yw, np.sin(n * phase))
+                     for n in ns[1:nharms+1]])
 
     ybar = sum(yw)
-    YC = np.asarray(yc) - ybar * C
-    YS = np.asarray(ys) - ybar * S
+    C = np.asarray(c)[1:nharms+1]
+    S = np.asarray(s)[1:nharms+1]
+    YC = yc - ybar * C
+    YS = ys - ybar * S
+
+    return _mh_assemble_from_centered(c, s, YC, YS, nharms)
+
+
+def _mh_assemble_from_centered(c, s, YC, YS, nharms):
+    """Assemble the (C, S, CC, CS, SS, YC, YS) multiharmonic GLS sums from
+    raw weight moments and already-mean-subtracted YC/YS.
+
+    Shared by :func:`mhdirect_sums` (which gets the moments from direct
+    trig sums) and the GPU multiharmonic path (which reads them off the
+    NFFT spectra of ``w`` and ``w*(y-ybar)``).
+
+    Parameters
+    ----------
+    c, s : array_like
+        Weight moments, length ``2*nharms+1``:
+        ``c[m] = sum w cos(2 pi m f t)``, ``s[m] = sum w sin(2 pi m f t)``
+        (so ``c[0]=sum w=1``, ``s[0]=0``). Indices up to ``2*nharms`` are
+        needed for the cross-term matrices.
+    YC, YS : array_like
+        Already mean-subtracted ``sum w (y-ybar) cos/sin(2 pi h f t)`` for
+        ``h = 1..nharms``.
+    nharms : int
+        Number of harmonics.
+    """
+    c = np.asarray(c, dtype=np.float64)
+    s = np.asarray(s, dtype=np.float64)
+    H = nharms
+
+    def sgn(n):
+        return 1 if n == 0 else np.sign(n)
+
+    hs = range(1, H + 1)
+    cc = [[0.5 * (c[n+m] + c[abs(n-m)]) for m in hs] for n in hs]
+    cs = [[0.5 * (s[n+m] - sgn(n-m) * s[abs(n-m)]) for m in hs] for n in hs]
+    ss = [[0.5 * (c[abs(n-m)] - c[n+m]) for m in hs] for n in hs]
+
+    C = c[1:H+1]
+    S = s[1:H+1]
 
     CC = np.asarray(cc) - np.outer(C, C)
     CS = np.asarray(cs) - np.outer(C, S)
     SS = np.asarray(ss) - np.outer(S, S)
 
-    return C, S, CC, CS, SS, YC, YS
+    return C, S, CC, CS, SS, np.asarray(YC), np.asarray(YS)
 
 
 def add_regularization(sums, amplitude_priors=None, cn0=None, sn0=None):
@@ -243,6 +274,55 @@ def mhgls_from_sums(sums, YY, ybar):
     P = (YX - np.sum(XX)) / YY
 
     return P
+
+
+def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
+    """Multiharmonic GLS power from the GPU NFFT spectra.
+
+    ``sw`` is the adjoint NFFT of the weights ``w`` and ``syw`` of
+    ``w*(y-ybar)``, both laid out so that entry ``j`` holds the spectrum
+    at frequency index ``(k0 + j)`` (i.e. frequency ``(k0+j)*df``). The
+    value at the ``m``-th harmonic of the ``i``-th output frequency
+    ``m*f_i`` is therefore at array index ``(m-1)*k0 + m*i``.
+
+    For each output frequency the weight moments ``c[0..2H], s[0..2H]``
+    are read from ``sw`` (``c[0]=1``, ``s[0]=0``) and the mean-subtracted
+    ``YC, YS`` (h=1..H) from ``syw``; these are fed through the existing,
+    tested :func:`_mh_assemble_from_centered` + :func:`mhgls_from_sums`
+    (the small 2H x 2H solve runs in float64 on the host -- cheap, and
+    numerically safer than a float32 in-kernel solve).
+    """
+    H = int(nharms)
+    i = np.arange(nf)
+
+    # weight moments c[m], s[m] for m = 1..2H from the w-spectrum
+    cm = np.empty((2 * H + 1, nf), dtype=np.float64)
+    sm = np.empty((2 * H + 1, nf), dtype=np.float64)
+    cm[0] = 1.0
+    sm[0] = 0.0
+    for m in range(1, 2 * H + 1):
+        idx = (m - 1) * k0 + m * i
+        vals = sw[idx]
+        cm[m] = vals.real
+        sm[m] = vals.imag
+
+    # mean-subtracted YC[h], YS[h] for h = 1..H from the w*(y-ybar) spectrum
+    YC = np.empty((H, nf), dtype=np.float64)
+    YS = np.empty((H, nf), dtype=np.float64)
+    for h in range(1, H + 1):
+        idx = (h - 1) * k0 + h * i
+        vals = syw[idx]
+        YC[h - 1] = vals.real
+        YS[h - 1] = vals.imag
+
+    power = np.empty(nf, dtype=np.float64)
+    for j in range(nf):
+        sums = _mh_assemble_from_centered(cm[:, j], sm[:, j],
+                                          YC[:, j], YS[:, j], H)
+        if reg_kwargs:
+            sums = add_regularization(sums, **reg_kwargs)
+        power[j] = mhgls_from_sums(sums, YY, 0.0)
+    return power
 
 
 def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
@@ -399,6 +479,22 @@ def lomb_scargle_async(memory, functions, freqs,
             nfft_adjoint_async(memory.nfft_mem_w, nfft_funcs,
                                **nfft_kwargs)
 
+    nharm = getattr(memory, 'nharmonics', 1)
+    if nharm > 1:
+        # Multiharmonic GLS: the GPU NFFT already produced the w-spectrum
+        # (to 2H harmonics) and the w*(y-ybar)-spectrum (to H); read them
+        # back and do the small per-frequency 2H x 2H solve on the host
+        # (see _mh_power_from_spectra). Sync the stream first so the async
+        # NFFT has completed before the device->host copy.
+        if stream is not None:
+            stream.synchronize()
+        sw = memory.nfft_mem_w.ghat_g.get()
+        syw = memory.nfft_mem_yw.ghat_g.get()
+        power = _mh_power_from_spectra(sw, syw, int(memory.k0), nharm,
+                                       int(memory.nf), memory.yy)
+        memory.lsp_c[:memory.nf] = power.astype(memory.real_type)
+        return memory.lsp_c
+
     args = (grid, block, stream)
     args += (memory.nfft_mem_w.ghat_g.ptr, memory.nfft_mem_yw.ghat_g.ptr)
     args += (memory.lsp_g.ptr, memory.reg_g.ptr, np.int32(memory.nf))
@@ -460,9 +556,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         self.nharmonics = kwargs.get('nharmonics', 1)
 
-        if self.nharmonics > 1:
-            raise NotImplementedError(
-                "Only 1 harmonic is supported right now")
+        if self.nharmonics < 1:
+            raise ValueError("nharmonics must be >= 1, got %r"
+                             % (self.nharmonics,))
 
         if self.use_cufinufft and not HAS_CUFINUFFT:
             raise ImportError(
