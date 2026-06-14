@@ -82,13 +82,14 @@ is not recommended for science use yet. It emits a `UserWarning` on import.
   curves above ~3,500 points exceed the kernel's shared-memory budget
   (a `ValueError` is raised).
 
-A NUFFT-based Likelihood Ratio Test (matched-filter transit detection
-for correlated noise, contributed by **Jamila Taaki**) was previously
-listed here but has been removed from the released package: the
-implementation computed on the CPU and silently truncated multi-season
-baselines. The source is preserved on the
-[`feature/nufft-lrt-experimental`](https://github.com/johnh2o2/cuvarbase/tree/feature/nufft-lrt-experimental)
-branch pending a GPU rewire.
+- **NUFFT-based Likelihood Ratio Test** (`cuvarbase.nufft_lrt`,
+  contributed by **Jamila Taaki** / [@xiaziyna](https://github.com/xiaziyna)) -
+  a frequency-domain matched-filter / likelihood-ratio test for box
+  transits in correlated noise. The data and templates are transformed
+  with the GPU adjoint NFFT, which handles gappy / multi-season sampling
+  over the full baseline (the earlier CPU-rfft and grid-truncation issues
+  are fixed). The matched-filter combination runs on the host; the method
+  has not yet had a full injection-recovery validation.
 
 ### Planned Features
 
@@ -370,7 +371,7 @@ This project has benefited from contributions and support from many people in th
 - Gaspar Bakos
 - Kevin Burdge
 - Attila Bodi
-- **Jamila Taaki** - for contributing the NUFFT-based Likelihood Ratio Test (LRT) implementation for transit detection with correlated noise (currently on the [`feature/nufft-lrt-experimental`](https://github.com/johnh2o2/cuvarbase/tree/feature/nufft-lrt-experimental) branch pending a GPU rewire). See her papers:
+- **Jamila Taaki** ([@xiaziyna](https://github.com/xiaziyna)) - for contributing the NUFFT-based Likelihood Ratio Test (`cuvarbase.nufft_lrt`) for transit detection with correlated noise (reinstated in v1.0 with the GPU adjoint-NFFT rewire). See her papers:
   - Taaki, J. S., Kamalabadi, F., & Kemball, A. (2020). *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization.*
   - Reference implementation: https://github.com/star-skelly/code_nova_exoghosts
 - All users and contributors who have helped make cuvarbase useful to the astronomy community
