@@ -243,7 +243,7 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
       lib-discovery findings fixed (glob pip-wheel + toolkit lib64,
       RTLD_GLOBAL, LD_LIBRARY_PATH-aware error, atexit __del__ guard).
       Suite 197 passed; flake8 clean. **VALIDATED on A5000 (batch 2,
-      <hash2>):** test_nfft FFT-vs-fftpack passes, full LS/NFFT suite
+      c77bd86):** test_nfft FFT-vs-fftpack passes, full LS/NFFT suite
       green, gate cufftEstimate1d path passes, perf vs scikit-cuda max
       |ratio-1| = 2.4% (within ±10%). → scikit-cuda DROPPED from
       pyproject + setup.py; cuvarbase/_skcuda_compat.py removed; CHANGELOG
