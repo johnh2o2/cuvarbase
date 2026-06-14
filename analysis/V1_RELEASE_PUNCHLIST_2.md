@@ -88,6 +88,11 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
       spectrum layout matches the verified convention: run
       LombScargleAsyncProcess(nharmonics=H) for H=2,3 and assert
       corr>0.999 vs lomb_scargle_direct_sums(nharms=H) on the same grid.
+- [ ] C3: NUFFT-LRT rewire — on the A5000: NUFFTLRTAsyncProcess.run
+      actually executes the NFFT on device (no GPUStubError; profile/
+      confirm kernels invoked); compute_nufft output matches the CPU
+      adjoint-DFT reference (corr>0.999); the restored GPU tests pass;
+      multi-season detection works end-to-end on device.
 
 ## A. Contained code items (do first)
 
@@ -324,7 +329,7 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
       lomb_scargle_direct_sums to machine precision for H=2,3 + refactor
       equivalence + construct-without-raise. Suite 209 passed; flake8
       clean. GPU queue: one smoke-test of the real ghat_g layout.
-- [ ] **C3. ⚠️ D1: NUFFT-LRT GPU rewire** (only if D1=reinstate) —
+- [x] **C3. ⚠️ D1: NUFFT-LRT GPU rewire** (only if D1=reinstate) —
       wire the existing compiled kernels (preserved on
       feature/nufft-lrt-experimental) into compute_nufft via cunfft;
       fix the grid-span defect (uniform grid must cover the full
@@ -332,6 +337,24 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
       wheel; coordinate/credit @xiaziyna. Accept: GPU path actually
       executes on device (profiled); multi-season test (perturbing
       late-season data changes output); accuracy vs CPU reference.
+      **DONE 83d5356** — scoping spike (analysis/c3-nufft-lrt-spike-
+      jun2026.json) → rewire compute_nufft to the GPU adjoint NFFT
+      (self.nufft_proc.run([(t,y,nf)])[0]), which fixes BOTH cut defects
+      at once: it runs on-device (the old path computed a host
+      uniform-grid RFFT; kernels never invoked) AND covers the full
+      non-uniform baseline (the old median(dt)*nf grid truncated
+      multi-season data). Weights→all-ones + PSD over all nf bins (NFFT
+      modes are all physical, freq k/(tmax-tmin)); dead matched-filter
+      kernels left unwired (host combine is O(nf)) + no longer compiled
+      in run(). Restored module+kernel+3 tests+docs+example to the wheel;
+      __init__ re-exposes NUFFTLRTAsyncProcess/Memory; removal test
+      inverted; README/CHANGELOG reframed + @xiaziyna credited. CPU
+      verification (test_nufft_lrt_pipeline.py): full pipeline via a
+      direct adjoint-DFT (exact NFFT math) is sensitive to late-season
+      data (grid-span fix) + runs end-to-end. Suite 229 passed; flake8
+      clean. Still EXPERIMENTAL (warning) pending injection-recovery.
+      GPU queue: NFFT executes on device + accuracy vs the CPU
+      adjoint-DFT reference.
 
 ## D. TLS science-ready (beyond punchlist-1 fixes)
 
