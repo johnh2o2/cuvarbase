@@ -83,6 +83,12 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
   (bug found+fixed: benchmark_pdm.py queried the device before B1's lazy
   context existed.)
 
+**Batch 3 queue (accumulating; CPU-side landed, GPU-pending):**
+- [ ] C2: multiharmonic GLS — on the A5000, confirm the real ghat_g
+      spectrum layout matches the verified convention: run
+      LombScargleAsyncProcess(nharmonics=H) for H=2,3 and assert
+      corr>0.999 vs lomb_scargle_direct_sums(nharms=H) on the same grid.
+
 ## A. Contained code items (do first)
 
 - [x] **A1. Sparse-path per-frequency q bounds** — wire qmin/qmax
@@ -296,13 +302,28 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
       lower risk given no local GPU, same memory-bound + const-grid win;
       buffer reuse is a possible future optimization. GPU queue +
       benchmark-JSON commit pending batch 2; #33 closable at release.
-- [ ] **C2. Multiharmonic GLS on GPU** — extend the LS kernel to
+- [x] **C2. Multiharmonic GLS on GPU** — extend the LS kernel to
       nharmonics>1 (the CPU helpers mhdirect_sums/mhgls_from_sums
       already define the math; kernel computes the 2H-sums via NFFT
       of higher harmonics — same NFFT plan at h*f). Accept: GPU
       multiharmonic matches the existing CPU mhgls reference
       (corr>0.999) for H=2,3 on pod; NotImplementedError removed;
       README planned-features updated.
+      **DONE 8d5a1aa** — scoping spike (Workflow, analysis/c2-
+      multiharmonic-gls-spike-jun2026.json) confirmed the math + that the
+      memory grids are ALREADY sized for it (w to 2H, yw to H) and yw is
+      already mean-centered. DECISION: HYBRID — GPU NFFT emits the
+      spectra (validated), host does the per-freq 2H×2H solve in float64
+      via the existing tested mhdirect_sums/mhgls_from_sums (avoids an
+      untestable float32 in-kernel Cholesky; H>1 not a hot path).
+      Factored _mh_assemble_from_centered (shared by mhdirect_sums + the
+      new _mh_power_from_spectra which reads moments at index
+      (m-1)*k0+m*i); wired into lomb_scargle_async for nharmonics>1;
+      NotImplementedError → ValueError(nharmonics<1); removed dead lomb_mh
+      kernel + README planned line. test_mhgls_hybrid.py (CPU): hybrid ==
+      lomb_scargle_direct_sums to machine precision for H=2,3 + refactor
+      equivalence + construct-without-raise. Suite 209 passed; flake8
+      clean. GPU queue: one smoke-test of the real ghat_g layout.
 - [ ] **C3. ⚠️ D1: NUFFT-LRT GPU rewire** (only if D1=reinstate) —
       wire the existing compiled kernels (preserved on
       feature/nufft-lrt-experimental) into compute_nufft via cunfft;
