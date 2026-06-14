@@ -358,11 +358,20 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
 
 ## D. TLS science-ready (beyond punchlist-1 fixes)
 
-- [ ] **D1. Expose t0 fidelity** — make T0_OVERSAMPLE a Python-level
+- [x] **D1. Expose t0 fidelity** — make T0_OVERSAMPLE a Python-level
       parameter (kernel #define via cpp_defs); document the
       sensitivity/speed trade (reference TLS uses ~33x finer
       stepping). Accept: parameter plumbed + tested; default
       documented.
+      RESOLVED (4df45b3): added `t0_oversample=3.0` to `compile_tls`,
+      `_get_cached_kernels` (now part of the cache key), and
+      `tls_search_gpu` (forwarded by `tls_search` via **kwargs); baked
+      into the kernel `T0_OVERSAMPLE` #define via cpp_defs. Docstrings
+      explain the sensitivity/speed trade (ref TLS ~33x finer; default 3
+      favors speed) and point to `tls_grids.t0_grid_size`. CPU test
+      `test_tls_t0_oversample.py` asserts the override lands before the
+      kernel's `#ifndef T0_OVERSAMPLE` guard, the param is in all three
+      signatures + the cache key, and the Python grid mirrors oversample.
 - [ ] **D2. Lift the ~3,500-point cap** — tile the shared-memory
       layout (chunked data passes or global-memory fallback kernel)
       so native TESS 10-min/200-s cadence fits; keep the fast path
