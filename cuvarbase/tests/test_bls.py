@@ -262,8 +262,9 @@ class TestBLS(object):
     @pytest.mark.parametrize("nstreams", [1, 3])
     @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
     @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    @pytest.mark.parametrize("use_optimized", [True, False])
     def test_custom(self, freq, q_index, phi_index, freq_batch_size, nstreams,
-                    ignore_negative_delta_sols):
+                    ignore_negative_delta_sols, use_optimized):
         q_values = np.logspace(-1.1, -0.8, num=10)
         phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
 
@@ -280,7 +281,8 @@ class TestBLS(object):
                                         q_values, phi_values,
                                         ignore_negative_delta_sols=ignore_negative_delta_sols,
                                         freq_batch_size=freq_batch_size,
-                                        nstreams=nstreams)
+                                        nstreams=nstreams,
+                                        use_optimized=use_optimized)
 
         for freq, (qg, phg), gpower in zip(freqs, gsols, power):
             q_and_phis = product(q_values, phi_values)
@@ -302,8 +304,9 @@ class TestBLS(object):
     @pytest.mark.parametrize("nstreams", [1, 3])
     @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
     @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    @pytest.mark.parametrize("use_optimized", [True, False])
     def test_standard(self, freq, q_index, phi_index, nstreams, freq_batch_size,
-                      ignore_negative_delta_sols):
+                      ignore_negative_delta_sols, use_optimized):
 
         q_values = np.logspace(-1.5, np.log10(0.1), num=100)
         phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
@@ -324,7 +327,8 @@ class TestBLS(object):
                                  qmin=0.1 * q, qmax=2.0 * q,
                                  nstreams=nstreams, noverlap=2, dlogq=0.5,
                                  freq_batch_size=freq_batch_size,
-                                 ignore_negative_delta_sols=ignore_negative_delta_sols)
+                                 ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                 use_optimized=use_optimized)
 
         bls_c = [single_bls(t, y, dy, x[0], *x[1],
                             ignore_negative_delta_sols=ignore_negative_delta_sols)
@@ -367,8 +371,9 @@ class TestBLS(object):
     @pytest.mark.parametrize("use_fast", [True, False])
     @pytest.mark.parametrize("nstreams", [1, 4])
     @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
+    @pytest.mark.parametrize("use_optimized", [True, False])
     def test_transit(self, freq, use_fast, freq_batch_size, nstreams, phi0, dlogq,
-                     ignore_negative_delta_sols):
+                     ignore_negative_delta_sols, use_optimized):
         q = q_transit(freq)
         samples_per_peak = 2
         noverlap = 2
@@ -381,14 +386,33 @@ class TestBLS(object):
                   ignore_negative_delta_sols=ignore_negative_delta_sols,
                   nstreams=nstreams, noverlap=noverlap,
                   fmin=0.9 * freq, fmax=1.1 * freq,
-                  use_fast=use_fast)
+                  use_fast=use_fast, use_optimized=use_optimized)
 
         if use_fast:
+            kw['use_optimized'] = False
             freqs, power = eebls_transit_gpu(t, y, err, **kw)
 
             kw['use_fast'] = False
             freqs, power_slow, sols = eebls_transit_gpu(t, y, err, **kw)
             kw['use_fast'] = True
+            dfsol = freqs[np.argmax(power)] - freqs[np.argmax(power_slow)]
+            close_enough = abs(dfsol) * (max(t) - min(t)) / q < 3
+            if not close_enough and self.plot:
+                import matplotlib.pyplot as plt
+                plt.plot(freqs, power, alpha=0.5)
+                plt.plot(freqs, power_slow, alpha=0.5)
+                plt.show()
+
+            assert(close_enough)
+            return
+
+        elif use_optimized:
+            kw['use_fast'] = False
+            freqs, power = eebls_transit_gpu(t, y, err, **kw)
+
+            kw['use_optimized'] = False
+            freqs, power_slow, sols = eebls_transit_gpu(t, y, err, **kw)
+            kw['use_optimized'] = True
             dfsol = freqs[np.argmax(power)] - freqs[np.argmax(power_slow)]
             close_enough = abs(dfsol) * (max(t) - min(t)) / q < 3
             if not close_enough and self.plot:
