@@ -2381,7 +2381,8 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
 
 def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                       qmin_fac=0.5, qmax_fac=2.0, fmin=None,
-                      fmax=None, freqs=None, qvals=None, use_fast=False,
+                      fmax=None, freqs=None, qvals=None,
+                      use_fast=False, use_optimized=False,
                       ignore_negative_delta_sols=False,
                       **kwargs):
     """
@@ -2420,6 +2421,9 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     functions: tuple, optional (default=None)
         result of ``compile_bls(**kwargs)``.
     use_fast: bool, optional (default: False)
+        Use fast GPU implementation.
+    use_optimized: bool, optional (default: False)
+        Use optimized GPU implementation (if not using fast).
 
     ignore_negative_delta_sols: bool
         Whether or not to ignore inverted dips
@@ -2463,6 +2467,13 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                                 qmin=qmins, qmax=qmaxes,
                                 ignore_negative_delta_sols=ignore_negative_delta_sols,
                                 **kwargs)
+
+        return freqs, powers
+    elif use_optimized:
+        powers = eebls_gpu_fast_optimized(t, y, dy, freqs,
+                                          qmin=qmins, qmax=qmaxes,
+                                          ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                          **kwargs)
 
         return freqs, powers
 
