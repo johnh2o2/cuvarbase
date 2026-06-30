@@ -26,7 +26,7 @@ __device__ float bls_value(float ybar, float w, unsigned int ignore_negative_del
 	// if ignore negative delta sols is turned on, that means only solutions where
 	// the mean amplitude within the transit is _lower_ than the mean amplitude of
 	// the source are considered: it will ignore "inverted dips"
-	float bls = (w > 1e-10f && w < 1.f - 1e-10f) ? ybar * ybar / (w * (1.f - w)) : 0.f;
+	float bls = (w > 1e-10f && w < 1.f - 1e-10f && fabs(ybar) > 1e-5f) ? ybar * ybar / (w * (1.f - w)) : 0.f;
 	return ((ignore_negative_delta_sols == 1) & (ybar > 0.f)) ? 0.f : bls;
 }
 
