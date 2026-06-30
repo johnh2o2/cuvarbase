@@ -304,6 +304,8 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     qmax_fac: float, optional (default: None)
         The maximum :math:`q` value to search in units of the Keplerian
         :math:`q` value. If ``None``, this defaults to ``1/qmin_fac``.
+    **kwargs:
+        passed to `fmin_transit`
 
     Returns
     -------
@@ -325,8 +327,7 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
         qmax_fac = 1./qmin_fac
 
     if fmin is None:
-        fmin = fmin_transit(t, rho=rho, samples_per_peak=samples_per_peak,
-                            **kwargs)
+        fmin = fmin_transit(t, rho=rho, **kwargs)
     if fmax is None:
         fmax = fmax_transit(rho=rho, qmax=0.5 / qmax_fac, **kwargs)
 
