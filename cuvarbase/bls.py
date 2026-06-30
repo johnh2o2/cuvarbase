@@ -1305,9 +1305,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         BLS periodogram; in the default convention, normalized to
         :math:`1 - \chi^2(f) / \chi^2_0`
     qphi_sols: list of ``(q, phi)`` tuples
-        Best ``(q, phi)`` solution at each frequency; ``phi`` is
-        measured relative to ``floor(min(t))`` (times are epoch-subtracted
-        before folding to preserve float32 precision)
+        Best ``(q, phi)`` solution at each frequency
 
     """
 
@@ -1369,7 +1367,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
 
-    t_g = gpuarray.to_gpu(subtract_epoch(t)[0].astype(np.float32))
+    t, epoch = subtract_epoch(t)
+    t_g = gpuarray.to_gpu(t.astype(np.float32))
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
@@ -1466,6 +1465,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     best_phi = bls_best_phi.get()
 
     qphi_sols = list(zip(best_q, best_phi))
+    # Adjust phases to original timescale
+    qphi_sols = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(qphi_sols, freqs)]
 
     return (convert_bls_power(bls_g.get() / YY, y, dy,
                               convention=convention),
@@ -1886,13 +1887,13 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     bls_powers: array_like, float
         BLS power at each frequency
     solutions: list of (q, phi0) tuples
-        Best (q, phi0) solution at each frequency; ``phi0`` is measured
-        relative to ``floor(min(t))``
+        Best (q, phi0) solution at each frequency
     """
     _validate_convention(convention)
 
     # Convert to numpy arrays (epoch-subtract before the float32 cast)
-    t = subtract_epoch(t)[0].astype(np.float32)
+    t, epoch = subtract_epoch(t)
+    t = t.astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
     freqs = np.asarray(freqs).astype(np.float32)
@@ -1968,6 +1969,9 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     best_phi = best_phi_g.get()
 
     solutions = list(zip(best_q, best_phi))
+    # Adjust phases to original timescale
+    solutions = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(solutions, freqs)]
+    
     return (convert_bls_power(bls_powers, y, dy, convention=convention),
             solutions)
 
