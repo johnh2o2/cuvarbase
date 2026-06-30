@@ -223,7 +223,7 @@ def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
     qmin = float(min_obs_per_transit) / len(t)
 
     fmin1 = freq_transit(qmin, rho=rho)
-    fmin2 = 2./(max(t) - min(t))
+    fmin2 = 2./(np.max(t) - np.min(t))
     return max([fmin1, fmin2])
 
 
@@ -331,7 +331,7 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     if fmax is None:
         fmax = fmax_transit(rho=rho, **kwargs)
 
-    T = max(t) - min(t)
+    T = np.max(t) - np.min(t)
     freqs = [fmin]
     while freqs[-1] < fmax:
         df = qmin_fac * q_transit(freqs[-1], rho=rho) / (samples_per_peak * T)
@@ -551,10 +551,10 @@ class BLSMemory:
         self.t[:len(t)] = t.astype(self.rtype)[:]
 
         w = np.power(dy, -2)
-        w /= sum(w)
+        w /= np.sum(w)
         self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
 
-        self.ybar = sum(y * w)
+        self.ybar = np.sum(y * w)
         self.yy = np.dot(w, np.power(y - self.ybar, 2))
         # chi2 of the constant model for the data actually loaded here;
         # convert_bls_power scalings must use this rather than whatever
@@ -1126,7 +1126,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
     # move data to GPU
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
     ybar = np.dot(w, y)
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
@@ -1364,7 +1364,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     # move data to GPU
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
     ybar = np.dot(w, y)
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
@@ -2392,7 +2392,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
     f = f0
     nol = noverlap
 
-    baseline = max(t) - min(t)
+    baseline = np.max(t) - np.min(t)
 
     functions = compile_bls(**kwargs)
     i = 0
