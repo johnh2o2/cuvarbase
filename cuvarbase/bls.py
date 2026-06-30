@@ -13,7 +13,6 @@ it, the optimal frequency-grid spacing for a transit search [O2014]_.
 .. [O2014] `Ofir 2014, A&A 561, A138 <https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O>`_, "Optimizing the search for transiting planets in long time series" (arXiv:1307.7330; corrigendum A&A 597, C2)
 
 """
-import sys
 import threading
 import warnings
 from collections import OrderedDict
@@ -22,12 +21,11 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess, ensure_context
+from .core import ensure_context
 from .utils import find_kernel, _module_reader, subtract_epoch
 from .memory.bls_memory import BLSBatchMemory
 from .memory._host import host_array
 
-import resource
 import numpy as np
 
 _default_block_size = 256
