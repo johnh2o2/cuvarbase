@@ -219,7 +219,6 @@ def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
     over the baseline ``T``), the latter being the long-period limit of
     Ofir (2014), Sect. 3.1 [O2014]_.
     """
-    T = max(t) - min(t)
     qmin = float(min_obs_per_transit) / len(t)
 
     fmin1 = freq_transit(qmin, rho=rho)
