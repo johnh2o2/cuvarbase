@@ -131,6 +131,8 @@ def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
 
     Parameters
     ----------
+    t : array_like
+        The observation times.
     samples_per_peak : float (optional, default=5)
         The approximate number of desired samples across the typical peak
     nyquist_factor : float (optional, default=5)
