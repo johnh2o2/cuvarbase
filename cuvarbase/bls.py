@@ -155,9 +155,9 @@ _function_signatures = {
                         np.float32, np.float32, np.uint32],
     'bin_and_phase_fold_custom': [np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.intp,
-                                  np.intp, np.intp, np.int32,
+                                  np.intp, np.intp, np.float64,
                                   np.uint32, np.uint32, np.uint32,
-                                  np.uint32],
+                                  np.uint32, np.uint32],
     'reduction_max': [np.intp, np.intp, np.uint32, np.uint32, np.uint32,
                       np.intp, np.intp, np.uint32, np.uint32],
     'store_best_sols': [np.intp, np.intp, np.intp, np.uint32,
@@ -1131,10 +1131,11 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
 
-    t_g = gpuarray.to_gpu(subtract_epoch(t)[0].astype(np.float32))
+    t, epoch = subtract_epoch(t)
+    t_g = gpuarray.to_gpu(t.astype(np.float32))
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
-    freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
+    freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float64))
 
     yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs, streams \
         = [], [], [], [], []
@@ -1189,7 +1190,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         args = (bin_grid, block, stream)
         args += (t_g.ptr, yw_g.ptr, w_g.ptr)
         args += (yw_g_bin.ptr, w_g_bin.ptr, freqs_g.ptr)
-        args += (q_values_g.ptr, phi_values_g.ptr)
+        args += (q_values_g.ptr, phi_values_g.ptr, np.float64(epoch))
         args += (np.uint32(len(q_values)), np.uint32(len(phi_values)))
         args += (np.uint32(len(t)), np.uint32(nf))
         args += (np.uint32(freq_batch_size * batch),)
@@ -1971,7 +1972,7 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     solutions = list(zip(best_q, best_phi))
     # Adjust phases to original timescale
     solutions = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(solutions, freqs)]
-    
+
     return (convert_bls_power(bls_powers, y, dy, convention=convention),
             solutions)
 
