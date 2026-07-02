@@ -4,8 +4,9 @@ After the rewire, ``compute_nufft`` routes to the GPU adjoint NFFT, which
 covers the full non-uniform baseline (no median(dt)*nf truncation). Here
 we mock ``compute_nufft`` with a direct adjoint DFT -- the exact math the
 GPU NFFT approximates, at the same convention (modes k=0..nf-1, frequency
-k/(max(t)-min(t))) -- and check the host pipeline (PSD, all-ones weights,
-matched filter) on CPU:
+k/(max(t)-min(t)), ABSOLUTE-t phases exp(2 pi i f_k t_j) -- verified
+against the device NFFT in the batch-3 pod run, Jul 2026) -- and check
+the host pipeline (PSD, all-ones weights, matched filter) on CPU:
 
 * the matched filter is sensitive to data across the WHOLE baseline
   (perturbing a late, well-separated season changes the result -- the
@@ -22,10 +23,11 @@ from cuvarbase.nufft_lrt import NUFFTLRTAsyncProcess
 
 def _adjoint_dft(t, y, nf):
     """Exact adjoint NFFT at the GPU convention: ghat[k] = sum_j y_j
-    exp(2 pi i k (t_j - tmin)/(tmax - tmin)), k = 0..nf-1."""
+    exp(2 pi i k t_j/(tmax - tmin)), k = 0..nf-1 (ABSOLUTE-t phases --
+    the device normalize kernel re-references to t=0, not min(t))."""
     t = np.asarray(t, dtype=np.float64)
     y = np.asarray(y, dtype=np.float64)
-    x = (t - t.min()) / (t.max() - t.min())
+    x = t / (t.max() - t.min())
     k = np.arange(nf)
     return np.exp(2j * np.pi * np.outer(k, x)) @ y
 
