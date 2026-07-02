@@ -719,6 +719,34 @@ class TestBLS(object):
         with pytest.raises(ValueError, match="qmax"):
             sparse_bls_cpu(t, y, dy, freqs, qmax=np.array([0.1] * 5))
 
+    def test_sparse_bls_q_bounds_keyword_only(self):
+        """qmin/qmax were inserted mid-signature in v1.0: a pre-v1.0
+        positional call like sparse_bls_cpu(t, y, dy, freqs, True)
+        (ignore_negative_delta_sols) would silently become qmin=True
+        -> qmin=1.0 > qmax and an all-zero periodogram. The bounds are
+        keyword-only so legacy positional calls fail loudly instead."""
+        t, y, dy = data(ndata=50)
+        freqs = np.array([0.9, 1.0, 1.1])
+        with pytest.raises(TypeError):
+            sparse_bls_cpu(t, y, dy, freqs, True)
+        with pytest.raises(TypeError):
+            sparse_bls_gpu(t, y, dy, freqs, False, 128)
+
+    def test_sparse_bls_inverted_q_bounds_raise(self):
+        """qmin > qmax used to silently return an all-zero periodogram
+        (every candidate rejected) — a pipeline reads that as 'no
+        transit'. It must raise. Validation runs before any GPU work,
+        so the GPU variant is CPU-testable too."""
+        t, y, dy = data(ndata=50)
+        freqs = np.array([0.9, 1.0, 1.1])
+        for fn in (sparse_bls_cpu, sparse_bls_gpu):
+            with pytest.raises(ValueError, match="qmin > qmax"):
+                fn(t, y, dy, freqs, qmin=0.2, qmax=0.1)
+            with pytest.raises(ValueError, match="finite"):
+                fn(t, y, dy, freqs, qmin=np.nan)
+            with pytest.raises(ValueError, match="qmax"):
+                fn(t, y, dy, freqs, qmax=0.0)
+
     @pytest.mark.parametrize("use_simple", [False, True])
     def test_sparse_bls_gpu_q_bounds(self, use_simple):
         """GPU sparse BLS honors per-frequency q bounds (matches CPU)."""

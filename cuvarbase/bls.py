@@ -1597,7 +1597,22 @@ def _broadcast_q_bound(value, nfreqs, default, name):
     return arr
 
 
-def sparse_bls_cpu(t, y, dy, freqs, qmin=None, qmax=None,
+def _validate_q_bounds(qmins, qmaxes):
+    """Reject transit-duration bounds that would silently produce an
+    all-zero periodogram (every candidate box rejected)."""
+    if not (np.all(np.isfinite(qmins)) and np.all(np.isfinite(qmaxes))):
+        raise ValueError("qmin/qmax must be finite")
+    if np.any(qmins < 0):
+        raise ValueError("qmin must be >= 0 (0 disables the lower bound)")
+    if np.any(qmaxes <= 0):
+        raise ValueError("qmax must be > 0")
+    if np.any(qmins > qmaxes):
+        raise ValueError("qmin > qmax for %d frequencies; every candidate "
+                         "transit would be rejected"
+                         % int(np.sum(qmins > qmaxes)))
+
+
+def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
                    ignore_negative_delta_sols=False,
                    convention='chi2ratio'):
     """
@@ -1652,6 +1667,7 @@ def sparse_bls_cpu(t, y, dy, freqs, qmin=None, qmax=None,
 
     qmins = _broadcast_q_bound(qmin, nfreqs, 0.0, 'qmin')
     qmaxes = _broadcast_q_bound(qmax, nfreqs, 0.5, 'qmax')
+    _validate_q_bounds(qmins, qmaxes)
 
     # Precompute weights (constant across all frequencies)
     w = np.power(dy, -2).astype(np.float32)
@@ -1782,7 +1798,7 @@ def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwarg
     return kernel
 
 
-def sparse_bls_gpu(t, y, dy, freqs, qmin=None, qmax=None,
+def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
                    ignore_negative_delta_sols=False,
                    block_size=64, max_ndata=None,
                    stream=None, kernel=None, use_simple=False,
@@ -1853,6 +1869,7 @@ def sparse_bls_gpu(t, y, dy, freqs, qmin=None, qmax=None,
                                'qmin').astype(np.float32)
     qmaxes = _broadcast_q_bound(qmax, nfreqs, 0.5,
                                 'qmax').astype(np.float32)
+    _validate_q_bounds(qmins, qmaxes)
 
     if max_ndata is None:
         max_ndata = ndata
