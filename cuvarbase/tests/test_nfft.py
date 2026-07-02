@@ -251,7 +251,8 @@ class TestNFFT(object):
         self.nfft_against_direct_sums(samples_per_peak=5, scaled=False, f0=0.)
 
     @pytest.mark.parametrize("use_double,tol", [(False, 1e-2),
-                                                (True, 1e-2)])
+                                                (True, 1e-2),
+                                                (True, 1e-6)])
     def test_autoset_m_l1_bound_meets_tolerance(self, use_double, tol):
         # autoset_m sizes the filter radius m from the data-driven
         # L1-norm *truncation* bound (cunfft.estimate_m). We check both
@@ -259,12 +260,13 @@ class TestNFFT(object):
         # the realized GPU NFFT then meets the requested absolute
         # tolerance against the exact DFT.
         #
-        # tol is held at 1e-2 for both precisions: the realized NFFT
-        # error floors near ~1e-3 absolute (a deconvolution/finite-
-        # precision term, independent of m and essentially the same in
-        # single and double precision -- see estimate_m's docstring), so
-        # a tighter tol would not be achievable and would not test the
-        # truncation bound. Note ||y||_1 (~67) < nf (500) here, so the
+        # float32 is held at tol=1e-2: single precision has a genuine
+        # ~1e-3 absolute error floor (float32 trig on large phases +
+        # grid/FFT roundoff -- see estimate_m's docstring). float64 is
+        # additionally checked at tol=1e-6, which the double path meets
+        # since the float-PI phase-factor fix (A3, Jul 2026); before
+        # that fix the realized error floored at ~1e-3 in both
+        # precisions. Note ||y||_1 (~67) < nf (500) here, so the
         # chosen m is *smaller* than the old N-based heuristic -- this
         # validates the rigorous-but-tighter direction.
         t, tsc, y, err = data()
@@ -295,6 +297,34 @@ class TestNFFT(object):
         roundoff = 1e-10 if use_double else 5e-6
         err_max = np.max(np.absolute(direct_dft - gpu_nfft))
         assert err_max <= tol + roundoff * np.sum(np.abs(y))
+
+    def test_double_precision_tracks_truncation_bound(self):
+        # Regression test for the float-PI phase-factor bug (A3,
+        # Jul 2026): cunfft.cu defined PI as a float32 literal, so the
+        # nfft_shift/normalize phases carried a ~2.8e-8 relative error
+        # that, multiplied by unreduced phase arguments up to
+        # 2*pi*|k0|, produced an m-independent ~1e-3 absolute error
+        # floor even at float64 (amplified with m by the Gaussian
+        # deconvolution). With the fix, the realized float64 error
+        # tracks the L1 truncation bound 4*exp(-m*D)*||y||_1; on the
+        # A5000 the m=12 error is 1.2e-10 vs a 3.3e-9 bound. We assert
+        # a 100x margin (buggy value was ~1e6 x the bound).
+        t, tsc, y, err = data()
+        nf = int(nfft_sigma * len(t))
+        m, sigma = 12, 2
+
+        gpu_nfft = simple_gpu_nfft(tsc, y, nf, sigma=sigma, m=m,
+                                   use_double=True,
+                                   minimum_frequency=-int(nf / 2),
+                                   samples_per_peak=1)
+
+        freqs = -int(nf / 2) + np.arange(nf)
+        direct_dft = direct_sums(tsc, y, freqs)
+
+        D = np.pi * (1. - 1. / (2. * sigma - 1.))
+        bound = 4. * np.exp(-m * D) * np.sum(np.abs(y))
+        err_max = np.max(np.absolute(direct_dft - gpu_nfft))
+        assert err_max <= 100. * bound
 
     def test_nfft_adjoint_async(self, f0=0., ndata=10,
                                 batch_size=3, use_double=False):
