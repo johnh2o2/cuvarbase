@@ -14,7 +14,6 @@ Please be respectful and constructive in all interactions with the project commu
 - CUDA-capable GPU (NVIDIA)
 - CUDA Toolkit (11.x or 12.x recommended)
 - PyCUDA >= 2017.1.1 (avoid 2024.1.2)
-- scikit-cuda
 
 ### Installation for Development
 

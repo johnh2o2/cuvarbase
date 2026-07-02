@@ -6,7 +6,7 @@ These installation instructions are for Linux/BSD-based systems (OS X/macOS, Ubu
 Installing the Nvidia Toolkit
 -----------------------------
 
-``cuvarbase`` requires PyCUDA and scikit-cuda, which both require the Nvidia toolkit for access to the Nvidia compiler, drivers, and runtime libraries.
+``cuvarbase`` requires PyCUDA, which requires the Nvidia toolkit for access to the Nvidia compiler, drivers, and runtime libraries.
 
 Go to the `NVIDIA Download page <https://developer.nvidia.com/cuda-downloads>`_ and select the distribution for your operating system. Everything has been developed and tested using **version 8.0**, so it may be best to stick with that version for now until we verify that later versions are OK.
 

@@ -186,45 +186,6 @@ export PATH=/usr/local/cuda/bin:$PATH
 
 Or add to your `~/.bashrc` on RunPod for persistence.
 
-### scikit-cuda + numpy 2.x Compatibility
-
-If you encounter `AttributeError: module 'numpy' has no attribute 'typeDict'`:
-
-This is a known issue with scikit-cuda 0.5.3 and numpy 2.x. The `setup-remote.sh` script attempts to patch this automatically. If the patch fails, you can manually fix it:
-
-```bash
-ssh -p ${RUNPOD_SSH_PORT} ${RUNPOD_SSH_USER}@${RUNPOD_SSH_HOST}
-python3 << 'PYEOF'
-# Read the file
-with open('/usr/local/lib/python3.12/dist-packages/skcuda/misc.py', 'r') as f:
-    lines = f.readlines()
-
-# Find and replace the problematic section
-new_lines = []
-i = 0
-while i < len(lines):
-    if 'num_types = [np.sctypeDict[t] for t in' in lines[i] or 'num_types = [np.typeDict[t] for t in' in lines[i]:
-        new_lines.append('# Fixed for numpy 2.x compatibility\n')
-        new_lines.append('num_types = []\n')
-        new_lines.append('for t in np.typecodes["AllInteger"]+np.typecodes["AllFloat"]:\n')
-        new_lines.append('    try:\n')
-        new_lines.append('        num_types.append(np.dtype(t).type)\n')
-        new_lines.append('    except (KeyError, TypeError):\n')
-        new_lines.append('        pass\n')
-        if i+1 < len(lines) and 'np.typecodes' in lines[i+1]:
-            i += 1
-        i += 1
-    else:
-        new_lines.append(lines[i])
-        i += 1
-
-with open('/usr/local/lib/python3.12/dist-packages/skcuda/misc.py', 'w') as f:
-    f.writelines(new_lines)
-
-print('✓ Fixed skcuda/misc.py')
-PYEOF
-```
-
 ### CUDA Initialization Errors
 
 If you see `pycuda._driver.LogicError: cuInit failed: initialization error`:
@@ -259,7 +220,7 @@ To test the TLS GPU implementation:
 ./scripts/test-remote.sh cuvarbase/tests/test_tls_basic.py -v
 ```
 
-**Note**: The TLS implementation uses PyCUDA directly and does not depend on skcuda, so TLS tests can run even if skcuda has import issues.
+**Note**: The TLS implementation uses PyCUDA directly.
 
 ## Security Notes
 

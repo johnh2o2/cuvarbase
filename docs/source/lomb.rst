@@ -99,7 +99,6 @@ Example: Basic
 .. plot::
 	:include-source:
 
-	import skcuda.fft
 	import cuvarbase.lombscargle as gls
 	import numpy as np
 	import matplotlib.pyplot as plt
@@ -141,7 +140,6 @@ Example: Batches of lightcurves
 .. plot::
 	:include-source:
 
-	import skcuda.fft
 	import cuvarbase.lombscargle as gls
 	import numpy as np
 	import matplotlib.pyplot as plt
