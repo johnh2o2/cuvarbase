@@ -383,9 +383,17 @@ class PDMAsyncProcess(GPUAsyncProcess):
         """
         return (3 * int(max_ndata) + 2 * int(nf)) * 4
 
+    # run() creates one CUDA stream and one page-locked host buffer per
+    # lightcurve in the chunk, so device-buffer arithmetic alone would
+    # let a huge free-memory pod pick a batch size in the millions --
+    # exhausting driver stream/pinned-allocation resources long before
+    # GPU memory runs out.
+    MAX_BATCH_SIZE = 256
+
     def _batch_size_from_memory(self, max_ndata, nf, n_lcs, max_memory=None):
         """Largest batch (number of lightcurves held on the GPU at once)
-        that fits in ``max_memory`` bytes; capped at ``n_lcs`` and >= 1.
+        that fits in ``max_memory`` bytes; capped at ``n_lcs``,
+        ``MAX_BATCH_SIZE`` and >= 1.
 
         ``max_memory`` defaults to 90% of the device's free memory.
         """
@@ -394,7 +402,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
             max_memory = int(0.9 * free)
         per_lc = self._bytes_per_lc(max_ndata, nf)
         batch_size = max(1, int(max_memory // per_lc))
-        return min(batch_size, int(n_lcs))
+        return min(batch_size, int(n_lcs), self.MAX_BATCH_SIZE)
 
     def batched_run_const_nfreq(self, data, batch_size=10, freqs=None,
                                 **kwargs):
@@ -422,6 +430,13 @@ class PDMAsyncProcess(GPUAsyncProcess):
         -------
         list of (freqs, power)
         """
+        batch_size = int(batch_size)
+        if batch_size < 1:
+            raise ValueError("batch_size must be >= 1; got %d" % batch_size)
+        if any(len(d) != 3 for d in data):
+            raise ValueError("batched_run_const_nfreq expects (t, y, err) "
+                             "tuples; the deprecated (t, y, w, freqs) "
+                             "run() format is not supported here")
         if len(data) == 0:
             return []
         if freqs is None:

@@ -35,12 +35,11 @@ def gpu_pdm(proc, t, y, dy, freqs, kind='binned_linterp', nbins=10):
 
 
 def test_correctness():
-    # The implementation-correctness test is that the GPU PDM matches the
-    # CPU reference (pdm2_cpu): same theta spectrum (high correlation) and
-    # same theta-minimizing frequency. (Whether that minimum lands on the
-    # injected period depends on the grid/nbins and PDM's known sparse-bin
-    # behaviour at high frequency -- it is reported below for information,
-    # not used as the pass criterion, since the GPU and CPU agree exactly.)
+    # The cuvarbase PDM kernels (and pdm2_cpu) return 1 - var/var_tot,
+    # which PEAKS at the true period (maximize convention, like the
+    # release gate's argmax) — NOT the classic minimize-theta PDM
+    # statistic. Correctness = GPU matches CPU (correlation + same
+    # argmax) AND the argmax recovers the injected period.
     print("=" * 60)
     print("PDM correctness: GPU PDM matches CPU reference (pdm2_cpu)")
     print("=" * 60)
@@ -59,15 +58,15 @@ def test_correctness():
                          dtype=np.float64)
 
         corr = np.corrcoef(gpu, cpu)[0, 1]
-        same_argmin = int(np.argmin(gpu)) == int(np.argmin(cpu))
-        f_best = freqs[np.argmin(gpu)]
+        same_argmax = int(np.argmax(gpu)) == int(np.argmax(cpu))
+        f_best = freqs[np.argmax(gpu)]
         df = freqs[1] - freqs[0]
-        recovers = abs(f_best - 1.0 / period) < 5 * df  # informational
-        ok = corr > 0.999 and same_argmin
+        recovers = abs(f_best - 1.0 / period) < 5 * df
+        ok = corr > 0.999 and same_argmax and recovers
         all_pass = all_pass and ok
-        print("  ndata=%-5d P=%4.1fd  corr=%.6f  argmin_match=%s  "
+        print("  ndata=%-5d P=%4.1fd  corr=%.6f  argmax_match=%s  "
               "f_best=%.5f f_inj=%.5f recovers=%s  %s"
-              % (ndata, period, corr, same_argmin, f_best, 1.0 / period,
+              % (ndata, period, corr, same_argmax, f_best, 1.0 / period,
                  recovers, "PASS" if ok else "FAIL"))
     print("  Overall:", "ALL PASS" if all_pass else "SOME FAILED")
     return all_pass
