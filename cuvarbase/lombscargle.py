@@ -810,7 +810,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         Returns
         -------
         results: list of lists
-            list of (freqs, pows) for each LS periodogram
+            list of (freqs, pows) for each LS periodogram; the power
+            arrays are page-locked host buffers filled asynchronously —
+            call :meth:`finish` before reading them (the batched entry
+            points synchronize for you)
 
         """
 

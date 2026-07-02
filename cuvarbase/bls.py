@@ -528,6 +528,10 @@ class BLSMemory:
 
         else:
             self.bls_g.get_async(ary=self.bls, stream=self.stream)
+            # self.bls is page-locked, so the copy above is genuinely
+            # asynchronous: sync before the host-side normalization or
+            # the divide races the DMA and gets overwritten by it.
+            self.stream.synchronize()
             self.bls /= self.yy
 
         # return self.bls

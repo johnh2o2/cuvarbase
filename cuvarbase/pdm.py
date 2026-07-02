@@ -308,6 +308,10 @@ class PDMAsyncProcess(GPUAsyncProcess):
         results: list
             If depracated format is used: list of power arrays.
             If new format is used: list of (freqs, power) tuples.
+            The power arrays are page-locked host buffers filled
+            asynchronously: call :meth:`finish` before reading them
+            (or use :meth:`batched_run_const_nfreq` / :meth:`large_run`,
+            which synchronize for you).
         """
 
         if kind in ['binless_tophat', 'binless_gauss',

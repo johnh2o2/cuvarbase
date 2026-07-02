@@ -394,6 +394,10 @@ class TLSMemory:
             self.best_t0_g.get_async(ary=self.best_t0, stream=self.stream)
             self.best_duration_g.get_async(ary=self.best_duration, stream=self.stream)
             self.best_depth_g.get_async(ary=self.best_depth, stream=self.stream)
+            # The host buffers are page-locked, so these copies are
+            # genuinely asynchronous; callers read them immediately after
+            # this returns, so sync here (matches BLSBatchMemory).
+            self.stream.synchronize()
 
     @classmethod
     def fromdata(cls, t, y, dy, periods=None, **kwargs):
