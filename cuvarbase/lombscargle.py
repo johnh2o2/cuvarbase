@@ -883,12 +883,22 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         ----------
         batch_size: int, optional (default: 1)
             Lightcurves processed per multi-stream batch. The default
-            of 1 is the fastest configuration in our benchmarks — all
-            published survey-throughput numbers (e.g. 4.4 ms/LC for
-            ZTF-scale grids) were measured at ``batch_size=1``; larger
-            values added multi-stream overhead and were slower in
-            every measured configuration (cause undiagnosed). Only
-            increase this if you benchmark it on your own workload.
+            of 1 is the safe choice — all published survey-throughput
+            numbers (e.g. 4.4 ms/LC for ZTF-scale grids) were measured
+            at ``batch_size=1``. The "multi-stream overhead" that made
+            larger values slower is per-call setup, diagnosed Jul 2026
+            (A5000): this method builds ``batch_size`` separate
+            ``LombScargleMemory`` sets — pinned host buffers, device
+            arrays, and a cuFFT plan each — on *every call*, a cost
+            that scales with ``batch_size``, while the GPU compute
+            stages barely benefit because a single survey-scale
+            Lomb-Scargle already saturates the device. When one call
+            processes many lightcurves (hundreds+) that setup
+            amortizes: ``batch_size=4`` measured ~10% faster per LC
+            than 1 at 256 LCs/call, while 8 was net slower. Only
+            increase this if your call sizes are large and you
+            benchmark it on your own workload; see
+            ``analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md``.
 
         Notes
         -----

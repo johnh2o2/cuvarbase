@@ -160,9 +160,11 @@ a8b074f, 568b821 + CHANGELOG/tracker commit):
   CONTRIBUTING/requirements/RunPod guide; CHANGELOG contradictions
   fixed (shim line, A6 "byte-identical" claim softened, t0_oversample
   entry added, pinned-buffer migration note, sparse BREAKING note).
-- Flagged, NOT yet addressed: E1 unchanged; A5 memory-reuse +
-  convention='snr' uses the passed y/dy for chi2_0 rather than the
-  loaded data.
+- E1/E2: RESOLVED Jul 2 (batch-4 pod) — see section E below.
+- A5 memory-reuse chi2_0: RESOLVED Jul 2 — BLSMemory.setdata records
+  chi2_0 of the loaded data; the fast path's snr/loglik conversion
+  uses it (regression test test_snr_uses_loaded_data_on_memory_reuse
+  passes on device).
 - A6 drift guard: RESOLVED Jul 2 — cross-file body comparison restored
   in test_kernel_drift.py (any function name defined in BOTH .cu files
   must have identical normalized bodies; reduction_max whitelisted);
@@ -464,7 +466,7 @@ a8b074f, 568b821 + CHANGELOG/tracker commit):
 
 ## E. Diagnosis items
 
-- [ ] **E1. eebls_gpu_batch large-ndata regression** — profile on pod
+- [x] **E1. eebls_gpu_batch large-ndata regression** — profile on pod
       (nsys via pip nvidia-nsight-systems or apt cuda-nsight-systems;
       fallback: CUDA-event stage timing inside the batch path);
       identify root cause; fix it OR implement automatic
@@ -481,9 +483,24 @@ a8b074f, 568b821 + CHANGELOG/tracker commit):
       session). E1 must explain + fix the batch path's small-ndata
       disagreement too (or document the regime where batch is valid).
       Details: analysis/v1.0-gpu-batch-jun2026/SUMMARY.md.
-- [ ] **E2. LS batch_size>1 multi-stream overhead** — same treatment:
+      **DONE Jul 2 (batch-4 pod): both defects root-caused + fixed.**
+      Correctness = batch path lacked the A2 noverlap multi-pass
+      (kernel arg is a no-op) → now mirrors _eebls_gpu_fast_impl;
+      parity tests corr>0.999 + identical argmax at ndata=200/2000.
+      Perf = per-call kernel compilation (0.6-0.9s vs 2-10ms kernel)
+      → batch kernel now LRU-cached; warm-cache batch BEATS the
+      single-LC loop at every scale (0.10x-0.45x, TESS 0.20x);
+      inefficiency warning retired. E1_E2_DIAGNOSIS.md.
+- [x] **E2. LS batch_size>1 multi-stream overhead** — same treatment:
       stage timing, root cause, fix or document; revisit the
       batch_size=1 default if fixed.
+      **DONE Jul 2 (batch-4 pod): root-caused + documented.** Per-call
+      construction of batch_size × (LombScargleMemory + pinned buffers
+      + cuFFT plan) with no compute headroom (one survey-scale LS
+      saturates the GPU; launch/finish actually improve slightly with
+      streams). Amortized (256 LCs/call): bs=4 ~10% faster than bs=1,
+      bs=8 net slower → default batch_size=1 unchanged, docstring now
+      carries the diagnosis + amortization guidance. E1_E2_DIAGNOSIS.md.
 
 ## F. Benchmark campaign (T2; gated on D3 sign-off)
 

@@ -125,3 +125,21 @@ Review comment posted on the PR (Jul 2) with these results and four
 asks (guard justification/relative threshold, single_bls/hone_solution
 phi convention + JD round-trip test, use_optimized docstring claim,
 return-arity/block_size-override consistency).
+
+## Batch-4 pod (same day, tw642fncf2qsvu): E1 + E2 + A5
+
+A second short pod session closed the remaining diagnosis items:
+
+- **E1** (eebls_gpu_batch): correctness divergence = missing A2
+  noverlap multi-pass; perf "regression" = per-call kernel compilation.
+  Both fixed; batch now beats the single-LC loop at every scale.
+- **E2** (LS batch_size>1): per-call allocation of batch_size memory
+  sets with no compute headroom; documented, default unchanged.
+- **A5** (chi2_0 on memory reuse): BLSMemory records chi2_0 at setdata
+  time; snr/loglik conversion uses it.
+
+Details + tables in `E1_E2_DIAGNOSIS.md`; scripts `e1_batch_profile.py`,
+`e2_ls_profile.py`, tests `TestBatchFastParity`,
+`test_snr_uses_loaded_data_on_memory_reuse`,
+`test_batch_kernels_are_cached`. Full suite re-run green on the batch-4
+pod (see tracker).
