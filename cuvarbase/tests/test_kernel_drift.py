@@ -14,7 +14,13 @@ These tests assert the include mechanism instead of comparing two copies:
 - the shared functions are defined once (in bls_common.cuh) and never
   redefined in either .cu file, so drift is structurally impossible,
 - the directive really expands (so both kernels see the shared bodies),
-- the intentionally-divergent functions still live in each .cu file.
+- the intentionally-divergent functions still live in each .cu file,
+- and any function name defined in BOTH .cu files (a helper duplicated
+  instead of moved to the header) must have an identical normalized
+  body -- the cross-file comparison the Jul-2026 audit found missing:
+  without it, a same-name helper added to both files could drift again
+  exactly like the original reduction_max bug. Only ``reduction_max``
+  itself is exempt (divergent by design).
 """
 import os
 import re
@@ -50,6 +56,36 @@ def _func_names(src):
     """Names of every __device__/__global__ function defined in ``src``."""
     return set(re.findall(
         r"^__(?:device|global)__[^\n]*?(\w+)\s*\(", src, re.M))
+
+
+def _strip_comments(src):
+    src = re.sub(r"/\*.*?\*/", " ", src, flags=re.S)
+    src = re.sub(r"//[^\n]*", " ", src)
+    return src
+
+
+def _func_bodies(src):
+    """Map name -> normalized source (signature + brace-matched body) for
+    every __device__/__global__ function defined in ``src``."""
+    src = _strip_comments(src)
+    bodies = {}
+    for m in re.finditer(
+            r"^__(?:device|global)__[^\n{;]*?(\w+)\s*\(", src, re.M):
+        name = m.group(1)
+        open_brace = src.find('{', m.end())
+        if open_brace < 0:
+            continue
+        depth, i = 1, open_brace + 1
+        while i < len(src) and depth:
+            if src[i] == '{':
+                depth += 1
+            elif src[i] == '}':
+                depth -= 1
+            i += 1
+        # normalize whitespace so formatting-only differences don't count
+        text = ' '.join(src[m.start():i].split())
+        bodies[name] = text
+    return bodies
 
 
 def test_both_kernels_inline_the_shared_header():
@@ -99,3 +135,29 @@ def test_intentionally_divergent_functions_live_in_the_cu_files():
     assert 'reduction_max' in std and 'reduction_max' in opt
     assert 'full_bls_no_sol' in std
     assert 'full_bls_no_sol_optimized' in opt
+
+
+def test_no_cross_file_drift_of_duplicated_functions():
+    # A helper defined in BOTH .cu files (rather than moved into
+    # bls_common.cuh) is a fresh drift hazard the header mechanism
+    # cannot see. Any such duplicate must be byte-identical after
+    # comment stripping + whitespace normalization. reduction_max is
+    # the one sanctioned divergence (tree reduction vs warp shuffle).
+    std = _func_bodies(open(find_kernel('bls')).read())
+    opt = _func_bodies(open(find_kernel('bls_optimized')).read())
+
+    duplicated = (set(std) & set(opt)) - {'reduction_max'}
+    drifted = sorted(name for name in duplicated
+                     if std[name] != opt[name])
+    assert not drifted, (
+        "function(s) %s are defined in BOTH bls.cu and bls_optimized.cu "
+        "with differing bodies -- move the shared implementation into "
+        "bls_common.cuh (or, if the divergence is intentional, rename "
+        "or whitelist it here) so the copies cannot silently drift"
+        % drifted)
+
+    # the guard itself must stay exercised: reduction_max is the known
+    # duplicated-and-divergent pair, so the extractor must see it in
+    # both files (guards against the regex/brace-matcher going stale)
+    assert 'reduction_max' in std and 'reduction_max' in opt
+    assert std['reduction_max'] != opt['reduction_max']
