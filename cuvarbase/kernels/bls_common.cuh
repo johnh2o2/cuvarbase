@@ -26,7 +26,19 @@ __device__ float bls_value(float ybar, float w, unsigned int ignore_negative_del
 	// if ignore negative delta sols is turned on, that means only solutions where
 	// the mean amplitude within the transit is _lower_ than the mean amplitude of
 	// the source are considered: it will ignore "inverted dips"
-	float bls = (w > 1e-10f && w < 1.f - 1e-10f) ? ybar * ybar / (w * (1.f - w)) : 0.f;
+	//
+	// The upper w bound must be a float32-meaningful complement: the old
+	// `w < 1.f - 1e-10f` compiled to `w < 1.f` (1e-10 < ulp(1)/2), so a
+	// box capturing ALL the statistical weight passed the guard with
+	// (1.f - w) equal to pure atomic-roundoff noise (~1e-5 for n~1e4
+	// points) and ybar likewise roundoff around 0 -- a 0/0 that showed
+	// up as nondeterministic bogus peaks on single-site data at alias
+	// frequencies (PR #65 reproducer, HATPI). 1e-4 exceeds worst-case
+	// accumulation error with margin; no legitimate transit solution
+	// holds >99.99% of the total weight (there would be no
+	// out-of-transit baseline). The lower bound is unchanged: small-w
+	// sums of positive weights carry no cancellation.
+	float bls = (w > 1e-10f && w < 1.f - 1e-4f) ? ybar * ybar / (w * (1.f - w)) : 0.f;
 	return ((ignore_negative_delta_sols == 1) & (ybar > 0.f)) ? 0.f : bls;
 }
 

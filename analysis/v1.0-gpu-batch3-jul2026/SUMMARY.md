@@ -143,3 +143,30 @@ Details + tables in `E1_E2_DIAGNOSIS.md`; scripts `e1_batch_profile.py`,
 `test_snr_uses_loaded_data_on_memory_reuse`,
 `test_batch_kernels_are_cached`. Full suite re-run green on the batch-4
 pod (see tracker).
+
+## Batch-5 pod (Jul 2, 0edjptn1mlfkgb): PR #65 instability root-caused
+
+Attila's response to the review supplied a HATPI reproducer for the
+instability his `fabs(ybar) > 1e-5f` guard was added for
+(nondeterministic run-to-run periodogram deviations, transient bogus
+peaks). Root cause found in OUR kernel: `bls_value`'s upper bound
+`w < 1.f - 1e-10f` is a float32 no-op (1e-10 < ulp(1)/2 → compiles to
+`w < 1.f`), so an all-weight trial box divides atomic roundoff by
+atomic roundoff; `sparse_bls.cu`'s `MAX_W_COMPLEMENT=1e-9` had the same
+underflow, and the CPU `single_bls` returned literal NaN on the same
+box (deterministically verified pre-fix on the pod).
+
+Fixed with a float32-meaningful 1e-4 complement in bls_common.cuh /
+bls_batch.cu / sparse_bls.cu / single_bls / sparse_bls_cpu. New tests
+(`TestAllWeightBoxStability`): deterministic CPU zero, GPU repeat
+stability on single-site data, 500 ppm shallow-transit recovery.
+
+Caveat, recorded honestly: the GPU run-to-run instability itself could
+NOT be reproduced synthetically (tried HATPI-scale n=98K + his exact
+eebls_transit call + extreme weights + outliers + phase clustering —
+all stable pre-fix at ≤1e-6, scripts in `pr65_instability_repro.py`).
+The reply asks attila to re-run his 50-iteration HATPI check on
+v1.0-fixes and to share one light curve's columns if any deviation
+survives. Side observation: a few near-zero-error points make one box
+carry ~all weight deterministically (power ≈ 0.99 in pure noise) —
+data-hygiene footgun, possibly worth a docs note (not a code bug).

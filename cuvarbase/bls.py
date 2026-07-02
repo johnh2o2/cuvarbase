@@ -1521,7 +1521,13 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
 
     if YW > 0 and ignore_negative_delta_sols:
         return 0
-    return 0 if W < 1e-9 else (YW ** 2) / (W * (1 - W)) / YY
+    # Upper bound mirrors the GPU kernels' bls_value: a box holding
+    # (nearly) all the statistical weight has no out-of-transit baseline
+    # and its power is roundoff-divided-by-roundoff (this function sums
+    # float32-cast quantities like the kernels do).
+    if W < 1e-9 or W > 1 - 1e-4:
+        return 0
+    return (YW ** 2) / (W * (1 - W)) / YY
 
 
 _BLS_POWER_CONVENTIONS = ('chi2ratio', 'snr', 'loglik')
@@ -1762,8 +1768,12 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
         powers = []
         for W, YW, q, valid in ((W_nw, YW_nw, q_nw, valid_nw),
                                 (W_w, YW_w, q_w, valid_w)):
+            # W bounds mirror sparse_bls.cu's MIN_W/MAX_W_COMPLEMENT:
+            # the complement must exceed float32 roundoff so the GPU
+            # kernel and this reference exclude the same degenerate
+            # all-weight boxes (parity tests compare them directly)
             valid = (valid & (q > 0) & (q >= qmin_f) & (q <= qmax_f)
-                     & (W > 1e-9) & (W < 1.0 - 1e-9))
+                     & (W > 1e-9) & (W < 1.0 - 1e-4))
             if ignore_negative_delta_sols:
                 valid &= (YW <= 0)
             with np.errstate(divide='ignore', invalid='ignore'):

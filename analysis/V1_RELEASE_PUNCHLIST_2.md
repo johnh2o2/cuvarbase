@@ -132,6 +132,17 @@ cufinufft deps installed this time); release gate ALL PASSED.**
       on his branch, exact recovery on v1.0-fixes) — review comment
       posted with results + 4 asks; merge blocked only on the guard
       (ask 1) and the single_bls phi convention (ask 2).
+      FOLLOW-UP (same day, batch-5 pod): attila supplied a HATPI
+      instability reproducer for ask 1 → root-caused in OUR kernel:
+      the bls_value upper w bound (1.f - 1e-10f) is a float32 no-op,
+      so all-weight boxes divide atomic roundoff by roundoff
+      (sparse_bls.cu MAX_W_COMPLEMENT=1e-9 same underflow; CPU
+      single_bls returned NaN — verified pre-fix on pod). Fixed with
+      a 1e-4 complement across all 5 sites + TestAllWeightBoxStability
+      (3 tests, pass on device); the GPU run-to-run symptom itself was
+      NOT synthetically reproducible (HATPI-scale attempts stable
+      pre-fix) — reply posted asking attila to re-run his HATPI check
+      on v1.0-fixes and drop the fabs(ybar) guard on rebase.
 
 ## Audit pass (Jul 2 2026) — post-offline work re-verified
 

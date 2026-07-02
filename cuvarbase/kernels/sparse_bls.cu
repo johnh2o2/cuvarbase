@@ -2,7 +2,11 @@
 #define RESTRICT __restrict__
 #define CONSTANT const
 #define MIN_W 1E-9
-#define MAX_W_COMPLEMENT 1E-9
+// Must be float32-meaningful: 1e-9 underflowed against 1.0f (the bound
+// compiled to `W > 1.f`, i.e. no upper guard), so an all-weight box
+// divided roundoff by roundoff. Matches bls_common.cuh's bls_value
+// bound; sparse_bls_cpu uses the same complement for parity.
+#define MAX_W_COMPLEMENT 1E-4
 //{CPP_DEFS}
 
 /**

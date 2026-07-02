@@ -31,7 +31,10 @@ __device__ int batch_mod(int a, int b){
 }
 
 __device__ float batch_bls_value(float ybar, float w, unsigned int ignore_neg){
-    float bls = (w > 1e-10f && w < 1.f - 1e-10f) ? ybar * ybar / (w * (1.f - w)) : 0.f;
+    // Upper w bound must be float32-meaningful (see bls_value in
+    // bls_common.cuh: the old 1e-10 complement underflowed to `w < 1.f`,
+    // letting all-weight boxes divide roundoff by roundoff).
+    float bls = (w > 1e-10f && w < 1.f - 1e-4f) ? ybar * ybar / (w * (1.f - w)) : 0.f;
     return ((ignore_neg == 1) & (ybar > 0.f)) ? 0.f : bls;
 }
 
