@@ -452,6 +452,8 @@ class BLSMemory:
         self.qmax = None
         self.nbinsf_g = None
 
+        self.chi2_0 = None
+
         self.bls = None
         self.bls_g = None
 
@@ -556,6 +558,10 @@ class BLSMemory:
 
         self.ybar = sum(y * w)
         self.yy = np.dot(w, np.power(y - self.ybar, 2))
+        # chi2 of the constant model for the data actually loaded here;
+        # convert_bls_power scalings must use this rather than whatever
+        # y/dy a later (memory-reuse) call happens to pass.
+        self.chi2_0 = _chi2_null(y, dy)
 
         u = (y - self.ybar) * w
         self.yw[:len(t)] = np.asarray(u).astype(self.rtype)[:]
@@ -725,8 +731,16 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
         memory.transfer_data_to_cpu()
         if stream is not None:
             stream.synchronize()
-        return convert_bls_power(memory.bls, y, dy,
-                                 convention=convention)
+        # Use the chi2_0 of the data actually loaded in the memory: on
+        # the memory-reuse path (memory= given, transfer_to_device=False)
+        # the y/dy arguments may not be the data that produced this
+        # periodogram, and 'snr'/'loglik' would be scaled by the wrong
+        # null model.
+        chi2_0 = getattr(memory, 'chi2_0', None)
+        if chi2_0 is None:
+            chi2_0 = _chi2_null(y, dy)
+        return _convert_bls_power_from_chi2_0(memory.bls, chi2_0,
+                                              convention)
 
     return memory.bls
 
@@ -1576,9 +1590,19 @@ def convert_bls_power(power, y, dy, convention='chi2ratio'):
         Power(s) in the requested convention.
     """
     _validate_convention(convention)
+    return _convert_bls_power_from_chi2_0(power, None, convention,
+                                          y=y, dy=dy)
+
+
+def _convert_bls_power_from_chi2_0(power, chi2_0, convention,
+                                   y=None, dy=None):
+    """``convert_bls_power`` with a precomputed :math:`\\chi^2_0`
+    (falls back to computing it from ``y``/``dy`` when ``None``)."""
+    _validate_convention(convention)
     if convention == 'chi2ratio':
         return power
-    chi2_0 = _chi2_null(y, dy)
+    if chi2_0 is None:
+        chi2_0 = _chi2_null(y, dy)
     if convention == 'snr':
         return np.sqrt(chi2_0 * np.asarray(power))
     return 0.5 * chi2_0 * np.asarray(power)  # 'loglik'
@@ -2138,17 +2162,24 @@ def compile_bls_batch(block_size=_default_block_size, **kwargs):
     return functions
 
 
-def _warn_if_batch_inefficient(max_ndata, threshold=10000):
-    """Warn when batch mode is known to be slower than the single-LC
-    path (benchmarked ~12x slower at ndata=20,000; the regression is
-    undiagnosed)."""
-    if max_ndata > threshold:
-        warnings.warn(
-            "eebls_gpu_batch was measured ~12x SLOWER than a "
-            "single-lightcurve eebls_gpu_fast loop for large "
-            "lightcurves (ndata ~20,000; cause undiagnosed). With "
-            "ndata=%d, consider looping over eebls_gpu_fast instead."
-            % max_ndata, UserWarning)
+def _get_cached_batch_kernels(block_size):
+    """``compile_bls_batch`` through the same thread-safe LRU cache the
+    single-LC paths use. Without this every ``eebls_gpu_batch`` call
+    recompiled the kernel (~0.6-0.9 s on an A5000) -- which dwarfed the
+    2-10 ms of actual kernel work and was the entire "batch is ~12x
+    slower at TESS scale" regression (E1)."""
+    ensure_context()
+    key = (block_size, 'batch')
+    with _kernel_cache_lock:
+        if key in _kernel_cache:
+            _kernel_cache.move_to_end(key)
+            return _kernel_cache[key]
+        compiled = compile_bls_batch(block_size=block_size)
+        _kernel_cache[key] = compiled
+        _kernel_cache.move_to_end(key)
+        if len(_kernel_cache) > _KERNEL_CACHE_MAX_SIZE:
+            _kernel_cache.popitem(last=False)
+        return compiled
 
 
 def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
@@ -2179,11 +2210,15 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         Maximum fractional transit duration (scalar or per-frequency,
         as for ``qmin``).
     noverlap : int, optional (default: 2)
-        Phase overlap factor.
+        Phase-bin oversampling: the periodogram is the elementwise max
+        over ``noverlap`` kernel passes with the phase-bin grid shifted
+        by ``1/noverlap`` of the finest bin between passes (same
+        semantics as ``eebls_gpu_fast``). Runtime scales linearly;
+        ``noverlap=1`` gives a single unshifted pass.
     dlogq : float, optional (default: 0.3)
         Logarithmic spacing of q values.
     dphi : float, optional (default: 0.0)
-        Phase offset.
+        Phase offset (in units of the finest phase bin).
     ignore_negative_delta_sols : bool, optional (default: False)
         Ignore solutions with positive residuals (inverted dips).
     max_batch_lcs : int, optional (default: 256)
@@ -2200,21 +2235,18 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
 
     Notes
     -----
-    .. warning::
-
-        Batch mode pays off when per-lightcurve overhead dominates,
-        i.e. for *small* lightcurves: benchmarks (RTX A5000) measured
-        3.7x speedup over a single-LC ``eebls_gpu_fast`` loop at
-        ndata=150, 1.6x at 6,000 — but ~12x *slower* at ndata=20,000
-        (TESS scale; regression undiagnosed) and slightly slower at
-        65,000. A UserWarning is emitted when the largest lightcurve
-        exceeds ~10,000 points; prefer the single-LC path there.
+    With the kernel cache warm, batch mode beats a single-LC
+    ``eebls_gpu_fast`` loop at every measured scale (RTX A5000,
+    Jul 2026): ~10x at ndata=200, ~6x at 2,000, ~5x at 20,000
+    (10 LCs, nfreq ~1800-5000). The earlier "~12x slower at TESS
+    scale" regression was per-call kernel compilation (now LRU-cached
+    like the single-LC paths) and its warning has been retired; see
+    ``analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md``.
     """
     freqs = np.asarray(freqs).astype(np.float32)
     nfreq = len(freqs)
     n_total = len(lightcurves)
     _validate_convention(convention)
-    _warn_if_batch_inefficient(max(len(lc[0]) for lc in lightcurves))
 
     # Group LCs by similar ndata to minimize padding
     lc_indices = list(range(n_total))
@@ -2228,9 +2260,10 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
     if block_size is None:
         block_size = _choose_block_size(max_ndata_all)
 
-    # Compile kernel if needed
+    # Compile kernel if needed (LRU-cached; per-call compilation was
+    # the dominant cost of this function -- see _get_cached_batch_kernels)
     if functions is None:
-        functions = compile_bls_batch(block_size=block_size)
+        functions = _get_cached_batch_kernels(block_size)
 
     func = functions['full_bls_batch']
 
@@ -2285,19 +2318,41 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         grid = (max_nblocks, batch_n)
         block = (block_size, 1, 1)
 
-        args = (grid, block, stream)
-        args += (mem.t_g.ptr, mem.yw_g.ptr, mem.w_g.ptr)
-        args += (mem.bls_g.ptr, mem.freqs_g.ptr)
-        args += (mem.nbins0_g.ptr, mem.nbinsf_g.ptr)
-        args += (mem.ndata_per_lc_g.ptr,)
-        args += (np.uint32(max_ndata_batch),)
-        args += (np.uint32(nfreq), np.uint32(0))
-        args += (np.uint32(max_nbins), np.uint32(noverlap))
-        args += (np.float32(dlogq), np.float32(dphi))
-        args += (np.uint32(int(ignore_negative_delta_sols)),)
-        args += (np.uint32(batch_n),)
+        # Phase oversampling, mirroring _eebls_gpu_fast_impl (A2): the
+        # kernel's own noverlap argument is a no-op in its box scan, so
+        # run ``noverlap`` passes with the bin grid shifted by
+        # 1/noverlap of a fine bin and keep the elementwise max.
+        # Without this the batch path was single-pass while the
+        # fast/adaptive reference multi-passes -- the small-ndata
+        # periodogram divergence flagged in the Jun GPU batch (E1).
+        best_bls_g = None
+        for i_pass in range(noverlap):
+            dphi_pass = dphi + float(i_pass) / noverlap
 
-        func.prepared_async_call(*args, shared_size=int(mem_req))
+            args = (grid, block, stream)
+            args += (mem.t_g.ptr, mem.yw_g.ptr, mem.w_g.ptr)
+            args += (mem.bls_g.ptr, mem.freqs_g.ptr)
+            args += (mem.nbins0_g.ptr, mem.nbinsf_g.ptr)
+            args += (mem.ndata_per_lc_g.ptr,)
+            args += (np.uint32(max_ndata_batch),)
+            args += (np.uint32(nfreq), np.uint32(0))
+            args += (np.uint32(max_nbins), np.uint32(1))
+            args += (np.float32(dlogq), np.float32(dphi_pass))
+            args += (np.uint32(int(ignore_negative_delta_sols)),)
+            args += (np.uint32(batch_n),)
+
+            func.prepared_async_call(*args, shared_size=int(mem_req))
+
+            if noverlap > 1:
+                if best_bls_g is None:
+                    best_bls_g = mem.bls_g.copy()
+                else:
+                    gpuarray.maximum(mem.bls_g, best_bls_g,
+                                     out=best_bls_g, stream=stream)
+
+        if best_bls_g is not None:
+            cuda.memcpy_dtod(mem.bls_g.gpudata, best_bls_g.gpudata,
+                             best_bls_g.nbytes)
 
         # Transfer results back
         mem.transfer_to_cpu()

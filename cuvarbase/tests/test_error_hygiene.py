@@ -126,14 +126,18 @@ class TestBatchApiHonesty(object):
             LombScargleAsyncProcess.batched_run_const_nfreq)
         assert sig.parameters['batch_size'].default == 1
 
-    def test_batch_inefficiency_warning(self):
-        import warnings as _warnings
-        from ..bls import _warn_if_batch_inefficient
-        with pytest.warns(UserWarning, match="SLOWER"):
-            _warn_if_batch_inefficient(20000)
-        with _warnings.catch_warnings():
-            _warnings.simplefilter("error", UserWarning)
-            _warn_if_batch_inefficient(500)  # must not warn
+    def test_batch_kernels_are_cached(self):
+        # E1: per-call compilation (~0.6-0.9 s vs 2-10 ms of kernel
+        # work) was the whole "batch is ~12x slower at TESS scale"
+        # regression; the batch kernel must go through the same LRU
+        # cache as the single-LC paths (and the old inefficiency
+        # warning is retired).
+        from .. import bls
+        assert not hasattr(bls, '_warn_if_batch_inefficient')
+        fns1 = bls._get_cached_batch_kernels(256)
+        fns2 = bls._get_cached_batch_kernels(256)
+        assert fns1 is fns2
+        assert (256, 'batch') in bls._kernel_cache
 
     def test_bls_memory_host_array_naming(self):
         from ..bls import BLSMemory
