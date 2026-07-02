@@ -629,3 +629,33 @@ class TestNoBitonicSort:
         src = open(find_kernel('tls')).read()
         assert 'bitonic_sort_phases' not in src
         assert 'y_sorted' not in src
+
+
+@pytest.mark.skipif(not PYCUDA_AVAILABLE,
+                    reason="PyCUDA not available")
+class TestTLSStreamParity:
+    """TLSMemory.transfer_from_gpu enqueues async copies into
+    page-locked buffers; tls_search_gpu used to synchronize BEFORE
+    enqueueing them and then read the host arrays immediately, so
+    stream runs could return stale/zero chi2. Results on a user
+    stream must match the default-stream results."""
+
+    def test_stream_matches_default(self):
+        import pycuda.driver as cuda
+        from cuvarbase import tls
+        from cuvarbase.core import ensure_context
+
+        rand = np.random.RandomState(7)
+        t = np.linspace(0, 100, 400)
+        y = np.ones(400) + 0.001 * rand.randn(400)
+        dy = np.ones(400) * 0.001
+        periods = np.linspace(5, 15, 10)
+
+        r_default = tls.tls_search_gpu(t, y, dy, periods=periods,
+                                       block_size=64)
+        ensure_context()
+        r_stream = tls.tls_search_gpu(t, y, dy, periods=periods,
+                                      block_size=64,
+                                      stream=cuda.Stream())
+        np.testing.assert_allclose(r_stream['chi2'], r_default['chi2'],
+                                   rtol=1e-3)

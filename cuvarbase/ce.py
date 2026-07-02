@@ -486,7 +486,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         -------
         results: list of lists
             list of (freqs, ce) corresponding to CE for each element of
-            the ``data`` array
+            the ``data`` array; the ce arrays are page-locked host
+            buffers filled asynchronously — call :meth:`finish` before
+            reading them (the batched entry points synchronize for you)
 
         """
         # compile module if not compiled already

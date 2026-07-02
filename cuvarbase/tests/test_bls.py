@@ -1257,3 +1257,30 @@ class TestSparseBlsCpuVectorized:
         elapsed = time.time() - start
         assert elapsed < 10.0  # pre-vectorization: minutes
         assert int(np.argmax(power)) == 1
+
+
+class TestPinnedBufferStreamParity(object):
+    """With page-locked host result buffers, device->host copies on a
+    user stream are genuinely asynchronous. BLSMemory.transfer_data_to_cpu
+    used to normalize (bls /= yy) right after enqueueing get_async, racing
+    the DMA — the returned periodogram could be unnormalized or torn.
+    Results on a user stream must match the default-stream results."""
+
+    @pytest.mark.parametrize("use_optimized", [False, True])
+    def test_fast_path_stream_matches_default(self, use_optimized):
+        import pycuda.driver as cuda
+        from ..core import ensure_context
+
+        t, y, dy = data(snr=30, q=0.05, phi0=0.317, freq=1.0,
+                        baseline=365., ndata=300)
+        freqs = np.linspace(0.95, 1.05, 200)
+        fn = eebls_gpu_fast_optimized if use_optimized else eebls_gpu_fast
+
+        p_default = fn(t, y, dy, freqs)
+        ensure_context()
+        p_stream = fn(t, y, dy, freqs, stream=cuda.Stream())
+
+        # rtol only needs to catch the failure modes (unnormalized:
+        # off by the factor 1/yy; torn: garbage), not atomic-order
+        # jitter between runs.
+        assert_allclose(p_stream, p_default, rtol=1e-3)
