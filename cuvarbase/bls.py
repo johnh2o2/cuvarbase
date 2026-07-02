@@ -941,13 +941,12 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     - ndata <= 128: 128 threads (four warps)
     - ndata > 128: 256 threads (eight warps)
 
-    This provides significant speedups for small datasets by reducing
-    idle thread overhead and kernel launch costs.
-
-    Expected performance vs eebls_gpu_fast:
-    - ndata=10: 2-5x faster
-    - ndata=100: 1.5-2x faster
-    - ndata=1000+: Same performance
+    Smaller blocks reduce idle-thread overhead for small datasets.
+    Measured benefit is modest: the v1.0 re-benchmark (warm kernel
+    cache) puts the block-size effect at ~1.0-1.3x vs the fixed
+    256-thread default (earlier 1.4-5.3x figures were dominated by
+    per-call kernel handling that the kernel cache now amortizes; see
+    ``benchmark_results_by_gpu/block_size_a5000.json``).
 
     All other parameters identical to eebls_gpu_fast.
 
