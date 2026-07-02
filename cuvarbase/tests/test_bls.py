@@ -981,6 +981,69 @@ class TestEeblsGpuFastNoverlap(object):
         assert np.all(p3 >= p1 - 1e-6)
 
 
+class TestAllWeightBoxStability(object):
+    """Regression tests for the nondeterministic bogus-peak bug behind
+    PR #65's fabs(ybar) guard (attila's HATPI reproducer): bls_value's
+    upper w bound `1.f - 1e-10f` is a float32 no-op (compiles to
+    `w < 1.f`), so a trial box capturing ALL the statistical weight --
+    routine for single-site data at ~1 cycle/day aliases with q up to
+    0.5 -- divided atomic roundoff by atomic roundoff, producing
+    run-to-run-varying spurious power. The bound is now a meaningful
+    1e-4 complement across bls_common.cuh / bls_batch.cu /
+    sparse_bls.cu / single_bls / sparse_bls_cpu."""
+
+    @staticmethod
+    def _single_site_data(n_nights=60, per_night=50, seed=21):
+        rand = np.random.RandomState(seed)
+        nights = np.arange(n_nights)
+        t = np.concatenate([n + 0.25 * np.sort(rand.rand(per_night))
+                            for n in nights])
+        y = 12.0 + 0.01 * rand.randn(len(t))
+        dy = 0.01 * np.ones_like(y)
+        return t, y, dy
+
+    def test_single_bls_all_weight_box_is_zero(self):
+        # deterministic CPU check: at f = 1/day the whole lightcurve
+        # sits at phases < 0.25, so a q=0.5 box holds all the weight --
+        # power must be exactly 0, not roundoff/roundoff
+        t, y, dy = self._single_site_data()
+        assert single_bls(t, y, dy, 1.0, 0.5, 0.0) == 0
+        # a normal box is unaffected by the new bound
+        assert np.isfinite(single_bls(t, y, dy, 0.31, 0.05, 0.1))
+
+    def test_fast_path_repeatable_on_single_site_data(self):
+        # the GPU symptom: identical calls returned different
+        # periodograms (deviations > 1e-2, transient bogus peaks near
+        # 1 cycle/day). With the fixed bound the all-weight boxes score
+        # exactly 0 in every pass, so repeats must agree to float32
+        # atomic-reordering noise and no order-0.01+ power appears in
+        # pure noise.
+        t, y, dy = self._single_site_data()
+        freqs = np.linspace(0.95, 1.05, 500)
+        kw = dict(qmin=0.01, qmax=0.5, noverlap=1)
+        p0 = eebls_gpu_fast(t, y, dy, freqs, **kw)
+        for _ in range(5):
+            p = eebls_gpu_fast(t, y, dy, freqs, **kw)
+            assert np.max(np.abs(p - p0)) < 1e-4
+        assert np.max(p0) < 0.05
+
+    def test_shallow_transit_survives_w_bound(self):
+        # guard against "fixing" the instability with an absolute
+        # amplitude threshold instead (the PR #65 approach): a 500 ppm
+        # q=0.01 transit in normalized flux (kernel-internal
+        # s ~ 5e-6) must still be recovered.
+        rand = np.random.RandomState(42)
+        ndata, freq_inj, q_inj = 3000, 0.4, 0.01
+        t = np.sort(370.0 * rand.rand(ndata))
+        y = np.ones(ndata) - 5e-4 * ((t * freq_inj) % 1.0 < q_inj)
+        y += 1e-4 * rand.randn(ndata)
+        dy = 1e-4 * np.ones(ndata)
+        freqs = np.linspace(0.38, 0.42, 4001)
+        power = eebls_gpu_fast(t, y, dy, freqs, qmin=0.005, qmax=0.05)
+        fbest = freqs[int(np.argmax(power))]
+        assert abs(fbest - freq_inj) < 5 * (freqs[1] - freqs[0])
+
+
 class TestBatchFastParity(object):
     """E1 regression: eebls_gpu_batch must match eebls_gpu_fast on the
     same inputs. The batch kernel's noverlap argument is a no-op (like
