@@ -60,8 +60,9 @@ Currently includes implementations of:
   - Sparse BLS ([Panahi & Zucker 2021](https://arxiv.org/abs/2103.06193)) for small datasets (< 500 observations)
     - GPU implementation: `sparse_bls_gpu()` (default)
     - CPU implementation: `sparse_bls_cpu()` (per-call alternative;
-      runs on a GPU-less machine — no CUDA context is created until a
-      GPU search actually runs)
+      the `pycuda` package must still be installed/importable —
+      `cuvarbase.bls` imports `pycuda.driver` at module top — but no
+      GPU or CUDA context is created until a GPU search actually runs)
 - **Non-equispaced fast Fourier transform (NFFT)** - Adjoint operation ([paper](http://epubs.siam.org/doi/abs/10.1137/0914081))
 - **Conditional Entropy period finder ([CE](https://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** - Non-parametric period finding
   - **Maintenance mode**: CE works and will keep working, but no further development is planned here. For new projects that want an actively developed GPU conditional entropy (or AOV) search, we recommend [periodfind](https://github.com/scope-ml/periodfind) from the ZTF/SCoPe team
@@ -122,7 +123,6 @@ spawning fresh processes over forking when using multiple GPUs.
 
 **Essential:**
 - [PyCUDA](https://mathema.tician.de/software/pycuda/) - Python interface to CUDA
-- [scikit-cuda](https://scikit-cuda.readthedocs.io/en/latest/) - Used for access to the CUDA FFT runtime library
 
 **Optional (for additional features and testing):**
 - [matplotlib](https://matplotlib.org/) - For plotting utilities
