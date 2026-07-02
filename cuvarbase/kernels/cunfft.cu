@@ -3,17 +3,22 @@
 
 #define RESTRICT __restrict__
 #define CONSTANT const
-#define PI 3.14159265358979323846264338327950288f
 #define FILTER gauss_filter
 //{CPP_DEFS}
 
 #ifdef DOUBLE_PRECISION
 	#define ATOMIC_ADD atomicAddDouble
 	#define FLT double
-
+	// PI must be a double literal here: the float32 literal's relative
+	// error (2.8e-8) times the un-reduced phase arguments in nfft_shift/
+	// normalize (up to 2*pi*|k0|) produced an m-independent absolute
+	// error floor ~1e-3 that swamped the truncation bound (A3 diagnosis,
+	// Jul 2026 batch 3).
+	#define PI 3.14159265358979323846264338327950288
 #else
 	#define ATOMIC_ADD atomicAdd
 	#define FLT float
+	#define PI 3.14159265358979323846264338327950288f
 #endif
 
 #define CMPLX pycuda::complex<FLT>
@@ -42,13 +47,13 @@ __device__ int mod(CONSTANT int a, CONSTANT int b) {
    return (ret < 0) ? ret + b : ret;
 }
 
-__device__ float modflt(CONSTANT FLT a, CONSTANT FLT b){
+__device__ FLT modflt(CONSTANT FLT a, CONSTANT FLT b){
 	return a - floor(a / b) * b;
 }
 
 __device__ FLT diffmod(CONSTANT FLT a, CONSTANT FLT b, CONSTANT FLT M) {
 	FLT ret = a - b;
-	if (fabsf(ret) > M/2){
+	if (fabs(ret) > M/2){
 		if (ret > 0)
 			return ret - M;
 		return M + ret;
