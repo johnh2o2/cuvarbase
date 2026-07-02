@@ -238,7 +238,15 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # than computing on the host -- and (b) covers the full baseline
         # with no ``median(dt)*nf`` span limit, so multi-season / gappy
         # data is no longer silently truncated. ``ghat`` is returned at
-        # Fourier modes k = 0..nf-1, i.e. frequencies k/(max(t)-min(t)).
+        # Fourier modes k = 0..nf-1, i.e. frequencies k/(max(t)-min(t)),
+        # with ABSOLUTE-t phases: ghat[k] = sum_j y_j exp(2 pi i f_k t_j)
+        # (the kernel re-references to t=0, NOT to min(t); verified
+        # against the exact adjoint DFT on device, batch 3 Jul 2026).
+        # Only modes k < nf/2 lie inside the sigma=2 Gaussian window's
+        # guaranteed-accuracy band; the upper half band carries growing
+        # deconvolution error. The matched filter uses the same transform
+        # for data and template, so the common phase and per-mode error
+        # largely cancel in the whitened correlation.
         t = np.asarray(t, dtype=self.real_type)
         y = np.asarray(y, dtype=self.real_type)
         if len(t) < 2:
