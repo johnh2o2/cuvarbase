@@ -40,12 +40,20 @@ def test_t0_oversample_is_part_of_cache_key(monkeypatch):
         return {'standard': object(), 'keplerian': object()}
 
     monkeypatch.setattr(tls_mod, 'compile_tls', fake_compile)
+    # Snapshot and restore the module-level cache: monkeypatch undoes
+    # compile_tls but NOT cache contents — leaking the fake kernel
+    # objects under keys like (128, 3.0) crashes any later test in the
+    # same process that hits _get_cached_kernels with default settings.
+    saved = dict(tls_mod._kernel_cache)
     tls_mod._kernel_cache.clear()
-
-    _get_cached_kernels(128, t0_oversample=3.0)
-    _get_cached_kernels(128, t0_oversample=3.0)    # cache hit -> no recompile
-    _get_cached_kernels(128, t0_oversample=33.0)   # distinct key -> recompile
-    assert calls == [(128, 3.0), (128, 33.0)]
+    try:
+        _get_cached_kernels(128, t0_oversample=3.0)
+        _get_cached_kernels(128, t0_oversample=3.0)   # cache hit
+        _get_cached_kernels(128, t0_oversample=33.0)  # distinct key
+        assert calls == [(128, 3.0), (128, 33.0)]
+    finally:
+        tls_mod._kernel_cache.clear()
+        tls_mod._kernel_cache.update(saved)
 
 
 def test_t0_grid_size_mirrors_oversample():

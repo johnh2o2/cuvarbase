@@ -305,7 +305,10 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
         if N is None:
             raise ValueError("estimate_m requires N when y is not given")
-        return self.m_from_C(self.m_tol / N, self.sigma)
+        # Clamp like the y-path above: pathological tolerances
+        # (m_tol > 4N) would give m <= 0, i.e. a negative Gaussian
+        # shape parameter b and garbage gridding.
+        return max(1, self.m_from_C(self.m_tol / N, self.sigma))
 
     def get_m(self, N=None, y=None):
         """

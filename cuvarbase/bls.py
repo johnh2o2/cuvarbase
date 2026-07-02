@@ -1069,6 +1069,10 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         Best (q, phi) solution at each frequency
 
     """
+    # Validate before any GPU work: an unknown convention would
+    # otherwise only raise at the return statement, after the whole
+    # multi-stream grid search has run.
+    _validate_convention(convention)
 
     functions = functions if functions is not None \
         else compile_bls(**kwargs)

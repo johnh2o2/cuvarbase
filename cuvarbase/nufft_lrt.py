@@ -32,7 +32,7 @@ import pycuda.driver as cuda  # noqa: E402
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .base import GPUAsyncProcess
+from .base import GPUAsyncProcess, ensure_context
 from .cunfft import NFFTAsyncProcess
 from .memory import NFFTMemory
 from .utils import find_kernel, _module_reader
@@ -53,6 +53,10 @@ class NUFFTLRTMemory:
     """
     
     def __init__(self, nfft_memory, stream, use_double=False, **kwargs):
+        # Direct construction is a supported entry point (exported in
+        # __all__): retain the CUDA context before any GPU allocation,
+        # like every other *Memory class.
+        ensure_context()
         self.nfft_memory = nfft_memory
         self.stream = stream
         self.use_double = use_double

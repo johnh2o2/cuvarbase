@@ -46,6 +46,14 @@ class TestEstimateM(object):
         assert proc.estimate_m(N) == expected
         assert proc.get_m(N) == expected
 
+    def test_fallback_clamps_m_to_at_least_one(self):
+        # Pathological tolerance (m_tol > 4N) used to return m <= 0 on
+        # the N-fallback path (the y-path was already clamped), giving
+        # a negative Gaussian shape parameter b and garbage gridding.
+        proc = self._proc(tol=1e6)
+        assert proc.estimate_m(100) >= 1
+        assert proc.get_m(100) >= 1
+
     def test_data_driven_m_scales_with_l1_norm(self):
         proc = self._proc(tol=1e-8, sigma=4)
         N = 1000
