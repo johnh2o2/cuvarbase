@@ -1,7 +1,12 @@
 {
   "device": "NVIDIA RTX A5000",
   "correctness_pass": true,
-  "correctness_note": "GPU PDM matches the CPU reference (pdm2_cpu) exactly: corr=1.0000 and identical theta-argmin for all 3 configs (ndata=300/1000/3000). The 'correctness_pass' field was regenerated to reflect this GPU-vs-CPU agreement criterion; the original run used a period-recovery check that flagged a PDM sparse-bin high-frequency artifact hit identically by GPU and CPU (not an implementation error). The throughput grid below is the unmodified A5000 measurement.",
+  "correctness_note": "Re-run Jul 2 2026 (batch 3) after fixing the benchmark's best-frequency selection (argmin on a maximize-convention periodogram, the C1 audit finding): GPU PDM matches the CPU reference (pdm2_cpu) at corr=1.000000 with identical argmax, AND the injected period is recovered at all 3 configs (ndata=300 P=2.5d f_best=0.39990/f_inj=0.40000; ndata=1000 P=5d 0.19995/0.20000; ndata=3000 P=10d 0.09997/0.10000). The earlier 'PDM sparse-bin high-frequency artifact' note from batch 2 was an artifact of the argmin bug, not of PDM. The throughput grid below is the unmodified batch-2 A5000 measurement.",
+  "recovery": [
+    {"ndata": 300, "period_d": 2.5, "corr": 1.0, "argmax_match": true, "f_best": 0.3999, "f_inj": 0.4, "recovers": true},
+    {"ndata": 1000, "period_d": 5.0, "corr": 1.0, "argmax_match": true, "f_best": 0.19995, "f_inj": 0.2, "recovers": true},
+    {"ndata": 3000, "period_d": 10.0, "corr": 1.0, "argmax_match": true, "f_best": 0.09997, "f_inj": 0.1, "recovers": true}
+  ],
   "benchmark": {
     "timestamp": "2026-06-13T22:56:44",
     "grid": [
