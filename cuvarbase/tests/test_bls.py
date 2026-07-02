@@ -1014,6 +1014,14 @@ class TestPowerConventions(object):
         with pytest.raises(ValueError, match="convention"):
             eebls_gpu_fast(t, y, dy, np.array([1.0]),
                            convention='banana')
+        # eebls_gpu_custom used to validate only at the return
+        # statement, i.e. AFTER the full GPU grid search. The
+        # ValueError (not a GPU error) must come before any GPU work.
+        with pytest.raises(ValueError, match="convention"):
+            eebls_gpu_custom(t, y, dy, np.array([1.0]),
+                             q_values=np.array([0.05, 0.1]),
+                             phi_values=np.linspace(0, 1, 10),
+                             convention='banana')
 
     def test_chi2ratio_is_identity(self):
         from ..bls import convert_bls_power
