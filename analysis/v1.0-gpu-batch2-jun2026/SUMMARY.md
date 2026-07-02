@@ -58,6 +58,20 @@ all pass on GPU too.
   artifact (hit identically by GPU and CPU), so the benchmark's pass
   criterion was corrected to GPU-vs-CPU agreement (the real test).
 
+  **CORRECTION (2026-07-02 audit): the "sparse-bin high-frequency
+  artifact" diagnosis above is FALSE.** The benchmark selected the best
+  frequency with `np.argmin` on a spectrum that PEAKS at the true
+  period (the kernels and `pdm2_cpu` return `1 - var/var_tot`; the
+  release gate correctly uses argmax) — i.e. it reported the
+  worst-fitting frequency and unsurprisingly failed to "recover" on
+  healthy data. Verified on all three benchmark configs: argmax
+  recovers the injected frequency within 5·df every time. Fixed in
+  `scripts/benchmark_pdm.py` (argmax + recovery restored to the pass
+  criterion); the `recovers=false` fields in
+  `benchmark_results_by_gpu/pdm_a5000.json` are artifacts of the
+  argmin bug (the throughput numbers are unaffected). Re-run queued
+  for the next pod session.
+
 ## Bug found + fixed during the session
 - `scripts/benchmark_pdm.py` queried `cuda.Context.get_device()` before
   any context existed — broken by B1's lazy context. Fixed to

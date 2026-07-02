@@ -61,6 +61,40 @@ def test_batched_run_const_nfreq_empty():
     assert proc.batched_run_const_nfreq([], freqs=np.linspace(0.1, 1, 5)) == []
 
 
+def test_batched_run_const_nfreq_rejects_bad_batch_size():
+    # batch_size=-2 used to silently return [] (all results dropped);
+    # batch_size=0 crashed with an opaque range() error.
+    import pytest
+    proc = _proc()
+    data = [(np.linspace(0, 10, 50), np.zeros(50), np.ones(50))]
+    freqs = np.linspace(0.1, 1, 5)
+    for bad in (0, -2):
+        with pytest.raises(ValueError, match="batch_size"):
+            proc.batched_run_const_nfreq(data, batch_size=bad, freqs=freqs)
+
+
+def test_batched_run_const_nfreq_rejects_legacy_format():
+    # The deprecated (t, y, w, freqs) run() format used to die deep in
+    # the result loop with an opaque unpack error and silently ignored
+    # the shared freqs argument.
+    import pytest
+    proc = _proc()
+    t = np.linspace(0, 10, 50)
+    legacy = [(t, np.zeros(50), np.ones(50), np.linspace(0.1, 1, 5))]
+    with pytest.raises(ValueError, match="deprecated"):
+        proc.batched_run_const_nfreq(legacy, freqs=np.linspace(0.1, 1, 5))
+
+
+def test_batch_size_from_memory_stream_cap():
+    # run() creates one stream + one pinned buffer per LC in the chunk;
+    # unbounded free memory must not translate into a driver-resource
+    # exhausting batch size (audit: 21.6 GB free -> batch_size ~ 1M).
+    proc = _proc()
+    assert proc._batch_size_from_memory(
+        150, 2000, n_lcs=10 ** 6, max_memory=20 * 10 ** 9) == \
+        PDMAsyncProcess.MAX_BATCH_SIZE
+
+
 def test_large_run_uses_memory_capped_batch_size(monkeypatch):
     proc = _proc()
     captured = {}
