@@ -1,4 +1,6 @@
-from itertools import product 
+from itertools import product
+import warnings
+
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -979,6 +981,58 @@ class TestEeblsGpuFastNoverlap(object):
         assert np.all(p3 >= p1 - 1e-6)
 
 
+class TestBatchFastParity(object):
+    """E1 regression: eebls_gpu_batch must match eebls_gpu_fast on the
+    same inputs. The batch kernel's noverlap argument is a no-op (like
+    the fast kernels', the A2 finding), so the batch launch is wrapped
+    in the same host-side dphi-shifted multi-pass; before that the
+    batch path was effectively noverlap=1 while the fast/adaptive
+    reference multi-passed, and the periodograms diverged at small
+    ndata (corr 0.77, peak match 5/10 at ndata=200 in the Jun 2026
+    GPU benchmark)."""
+
+    @pytest.mark.parametrize('ndata', [200, 2000])
+    def test_batch_matches_fast(self, ndata):
+        from ..bls import eebls_gpu_batch, eebls_gpu_fast
+
+        rand = np.random.RandomState(3)
+        baseline = 365.0
+        freq_inj, q_inj, delta = 0.5, 0.03, 0.05
+        t = np.sort(baseline * rand.rand(ndata))
+        phase = (t * freq_inj) % 1.0
+        y = 12.0 - delta * (phase < q_inj)
+        sigma = 0.01
+        y += sigma * rand.randn(ndata)
+        dy = sigma * np.ones(ndata)
+
+        freqs = np.linspace(0.1, 1.0, 5000)
+        p_fast = eebls_gpu_fast(t, y, dy, freqs)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            p_batch = eebls_gpu_batch([(t, y, dy)], freqs)[0]
+
+        corr = float(np.corrcoef(p_fast, p_batch)[0, 1])
+        assert corr > 0.999, corr
+        assert int(np.argmax(p_fast)) == int(np.argmax(p_batch))
+
+    def test_batch_noverlap_1_single_pass(self):
+        # noverlap=1 must reproduce the old single-pass behavior:
+        # everywhere <= the multi-pass result (elementwise max).
+        from ..bls import eebls_gpu_batch
+
+        rand = np.random.RandomState(4)
+        ndata = 300
+        t = np.sort(365.0 * rand.rand(ndata))
+        y = 1.0 + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        freqs = np.linspace(0.1, 1.0, 2000)
+
+        p1 = eebls_gpu_batch([(t, y, dy)], freqs, noverlap=1)[0]
+        p3 = eebls_gpu_batch([(t, y, dy)], freqs, noverlap=3)[0]
+        assert np.all(p3 >= p1 - 1e-7)
+        assert np.max(np.abs(p3 - p1)) > 0
+
+
 class TestPowerConventions(object):
     """convert_bls_power + the convention= kwarg (#17): conversions
     validated against astropy.timeseries.BoxLeastSquares definitions
@@ -1028,6 +1082,30 @@ class TestPowerConventions(object):
         t, y, dy = self._data()
         p = np.array([0.0, 0.1, 0.5])
         assert convert_bls_power(p, y, dy) is p
+
+    def test_snr_uses_loaded_data_on_memory_reuse(self):
+        # A5 audit follow-up: on the memory-reuse path (memory= given,
+        # transfer_to_device=False) the y/dy ARGUMENTS may not be the
+        # data that produced the periodogram; the 'snr'/'loglik'
+        # scaling must come from the chi2_0 of the data actually
+        # loaded into the memory (recorded at setdata time), not from
+        # the arguments.
+        from ..bls import BLSMemory, eebls_gpu_fast
+        t, y, dy = self._data()
+        freqs = np.linspace(0.5, 1.5, 200)
+
+        p_ref = eebls_gpu_fast(t, y, dy, freqs, convention='snr')
+
+        mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                 freqs=freqs, transfer=True)
+        # deliberately junk arguments: must not affect the scaling
+        y_junk = 100.0 + 5.0 * y
+        dy_junk = 25.0 * dy
+        p_reuse = eebls_gpu_fast(t, y_junk, dy_junk, freqs,
+                                 memory=mem,
+                                 transfer_to_device=False,
+                                 convention='snr')
+        assert_allclose(p_reuse, p_ref, rtol=1e-6)
 
     def test_conversion_definitions(self):
         from ..bls import convert_bls_power
