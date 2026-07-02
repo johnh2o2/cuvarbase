@@ -83,23 +83,44 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
   (bug found+fixed: benchmark_pdm.py queried the device before B1's lazy
   context existed.)
 
-**Batch 3 queue (accumulating; CPU-side landed, GPU-pending):**
-- [ ] C2: multiharmonic GLS — on the A5000, confirm the real ghat_g
+**Batch 3 queue — EXECUTED Jul 2 2026 (RTX A5000, pod vma81x9ssaaf92,
+terminated + verified). Results in analysis/v1.0-gpu-batch3-jul2026/.
+Full suite on v1.0-fixes: 721 passed / 0 skipped (batman + TLS +
+cufinufft deps installed this time); release gate ALL PASSED.**
+- [x] C2: multiharmonic GLS — on the A5000, confirm the real ghat_g
       spectrum layout matches the verified convention: run
       LombScargleAsyncProcess(nharmonics=H) for H=2,3 and assert
       corr>0.999 vs lomb_scargle_direct_sums(nharms=H) on the same grid.
-- [ ] C3: NUFFT-LRT rewire — on the A5000: NUFFTLRTAsyncProcess.run
+      → GREEN: corr=0.99995/0.99994 (H=2/3, float64), identical peak
+      frequency; float32 also >0.9999.
+- [x] C3: NUFFT-LRT rewire — on the A5000: NUFFTLRTAsyncProcess.run
       actually executes the NFFT on device (no GPUStubError; profile/
       confirm kernels invoked); compute_nufft output matches the CPU
       adjoint-DFT reference (corr>0.999); the restored GPU tests pass;
       multi-season detection works end-to-end on device.
-- [ ] AUDIT: stream-parity regression tests from the Jul 2 audit
+      → GREEN: corr=1.0000000000 vs exact adjoint DFT over the sigma=2
+      guaranteed band; all 5 NFFT kernels compiled+invoked; two-season
+      detection exact (best P = true P = 2.3000, SNR 20.4). Finding
+      fixed in-batch: the documented phase convention was wrong — the
+      device computes ABSOLUTE-t phases exp(2πi k t/T), not
+      (t−tmin)-relative; compute_nufft docstring + pipeline-test mock
+      corrected (matched filter unaffected: common phase cancels).
+- [x] AUDIT: stream-parity regression tests from the Jul 2 audit
       fixes — TestPinnedBufferStreamParity (test_bls.py) and
       TestTLSStreamParity (test_tls_basic.py) must pass on device
-      (they auto-skip without CUDA).
-- [ ] AUDIT: re-run scripts/benchmark_pdm.py --tests-only after the
+      (they auto-skip without CUDA). → GREEN (all 3, run verbosely).
+- [x] AUDIT: re-run scripts/benchmark_pdm.py --tests-only after the
       argmin→argmax fix; recommit pdm_a5000.json with valid recovery
       fields (throughput numbers from batch 2 remain valid).
+      → GREEN: recovery now passes at ALL 3 configs (corr=1.0, argmax
+      match, f_best≈f_inj); the batch-2 "sparse-bin artifact" was
+      entirely the benchmark argmin bug. pdm_a5000.json updated.
+- [x] AUDIT/A3: NFFT error-floor diagnosis — CAUSE FOUND AND FIXED:
+      float32 PI literal in cunfft.cu phase kernels (nfft_shift/
+      normalize) — NOT inherent. f64 error now tracks the truncation
+      bound (m=12: 3.4e-3 → 1.2e-10). Kernel + estimate_m docstring +
+      tests updated; float32 keeps a genuine ~1e-3 floor (documented).
+      See analysis/v1.0-gpu-batch3-jul2026/A3_DIAGNOSIS.md.
 - [ ] PR #65 (@astrobatty): run the full GPU suite + the new
       eebls_transit(use_optimized=True) tests on his branch before
       merge (CI is CPU-only).
@@ -132,11 +153,12 @@ a8b074f, 568b821 + CHANGELOG/tracker commit):
   fixed (shim line, A6 "byte-identical" claim softened, t0_oversample
   entry added, pinned-buffer migration note, sparse BREAKING note).
 - Flagged, NOT yet addressed: A6 drift test can't catch cross-file
-  drift of new helpers (restore cross-file comparison); A3 realized
-  ~1e-3 NFFT error floor exceeds the implemented bound by ~1e4 at
-  float64 (docstring calls it inherent — needs a diagnosis item, not
-  documentation); E1 unchanged; A5 memory-reuse + convention='snr'
-  uses the passed y/dy for chi2_0 rather than the loaded data.
+  drift of new helpers (restore cross-file comparison); E1 unchanged;
+  A5 memory-reuse + convention='snr' uses the passed y/dy for chi2_0
+  rather than the loaded data.
+- A3 error floor: RESOLVED Jul 2 (batch 3) — the ~1e-3 float64 floor
+  was the float32 PI literal in cunfft.cu's phase kernels, fixed;
+  realized error now tracks the L1 bound (see batch-3 queue above).
 
 ## A. Contained code items (do first)
 
