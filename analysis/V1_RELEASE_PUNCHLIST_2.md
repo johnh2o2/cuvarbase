@@ -121,9 +121,17 @@ cufinufft deps installed this time); release gate ALL PASSED.**
       bound (m=12: 3.4e-3 → 1.2e-10). Kernel + estimate_m docstring +
       tests updated; float32 keeps a genuine ~1e-3 floor (documented).
       See analysis/v1.0-gpu-batch3-jul2026/A3_DIAGNOSIS.md.
-- [ ] PR #65 (@astrobatty): run the full GPU suite + the new
+- [x] PR #65 (@astrobatty): run the full GPU suite + the new
       eebls_transit(use_optimized=True) tests on his branch before
       merge (CI is CPU-only).
+      → Run Jul 2 in a separate pod clone at his head c959d51:
+      916 passed / 0 failed; release gate ALL PASSED; the
+      noverlap × use_optimized interaction verified working. The
+      fabs(ybar) > 1e-5f shallow-transit kill was CONFIRMED with a
+      device reproducer (500 ppm SNR~27 transit: all-zero periodogram
+      on his branch, exact recovery on v1.0-fixes) — review comment
+      posted with results + 4 asks; merge blocked only on the guard
+      (ask 1) and the single_bls phi convention (ask 2).
 
 ## Audit pass (Jul 2 2026) — post-offline work re-verified
 
@@ -152,10 +160,13 @@ a8b074f, 568b821 + CHANGELOG/tracker commit):
   CONTRIBUTING/requirements/RunPod guide; CHANGELOG contradictions
   fixed (shim line, A6 "byte-identical" claim softened, t0_oversample
   entry added, pinned-buffer migration note, sparse BREAKING note).
-- Flagged, NOT yet addressed: A6 drift test can't catch cross-file
-  drift of new helpers (restore cross-file comparison); E1 unchanged;
-  A5 memory-reuse + convention='snr' uses the passed y/dy for chi2_0
-  rather than the loaded data.
+- Flagged, NOT yet addressed: E1 unchanged; A5 memory-reuse +
+  convention='snr' uses the passed y/dy for chi2_0 rather than the
+  loaded data.
+- A6 drift guard: RESOLVED Jul 2 — cross-file body comparison restored
+  in test_kernel_drift.py (any function name defined in BOTH .cu files
+  must have identical normalized bodies; reduction_max whitelisted);
+  mutation-verified.
 - A3 error floor: RESOLVED Jul 2 (batch 3) — the ~1e-3 float64 floor
   was the float32 PI literal in cunfft.cu's phase kernels, fixed;
   realized error now tracks the L1 bound (see batch-3 queue above).

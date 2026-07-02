@@ -96,6 +96,32 @@ kernels.** The float64 error now tracks the L1 truncation bound
 `a3_sweep_before_fix.txt` / `a3_sweep_after_fix.txt` (JSON_RESULT lines
 include per-mode error profiles for the phase-on/phase-off cases).
 
-## PR #65 (astrobatty, bugfix/BLS-kernel)
+## PR #65 (astrobatty, bugfix/BLS-kernel @ c959d51)
 
-See section appended below after the run.
+Run in a separate clone (`/workspace/cuvarbase-pr65`, editable install
+repointed) so the branch was tested exactly as submitted:
+
+- **Full GPU suite: 916 passed, 0 failed** in 9:29 (his
+  use_fast × use_optimized parametrization adds ~190 cases over our
+  723).
+- **check_release_gate.py: ALL CHECKS PASSED** on his branch.
+- **noverlap × use_optimized interaction** (flagged in the Jul-1 review
+  notes as needing a pod check): `eebls_transit(use_optimized=True,
+  noverlap=3)` really does multi-pass (max |p3−p1| = 0.059 > 0),
+  satisfies the elementwise-max property (p3 ≥ p1 everywhere), and
+  recovers the injected signal exactly. CLEARED.
+- **Shallow-transit regression from the `fabs(ybar) > 1e-5f` guard
+  CONFIRMED** (`pr65_shallow_transit_repro.py`): 500 ppm, q=0.01
+  transit in normalized flux (per-point σ=1e-4, in-transit SNR ~27,
+  ndata=3000, 20001 freqs). The kernel-internal s ≈ q·depth = 5e-6 is
+  below the guard for *every* box, so on his branch the entire
+  periodogram is identically zero (peak power = 0, NOT RECOVERED);
+  on v1.0-fixes the same data yields peak f=0.40002 vs injected
+  0.40000, power 0.137, RECOVERED. This is review ask #1.
+- `git merge-tree` check: his branch merges into the current
+  v1.0-fixes head with no conflicts.
+
+Review comment posted on the PR (Jul 2) with these results and four
+asks (guard justification/relative threshold, single_bls/hone_solution
+phi convention + JD round-trip test, use_optimized docstring claim,
+return-arity/block_size-override consistency).
