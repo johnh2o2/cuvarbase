@@ -93,6 +93,50 @@ Full suite 671 passed / 7 skipped; release gate ALL PASSED.
       confirm kernels invoked); compute_nufft output matches the CPU
       adjoint-DFT reference (corr>0.999); the restored GPU tests pass;
       multi-season detection works end-to-end on device.
+- [ ] AUDIT: stream-parity regression tests from the Jul 2 audit
+      fixes — TestPinnedBufferStreamParity (test_bls.py) and
+      TestTLSStreamParity (test_tls_basic.py) must pass on device
+      (they auto-skip without CUDA).
+- [ ] AUDIT: re-run scripts/benchmark_pdm.py --tests-only after the
+      argmin→argmax fix; recommit pdm_a5000.json with valid recovery
+      fields (throughput numbers from batch 2 remain valid).
+- [ ] PR #65 (@astrobatty): run the full GPU suite + the new
+      eebls_transit(use_optimized=True) tests on his branch before
+      merge (CI is CPU-only).
+
+## Audit pass (Jul 2 2026) — post-offline work re-verified
+
+The Jun 12-13 punchlist execution (5e90a16..4449ff9) was audited by a
+16-lane adversarial review (10 lanes completed + inline spot-checks;
+findings journal preserved in the session transcript). Confirmed
+defects were fixed on v1.0-fixes (commits 07ce10e, 44559f3, 9ef3306,
+a8b074f, 568b821 + CHANGELOG/tracker commit):
+- B3 fallout (BLOCKER): unsynced async D2H copies into now-pinned
+  buffers — BLSMemory.transfer_data_to_cpu normalized against the
+  in-flight DMA; tls_search_gpu synced before enqueueing its result
+  copies; LS/CE/PDM run() finish() contract now documented.
+- C1: benchmark_pdm.py selected best frequency with argmin on a
+  maximize-convention spectrum; the resulting recovery failure was
+  mis-recorded in batch 2 as a "PDM sparse-bin artifact" (correction
+  appended to the batch-2 SUMMARY; re-run queued above).
+- A1: sparse_bls_cpu/gpu q bounds made keyword-only + value-validated
+  (positional legacy calls silently returned all-zero periodograms).
+- D1 test leaked fake kernels into the TLS kernel cache; C3's
+  NUFFTLRTMemory missed the B1 ensure_context guard; A5's
+  eebls_gpu_custom validated convention= only after the GPU run;
+  A3's estimate_m N-fallback could return m<=0; PDM batch_size and
+  legacy-format inputs now validated; large_run batch size capped at
+  256 (one stream + pinned buffer per LC per chunk).
+- Docs: skcuda purged from lomb.rst examples/INSTALL/README/
+  CONTRIBUTING/requirements/RunPod guide; CHANGELOG contradictions
+  fixed (shim line, A6 "byte-identical" claim softened, t0_oversample
+  entry added, pinned-buffer migration note, sparse BREAKING note).
+- Flagged, NOT yet addressed: A6 drift test can't catch cross-file
+  drift of new helpers (restore cross-file comparison); A3 realized
+  ~1e-3 NFFT error floor exceeds the implemented bound by ~1e4 at
+  float64 (docstring calls it inherent — needs a diagnosis item, not
+  documentation); E1 unchanged; A5 memory-reuse + convention='snr'
+  uses the passed y/dy for chi2_0 rather than the loaded data.
 
 ## A. Contained code items (do first)
 
