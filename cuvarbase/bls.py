@@ -1490,9 +1490,7 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     q: float
         Transit duration in phase
     phi0: float
-        Phase offset of transit, relative to ``floor(min(t))`` (times are
-        epoch-subtracted before folding, consistent with the GPU
-        functions in this module)
+        Phase offset of transit
     ignore_negative_delta_sols:
         Whether or not to ignore solutions with negative delta (inverted dips)
 
@@ -1502,7 +1500,13 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
         BLS power for this set of parameters
     """
 
-    phi = subtract_epoch(t)[0].astype(np.float32) * np.float32(freq)
+    # Epoch-subtract before the float32 cast
+    t, epoch = subtract_epoch(t)
+
+    # Adjust phase offset to subtracted timescale
+    phi0 = (phi0 - (epoch * freq)) % 1.0
+
+    phi = t.astype(np.float32) * np.float32(freq)
     phi -= np.float32(phi0)
     phi -= np.floor(phi)
 
