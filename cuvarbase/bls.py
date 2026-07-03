@@ -1683,12 +1683,12 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     bls: array_like, float
         BLS power at each frequency
     solutions: list of (q, phi0) tuples
-        Best (q, phi0) solution at each frequency; ``phi0`` is measured
-        relative to ``floor(min(t))``
+        Best (q, phi0) solution at each frequency
     """
     _validate_convention(convention)
 
-    t = subtract_epoch(t)[0].astype(np.float32)
+    t, epoch = subtract_epoch(t)
+    t = t.astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
     freqs = np.asarray(freqs).astype(np.float32)
@@ -1794,6 +1794,9 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             best_phi[i_freq] = phi_s[ii]
 
     solutions = list(zip(best_q, best_phi))
+    # Adjust phases to original timescale
+    solutions = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(solutions, freqs)]
+
     return (convert_bls_power(bls_powers, y, dy, convention=convention),
             solutions)
 
