@@ -1053,9 +1053,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     q_values: array_like
         Set of q values to search at each trial frequency
     phi_values: float or array_like
-        Set of phi values to search at each trial frequency; phases
-        are measured relative to ``floor(min(t))`` (times are epoch-subtracted
-        before folding)
+        Set of phi values to search at each trial frequency
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     nstreams: int, optional (default: 5)
