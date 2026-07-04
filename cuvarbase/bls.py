@@ -2063,14 +2063,18 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     use_optimized: bool, optional (default: False)
         Use optimized GPU implementation (if not using sparse).
 
-        This automatically selects optimal block size based on ndata:
+        Unless an explicit ``block_size`` is passed (which is always
+        respected), this automatically selects a block size based on
+        ndata:
+
         - ndata <= 32: 32 threads (single warp)
         - ndata <= 64: 64 threads (two warps)
         - ndata <= 128: 128 threads (four warps)
         - ndata > 128: 256 threads (eight warps)
 
-        This provides significant speedups for small datasets by reducing
-        idle thread overhead and kernel launch costs.
+        Smaller blocks reduce idle-thread overhead for small datasets
+        (measured effect with a warm kernel cache is ~1.0-1.3x; see
+        eebls_gpu_fast_adaptive).
     use_sparse: bool, optional (default: None)
         If True, use sparse BLS. If False, use standard BLS. If None (default),
         automatically select based on dataset size (sparse_threshold).
