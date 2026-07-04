@@ -29,10 +29,20 @@ Timing discipline: warm-cache medians over >= --runs runs; the cold
 """
 import argparse
 import json
+import os
 import subprocess
 import time
 from collections import OrderedDict
 from pathlib import Path
+
+# Pin BLAS threadpools BEFORE importing numpy: on CPU-quota-limited
+# containers (RunPod/K8s) OpenBLAS spawns nproc threads inside np.dot
+# and the CFS quota freezes the process for ~90 ms per 100 ms period
+# (measured: TESS reuse path 52 -> 6.4 ms/lc with this pin; cgroup
+# nr_throttled +5 -> 0 per loop).
+for _v in ('OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS',
+           'NUMEXPR_NUM_THREADS'):
+    os.environ.setdefault(_v, '1')
 
 import numpy as np
 
@@ -89,6 +99,16 @@ def sync():
     cuda.Context.synchronize()
 
 
+def _throttle_stat():
+    """cgroup-v1 CFS throttle counters (0,0 if unavailable)."""
+    try:
+        with open('/sys/fs/cgroup/cpu/cpu.stat') as f:
+            d = dict(line.split() for line in f)
+        return int(d.get('nr_throttled', 0)), int(d.get('throttled_time', 0))
+    except Exception:
+        return 0, 0
+
+
 def timed(fn, runs, warmup=1):
     """Return (cold_s, warm_median_s, all_warm)."""
     cold = None
@@ -117,6 +137,7 @@ def bench_survey(name, cfg, n_lcs, runs, variants, noverlap=2):
           f"(n_lcs={n_lcs}, runs={runs}) ===", flush=True)
 
     lcs = [make_lc(cfg, seed=1000 + i) for i in range(n_lcs)]
+    thr0 = _throttle_stat()
     out = dict(ndata=cfg['ndata'], nfreq=nfreq, n_lcs=n_lcs, runs=runs,
                noverlap=noverlap, variants={})
 
@@ -215,6 +236,12 @@ def bench_survey(name, cfg, n_lcs, runs, variants, noverlap=2):
         if 'per_lc_s' in d:
             d['usd_per_million_lc'] = (d['per_lc_s'] / 3600.0) \
                 * POD_USD_PER_HR * 1e6
+    thr1 = _throttle_stat()
+    out['cfs_throttle_events'] = thr1[0] - thr0[0]
+    out['cfs_throttle_ms'] = (thr1[1] - thr0[1]) / 1e6
+    if out['cfs_throttle_events']:
+        print(f"  WARNING: {out['cfs_throttle_events']} CFS throttle "
+              f"events during this survey's timing", flush=True)
     if mem is not None:
         del mem
     return out
