@@ -275,9 +275,8 @@ class TestBLS(object):
     @pytest.mark.parametrize("nstreams", [1, 3])
     @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
     @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
-    @pytest.mark.parametrize("use_optimized", [True, False])
     def test_custom(self, freq, q_index, phi_index, freq_batch_size, nstreams,
-                    ignore_negative_delta_sols, use_optimized):
+                    ignore_negative_delta_sols):
         q_values = np.logspace(-1.1, -0.8, num=10)
         phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
 
@@ -294,8 +293,7 @@ class TestBLS(object):
                                         q_values, phi_values,
                                         ignore_negative_delta_sols=ignore_negative_delta_sols,
                                         freq_batch_size=freq_batch_size,
-                                        nstreams=nstreams,
-                                        use_optimized=use_optimized)
+                                        nstreams=nstreams)
 
         for freq, (qg, phg), gpower in zip(freqs, gsols, power):
             q_and_phis = product(q_values, phi_values)
@@ -317,9 +315,8 @@ class TestBLS(object):
     @pytest.mark.parametrize("nstreams", [1, 3])
     @pytest.mark.parametrize("freq_batch_size", [1, 3, None])
     @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
-    @pytest.mark.parametrize("use_optimized", [True, False])
     def test_standard(self, freq, q_index, phi_index, nstreams, freq_batch_size,
-                      ignore_negative_delta_sols, use_optimized):
+                      ignore_negative_delta_sols):
 
         q_values = np.logspace(-1.5, np.log10(0.1), num=100)
         phi_values = np.linspace(0, 1, int(np.ceil(2./min(q_values))))
@@ -340,8 +337,7 @@ class TestBLS(object):
                                  qmin=0.1 * q, qmax=2.0 * q,
                                  nstreams=nstreams, noverlap=2, dlogq=0.5,
                                  freq_batch_size=freq_batch_size,
-                                 ignore_negative_delta_sols=ignore_negative_delta_sols,
-                                 use_optimized=use_optimized)
+                                 ignore_negative_delta_sols=ignore_negative_delta_sols)
 
         bls_c = [single_bls(t, y, dy, x[0], *x[1],
                             ignore_negative_delta_sols=ignore_negative_delta_sols)
@@ -377,16 +373,65 @@ class TestBLS(object):
         assert mostly_ok and not_too_bad
         # assert_allclose(bls_c, power, rtol=1e-3, atol=1e-5)
 
+    # use_optimized=True swaps in the bls_optimized.cu module, whose
+    # binning/store kernels are byte-shared with bls.cu via
+    # bls_common.cuh -- only reduction_max differs (warp-shuffle finish
+    # vs full tree). One focused equivalence test per entry point
+    # exercises that reduction + store path; cross-multiplying
+    # use_optimized into every test_standard/test_custom parametrization
+    # would double the suite while varying nothing else in the kernel.
+    def test_standard_use_optimized_matches(self):
+        q = 0.05
+        t, y, dy = data(snr=10, q=q, phi0=0.317, freq=1.0, baseline=365.)
+        freqs = np.linspace(0.95, 1.05, 300)
+
+        kw = dict(qmin=0.1 * q, qmax=2.0 * q, nstreams=1,
+                  noverlap=2, dlogq=0.5)
+        p_std, sols_std = eebls_gpu(t, y, dy, freqs, **kw)
+        p_opt, sols_opt = eebls_gpu(t, y, dy, freqs, use_optimized=True,
+                                    **kw)
+
+        # identical binning kernels: powers agree to float32
+        # atomic-ordering noise
+        assert_allclose(p_opt, p_std, rtol=1e-4, atol=1e-6)
+
+        # solutions may legitimately differ where two boxes tie in
+        # power (the two reductions break ties differently), so compare
+        # the powers of the solutions rather than the solutions
+        for f, s_std, s_opt in zip(freqs, sols_std, sols_opt):
+            if s_std != s_opt:
+                b_std = single_bls(t, y, dy, f, *s_std)
+                b_opt = single_bls(t, y, dy, f, *s_opt)
+                # ties: same binned power; exact powers can differ by
+                # one point's membership at most (~power / n_in_box)
+                assert abs(b_std - b_opt) < 0.15 * max(b_std, b_opt) + 1e-5
+
+    def test_custom_use_optimized_matches(self):
+        q_values = np.logspace(-1.1, -0.8, num=10)
+        phi_values = np.linspace(0, 1, int(np.ceil(2. / min(q_values))))
+        t, y, dy = data(snr=10, q=q_values[5], phi0=phi_values[10],
+                        freq=1.0, baseline=365., ndata=500)
+        freqs = np.linspace(0.9999, 1.0001, 20)
+
+        p_std, sols_std = eebls_gpu_custom(t, y, dy, freqs,
+                                           q_values, phi_values)
+        p_opt, sols_opt = eebls_gpu_custom(t, y, dy, freqs,
+                                           q_values, phi_values,
+                                           use_optimized=True)
+        assert_allclose(p_opt, p_std, rtol=1e-4, atol=1e-6)
+
     @pytest.mark.parametrize("freq", [1.0])
     @pytest.mark.parametrize("dlogq", [0.5, -1.0])
     @pytest.mark.parametrize("freq_batch_size", [1, 10, None])
     @pytest.mark.parametrize("phi0", [0.0])
-    @pytest.mark.parametrize("use_fast", [True, False])
+    # one axis for the three kernel paths: a use_fast x use_optimized
+    # cross-product would add combinations (fast+optimized) that just
+    # re-run the fast branch
+    @pytest.mark.parametrize("mode", ["standard", "fast", "optimized"])
     @pytest.mark.parametrize("nstreams", [1, 4])
     @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
-    @pytest.mark.parametrize("use_optimized", [True, False])
-    def test_transit(self, freq, use_fast, freq_batch_size, nstreams, phi0, dlogq,
-                     ignore_negative_delta_sols, use_optimized):
+    def test_transit(self, freq, mode, freq_batch_size, nstreams, phi0, dlogq,
+                     ignore_negative_delta_sols):
         q = q_transit(freq)
         samples_per_peak = 2
         noverlap = 2
@@ -399,33 +444,18 @@ class TestBLS(object):
                   ignore_negative_delta_sols=ignore_negative_delta_sols,
                   nstreams=nstreams, noverlap=noverlap,
                   fmin=0.9 * freq, fmax=1.1 * freq,
-                  use_fast=use_fast, use_optimized=use_optimized)
+                  use_fast=(mode == "fast"),
+                  use_optimized=(mode == "optimized"))
 
-        if use_fast:
-            kw['use_optimized'] = False
-            freqs, power = eebls_transit_gpu(t, y, err, **kw)
+        if mode in ("fast", "optimized"):
+            freqs, power, no_sols = eebls_transit_gpu(t, y, err, **kw)
+            # fast/optimized kernels do not track solutions but the
+            # return is a uniform 3-tuple
+            assert no_sols is None
 
             kw['use_fast'] = False
-            freqs, power_slow, sols = eebls_transit_gpu(t, y, err, **kw)
-            kw['use_fast'] = True
-            dfsol = freqs[np.argmax(power)] - freqs[np.argmax(power_slow)]
-            close_enough = abs(dfsol) * (max(t) - min(t)) / q < 3
-            if not close_enough and self.plot:
-                import matplotlib.pyplot as plt
-                plt.plot(freqs, power, alpha=0.5)
-                plt.plot(freqs, power_slow, alpha=0.5)
-                plt.show()
-
-            assert(close_enough)
-            return
-
-        elif use_optimized:
-            kw['use_fast'] = False
-            freqs, power = eebls_transit_gpu(t, y, err, **kw)
-
             kw['use_optimized'] = False
             freqs, power_slow, sols = eebls_transit_gpu(t, y, err, **kw)
-            kw['use_optimized'] = True
             dfsol = freqs[np.argmax(power)] - freqs[np.argmax(power_slow)]
             close_enough = abs(dfsol) * (max(t) - min(t)) / q < 3
             if not close_enough and self.plot:
@@ -899,6 +929,53 @@ class TestBLS(object):
         assert len(result) == 3
         freqs, powers, sols = result
         assert sols is None
+
+
+class TestHoneSolution(object):
+    """hone_solution refines an initial (f, q, phi) via successive
+    eebls_gpu_custom grids. This is the regression coverage for the
+    original-timescale phi convention through the whole custom chain:
+    trial phi values are passed in the original input timescale and the
+    kernel re-references them to the subtracted epoch. With the fixture
+    epoch (floor(min(t)) = 5) and freq = 0.7 the phase rotation
+    (epoch * freq) % 1 = 0.5 is maximal -- a convention slip anywhere
+    in the chain puts every trial box half a cycle off the transit."""
+
+    def test_hone_refines_and_matches_single_bls(self):
+        freq, q, phi0 = 0.7, 0.05, 0.3
+        t, y, dy = data(snr=50, q=q, phi0=phi0, freq=freq,
+                        baseline=365.)
+
+        q0 = 1.3 * q
+        phi_start = phi0 + 0.03
+        p_start = single_bls(t, y, dy, freq, q0, phi_start)
+
+        f, pn, niter, (qs, phs) = hone_solution(
+            t, y, dy, freq, 1e-6, q0, 0.3, phi_start,
+            stop=1e-4, max_iter=10)
+
+        # refinement must improve on the deliberately misaligned start
+        assert pn > p_start
+
+        # the reported (f, q, phi) must reproduce the reported power
+        # through single_bls: custom-kernel boxes are exact (unbinned)
+        # box memberships, so agreement is at the float32-accumulation
+        # level. If phs were epoch-relative instead of original-scale,
+        # single_bls would evaluate a box 0.5 cycles from the transit
+        # and disagree at the 0.1-1 level.
+        p_check = single_bls(t, y, dy, f, qs, phs)
+        assert abs(pn - p_check) < 1e-3 * pn + 1e-4
+
+        # the refined box overlaps the injected transit in the ORIGINAL
+        # timescale (circular distance between box centers below q)
+        c_found = (phs + 0.5 * qs) % 1.0
+        c_true = (phi0 + 0.5 * q) % 1.0
+        dist = abs(c_found - c_true)
+        dist = min(dist, 1.0 - dist)
+        assert dist < q
+
+        # frequency recovered to within a few phase-smear widths
+        assert abs(f - freq) * (np.max(t) - np.min(t)) / q < 3
 
 
 class TestEeblsTransitSparseKwargs(object):

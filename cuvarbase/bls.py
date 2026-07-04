@@ -1151,7 +1151,10 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     bls_best_q = gpuarray.zeros(len(freqs), dtype=np.float32)
 
     q_values_g = gpuarray.to_gpu(np.asarray(q_values).astype(np.float32))
-    phi_values_g = gpuarray.to_gpu(np.asarray(phi_values).astype(np.float32))
+    # phi values stay float64: the kernel re-references them to the
+    # subtracted epoch as (phi - epoch*freq) % 1 in double precision
+    # (epoch*freq can be ~1e6 cycles), matching single_bls bit for bit
+    phi_values_g = gpuarray.to_gpu(np.asarray(phi_values).astype(np.float64))
 
     block = (block_size, 1, 1)
 
@@ -1490,7 +1493,9 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     q: float
         Transit duration in phase
     phi0: float
-        Phase offset of transit
+        Phase offset of transit, in the ORIGINAL input timescale
+        (internally re-referenced to the subtracted epoch, consistent
+        with the phases reported by the GPU functions in this module)
     ignore_negative_delta_sols:
         Whether or not to ignore solutions with negative delta (inverted dips)
 
@@ -1507,6 +1512,18 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     phi0 = (phi0 - (epoch * freq)) % 1.0
 
     phi = t.astype(np.float32) * np.float32(freq)
+    # Wrap into [0, 1) BEFORE subtracting the phase offset, exactly like
+    # the GPU kernels' mod1(t * f) (verified bit-identical to the
+    # compiled kernels' fold on hardware; nvcc does not FMA-contract the
+    # mod1 expression). Subtracting phi0 first -- the old order --
+    # happens at magnitude ~t*f, where float32 resolution is only
+    # ulp(t*f)/2 ~ 1.5e-5 phase for a 1-year baseline (2.4e-4 for 10
+    # years), so points within that fuzz of a box edge acquired the
+    # wrong membership relative to the kernels' full-resolution [0, 1)
+    # fold. Wrapping first shrinks the CPU-vs-GPU edge-disagreement
+    # window by ~2 orders of magnitude, to the float32 rounding of the
+    # kernels' bin-index arithmetic (~1e-7).
+    phi -= np.floor(phi)
     phi -= np.float32(phi0)
     phi -= np.floor(phi)
 
@@ -1695,7 +1712,14 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     t = t.astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
-    freqs = np.asarray(freqs).astype(np.float32)
+    # Keep a float64 copy for the phase re-referencing below: the
+    # original-timescale conversion (phi + epoch*freq) % 1 must use the
+    # same float64 frequency the caller will use to convert back (e.g.
+    # in single_bls); with the float32-cast frequency the phases would
+    # be off by epoch * |f64 - f32|, which reaches ~0.07 cycles for
+    # BJD-scale epochs (~2.45e6 days).
+    freqs64 = np.asarray(freqs, dtype=np.float64)
+    freqs = freqs64.astype(np.float32)
 
     ndata = len(t)
     nfreqs = len(freqs)
@@ -1798,8 +1822,10 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             best_phi[i_freq] = phi_s[ii]
 
     solutions = list(zip(best_q, best_phi))
-    # Adjust phases to original timescale
-    solutions = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(solutions, freqs)]
+    # Adjust phases to original timescale (float64 frequencies: the
+    # inverse conversion in single_bls uses the caller's float64 freq)
+    solutions = [(q, (phi + (epoch * freq)) % 1.0)
+                 for (q, phi), freq in zip(solutions, freqs64)]
 
     return (convert_bls_power(bls_powers, y, dy, convention=convention),
             solutions)
@@ -1902,7 +1928,11 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     t = t.astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
-    freqs = np.asarray(freqs).astype(np.float32)
+    # float64 copy for the phase re-referencing below (see
+    # sparse_bls_cpu: the float32-cast frequency would put the
+    # original-timescale phases off by epoch * |f64 - f32|)
+    freqs64 = np.asarray(freqs, dtype=np.float64)
+    freqs = freqs64.astype(np.float32)
 
     ndata = len(t)
     nfreqs = len(freqs)
@@ -1975,8 +2005,10 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     best_phi = best_phi_g.get()
 
     solutions = list(zip(best_q, best_phi))
-    # Adjust phases to original timescale
-    solutions = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(solutions, freqs)]
+    # Adjust phases to original timescale (float64 frequencies: the
+    # inverse conversion in single_bls uses the caller's float64 freq)
+    solutions = [(q, (phi + (epoch * freq)) % 1.0)
+                 for (q, phi), freq in zip(solutions, freqs64)]
 
     return (convert_bls_power(bls_powers, y, dy, convention=convention),
             solutions)
@@ -2134,10 +2166,13 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     # Use GPU BLS for larger datasets
 
     if use_optimized:
-        # Choose optimal block size
-        block_size = _choose_block_size(ndata)
-
-        # Override any user-provided block_size
+        # Choose a block size from ndata unless the caller asked for a
+        # specific one (an explicit block_size must never be silently
+        # overridden -- the compiled BLOCK_SIZE and the launch
+        # configuration have to agree with what the caller expects)
+        block_size = kwargs.get('block_size')
+        if block_size is None:
+            block_size = _choose_block_size(ndata)
         kwargs['block_size'] = block_size
 
         # Get cached kernels for this block size
@@ -2532,12 +2567,11 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         Frequencies where BLS is evaluated
     bls: array_like, float
         BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
-    solutions: list of ``(q, phi)`` tuples
-        Best ``(q, phi)`` solution at each frequency
-
-        .. note::
-
-            Only returned when ``use_fast=False``.
+    solutions: list of ``(q, phi)`` tuples, or None
+        Best ``(q, phi)`` solution at each frequency; ``phi`` is in the
+        original input timescale. ``None`` when ``use_fast=True`` or
+        ``use_optimized=True`` (those kernels do not track solutions).
+        The return is always a 3-tuple, matching :func:`eebls_transit`.
 
     """
 
@@ -2562,14 +2596,14 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                                 ignore_negative_delta_sols=ignore_negative_delta_sols,
                                 **kwargs)
 
-        return freqs, powers
+        return freqs, powers, None
     elif use_optimized:
         powers = eebls_gpu_fast_optimized(t, y, dy, freqs,
                                           qmin=qmins, qmax=qmaxes,
                                           ignore_negative_delta_sols=ignore_negative_delta_sols,
                                           **kwargs)
 
-        return freqs, powers
+        return freqs, powers, None
 
     powers, sols = eebls_gpu(t, y, dy, freqs,
                              qmin=qmins, qmax=qmaxes,
