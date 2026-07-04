@@ -12,7 +12,12 @@ Usage:
   nsys profile -o rep python benchmarks/profile_bls_survey.py ...
 """
 import argparse
+import os
 import time
+
+for _v in ('OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS',
+           'NUMEXPR_NUM_THREADS'):
+    os.environ.setdefault(_v, '1')  # see bench_bls_survey.py header
 
 import numpy as np
 import pycuda.driver as cuda
