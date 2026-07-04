@@ -30,10 +30,17 @@ def main():
     ap.add_argument('--niter', type=int, default=4)
     ap.add_argument('--noverlap', type=int, default=2)
     ap.add_argument('--nlcs', type=int, default=2)
+    ap.add_argument('--freq-stride', type=int, default=1,
+                    help='subsample the freq grid (keeps the nbins mix) '
+                         'so ncu kernel replay stays affordable')
     args = ap.parse_args()
 
     cfg = SURVEYS[args.survey]
     freqs, qmins, qmaxs = grid_for(cfg)
+    if args.freq_stride > 1:
+        freqs = freqs[::args.freq_stride].copy()
+        qmins = qmins[::args.freq_stride].copy()
+        qmaxs = qmaxs[::args.freq_stride].copy()
     print(f"{args.survey}: ndata={cfg['ndata']} nfreq={len(freqs)} "
           f"variant={args.variant}")
 
