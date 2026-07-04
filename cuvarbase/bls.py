@@ -31,6 +31,7 @@ import numpy as np
 _default_block_size = 256
 _all_function_names = ['full_bls_no_sol',
                        'full_bls_no_sol_optimized',
+                       'full_bls_no_sol_fused',
                        'bin_and_phase_fold_custom',
                        'reduction_max',
                        'store_best_sols',
@@ -149,6 +150,13 @@ _function_signatures = {
                         np.uint32, np.uint32, np.uint32,
                         np.float32, np.float32, np.uint32],
     'full_bls_no_sol_optimized': [np.intp, np.intp, np.intp,
+                        np.intp, np.intp, np.intp,
+                        np.intp, np.uint32, np.uint32,
+                        np.uint32, np.uint32, np.uint32,
+                        np.float32, np.float32, np.uint32],
+    # fused-noverlap variant (bls_common.cuh, present in both modules);
+    # identical argument list, hist_size = noverlap * max_nbins
+    'full_bls_no_sol_fused': [np.intp, np.intp, np.intp,
                         np.intp, np.intp, np.intp,
                         np.intp, np.uint32, np.uint32,
                         np.uint32, np.uint32, np.uint32,
@@ -624,16 +632,38 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
         # Use the thread-safe LRU kernel cache (compilation costs ~150 ms
         # per call otherwise). Fall back to a direct compile only for
         # non-default compile options that aren't part of the cache key.
+        # The fused-noverlap kernel ships in the same module, so request
+        # it alongside (same single compilation).
         if kwargs.get('prepare', True):
             functions = _get_cached_kernels(
                 kwargs.get('block_size', _default_block_size),
-                use_optimized, [fname])
+                use_optimized, [fname, 'full_bls_no_sol_fused'])
         else:
             ckw = dict(kwargs)
             ckw.setdefault('use_optimized', use_optimized)
-            functions = compile_bls(function_names=[fname], **ckw)
+            functions = compile_bls(
+                function_names=[fname, 'full_bls_no_sol_fused'], **ckw)
 
     func = functions[fname]
+
+    # Fused-noverlap fast path: for power-of-two noverlap with no base
+    # phase offset, one launch histograms at noverlap-times finer phase
+    # resolution and derives every pass's box sums from it -- the
+    # noverlap-x fold + histogram (and per-frequency fixed costs) are
+    # paid once. Bin assignment is bit-identical to the multi-pass loop
+    # there (see full_bls_no_sol_fused in bls_common.cuh); any other
+    # (noverlap, dphi) combination keeps the host-side loop, as do
+    # caller-provided ``functions`` dicts without the fused kernel.
+    fused_func = None
+    try:
+        fused_func = functions.get('full_bls_no_sol_fused')
+    except AttributeError:
+        fused_func = None
+    noverlap_int = int(noverlap)
+    use_fused = (fused_func is not None
+                 and noverlap_int >= 2
+                 and float(dphi) == 0.0
+                 and (noverlap_int & (noverlap_int - 1)) == 0)
 
     if shmem_lim is None:
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
@@ -660,14 +690,26 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
     # minimum q value that we can handle with the shared memory limit
     qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
 
+    # The fused kernel needs (block_size + 2*noverlap*max_nbins) floats
+    # of shared memory; fall back to the multi-pass loop when that
+    # exceeds the device limit (the loop only needs the 1x histogram).
+    if use_fused:
+        global_max_nbins = int(np.max(memory.nbinsf[:len(freqs)]))
+        fused_req = (block_size
+                     + 2 * noverlap_int * global_max_nbins) * float_size
+        if fused_req > shmem_lim:
+            use_fused = False
+
     # Phase oversampling: the kernel's box start positions step one
     # fine phase bin, so a single pass undersamples boxes whose width
-    # is near the finest bin. Run ``noverlap`` passes with the bin
-    # grid shifted by 1/noverlap of a bin each time and keep the
-    # elementwise max -- equivalent to the manual dphi re-run
-    # procedure this replaces.
+    # is near the finest bin. Fused path: one launch builds the
+    # noverlap-times finer histogram and evaluates all shifted grids.
+    # Fallback: run ``noverlap`` passes with the bin grid shifted by
+    # 1/noverlap of a bin each time and keep the elementwise max --
+    # equivalent to the manual dphi re-run procedure this replaces.
     best_bls_g = None
-    for i_pass in range(noverlap):
+    n_passes = 1 if use_fused else noverlap
+    for i_pass in range(n_passes):
         dphi_pass = dphi + float(i_pass) / noverlap
 
         i_freq = 0
@@ -677,7 +719,11 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
 
             max_nbins = max(memory.nbinsf[i_freq:j_freq])
 
-            mem_req = (block_size + 2 * max_nbins) * float_size
+            if use_fused:
+                hist_size = noverlap_int * int(max_nbins)
+            else:
+                hist_size = int(max_nbins)
+            mem_req = (block_size + 2 * hist_size) * float_size
 
             if mem_req > shmem_lim:
                 s = "qmin = %.2e requires too much shared memory." \
@@ -700,21 +746,30 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
             args += (memory.nbins0_g.ptr, memory.nbinsf_g.ptr)
             args += (np.uint32(len(t)), np.uint32(nfreqs),
                      np.uint32(i_freq))
-            # The kernel's own noverlap argument is a no-op in the
-            # compiled (linear bin spacing) branch; phase oversampling
-            # is implemented by the dphi-shifted passes above.
-            args += (np.uint32(max_nbins), np.uint32(1))
-            args += (np.float32(dlogq), np.float32(dphi_pass))
+            if use_fused:
+                # hist_size is the fine histogram size; the fused
+                # kernel consumes the real noverlap and the base dphi.
+                args += (np.uint32(hist_size), np.uint32(noverlap_int))
+                args += (np.float32(dlogq), np.float32(dphi))
+            else:
+                # The kernel's own noverlap argument is a no-op in the
+                # compiled (linear bin spacing) branch; phase
+                # oversampling is implemented by the dphi-shifted
+                # passes above.
+                args += (np.uint32(max_nbins), np.uint32(1))
+                args += (np.float32(dlogq), np.float32(dphi_pass))
             args += (np.uint32(ignore_negative_delta_sols),)
 
+            launch_func = fused_func if use_fused else func
             if stream is not None:
-                func.prepared_async_call(*args, shared_size=int(mem_req))
+                launch_func.prepared_async_call(*args,
+                                                shared_size=int(mem_req))
             else:
-                func.prepared_call(*args, shared_size=int(mem_req))
+                launch_func.prepared_call(*args, shared_size=int(mem_req))
 
             i_freq = j_freq
 
-        if noverlap > 1:
+        if not use_fused and noverlap > 1:
             if best_bls_g is None:
                 best_bls_g = memory.bls_g.copy()
             else:
@@ -2214,6 +2269,18 @@ _batch_function_signature = {
         np.float32, np.float32,           # dlogq, dphi
         np.uint32, np.uint32,             # ignore_neg, n_lcs
     ],
+    # fused-noverlap variant: identical argument list; hist_size is the
+    # FINE histogram size (noverlap * max_nbins)
+    'full_bls_batch_fused': [
+        np.intp, np.intp, np.intp,
+        np.intp, np.intp,
+        np.intp, np.intp,
+        np.intp,
+        np.uint32, np.uint32, np.uint32,
+        np.uint32, np.uint32,
+        np.float32, np.float32,
+        np.uint32, np.uint32,
+    ],
 }
 
 
@@ -2353,6 +2420,16 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
 
     func = functions['full_bls_batch']
 
+    # Fused-noverlap path (mirrors _eebls_gpu_fast_impl): one launch
+    # with a noverlap-times finer histogram replaces the dphi-shifted
+    # multi-pass loop for power-of-two noverlap with dphi == 0.
+    fused_func = functions.get('full_bls_batch_fused')
+    noverlap_int = int(noverlap)
+    use_fused = (fused_func is not None
+                 and noverlap_int >= 2
+                 and float(dphi) == 0.0
+                 and (noverlap_int & (noverlap_int - 1)) == 0)
+
     # Process in batches
     all_results = [None] * n_total  # indexed by original order
 
@@ -2391,6 +2468,17 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
                 f"Try qmin > {qmin_min:.2e}."
             )
 
+        # Fused path needs the noverlap-times finer histogram to fit;
+        # otherwise fall back to the multi-pass loop for this batch.
+        batch_use_fused = use_fused
+        if batch_use_fused:
+            fused_req = (block_size
+                         + 2 * noverlap_int * max_nbins) * float_size
+            if fused_req > shmem_lim:
+                batch_use_fused = False
+            else:
+                mem_req = fused_req
+
         # Set lightcurve data
         for j, orig_idx in enumerate(batch_indices):
             t, y, dy = lightcurves[orig_idx]
@@ -2404,15 +2492,19 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         grid = (max_nblocks, batch_n)
         block = (block_size, 1, 1)
 
-        # Phase oversampling, mirroring _eebls_gpu_fast_impl (A2): the
-        # kernel's own noverlap argument is a no-op in its box scan, so
-        # run ``noverlap`` passes with the bin grid shifted by
-        # 1/noverlap of a fine bin and keep the elementwise max.
-        # Without this the batch path was single-pass while the
-        # fast/adaptive reference multi-passes -- the small-ndata
-        # periodogram divergence flagged in the Jun GPU batch (E1).
+        # Phase oversampling, mirroring _eebls_gpu_fast_impl (A2).
+        # Fused path: a single launch of full_bls_batch_fused evaluates
+        # all noverlap bin grids from one finer histogram. Fallback
+        # (non-power-of-two noverlap, dphi != 0, or fused histogram over
+        # the shared-memory limit): run ``noverlap`` passes with the bin
+        # grid shifted by 1/noverlap of a fine bin and keep the
+        # elementwise max. Without multi-passing the batch path was
+        # single-pass while the fast/adaptive reference multi-passes --
+        # the small-ndata periodogram divergence flagged in the Jun GPU
+        # batch (E1).
         best_bls_g = None
-        for i_pass in range(noverlap):
+        n_passes = 1 if batch_use_fused else noverlap
+        for i_pass in range(n_passes):
             dphi_pass = dphi + float(i_pass) / noverlap
 
             args = (grid, block, stream)
@@ -2422,14 +2514,21 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
             args += (mem.ndata_per_lc_g.ptr,)
             args += (np.uint32(max_ndata_batch),)
             args += (np.uint32(nfreq), np.uint32(0))
-            args += (np.uint32(max_nbins), np.uint32(1))
-            args += (np.float32(dlogq), np.float32(dphi_pass))
+            if batch_use_fused:
+                args += (np.uint32(noverlap_int * max_nbins),
+                         np.uint32(noverlap_int))
+                args += (np.float32(dlogq), np.float32(dphi))
+            else:
+                args += (np.uint32(max_nbins), np.uint32(1))
+                args += (np.float32(dlogq), np.float32(dphi_pass))
             args += (np.uint32(int(ignore_negative_delta_sols)),)
             args += (np.uint32(batch_n),)
 
-            func.prepared_async_call(*args, shared_size=int(mem_req))
+            launch_func = fused_func if batch_use_fused else func
+            launch_func.prepared_async_call(*args,
+                                            shared_size=int(mem_req))
 
-            if noverlap > 1:
+            if not batch_use_fused and noverlap > 1:
                 if best_bls_g is None:
                     best_bls_g = mem.bls_g.copy()
                 else:
