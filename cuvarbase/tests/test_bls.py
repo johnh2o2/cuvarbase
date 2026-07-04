@@ -62,7 +62,8 @@ def plot_bls_sol(t, y, dy, freq, q, phi0):
 
 
 def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
-         q=0.01, phi0=None, baseline=1., negative_delta=False):
+         q=0.01, phi0=None, baseline=1., negative_delta=False,
+         t0=4.5):
 
     rand = np.random.RandomState(seed)
 
@@ -76,7 +77,12 @@ def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
 
     model = transit_model(phi0, q, delta)
 
-    t = baseline * np.sort(rand.rand(ndata))
+    # Non-zero T0 so every test exercises a non-trivial epoch
+    # (floor(min(t)) > 0): phases reported by the BLS functions are in
+    # the original input timescale, and the injected transit is at
+    # original-timescale phase phi0 (the shift is applied BEFORE the
+    # model is evaluated).
+    t = baseline * np.sort(rand.rand(ndata)) + t0
     y = model(t, freq) + sigma * rand.randn(len(t))
     y += ybar - np.mean(y)
     err = sigma * np.ones_like(y)
@@ -163,7 +169,13 @@ class TestBLS(object):
     @pytest.mark.parametrize("args", [(
             SolutionParams(freq=0.3, phi0=0.5, q=0.2, baseline=365., ybar=0., snr=50.,
                            negative_delta=True),
-            {'bls0': 0.8902446483898836, 'bls_ignore': 0}
+            # Deterministic single_bls value at the injected solution
+            # (pure-CPU float32 arithmetic; changes only if data() or
+            # single_bls numerics change -- e.g. this was
+            # 0.8902446483898836 before data() gained the t0=4.5 shift,
+            # which rotates the fold and re-draws which points host the
+            # injected dip).
+            {'bls0': 0.9223771210115413, 'bls_ignore': 0}
         )
     ])
     def test_ignore_positive_sols(self, args):
@@ -178,10 +190,9 @@ class TestBLS(object):
         
         freq, q, phi0 = solution.freq, solution.q, solution.phi0
 
-        # single_bls folds epoch-subtracted times (phases relative to
-        # floor(min(t))); shift the injected absolute-time phase to match
-        phi0 = (phi0 - np.floor(np.min(t)) * freq) % 1.0
-
+        # single_bls now takes phi0 in the ORIGINAL input timescale (it
+        # epoch-subtracts internally), so the injected phase is passed
+        # through unchanged.
         bls_default = single_bls(t, y_neg, dy, freq, q, phi0)
         bls0 = single_bls(t, y_neg, dy, freq, q, phi0, ignore_negative_delta_sols=False)
         bls_ignore = single_bls(t, y_neg, dy, freq, q, phi0, 
@@ -362,14 +373,64 @@ class TestBLS(object):
         assert mostly_ok and not_too_bad
         # assert_allclose(bls_c, power, rtol=1e-3, atol=1e-5)
 
+    # use_optimized=True swaps in the bls_optimized.cu module, whose
+    # binning/store kernels are byte-shared with bls.cu via
+    # bls_common.cuh -- only reduction_max differs (warp-shuffle finish
+    # vs full tree). One focused equivalence test per entry point
+    # exercises that reduction + store path; cross-multiplying
+    # use_optimized into every test_standard/test_custom parametrization
+    # would double the suite while varying nothing else in the kernel.
+    def test_standard_use_optimized_matches(self):
+        q = 0.05
+        t, y, dy = data(snr=10, q=q, phi0=0.317, freq=1.0, baseline=365.)
+        freqs = np.linspace(0.95, 1.05, 300)
+
+        kw = dict(qmin=0.1 * q, qmax=2.0 * q, nstreams=1,
+                  noverlap=2, dlogq=0.5)
+        p_std, sols_std = eebls_gpu(t, y, dy, freqs, **kw)
+        p_opt, sols_opt = eebls_gpu(t, y, dy, freqs, use_optimized=True,
+                                    **kw)
+
+        # identical binning kernels: powers agree to float32
+        # atomic-ordering noise
+        assert_allclose(p_opt, p_std, rtol=1e-4, atol=1e-6)
+
+        # solutions may legitimately differ where two boxes tie in
+        # power (the two reductions break ties differently), so compare
+        # the powers of the solutions rather than the solutions
+        for f, s_std, s_opt in zip(freqs, sols_std, sols_opt):
+            if s_std != s_opt:
+                b_std = single_bls(t, y, dy, f, *s_std)
+                b_opt = single_bls(t, y, dy, f, *s_opt)
+                # ties: same binned power; exact powers can differ by
+                # one point's membership at most (~power / n_in_box)
+                assert abs(b_std - b_opt) < 0.15 * max(b_std, b_opt) + 1e-5
+
+    def test_custom_use_optimized_matches(self):
+        q_values = np.logspace(-1.1, -0.8, num=10)
+        phi_values = np.linspace(0, 1, int(np.ceil(2. / min(q_values))))
+        t, y, dy = data(snr=10, q=q_values[5], phi0=phi_values[10],
+                        freq=1.0, baseline=365., ndata=500)
+        freqs = np.linspace(0.9999, 1.0001, 20)
+
+        p_std, sols_std = eebls_gpu_custom(t, y, dy, freqs,
+                                           q_values, phi_values)
+        p_opt, sols_opt = eebls_gpu_custom(t, y, dy, freqs,
+                                           q_values, phi_values,
+                                           use_optimized=True)
+        assert_allclose(p_opt, p_std, rtol=1e-4, atol=1e-6)
+
     @pytest.mark.parametrize("freq", [1.0])
     @pytest.mark.parametrize("dlogq", [0.5, -1.0])
     @pytest.mark.parametrize("freq_batch_size", [1, 10, None])
     @pytest.mark.parametrize("phi0", [0.0])
-    @pytest.mark.parametrize("use_fast", [True, False])
+    # one axis for the three kernel paths: a use_fast x use_optimized
+    # cross-product would add combinations (fast+optimized) that just
+    # re-run the fast branch
+    @pytest.mark.parametrize("mode", ["standard", "fast", "optimized"])
     @pytest.mark.parametrize("nstreams", [1, 4])
     @pytest.mark.parametrize("ignore_negative_delta_sols", [True, False])
-    def test_transit(self, freq, use_fast, freq_batch_size, nstreams, phi0, dlogq,
+    def test_transit(self, freq, mode, freq_batch_size, nstreams, phi0, dlogq,
                      ignore_negative_delta_sols):
         q = q_transit(freq)
         samples_per_peak = 2
@@ -383,14 +444,18 @@ class TestBLS(object):
                   ignore_negative_delta_sols=ignore_negative_delta_sols,
                   nstreams=nstreams, noverlap=noverlap,
                   fmin=0.9 * freq, fmax=1.1 * freq,
-                  use_fast=use_fast)
+                  use_fast=(mode == "fast"),
+                  use_optimized=(mode == "optimized"))
 
-        if use_fast:
-            freqs, power = eebls_transit_gpu(t, y, err, **kw)
+        if mode in ("fast", "optimized"):
+            freqs, power, no_sols = eebls_transit_gpu(t, y, err, **kw)
+            # fast/optimized kernels do not track solutions but the
+            # return is a uniform 3-tuple
+            assert no_sols is None
 
             kw['use_fast'] = False
+            kw['use_optimized'] = False
             freqs, power_slow, sols = eebls_transit_gpu(t, y, err, **kw)
-            kw['use_fast'] = True
             dfsol = freqs[np.argmax(power)] - freqs[np.argmax(power_slow)]
             close_enough = abs(dfsol) * (max(t) - min(t)) / q < 3
             if not close_enough and self.plot:
@@ -866,6 +931,53 @@ class TestBLS(object):
         assert sols is None
 
 
+class TestHoneSolution(object):
+    """hone_solution refines an initial (f, q, phi) via successive
+    eebls_gpu_custom grids. This is the regression coverage for the
+    original-timescale phi convention through the whole custom chain:
+    trial phi values are passed in the original input timescale and the
+    kernel re-references them to the subtracted epoch. With the fixture
+    epoch (floor(min(t)) = 5) and freq = 0.7 the phase rotation
+    (epoch * freq) % 1 = 0.5 is maximal -- a convention slip anywhere
+    in the chain puts every trial box half a cycle off the transit."""
+
+    def test_hone_refines_and_matches_single_bls(self):
+        freq, q, phi0 = 0.7, 0.05, 0.3
+        t, y, dy = data(snr=50, q=q, phi0=phi0, freq=freq,
+                        baseline=365.)
+
+        q0 = 1.3 * q
+        phi_start = phi0 + 0.03
+        p_start = single_bls(t, y, dy, freq, q0, phi_start)
+
+        f, pn, niter, (qs, phs) = hone_solution(
+            t, y, dy, freq, 1e-6, q0, 0.3, phi_start,
+            stop=1e-4, max_iter=10)
+
+        # refinement must improve on the deliberately misaligned start
+        assert pn > p_start
+
+        # the reported (f, q, phi) must reproduce the reported power
+        # through single_bls: custom-kernel boxes are exact (unbinned)
+        # box memberships, so agreement is at the float32-accumulation
+        # level. If phs were epoch-relative instead of original-scale,
+        # single_bls would evaluate a box 0.5 cycles from the transit
+        # and disagree at the 0.1-1 level.
+        p_check = single_bls(t, y, dy, f, qs, phs)
+        assert abs(pn - p_check) < 1e-3 * pn + 1e-4
+
+        # the refined box overlaps the injected transit in the ORIGINAL
+        # timescale (circular distance between box centers below q)
+        c_found = (phs + 0.5 * qs) % 1.0
+        c_true = (phi0 + 0.5 * q) % 1.0
+        dist = abs(c_found - c_true)
+        dist = min(dist, 1.0 - dist)
+        assert dist < q
+
+        # frequency recovered to within a few phase-smear widths
+        assert abs(f - freq) * (np.max(t) - np.min(t)) / q < 3
+
+
 class TestEeblsTransitSparseKwargs(object):
     """Regression tests: eebls_transit's sparse path must tolerate the
     documented pass-through kwargs (rho, samples_per_peak, dlogq, ...)
@@ -1336,11 +1448,28 @@ class TestEpochHandling(object):
         return t, y, dy, freq, q, phi0
 
     def test_single_bls_bjd_invariance(self):
+        # phi0 is now in the ORIGINAL input timescale, so a time-shifted
+        # run must use the covariantly shifted phase
+        # (phi0 + offset * freq) mod 1 to refer to the same transit.
         t, y, dy, freq, q, phi0 = self._signal()
         p_rel = single_bls(t, y, dy, freq, q, phi0)
-        p_raw = single_bls(t + self.bjd_offset, y, dy, freq, q, phi0)
+        phi0_raw = (phi0 + self.bjd_offset * freq) % 1.0
+        p_raw = single_bls(t + self.bjd_offset, y, dy, freq, q, phi0_raw)
         assert p_rel > 0.5  # signal actually detected
         assert abs(p_raw - p_rel) < 1e-3 * p_rel
+
+    def test_single_bls_phase_is_original_timescale(self):
+        # The convention itself: evaluating at the UNshifted phi0 on
+        # shifted times must MISS the transit (if it matched, phases
+        # would still be epoch-relative and the covariance test above
+        # would be vacuous). An integer-day offset o at freq=0.3 rotates
+        # the transit by (o * freq) mod 1 = 0.5 in phase, so the
+        # unshifted phi0 lands in pure out-of-transit noise.
+        t, y, dy, freq, q, phi0 = self._signal()
+        p_rel = single_bls(t, y, dy, freq, q, phi0)
+        p_wrong = single_bls(t + 4325.0, y, dy, freq, q, phi0)
+        assert p_rel > 0.5
+        assert p_wrong < 0.25 * p_rel
 
     def test_sparse_bls_cpu_bjd_invariance(self):
         t, y, dy, freq, q, phi0 = self._signal(ndata=60)

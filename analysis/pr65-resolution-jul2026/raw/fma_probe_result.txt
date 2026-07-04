@@ -1,0 +1,12 @@
+FMA probe (RTX A5000, CUDA 12.4, --use_fast_math), fma_probe.py:
+2,000,000 random t in [300, 370) at f = 0.9999707539228717, nb = 22:
+341 points where frac(fl32(t*f)) and fl32(frac(exact t*f)) fall in
+different bins. First 64 run one-at-a-time through the compiled
+bin_and_phase_fold_bst_multifreq kernel:
+
+  kernel matches PLAIN (rounded-product frac): 64
+  kernel matches FMA   (exact-product frac):   0
+  other: 0
+
+=> nvcc does NOT FMA-contract mod1(t * f); the kernel fold is
+   bit-identical to numpy float32 (t32 * f32) followed by u - floor(u).

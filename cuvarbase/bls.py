@@ -8,12 +8,11 @@ assume the transiting body orbits at the host star's mean density. That
 assumption fixes the transit-duration/period relation [SM03]_ and, with
 it, the optimal frequency-grid spacing for a transit search [O2014]_.
 
-.. [K2002] `Kovacs et al. 2002, A&A 391, 369 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
+.. [K2002] `Kovacs et al. 2002, A&A 391, 369 <https://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
 .. [SM03] `Seager & Mallen-Ornelas 2003, ApJ 585, 1038 <https://ui.adsabs.harvard.edu/abs/2003ApJ...585.1038S>`_, "A Unique Solution of Planet and Star Parameters from an Extrasolar Planet Transit Light Curve" (eq. 3-4)
 .. [O2014] `Ofir 2014, A&A 561, A138 <https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O>`_, "Optimizing the search for transiting planets in long time series" (arXiv:1307.7330; corrigendum A&A 597, C2)
 
 """
-import sys
 import threading
 import warnings
 from collections import OrderedDict
@@ -22,12 +21,11 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess, ensure_context
+from .core import ensure_context
 from .utils import find_kernel, _module_reader, subtract_epoch
 from .memory.bls_memory import BLSBatchMemory
 from .memory._host import host_array
 
-import resource
 import numpy as np
 
 _default_block_size = 256
@@ -157,9 +155,9 @@ _function_signatures = {
                         np.float32, np.float32, np.uint32],
     'bin_and_phase_fold_custom': [np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.intp,
-                                  np.intp, np.intp, np.int32,
+                                  np.intp, np.intp, np.float64,
                                   np.uint32, np.uint32, np.uint32,
-                                  np.uint32],
+                                  np.uint32, np.uint32],
     'reduction_max': [np.intp, np.intp, np.uint32, np.uint32, np.uint32,
                       np.intp, np.intp, np.uint32, np.uint32],
     'store_best_sols': [np.intp, np.intp, np.intp, np.uint32,
@@ -221,11 +219,10 @@ def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
     over the baseline ``T``), the latter being the long-period limit of
     Ofir (2014), Sect. 3.1 [O2014]_.
     """
-    T = max(t) - min(t)
     qmin = float(min_obs_per_transit) / len(t)
 
     fmin1 = freq_transit(qmin, rho=rho)
-    fmin2 = 2./(max(t) - min(t))
+    fmin2 = 2./(np.max(t) - np.min(t))
     return max([fmin1, fmin2])
 
 
@@ -307,6 +304,8 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     qmax_fac: float, optional (default: None)
         The maximum :math:`q` value to search in units of the Keplerian
         :math:`q` value. If ``None``, this defaults to ``1/qmin_fac``.
+    **kwargs:
+        passed to `fmin_transit`
 
     Returns
     -------
@@ -328,12 +327,11 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
         qmax_fac = 1./qmin_fac
 
     if fmin is None:
-        fmin = fmin_transit(t, rho=rho, samples_per_peak=samples_per_peak,
-                            **kwargs)
+        fmin = fmin_transit(t, rho=rho, **kwargs)
     if fmax is None:
-        fmax = fmax_transit(rho=rho, **kwargs)
+        fmax = fmax_transit(rho=rho, qmax=0.5 / qmax_fac, **kwargs)
 
-    T = max(t) - min(t)
+    T = np.max(t) - np.min(t)
     freqs = [fmin]
     while freqs[-1] < fmax:
         df = qmin_fac * q_transit(freqs[-1], rho=rho) / (samples_per_peak * T)
@@ -553,10 +551,10 @@ class BLSMemory:
         self.t[:len(t)] = t.astype(self.rtype)[:]
 
         w = np.power(dy, -2)
-        w /= sum(w)
+        w /= np.sum(w)
         self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
 
-        self.ybar = sum(y * w)
+        self.ybar = np.sum(y * w)
         self.yy = np.dot(w, np.power(y - self.ybar, 2))
         # chi2 of the constant model for the data actually loaded here;
         # convert_bls_power scalings must use this rather than whatever
@@ -1055,9 +1053,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     q_values: array_like
         Set of q values to search at each trial frequency
     phi_values: float or array_like
-        Set of phi values to search at each trial frequency; phases
-        are measured relative to ``floor(min(t))`` (times are epoch-subtracted
-        before folding)
+        Set of phi values to search at each trial frequency
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     nstreams: int, optional (default: 5)
@@ -1128,15 +1124,16 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
     # move data to GPU
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
     ybar = np.dot(w, y)
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
 
-    t_g = gpuarray.to_gpu(subtract_epoch(t)[0].astype(np.float32))
+    t, epoch = subtract_epoch(t)
+    t_g = gpuarray.to_gpu(t.astype(np.float32))
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
-    freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
+    freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float64))
 
     yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs, streams \
         = [], [], [], [], []
@@ -1154,7 +1151,10 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     bls_best_q = gpuarray.zeros(len(freqs), dtype=np.float32)
 
     q_values_g = gpuarray.to_gpu(np.asarray(q_values).astype(np.float32))
-    phi_values_g = gpuarray.to_gpu(np.asarray(phi_values).astype(np.float32))
+    # phi values stay float64: the kernel re-references them to the
+    # subtracted epoch as (phi - epoch*freq) % 1 in double precision
+    # (epoch*freq can be ~1e6 cycles), matching single_bls bit for bit
+    phi_values_g = gpuarray.to_gpu(np.asarray(phi_values).astype(np.float64))
 
     block = (block_size, 1, 1)
 
@@ -1191,7 +1191,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         args = (bin_grid, block, stream)
         args += (t_g.ptr, yw_g.ptr, w_g.ptr)
         args += (yw_g_bin.ptr, w_g_bin.ptr, freqs_g.ptr)
-        args += (q_values_g.ptr, phi_values_g.ptr)
+        args += (q_values_g.ptr, phi_values_g.ptr, np.float64(epoch))
         args += (np.uint32(len(q_values)), np.uint32(len(phi_values)))
         args += (np.uint32(len(t)), np.uint32(nf))
         args += (np.uint32(freq_batch_size * batch),)
@@ -1307,9 +1307,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         BLS periodogram; in the default convention, normalized to
         :math:`1 - \chi^2(f) / \chi^2_0`
     qphi_sols: list of ``(q, phi)`` tuples
-        Best ``(q, phi)`` solution at each frequency; ``phi`` is
-        measured relative to ``floor(min(t))`` (times are epoch-subtracted
-        before folding to preserve float32 precision)
+        Best ``(q, phi)`` solution at each frequency
 
     """
 
@@ -1366,12 +1364,13 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     # move data to GPU
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
     ybar = np.dot(w, y)
     YY = np.dot(w, np.power(np.array(y) - ybar, 2))
     yw = (np.array(y) - ybar) * np.array(w)
 
-    t_g = gpuarray.to_gpu(subtract_epoch(t)[0].astype(np.float32))
+    t, epoch = subtract_epoch(t)
+    t_g = gpuarray.to_gpu(t.astype(np.float32))
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
@@ -1468,6 +1467,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     best_phi = bls_best_phi.get()
 
     qphi_sols = list(zip(best_q, best_phi))
+    # Adjust phases to original timescale
+    qphi_sols = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(qphi_sols, freqs)]
 
     return (convert_bls_power(bls_g.get() / YY, y, dy,
                               convention=convention),
@@ -1492,9 +1493,9 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     q: float
         Transit duration in phase
     phi0: float
-        Phase offset of transit, relative to ``floor(min(t))`` (times are
-        epoch-subtracted before folding, consistent with the GPU
-        functions in this module)
+        Phase offset of transit, in the ORIGINAL input timescale
+        (internally re-referenced to the subtracted epoch, consistent
+        with the phases reported by the GPU functions in this module)
     ignore_negative_delta_sols:
         Whether or not to ignore solutions with negative delta (inverted dips)
 
@@ -1504,7 +1505,25 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
         BLS power for this set of parameters
     """
 
-    phi = subtract_epoch(t)[0].astype(np.float32) * np.float32(freq)
+    # Epoch-subtract before the float32 cast
+    t, epoch = subtract_epoch(t)
+
+    # Adjust phase offset to subtracted timescale
+    phi0 = (phi0 - (epoch * freq)) % 1.0
+
+    phi = t.astype(np.float32) * np.float32(freq)
+    # Wrap into [0, 1) BEFORE subtracting the phase offset, exactly like
+    # the GPU kernels' mod1(t * f) (verified bit-identical to the
+    # compiled kernels' fold on hardware; nvcc does not FMA-contract the
+    # mod1 expression). Subtracting phi0 first -- the old order --
+    # happens at magnitude ~t*f, where float32 resolution is only
+    # ulp(t*f)/2 ~ 1.5e-5 phase for a 1-year baseline (2.4e-4 for 10
+    # years), so points within that fuzz of a box edge acquired the
+    # wrong membership relative to the kernels' full-resolution [0, 1)
+    # fold. Wrapping first shrinks the CPU-vs-GPU edge-disagreement
+    # window by ~2 orders of magnitude, to the float32 rounding of the
+    # kernels' bin-index arithmetic (~1e-7).
+    phi -= np.floor(phi)
     phi -= np.float32(phi0)
     phi -= np.floor(phi)
 
@@ -1685,15 +1704,22 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     bls: array_like, float
         BLS power at each frequency
     solutions: list of (q, phi0) tuples
-        Best (q, phi0) solution at each frequency; ``phi0`` is measured
-        relative to ``floor(min(t))``
+        Best (q, phi0) solution at each frequency
     """
     _validate_convention(convention)
 
-    t = subtract_epoch(t)[0].astype(np.float32)
+    t, epoch = subtract_epoch(t)
+    t = t.astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
-    freqs = np.asarray(freqs).astype(np.float32)
+    # Keep a float64 copy for the phase re-referencing below: the
+    # original-timescale conversion (phi + epoch*freq) % 1 must use the
+    # same float64 frequency the caller will use to convert back (e.g.
+    # in single_bls); with the float32-cast frequency the phases would
+    # be off by epoch * |f64 - f32|, which reaches ~0.07 cycles for
+    # BJD-scale epochs (~2.45e6 days).
+    freqs64 = np.asarray(freqs, dtype=np.float64)
+    freqs = freqs64.astype(np.float32)
 
     ndata = len(t)
     nfreqs = len(freqs)
@@ -1796,6 +1822,11 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             best_phi[i_freq] = phi_s[ii]
 
     solutions = list(zip(best_q, best_phi))
+    # Adjust phases to original timescale (float64 frequencies: the
+    # inverse conversion in single_bls uses the caller's float64 freq)
+    solutions = [(q, (phi + (epoch * freq)) % 1.0)
+                 for (q, phi), freq in zip(solutions, freqs64)]
+
     return (convert_bls_power(bls_powers, y, dy, convention=convention),
             solutions)
 
@@ -1888,16 +1919,20 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     bls_powers: array_like, float
         BLS power at each frequency
     solutions: list of (q, phi0) tuples
-        Best (q, phi0) solution at each frequency; ``phi0`` is measured
-        relative to ``floor(min(t))``
+        Best (q, phi0) solution at each frequency
     """
     _validate_convention(convention)
 
     # Convert to numpy arrays (epoch-subtract before the float32 cast)
-    t = subtract_epoch(t)[0].astype(np.float32)
+    t, epoch = subtract_epoch(t)
+    t = t.astype(np.float32)
     y = np.asarray(y).astype(np.float32)
     dy = np.asarray(dy).astype(np.float32)
-    freqs = np.asarray(freqs).astype(np.float32)
+    # float64 copy for the phase re-referencing below (see
+    # sparse_bls_cpu: the float32-cast frequency would put the
+    # original-timescale phases off by epoch * |f64 - f32|)
+    freqs64 = np.asarray(freqs, dtype=np.float64)
+    freqs = freqs64.astype(np.float32)
 
     ndata = len(t)
     nfreqs = len(freqs)
@@ -1970,13 +2005,19 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     best_phi = best_phi_g.get()
 
     solutions = list(zip(best_q, best_phi))
+    # Adjust phases to original timescale (float64 frequencies: the
+    # inverse conversion in single_bls uses the caller's float64 freq)
+    solutions = [(q, (phi + (epoch * freq)) % 1.0)
+                 for (q, phi), freq in zip(solutions, freqs64)]
+
     return (convert_bls_power(bls_powers, y, dy, convention=convention),
             solutions)
 
 
 def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                   qmin_fac=0.5, qmax_fac=2.0, fmin=None,
-                  fmax=None, freqs=None, qvals=None, use_fast=False,
+                  fmax=None, freqs=None, qvals=None,
+                  use_fast=False,  use_optimized=False,
                   use_sparse=None, sparse_threshold=500,
                   use_gpu=True,
                   ignore_negative_delta_sols=False,
@@ -2018,7 +2059,22 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     qvals: array_like, optional (default: None)
         Overrides the keplerian q values
     use_fast: bool, optional (default: False)
-        Use fast GPU implementation (if not using sparse)
+        Use fast GPU implementation (if not using sparse or optimized)
+    use_optimized: bool, optional (default: False)
+        Use optimized GPU implementation (if not using sparse).
+
+        Unless an explicit ``block_size`` is passed (which is always
+        respected), this automatically selects a block size based on
+        ndata:
+
+        - ndata <= 32: 32 threads (single warp)
+        - ndata <= 64: 64 threads (two warps)
+        - ndata <= 128: 128 threads (four warps)
+        - ndata > 128: 256 threads (eight warps)
+
+        Smaller blocks reduce idle-thread overhead for small datasets
+        (measured effect with a warm kernel cache is ~1.0-1.3x; see
+        eebls_gpu_fast_adaptive).
     use_sparse: bool, optional (default: None)
         If True, use sparse BLS. If False, use standard BLS. If None (default),
         automatically select based on dataset size (sparse_threshold).
@@ -2113,7 +2169,27 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
 
     # Use GPU BLS for larger datasets
 
-    if use_fast:
+    if use_optimized:
+        # Choose a block size from ndata unless the caller asked for a
+        # specific one (an explicit block_size must never be silently
+        # overridden -- the compiled BLOCK_SIZE and the launch
+        # configuration have to agree with what the caller expects)
+        block_size = kwargs.get('block_size')
+        if block_size is None:
+            block_size = _choose_block_size(ndata)
+        kwargs['block_size'] = block_size
+
+        # Get cached kernels for this block size
+        fname = 'full_bls_no_sol_optimized'
+        functions = _get_cached_kernels(block_size, use_optimized, [fname])
+
+        powers = eebls_gpu_fast_optimized(t, y, dy, freqs,
+                                          qmin=qmins, qmax=qmaxes,
+                                          ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                          functions=functions,
+                                          **kwargs)
+        return freqs, powers, None
+    elif use_fast:
         powers = eebls_gpu_fast(t, y, dy, freqs,
                                 qmin=qmins, qmax=qmaxes,
                                 ignore_negative_delta_sols=ignore_negative_delta_sols,
@@ -2394,7 +2470,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
     f = f0
     nol = noverlap
 
-    baseline = max(t) - min(t)
+    baseline = np.max(t) - np.min(t)
 
     functions = compile_bls(**kwargs)
     i = 0
@@ -2438,7 +2514,8 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
 
 def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                       qmin_fac=0.5, qmax_fac=2.0, fmin=None,
-                      fmax=None, freqs=None, qvals=None, use_fast=False,
+                      fmax=None, freqs=None, qvals=None,
+                      use_fast=False, use_optimized=False,
                       ignore_negative_delta_sols=False,
                       **kwargs):
     """
@@ -2477,6 +2554,9 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     functions: tuple, optional (default=None)
         result of ``compile_bls(**kwargs)``.
     use_fast: bool, optional (default: False)
+        Use fast GPU implementation.
+    use_optimized: bool, optional (default: False)
+        Use optimized GPU implementation (if not using fast).
 
     ignore_negative_delta_sols: bool
         Whether or not to ignore inverted dips
@@ -2491,12 +2571,11 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         Frequencies where BLS is evaluated
     bls: array_like, float
         BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
-    solutions: list of ``(q, phi)`` tuples
-        Best ``(q, phi)`` solution at each frequency
-
-        .. note::
-
-            Only returned when ``use_fast=False``.
+    solutions: list of ``(q, phi)`` tuples, or None
+        Best ``(q, phi)`` solution at each frequency; ``phi`` is in the
+        original input timescale. ``None`` when ``use_fast=True`` or
+        ``use_optimized=True`` (those kernels do not track solutions).
+        The return is always a 3-tuple, matching :func:`eebls_transit`.
 
     """
 
@@ -2521,7 +2600,14 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                                 ignore_negative_delta_sols=ignore_negative_delta_sols,
                                 **kwargs)
 
-        return freqs, powers
+        return freqs, powers, None
+    elif use_optimized:
+        powers = eebls_gpu_fast_optimized(t, y, dy, freqs,
+                                          qmin=qmins, qmax=qmaxes,
+                                          ignore_negative_delta_sols=ignore_negative_delta_sols,
+                                          **kwargs)
+
+        return freqs, powers, None
 
     powers, sols = eebls_gpu(t, y, dy, freqs,
                              qmin=qmins, qmax=qmaxes,
