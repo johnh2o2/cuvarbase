@@ -231,6 +231,25 @@ def bench_survey(name, cfg, n_lcs, runs, variants, noverlap=2):
         print(f"  batch      : {med/n_lcs*1e3:9.2f} ms/lc "
               f"(cold total {cold:.3f}s)", flush=True)
 
+    # ---------------- batch with reusable memory ------------------------
+    if 'batch_reuse' in variants:
+        import inspect
+        if 'memory' in inspect.signature(eebls_gpu_batch).parameters:
+            from cuvarbase.memory.bls_memory import BLSBatchMemory
+            bmem = BLSBatchMemory(cfg['ndata'], n_lcs, nfreq,
+                                  stream=cuda.Stream())
+
+            def run_batch_reuse():
+                eebls_gpu_batch(lcs, freqs, qmin=qmins, qmax=qmaxs,
+                                noverlap=noverlap, memory=bmem)
+            cold, med, all_t = timed(run_batch_reuse, runs)
+            out['variants']['batch_reuse'] = dict(
+                cold_total_s=cold, warm_median_total_s=med, all_s=all_t,
+                per_lc_s=med / n_lcs)
+            print(f"  batch_reuse: {med/n_lcs*1e3:9.2f} ms/lc "
+                  f"(cold total {cold:.3f}s)", flush=True)
+            del bmem
+
     # $/lightcurve for whatever variants we have
     for v, d in out['variants'].items():
         if 'per_lc_s' in d:
@@ -276,7 +295,8 @@ def main():
     ap.add_argument('--surveys', nargs='+', default=list(SURVEYS.keys()))
     ap.add_argument('--variants', nargs='+',
                     default=['fast_naive', 'fast_reuse', 'kernel',
-                             'kernel_1pass', 'pieces', 'batch'])
+                             'kernel_1pass', 'pieces', 'batch',
+                             'batch_reuse'])
     ap.add_argument('--runs', type=int, default=5)
     ap.add_argument('--nlcs', type=int, default=None)
     ap.add_argument('--noverlap', type=int, default=2)
