@@ -234,6 +234,57 @@ to ``floor(min(t))`` (observation times are epoch-subtracted internally to
 preserve float32 precision).
 
 
+Data hygiene: near-zero uncertainties
+-------------------------------------
+
+BLS is a *weighted* least-squares fit: each observation enters with
+weight :math:`w_i = dy_i^{-2} / \sum_j dy_j^{-2}`. A lightcurve point
+with a near-zero reported uncertainty (a common artifact of pipeline
+glitches, sentinel values, or unit mistakes) therefore concentrates
+essentially *all* of the statistical weight in a single observation.
+The box that covers that one point's phase bin then absorbs essentially
+all of the weighted variance, so :math:`\chi^2 \approx 0` for the box
+model and the reported power :math:`P = 1 - \chi^2/\chi^2_0` saturates
+near 1 (typically :math:`\sim 0.99` after binning) — *deterministically*,
+in pure noise. Because every trial frequency has some phase bin
+containing the dominant point, the result is a spuriously high,
+nearly frequency-independent periodogram rather than an isolated peak.
+
+How to recognize it:
+
+- one point dominates the statistical weight: ``max(dy**-2) / sum(dy**-2)``
+  is close to 1 (anything above ~0.1 deserves scrutiny);
+- suspiciously high BLS power (:math:`\sim 0.99`) on data you expect to
+  be noise, roughly flat across trial frequencies.
+
+The recommended guard is an *error floor*: clip the reported
+uncertainties from below at a percentile-based floor (and/or clip the
+weights from above) before running BLS:
+
+.. code-block:: python
+
+    import numpy as np
+
+    # Error floor: clip dy from below at a percentile-based floor
+    # before computing BLS weights.
+    dy_floor = np.percentile(dy, 10)  # or a survey-specific value
+    dy_safe = np.clip(dy, dy_floor, None)
+
+    # Sanity check: no single point should dominate the total weight.
+    w = dy_safe ** -2
+    w = w / w.sum()
+    if w.max() > 0.1:
+        raise ValueError("one point holds {:.0%} of the statistical "
+                         "weight; check dy for near-zero values"
+                         .format(w.max()))
+
+    freqs, power, sols = eebls_transit(t, y, dy_safe, fmin=0.1, fmax=10.0)
+
+``cuvarbase`` does not apply such a floor automatically — reported
+uncertainties are taken at face value — so this check belongs in your
+pre-processing.
+
+
 References
 ----------
 
