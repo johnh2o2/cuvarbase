@@ -1,0 +1,7 @@
+include CHANGELOG.rst
+include INSTALL.rst
+include LICENSE
+include README.md
+include README.rst
+include requirements.txt
+recursive-include cuvarbase/kernels *.cu *.cuh
