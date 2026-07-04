@@ -266,7 +266,7 @@ This optimization makes large-scale BLS searches practical and efficient for all
 - [RunPod Development](docs/RUNPOD_DEVELOPMENT.md) - Cloud GPU development setup
 - [BLS Optimization History](docs/BLS_OPTIMIZATION.md) - Thread-safety, memory management, and GPU optimizations
 
-For a complete list of changes, see [CHANGELOG.rst](CHANGELOG.rst).
+For a complete list of changes, see [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/master/CHANGELOG.rst).
 
 ## Contributing
 

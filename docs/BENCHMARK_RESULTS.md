@@ -103,17 +103,33 @@ The closest CPU competitor is **fBLS** at ~6 seconds for 65K datapoints / 100K f
 
 Measured February 2026 with `scripts/benchmark_algorithms.py` (driven across pods by `scripts/benchmark_all_gpus.sh`; 10K observations, 5K frequencies, batches of 10 lightcurves; astropy `BoxLeastSquares` on the host CPU as the reference). Per-GPU source data: `benchmarks/results/by_gpu/benchmark_<GPU>.json`.
 
-| GPU | BLS time/LC (ms) | vs astropy | vs pre-v1.0 kernel | $/hr (RunPod, Feb 2026) | $ per 1M LCs |
-|-----|-----------------:|-----------:|-------------------:|------------------------:|-------------:|
-| NVIDIA L40 | 2.62 | **354x** | 390x | $0.69 | $0.50 |
-| NVIDIA H200 | 2.34 | 306x | 70x | $3.59 | $2.33 |
-| Tesla V100-SXM2-16GB | 6.03 | 305x | 21x | $0.19 | $0.32 |
-| NVIDIA GeForce RTX 4090 | 2.99 | 290x | 38x | $0.34 | $0.28 |
-| NVIDIA RTX 4000 Ada | 2.57 | 284x | 29x | $0.20 | **$0.14** |
-| NVIDIA H100 80GB HBM3 | 2.26 | 268x | 148x | $2.69 | $1.69 |
-| NVIDIA A100-SXM4-80GB | 3.70 | **257x** | 49x | $1.19 | $1.22 |
+| GPU | BLS time/LC (ms) | vs astropy | $/hr (RunPod, Feb 2026) | $ per 1M LCs |
+|-----|-----------------:|-----------:|------------------------:|-------------:|
+| NVIDIA L40 | 2.62 | **354x** | $0.69 | $0.50 |
+| NVIDIA H200 | 2.34 | 306x | $3.59 | $2.33 |
+| Tesla V100-SXM2-16GB | 6.03 | 305x | $0.19 | $0.32 |
+| NVIDIA GeForce RTX 4090 | 2.99 | 290x | $0.34 | $0.28 |
+| NVIDIA RTX 4000 Ada | 2.57 | 284x | $0.20 | **$0.14** |
+| NVIDIA H100 80GB HBM3 | 2.26 | 268x | $2.69 | $1.69 |
+| NVIDIA A100-SXM4-80GB | 3.70 | **257x** | $1.19 | $1.22 |
 
 The speedup over astropy is remarkably consistent — **257-354x across every architecture from Volta (2017) to Hopper (2024)** — because both the GPU kernel and astropy scale linearly in N x N_freq at this problem size. The cheapest way to process a million lightcurves is a workstation card (RTX 4000 Ada at **$0.14/M**), not a data-center flagship.
+
+> An earlier revision of this table carried a "vs pre-v1.0 kernel" column (21-390x). Those numbers are **retracted**: the baseline paid per-call CUDA compilation, so the ratio measured pod-host compile speed, not GPU throughput. The measured comparison against the previous release is below.
+
+### Versus the previous cuvarbase release (v0.2.6 tag; measured July 2026, RTX A5000)
+
+Identical inputs both sides; v1.0 at `noverlap=1` for apples-to-apples (the old fast path silently ignored `noverlap`). Raw JSON + scripts: `benchmarks/results/v026_head_to_head_jul2026/`.
+
+| Measurement | 0.2.6 | 1.0.0 | Change |
+|---|---:|---:|---|
+| BLS kernel-only, 20K obs x 13.5K freqs | 9.8 ms | 9.8 ms | 1.00x — kernel throughput unchanged |
+| BLS per-call in a lightcurve loop (steady state) | 261 ms | 7.6 ms | **34x** (kernel cached vs recompiled every call) |
+| BLS 100-lightcurve run incl. first compile | 28.4 s | 2.8 s | **10x** |
+| Lomb-Scargle, 3K obs x 100K freqs | 33.3 ms | 11.7 ms | **2.85x** |
+| BLS on BJD-scale timestamps | signal lost (peak 0.30 → 0.089, wrong freq) | identical to near-zero timestamps | correctness |
+
+We claim **no raw-kernel speedup** over the previous release — the wins are architectural (compile-once caching, batching, Keplerian grids) plus correctness. The 0.2.6 baseline also required numpy < 1.24 and a 2022-era pycuda to run its LS/PDM paths at all (segfaults on pycuda >= 2025.1).
 
 ### BLS survey-scale throughput
 
@@ -126,10 +142,9 @@ Using Keplerian frequency grids (see Section 4):
 | TESS | 20,000 | 1.8K | 20 | **236** | Single |
 | Kepler | 65,000 | 131K | 5 | **6** | Single |
 
-**When does batch mode help?** Batch mode (`eebls_gpu_batch`) amortizes per-LC overhead (memory allocation, kernel launch, host-device transfer). This matters when kernel execution time per LC is small relative to overhead — i.e., when N_obs is small:
+> **Stale batch columns:** this table was measured February 2026, when `eebls_gpu_batch` recompiled its kernel on every call. That defect was fixed in July 2026, after which **batch beats the single-LC loop at every measured scale** (~10x at N_obs=200, ~5x at N_obs=20,000, 2.2x for 2-LC batches; warm cache, RTX A5000). The ZTF/HAT-Net batch rows above are therefore conservative and the TESS/Kepler "Best mode: Single" recommendations are obsolete — prefer `eebls_gpu_batch` when processing many lightcurves at any size.
 
-- **N_obs < 1000**: Batch mode gives 2-4x speedup (overhead-dominated regime)
-- **N_obs > 10000**: the single-LC loop is faster — dramatically so at TESS scale (batch ran ~12x slower at N_obs=20,000, an undiagnosed regression; see the table above). Use the single-LC path for large lightcurves.
+**When does batch mode help?** Batch mode (`eebls_gpu_batch`) amortizes per-LC overhead (kernel launch, memory allocation, host-device transfer) and, since the July 2026 fix, shares one cached kernel across the whole collection. With a warm cache it outperformed the single-LC loop at every scale measured (N_obs 200 to 20,000).
 
 ### Survey-wide processing cost
 
