@@ -191,6 +191,25 @@ def main():
               'r = %.6f' % np.corrcoef(p026b, p026)[0, 1])
         print()
 
+    # ---- pycuda cross-check ----
+    xchk = [(cfg, get_row(D, 'v026b_warm_%s' % cfg,
+                          'v026_fast_warm_precompiled'))
+            for cfg in ['canonical', 'tess']]
+    if any(r for _, r in xchk):
+        print('## 0.2.6 BLS warm cross-check: pycuda 2025.1 vs 2022.2.2\n')
+        print('| config | 0.2.6 + pycuda 2025.1 (pooled) | 0.2.6 + pycuda '
+              '2022.2.2 |')
+        print('|---|---|---|')
+        for cfg, r in xchk:
+            if r is None:
+                continue
+            p = pooled_warm(D, 'v026_warm_%s' % cfg,
+                            'v026_fast_warm_precompiled')
+            print('| %s | %s | %s |'
+                  % (cfg, fmt_ms(p[0]) if p else 'n/a',
+                     fmt_ms(r['median_s'])))
+        print()
+
     # ---- LS ----
     print('## Lomb-Scargle (process reused, warm; median of 7)\n')
     print('| config | 0.2.6 | v1.0 | ratio | peak freq agreement |')
@@ -207,6 +226,24 @@ def main():
               % (cfg, fmt_ms(r026['median_s']), fmt_ms(r10['median_s']),
                  r026['median_s'] / r10['median_s'], agree))
     print()
+
+    # ---- PDM ----
+    p026 = get_row(D, 'v026_pdm', 'pdm_v026_binned_linterp')
+    p10 = get_row(D, 'v10_pdm', 'pdm_v10_binned_linterp')
+    p10f = get_row(D, 'v10_pdm', 'pdm_v10_binned_linterp_fast')
+    if p026 and p10:
+        print('## PDM (binned_linterp, nbins=10, ndata=3000, nf=10000; '
+              'process reused)\n')
+        print('| variant | 0.2.6 | v1.0 | ratio |')
+        print('|---|---|---|---|')
+        print('| binned_linterp (same algorithm) | %s | %s | %.2fx |'
+              % (fmt_ms(p026['median_s']), fmt_ms(p10['median_s']),
+                 p026['median_s'] / p10['median_s']))
+        if p10f:
+            print('| binned_linterp_fast (new in v1.0) | %s | %s | %.2fx |'
+                  % (fmt_ms(p026['median_s']), fmt_ms(p10f['median_s']),
+                     p026['median_s'] / p10f['median_s']))
+        print()
 
 
 if __name__ == '__main__':
