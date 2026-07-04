@@ -1576,7 +1576,10 @@ class TestEpochHandling(object):
         mem = BLSMemory.fromdata(t + self.bjd_offset, y, dy,
                                  qmin=1e-2, qmax=0.5, freqs=freqs,
                                  transfer=False)
-        assert_allclose(mem.t[:len(t)], t.astype(np.float32), atol=1e-3)
+        # staging buffers hold the samples in conflict-scattered order
+        # (utils.conflict_scatter_perm); compare as sets via sort
+        assert_allclose(np.sort(mem.t[:len(t)]),
+                        np.sort(t.astype(np.float32)), atol=1e-3)
         assert mem.epoch == pytest.approx(
             np.floor(self.bjd_offset + t.min()))
 
@@ -1586,7 +1589,10 @@ class TestEpochHandling(object):
         t, y, dy, freq, q, phi0 = self._signal()
         mem = BLSBatchMemory(len(t), 1, 8)
         mem.set_lightcurve(0, t + self.bjd_offset, y, dy)
-        assert_allclose(mem.t[:len(t)], t.astype(np.float32), atol=1e-3)
+        # staging buffers hold the samples in conflict-scattered order
+        # (utils.conflict_scatter_perm); compare as sets via sort
+        assert_allclose(np.sort(mem.t[:len(t)]),
+                        np.sort(t.astype(np.float32)), atol=1e-3)
         assert mem.epochs[0] == pytest.approx(
             np.floor(self.bjd_offset + t.min()))
 

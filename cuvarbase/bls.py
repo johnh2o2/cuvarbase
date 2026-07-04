@@ -22,7 +22,8 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
 from .core import ensure_context
-from .utils import find_kernel, _module_reader, subtract_epoch
+from .utils import (find_kernel, _module_reader, subtract_epoch,
+                    conflict_scatter_perm)
 from .memory.bls_memory import BLSBatchMemory
 from .memory._host import host_array
 
@@ -556,11 +557,9 @@ class BLSMemory:
         # Epoch-subtract in float64 before the float32 cast: absolute
         # timestamps (e.g. BJD) would otherwise destroy the phase fold.
         t, self.epoch = subtract_epoch(t)
-        self.t[:len(t)] = t.astype(self.rtype)[:]
 
         w = np.power(dy, -2)
         w /= np.sum(w)
-        self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
 
         self.ybar = np.sum(y * w)
         self.yy = np.dot(w, np.power(y - self.ybar, 2))
@@ -570,7 +569,22 @@ class BLSMemory:
         self.chi2_0 = _chi2_null(y, dy)
 
         u = (y - self.ybar) * w
-        self.yw[:len(t)] = np.asarray(u).astype(self.rtype)[:]
+
+        # Store in conflict-scattered order: time-sorted input puts
+        # warp-adjacent samples into the same phase bin at nearly every
+        # trial frequency, serializing the kernels' shared-memory
+        # atomics (3.1x on a TESS-like cadence). Binning is a sum, so
+        # the order is semantically free. See
+        # utils.conflict_scatter_perm.
+        perm = conflict_scatter_perm(len(t))
+        if perm is None:
+            self.t[:len(t)] = t.astype(self.rtype)[:]
+            self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
+            self.yw[:len(t)] = np.asarray(u).astype(self.rtype)[:]
+        else:
+            self.t[:len(t)] = t.astype(self.rtype)[perm]
+            self.w[:len(t)] = np.asarray(w).astype(self.rtype)[perm]
+            self.yw[:len(t)] = np.asarray(u).astype(self.rtype)[perm]
 
         if any([x is None for x in [self.t_g, self.yw_g, self.w_g]]):
             self.allocate_data()
