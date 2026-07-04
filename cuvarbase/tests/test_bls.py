@@ -62,7 +62,8 @@ def plot_bls_sol(t, y, dy, freq, q, phi0):
 
 
 def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
-         q=0.01, phi0=None, baseline=1., negative_delta=False):
+         q=0.01, phi0=None, baseline=1., negative_delta=False,
+         t0=4.5):
 
     rand = np.random.RandomState(seed)
 
@@ -76,7 +77,12 @@ def data(seed=100, sigma=0.1, ybar=12., snr=10, ndata=200, freq=10.,
 
     model = transit_model(phi0, q, delta)
 
-    t = baseline * np.sort(rand.rand(ndata))
+    # Non-zero T0 so every test exercises a non-trivial epoch
+    # (floor(min(t)) > 0): phases reported by the BLS functions are in
+    # the original input timescale, and the injected transit is at
+    # original-timescale phase phi0 (the shift is applied BEFORE the
+    # model is evaluated).
+    t = baseline * np.sort(rand.rand(ndata)) + t0
     y = model(t, freq) + sigma * rand.randn(len(t))
     y += ybar - np.mean(y)
     err = sigma * np.ones_like(y)
@@ -163,7 +169,13 @@ class TestBLS(object):
     @pytest.mark.parametrize("args", [(
             SolutionParams(freq=0.3, phi0=0.5, q=0.2, baseline=365., ybar=0., snr=50.,
                            negative_delta=True),
-            {'bls0': 0.8902446483898836, 'bls_ignore': 0}
+            # Deterministic single_bls value at the injected solution
+            # (pure-CPU float32 arithmetic; changes only if data() or
+            # single_bls numerics change -- e.g. this was
+            # 0.8902446483898836 before data() gained the t0=4.5 shift,
+            # which rotates the fold and re-draws which points host the
+            # injected dip).
+            {'bls0': 0.9223771210115413, 'bls_ignore': 0}
         )
     ])
     def test_ignore_positive_sols(self, args):
@@ -178,10 +190,9 @@ class TestBLS(object):
         
         freq, q, phi0 = solution.freq, solution.q, solution.phi0
 
-        # single_bls folds epoch-subtracted times (phases relative to
-        # floor(min(t))); shift the injected absolute-time phase to match
-        phi0 = (phi0 - np.floor(np.min(t)) * freq) % 1.0
-
+        # single_bls now takes phi0 in the ORIGINAL input timescale (it
+        # epoch-subtracts internally), so the injected phase is passed
+        # through unchanged.
         bls_default = single_bls(t, y_neg, dy, freq, q, phi0)
         bls0 = single_bls(t, y_neg, dy, freq, q, phi0, ignore_negative_delta_sols=False)
         bls_ignore = single_bls(t, y_neg, dy, freq, q, phi0, 
@@ -1360,11 +1371,28 @@ class TestEpochHandling(object):
         return t, y, dy, freq, q, phi0
 
     def test_single_bls_bjd_invariance(self):
+        # phi0 is now in the ORIGINAL input timescale, so a time-shifted
+        # run must use the covariantly shifted phase
+        # (phi0 + offset * freq) mod 1 to refer to the same transit.
         t, y, dy, freq, q, phi0 = self._signal()
         p_rel = single_bls(t, y, dy, freq, q, phi0)
-        p_raw = single_bls(t + self.bjd_offset, y, dy, freq, q, phi0)
+        phi0_raw = (phi0 + self.bjd_offset * freq) % 1.0
+        p_raw = single_bls(t + self.bjd_offset, y, dy, freq, q, phi0_raw)
         assert p_rel > 0.5  # signal actually detected
         assert abs(p_raw - p_rel) < 1e-3 * p_rel
+
+    def test_single_bls_phase_is_original_timescale(self):
+        # The convention itself: evaluating at the UNshifted phi0 on
+        # shifted times must MISS the transit (if it matched, phases
+        # would still be epoch-relative and the covariance test above
+        # would be vacuous). An integer-day offset o at freq=0.3 rotates
+        # the transit by (o * freq) mod 1 = 0.5 in phase, so the
+        # unshifted phi0 lands in pure out-of-transit noise.
+        t, y, dy, freq, q, phi0 = self._signal()
+        p_rel = single_bls(t, y, dy, freq, q, phi0)
+        p_wrong = single_bls(t + 4325.0, y, dy, freq, q, phi0)
+        assert p_rel > 0.5
+        assert p_wrong < 0.25 * p_rel
 
     def test_sparse_bls_cpu_bjd_invariance(self):
         t, y, dy, freq, q, phi0 = self._signal(ndata=60)
