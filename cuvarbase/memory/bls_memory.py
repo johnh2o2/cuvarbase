@@ -261,7 +261,7 @@ class BLSBatchMemory:
         else:
             cuda.memcpy_dtoh(self.bls[:nb], self.bls_g.gpudata)
 
-    def get_results(self, n_lcs_active=None):
+    def get_results(self, n_lcs_active=None, nfreq_active=None):
         """
         Return normalized BLS results per lightcurve.
 
@@ -270,6 +270,11 @@ class BLSBatchMemory:
         n_lcs_active : int, optional
             Number of populated lightcurve slots to return (chunked
             reuse). Default: all slots.
+        nfreq_active : int, optional
+            Number of valid frequencies per row (a memory allocated
+            for more frequencies than the current call uses -- the
+            ``memory=`` reuse path -- keeps its allocation pitch, and
+            the row tails are stale). Default: the full allocation.
 
         Returns
         -------
@@ -278,10 +283,12 @@ class BLSBatchMemory:
         """
         n_act = self.n_lcs if n_lcs_active is None else int(n_lcs_active)
         n_act = min(n_act, self.n_lcs)
+        nf = self.nfreqs if nfreq_active is None else int(nfreq_active)
+        nf = min(nf, self.nfreqs)
         results = []
         for i in range(n_act):
             offset = i * self.nfreqs
-            raw = self.bls[offset:offset + self.nfreqs].copy()
+            raw = self.bls[offset:offset + nf].copy()
             if self.yy[i] > 0:
                 raw /= self.yy[i]
             results.append(raw)
