@@ -373,12 +373,60 @@ def run_ls(cfg_name, out):
           % (cfg_name, med, iqr[0], iqr[1], np.asarray(fgrid)[imax]))
 
 
+def run_pdm(out):
+    """PDM steady state, process reused. Legacy (t, y, w, freqs) data
+    format (accepted by both versions); binned_linterp, nbins=10.
+    v1.0 additionally reports the new *_fast kernel."""
+    import warnings
+    warnings.simplefilter('ignore')
+    from cuvarbase.pdm import PDMAsyncProcess
+
+    ndata, baseline, nfreq = 3000, 365.0, 10000
+    df = 2.0 / nfreq
+    frq = (np.arange(1, nfreq + 1) * df).astype(np.float64)
+    t, y, dy = make_lc(ndata, baseline, seed=13)
+    y = y + 0.005 * np.sin(2 * np.pi * 0.7431 * np.asarray(t))
+    w = np.power(dy, -2.0)
+    w /= w.sum()
+
+    rows = []
+    kinds = ['binned_linterp']
+    if not is_v026():
+        kinds.append('binned_linterp_fast')
+    for kind in kinds:
+        proc = PDMAsyncProcess()
+
+        def call():
+            r = proc.run([(np.asarray(t, dtype=np.float32),
+                           np.asarray(y, dtype=np.float32),
+                           np.asarray(w, dtype=np.float32),
+                           np.asarray(frq, dtype=np.float32))],
+                         kind=kind, nbins=10)
+            proc.finish()
+            return r
+
+        res = call()
+        power = np.asarray(res[0])
+        imax = int(np.argmax(power))
+        med, iqr, times = time_call(call, n_warm=1, n_timed=7)
+        rows.append(dict(label='pdm_%s_%s' % (
+                             'v026' if is_v026() else 'v10', kind),
+                         ndata=ndata, nfreq=nfreq, kind=kind,
+                         median_s=med, iqr_s=iqr, times_s=times,
+                         peak_freq=float(frq[imax]),
+                         peak_power=float(power[imax])))
+        print('  PDM %-22s median %.4f s IQR [%.4f, %.4f] peak %.4f/d'
+              % (kind, med, iqr[0], iqr[1], frq[imax]))
+    out['rows'] = rows
+
+
 # ----------------------------------------------------------------------------
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--mode', required=True,
-                   choices=['warm', 'cold', 'loop', 'correctness', 'ls'])
+                   choices=['warm', 'cold', 'loop', 'correctness', 'ls',
+                            'pdm'])
     p.add_argument('--config', default='canonical')
     p.add_argument('--nlc', type=int, default=20)
     p.add_argument('--out', required=True)
@@ -391,6 +439,8 @@ def main():
     if args.mode == 'ls':
         out['env'] = None  # filled after import inside run_ls path
         run_ls(args.config, out)
+    elif args.mode == 'pdm':
+        run_pdm(out)
     else:
         cfg = get_config(args.config if args.mode != 'correctness'
                          else 'correctness')

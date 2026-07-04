@@ -36,6 +36,24 @@ def get_row(data, key, label):
     return None
 
 
+def pooled_warm(data, key_base, label):
+    """Pool timed samples across benchmark rounds (key_base, key_base_r2,
+    ...) and return (pooled_median, iqr, n, n_rounds)."""
+    times = []
+    n_rounds = 0
+    for suffix in ('', '_r2', '_r3', '_r4'):
+        r = get_row(data, key_base + suffix, label)
+        if r is not None:
+            times.extend(r['times_s'])
+            n_rounds += 1
+    if not times:
+        return None
+    return (float(np.median(times)),
+            [float(np.percentile(times, 25)),
+             float(np.percentile(times, 75))],
+            len(times), n_rounds)
+
+
 def main():
     raw_dir = sys.argv[1]
     D = load_all(raw_dir)
@@ -54,25 +72,51 @@ def main():
                                  env['cuda_driver_version'], env['gpu']))
     print()
 
-    # ---- warm ----
-    print('## Standard BLS, warm / steady state (median of 7, 2 warmups)\n')
+    # ---- warm (pooled across all rounds) ----
+    print('## Standard BLS, warm / steady state (pooled across rounds; '
+          '7 timed / 2 warmups per round)\n')
     print('| config | 0.2.6 warm (functions= precompiled) | v1.0 noverlap=1 '
           '(apples-to-apples) | ratio | v1.0 noverlap=2 (default, '
-          'correctness) | v1.0 optimized kernel (nov=1) |')
+          'correctness) | n samples (026/v10) |')
     print('|---|---|---|---|---|---|')
     for cfg in ['canonical', 'small', 'tess']:
-        r026 = get_row(D, 'v026_warm_%s' % cfg, 'v026_fast_warm_precompiled')
-        r10a = get_row(D, 'v10_warm_%s' % cfg, 'v10_fast_noverlap1')
-        r10b = get_row(D, 'v10_warm_%s' % cfg, 'v10_fast_noverlap2_default')
-        r10o = get_row(D, 'v10_warm_%s' % cfg, 'v10_fast_optimized_noverlap1')
-        if r026 is None or r10a is None:
+        p026 = pooled_warm(D, 'v026_warm_%s' % cfg,
+                           'v026_fast_warm_precompiled')
+        p10a = pooled_warm(D, 'v10_warm_%s' % cfg, 'v10_fast_noverlap1')
+        p10b = pooled_warm(D, 'v10_warm_%s' % cfg,
+                           'v10_fast_noverlap2_default')
+        if p026 is None or p10a is None:
             continue
-        ratio = r026['median_s'] / r10a['median_s']
-        print('| %s | %s | %s | **%.2fx** | %s | %s |'
-              % (cfg, fmt_ms(r026['median_s']), fmt_ms(r10a['median_s']),
-                 ratio, fmt_ms(r10b['median_s']) if r10b else 'n/a',
-                 fmt_ms(r10o['median_s']) if r10o else 'n/a'))
+        ratio = p026[0] / p10a[0]
+        print('| %s | %s [%s, %s] | %s [%s, %s] | **%.2fx** | %s | %d/%d |'
+              % (cfg, fmt_ms(p026[0]), fmt_ms(p026[1][0]),
+                 fmt_ms(p026[1][1]), fmt_ms(p10a[0]), fmt_ms(p10a[1][0]),
+                 fmt_ms(p10a[1][1]), ratio,
+                 fmt_ms(p10b[0]) if p10b else 'n/a', p026[2], p10a[2]))
     print()
+
+    # ---- decomposition ----
+    have_decomp = any(k.startswith('decomp_') for k in D)
+    if have_decomp:
+        print('## Warm-call decomposition (TESS config, 15 reps, '
+              'interleaved run order)\n')
+        print('| variant | v1.0 (run 1) | 0.2.6 | v1.0 (run 2, drift '
+              'check) |')
+        print('|---|---|---|---|')
+        names = {'A_full': 'A: product call (per-call compile path)',
+                 'B_precompiled': 'B: functions= precompiled',
+                 'C_mem_reuse': 'C: B + memory reused',
+                 'D_kernel_only': 'D: C without H2D/D2H (kernel only)'}
+        for key, label in names.items():
+            vals = []
+            for f in ['decomp_v10_tess', 'decomp_v026_tess',
+                      'decomp_v10_tess2']:
+                d = D.get(f)
+                vals.append(fmt_ms(d['results'][key]['median_s'])
+                            if d else 'n/a')
+            print('| %s | %s | %s | %s |' % (label, vals[0], vals[1],
+                                             vals[2]))
+        print()
 
     # ---- cold ----
     print('## Standard BLS, cold / out-of-the-box (fresh process, compiler '
