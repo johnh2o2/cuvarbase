@@ -73,7 +73,8 @@ __global__ void full_bls_batch_fused(
         float dlogq,
         float dphi,
         unsigned int ignore_negative_delta_sols,
-        unsigned int n_lcs){
+        unsigned int n_lcs,
+        unsigned int bls_stride){
 
     extern __shared__ float sh[];
 
@@ -94,7 +95,10 @@ __global__ void full_bls_batch_fused(
     const float *yw = yw_all + data_offset;
     const float *w = w_all + data_offset;
 
-    float *bls_out = bls_all + lc_idx * nfreq;
+    // bls_stride, not nfreq: freq-chunked launches pass nfreq = the
+    // chunk's frequency count while rows of bls_all stay one full
+    // grid apart.
+    float *bls_out = bls_all + lc_idx * bls_stride;
 
     float phi, bls1, bls2, thread_max_bls, thread_yw, thread_w;
 
@@ -204,7 +208,8 @@ __global__ void full_bls_batch(
         float dlogq,
         float dphi,
         unsigned int ignore_negative_delta_sols,
-        unsigned int n_lcs){
+        unsigned int n_lcs,
+        unsigned int bls_stride){
 
     extern __shared__ float sh[];
 
@@ -228,7 +233,10 @@ __global__ void full_bls_batch(
     const float *w = w_all + data_offset;
 
     // Output offset: bls_all[lc_idx * nfreq + freq_idx]
-    float *bls_out = bls_all + lc_idx * nfreq;
+    // bls_stride, not nfreq: freq-chunked launches pass nfreq = the
+    // chunk's frequency count while rows of bls_all stay one full
+    // grid apart.
+    float *bls_out = bls_all + lc_idx * bls_stride;
 
     unsigned int s;
     int b;

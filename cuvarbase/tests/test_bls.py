@@ -1237,6 +1237,35 @@ class TestBatchMemoryReuse(object):
         with pytest.raises(ValueError, match="too small"):
             eebls_gpu_batch(lcs, freqs, memory=mem)
 
+    def test_freq_chunked_batch_matches(self):
+        # freq-chunked launches (occupancy-aware path) must reproduce
+        # the single-launch result; odd chunk size to catch
+        # offset/stride mistakes.
+        from ..bls import eebls_gpu_batch
+
+        freqs = np.linspace(0.1, 1.0, 500)
+        lcs = self._lcs((1, 2), (200, 400))
+        p_full = eebls_gpu_batch(lcs, freqs)
+        p_chunk = eebls_gpu_batch(lcs, freqs, freq_batch_size=97)
+        for a, b in zip(p_full, p_chunk):
+            assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+
+    def test_oversized_memory_reuse_matches(self):
+        # memory allocated for MORE freqs/LCs/ndata than the call uses:
+        # output row pitch is the allocation, results must still match.
+        from ..bls import eebls_gpu_batch
+        from ..memory.bls_memory import BLSBatchMemory
+        import pycuda.driver as cuda
+
+        freqs = np.linspace(0.1, 1.0, 400)
+        lcs = self._lcs((3, 4), (150, 250))
+        mem = BLSBatchMemory(600, 4, 900, stream=cuda.Stream())
+        expect = eebls_gpu_batch(lcs, freqs)
+        got = eebls_gpu_batch(lcs, freqs, memory=mem)
+        for a, b in zip(expect, got):
+            assert len(a) == len(b) == len(freqs)
+            assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+
 
 class TestAllWeightBoxStability(object):
     """Regression tests for the nondeterministic bogus-peak bug behind
