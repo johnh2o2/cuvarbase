@@ -24,7 +24,11 @@
 #define BLOCK_SIZE 128
 #endif
 
-#define PI 3.141592653589793f
+// No PI macro here: an earlier float32 PI literal was dead code (never
+// referenced) and was removed in the Jul 2026 kernel-hygiene pass (same
+// audit class as the cunfft.cu A3 fix). This kernel is float32-only by
+// design; if pi is ever needed, add it under a DOUBLE_PRECISION guard
+// as in cunfft.cu/lomb.cu.
 #define WARP_SIZE 32
 
 /*

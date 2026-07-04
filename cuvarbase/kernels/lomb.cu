@@ -3,11 +3,18 @@
 //{CPP_DEFS}
 
 #define EPSILON 1E-8
-#define PI 3.141592653589793238462643383279502884f
 #ifdef DOUBLE_PRECISION
 	#define FLT double
+	// PI must be a double literal here: the float32 literal's relative
+	// error (2.8e-8) rescales the un-reduced phase arguments in cossum/
+	// sinsum (2*pi*f*(t + 0.5), with t on the caller's original time
+	// scale) so the direct-sums kernels evaluate the periodogram on a
+	// frequency axis stretched by 1 + 2.8e-8 even in double-precision
+	// mode (same defect class as the cunfft.cu A3 fix, Jul 2026).
+	#define PI 3.14159265358979323846264338327950288
 #else
 	#define FLT float
+	#define PI 3.14159265358979323846264338327950288f
 #endif
 
 #define STANDARD 0
