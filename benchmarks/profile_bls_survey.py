@@ -26,7 +26,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--survey', default='Kepler')
     ap.add_argument('--variant', default='fast',
-                    choices=['fast', 'batch'])
+                    choices=['fast', 'batch', 'naive'])
     ap.add_argument('--niter', type=int, default=4)
     ap.add_argument('--noverlap', type=int, default=2)
     ap.add_argument('--nlcs', type=int, default=2)
@@ -63,6 +63,20 @@ def main():
                            noverlap=args.noverlap)
         cuda.Context.synchronize()
         print(f"per-iter: {(time.perf_counter()-t0)/args.niter*1e3:.1f} ms")
+    elif args.variant == 'naive':
+        # full public path incl. per-call allocations (host-overhead view)
+        lcs = [make_lc(cfg, seed=1000 + i) for i in range(args.nlcs)]
+        eebls_gpu_fast(*lcs[0], freqs, qmin=qmins, qmax=qmaxs,
+                       noverlap=args.noverlap)
+        cuda.Context.synchronize()
+        t0 = time.perf_counter()
+        for _ in range(args.niter):
+            for lc in lcs:
+                eebls_gpu_fast(*lc, freqs, qmin=qmins, qmax=qmaxs,
+                               noverlap=args.noverlap)
+        cuda.Context.synchronize()
+        n = args.niter * len(lcs)
+        print(f"per-lc: {(time.perf_counter()-t0)/n*1e3:.1f} ms")
     else:
         lcs = [make_lc(cfg, seed=1000 + i) for i in range(args.nlcs)]
         eebls_gpu_batch(lcs, freqs, qmin=qmins, qmax=qmaxs,
