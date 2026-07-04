@@ -1181,6 +1181,63 @@ class TestFusedNoverlapKernel(object):
         assert_allclose(p2, manual, rtol=1e-4, atol=1e-6)
 
 
+class TestBatchMemoryReuse(object):
+    """eebls_gpu_batch(memory=...) reuses one BLSBatchMemory across
+    calls and chunks (per-call pinned/device allocation costs several
+    ms at survey nfreq); results must match the allocate-per-call
+    path, including across chunked processing and back-to-back calls
+    with different data."""
+
+    @staticmethod
+    def _lcs(seeds, ndatas, baseline=365.0):
+        out = []
+        for seed, nd in zip(seeds, ndatas):
+            rand = np.random.RandomState(seed)
+            t = np.sort(baseline * rand.rand(nd)) + 4.5
+            phase = (t * 0.5) % 1.0
+            y = 12.0 - 0.05 * (phase < 0.04)
+            y += 0.01 * rand.randn(nd)
+            dy = 0.01 * np.ones(nd)
+            out.append((t, y, dy))
+        return out
+
+    def test_memory_reuse_matches_fresh(self):
+        from ..bls import eebls_gpu_batch
+        from ..memory.bls_memory import BLSBatchMemory
+        import pycuda.driver as cuda
+
+        freqs = np.linspace(0.1, 1.0, 500)
+        mem = BLSBatchMemory(400, 2, len(freqs), stream=cuda.Stream())
+
+        for seeds in ((1, 2), (3, 4)):
+            lcs = self._lcs(seeds, (200, 400))
+            expect = eebls_gpu_batch(lcs, freqs)
+            got = eebls_gpu_batch(lcs, freqs, memory=mem)
+            for a, b in zip(expect, got):
+                assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+
+    def test_chunked_matches_single_chunk(self):
+        from ..bls import eebls_gpu_batch
+
+        freqs = np.linspace(0.1, 1.0, 300)
+        lcs = self._lcs((5, 6, 7, 8, 9), (150, 220, 300, 80, 260))
+
+        p_one = eebls_gpu_batch(lcs, freqs)
+        p_chunks = eebls_gpu_batch(lcs, freqs, max_batch_lcs=2)
+        for a, b in zip(p_one, p_chunks):
+            assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+
+    def test_too_small_memory_raises(self):
+        from ..bls import eebls_gpu_batch
+        from ..memory.bls_memory import BLSBatchMemory
+
+        freqs = np.linspace(0.1, 1.0, 100)
+        lcs = self._lcs((1,), (200,))
+        mem = BLSBatchMemory(100, 1, len(freqs))  # max_ndata too small
+        with pytest.raises(ValueError, match="too small"):
+            eebls_gpu_batch(lcs, freqs, memory=mem)
+
+
 class TestAllWeightBoxStability(object):
     """Regression tests for the nondeterministic bogus-peak bug behind
     PR #65's fabs(ybar) guard (attila's HATPI reproducer): bls_value's

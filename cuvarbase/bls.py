@@ -562,7 +562,13 @@ class BLSMemory:
         w /= np.sum(w)
 
         self.ybar = np.sum(y * w)
-        self.yy = np.dot(w, np.power(y - self.ybar, 2))
+        # einsum, not np.dot: BLAS ddot spawns a full threadpool for
+        # large vectors, and on CPU-quota-limited containers (RunPod,
+        # K8s) the burst trips CFS throttling and freezes the process
+        # ~90 ms per 100 ms period (measured 8x end-to-end slowdown at
+        # TESS scale). einsum stays in numpy core, single-threaded.
+        self.yy = float(np.einsum('i,i->', w,
+                                  np.power(y - self.ybar, 2)))
         # chi2 of the constant model for the data actually loaded here;
         # convert_bls_power scalings must use this rather than whatever
         # y/dy a later (memory-reuse) call happens to pass.
@@ -731,7 +737,10 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
             j_freq = min([i_freq + freq_batch_size, len(freqs)])
             nfreqs = j_freq - i_freq
 
-            max_nbins = max(memory.nbinsf[i_freq:j_freq])
+            # np.max, not builtin max(): iterating a 300K-element numpy
+            # array through Python scalars cost 10+ ms per call at
+            # HAT-Net/Kepler grid sizes.
+            max_nbins = int(np.max(memory.nbinsf[i_freq:j_freq]))
 
             if use_fused:
                 hist_size = noverlap_int * int(max_nbins)
@@ -1627,8 +1636,11 @@ def _chi2_null(y, dy):
     conventions."""
     y = np.asarray(y, dtype=np.float64)
     w = np.power(np.asarray(dy, dtype=np.float64), -2)
-    ybar = np.dot(w, y) / np.sum(w)
-    return float(np.dot(w, np.power(y - ybar, 2)))
+    # einsum, not np.dot: keep the per-LC path off BLAS threadpools
+    # (CFS-throttling cliff on CPU-quota-limited hosts; see
+    # BLSMemory.setdata).
+    ybar = float(np.einsum('i,i->', w, y)) / np.sum(w)
+    return float(np.einsum('i,i->', w, np.power(y - ybar, 2)))
 
 
 def _validate_convention(convention):
@@ -2353,7 +2365,8 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
                     noverlap=2, dlogq=0.3, dphi=0.0,
                     ignore_negative_delta_sols=False,
                     max_batch_lcs=256, block_size=None,
-                    functions=None, convention='chi2ratio', **kwargs):
+                    functions=None, convention='chi2ratio',
+                    memory=None, **kwargs):
     """
     Process multiple lightcurves in batched GPU operations.
 
@@ -2394,6 +2407,15 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         CUDA threads per block. If None, auto-selects based on max ndata.
     functions : dict, optional
         Pre-compiled batch kernel functions.
+    memory : :class:`cuvarbase.memory.bls_memory.BLSBatchMemory`, optional
+        Reusable staging/device memory. Streaming many chunks of
+        lightcurves through repeated ``eebls_gpu_batch`` calls pays
+        several ms of pinned-host + device allocation per call
+        otherwise; construct one ``BLSBatchMemory(max_ndata,
+        min(max_batch_lcs, n_lcs), nfreq, stream=Stream())`` sized for
+        the largest chunk and pass it to every call. Must satisfy
+        ``max_ndata >= max(len(t))``, ``n_lcs >= min(max_batch_lcs,
+        len(lightcurves))`` and ``nfreqs >= len(freqs)``.
 
     Returns
     -------
@@ -2455,6 +2477,51 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
 
     float_size = np.float32(1).nbytes
 
+    # One BLSBatchMemory serves every chunk (and, via ``memory=``,
+    # every future call with compatible sizes): allocating the pinned
+    # staging buffers + device arrays per chunk cost multiple ms per
+    # call (cuMemHostAlloc dominates at survey nfreq).
+    batch_cap = min(max_batch_lcs, n_total)
+    if memory is not None:
+        mem = memory
+        if (mem.max_ndata < max_ndata_all or mem.n_lcs < batch_cap
+                or mem.nfreqs < nfreq):
+            raise ValueError(
+                "eebls_gpu_batch: provided memory is too small "
+                f"(max_ndata {mem.max_ndata} < {max_ndata_all}, "
+                f"n_lcs {mem.n_lcs} < {batch_cap}, or nfreqs "
+                f"{mem.nfreqs} < {nfreq})")
+        stream = mem.stream
+    else:
+        stream = cuda.Stream()
+        mem = BLSBatchMemory(max_ndata_all, batch_cap, nfreq,
+                             stream=stream)
+
+    # Set frequency grid once for all chunks
+    max_nbins = mem.set_freqs(freqs, qmin=qmin, qmax=qmax)
+
+    # Check shared memory (qmin may be a per-frequency array)
+    mem_req = (block_size + 2 * max_nbins) * float_size
+    if mem_req > shmem_lim:
+        qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
+        raise ValueError(
+            f"qmin={float(np.min(qmin)):.2e} requires too much "
+            f"shared memory ({mem_req} > {shmem_lim}). "
+            f"Try qmin > {qmin_min:.2e}."
+        )
+
+    # Fused path needs the noverlap-times finer histogram to fit;
+    # otherwise fall back to the multi-pass loop.
+    batch_use_fused = use_fused
+    if batch_use_fused:
+        fused_req = (block_size
+                     + 2 * noverlap_int * max_nbins) * float_size
+        if fused_req > shmem_lim:
+            batch_use_fused = False
+        else:
+            mem_req = fused_req
+
+    freqs_uploaded = False
     i = 0
     while i < len(sorted_indices):
         # Take up to max_batch_lcs from sorted order
@@ -2462,44 +2529,16 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         batch_indices = sorted_indices[i:batch_end]
         batch_n = len(batch_indices)
 
-        # Max ndata in this batch
-        max_ndata_batch = max(lc_ndatas[idx] for idx in batch_indices)
-
-        # Allocate batch memory
-        stream = cuda.Stream()
-        mem = BLSBatchMemory(max_ndata_batch, batch_n, nfreq, stream=stream)
-
-        # Set frequency grid
-        max_nbins = mem.set_freqs(freqs, qmin=qmin, qmax=qmax)
-
-        # Check shared memory (qmin may be a per-frequency array)
-        mem_req = (block_size + 2 * max_nbins) * float_size
-        if mem_req > shmem_lim:
-            qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
-            raise ValueError(
-                f"qmin={float(np.min(qmin)):.2e} requires too much "
-                f"shared memory ({mem_req} > {shmem_lim}). "
-                f"Try qmin > {qmin_min:.2e}."
-            )
-
-        # Fused path needs the noverlap-times finer histogram to fit;
-        # otherwise fall back to the multi-pass loop for this batch.
-        batch_use_fused = use_fused
-        if batch_use_fused:
-            fused_req = (block_size
-                         + 2 * noverlap_int * max_nbins) * float_size
-            if fused_req > shmem_lim:
-                batch_use_fused = False
-            else:
-                mem_req = fused_req
-
         # Set lightcurve data
         for j, orig_idx in enumerate(batch_indices):
             t, y, dy = lightcurves[orig_idx]
             mem.set_lightcurve(j, t, y, dy)
 
-        # Transfer to GPU
-        mem.transfer_to_gpu()
+        # Transfer to GPU (frequency grid only once; only the
+        # populated LC slots)
+        mem.transfer_to_gpu(n_lcs_active=batch_n,
+                            transfer_freqs=not freqs_uploaded)
+        freqs_uploaded = True
 
         # Launch kernel
         max_nblocks = min(nfreq, 5000)
@@ -2526,7 +2565,9 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
             args += (mem.bls_g.ptr, mem.freqs_g.ptr)
             args += (mem.nbins0_g.ptr, mem.nbinsf_g.ptr)
             args += (mem.ndata_per_lc_g.ptr,)
-            args += (np.uint32(max_ndata_batch),)
+            # per-LC stride of the padded data layout = the memory's
+            # allocation stride (constant across chunks on reuse)
+            args += (np.uint32(mem.max_ndata),)
             args += (np.uint32(nfreq), np.uint32(0))
             if batch_use_fused:
                 args += (np.uint32(noverlap_int * max_nbins),
@@ -2553,9 +2594,9 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
             cuda.memcpy_dtod(mem.bls_g.gpudata, best_bls_g.gpudata,
                              best_bls_g.nbytes)
 
-        # Transfer results back
-        mem.transfer_to_cpu()
-        batch_results = mem.get_results()
+        # Transfer results back (only the populated rows)
+        mem.transfer_to_cpu(n_lcs_active=batch_n)
+        batch_results = mem.get_results(n_lcs_active=batch_n)
 
         # Store results in original order
         for j, orig_idx in enumerate(batch_indices):
