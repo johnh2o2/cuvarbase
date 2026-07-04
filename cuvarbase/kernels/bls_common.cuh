@@ -84,7 +84,7 @@ __device__ unsigned int count_tot_nbins(unsigned int nbins0, unsigned int nbinsf
 
 __global__ void store_best_sols_custom(unsigned int *argmaxes, float *best_phi,
 	                            float *best_q, float *q_values,
-	                            float *phi_values, unsigned int nq, unsigned int nphi,
+	                            double *phi_values, unsigned int nq, unsigned int nphi,
 	                            unsigned int nfreq, unsigned int freq_offset){
 
 	unsigned int i = get_id();
@@ -92,7 +92,7 @@ __global__ void store_best_sols_custom(unsigned int *argmaxes, float *best_phi,
 	if (i < nfreq){
 		unsigned int imax = argmaxes[i + freq_offset];
 
-		best_phi[i + freq_offset] = phi_values[imax / nq];
+		best_phi[i + freq_offset] = (float) phi_values[imax / nq];
 		best_q[i + freq_offset] = q_values[imax % nq];
 	}
 }
@@ -184,7 +184,7 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 __global__ void bin_and_phase_fold_custom(
 	                    float *t, float *yw, float *w,
 						float *yw_bin, float *w_bin, double *freqs,
-						float *q_values, float *phi_values,
+						float *q_values, double *phi_values,
 						double epoch,
 						unsigned int nq, unsigned int nphi, unsigned int ndata,
 						unsigned int nfreq, unsigned int freq_offset){
@@ -199,12 +199,26 @@ __global__ void bin_and_phase_fold_custom(
 		float W = w[i_data];
 		float YW = yw[i_data];
 
+		// Fold in single precision with the float32-cast frequency,
+		// exactly like bin_and_phase_fold_bst_multifreq and the CPU
+		// reference single_bls (which folds with float32(t) *
+		// float32(freq)). freqs stay double ONLY for the epoch
+		// re-referencing below -- folding with the double frequency
+		// would shift each phase by up to ~|f64 - f32|* t relative to
+		// the reference and flip bin membership of edge points.
+		float f0 = (float) freqs[i_freq + freq_offset];
+
 		// get phase [0, 1)
-		float phi = mod1(t[i_data] * freqs[i_freq + freq_offset]);
+		float phi = mod1(t[i_data] * f0);
 
 		for(int pb = 0; pb < nphi; pb++){
-			// Adjust test phase to normalized timescale
-			float phi0 = (float)mod1d((double)phi_values[pb] - (epoch * freqs[i_freq + freq_offset]));
+			// Re-reference the trial phase (given in the original input
+			// timescale) to the subtracted epoch, in double precision:
+			// epoch * freq can be ~1e6 cycles for BJD-scale epochs.
+			// phi_values are double so this matches the float64
+			// conversion (phi0 - epoch*freq) % 1 in single_bls bit for
+			// bit before the float32 cast.
+			float phi0 = (float)mod1d(phi_values[pb] - (epoch * freqs[i_freq + freq_offset]));
 			float dphi = phi - phi0;
 			dphi -= floorf(dphi);
 
