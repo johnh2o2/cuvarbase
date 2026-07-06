@@ -30,10 +30,10 @@ echo "Step 1: Syncing code..."
 
 echo ""
 echo "Step 2: Installing cuvarbase in development mode..."
-ssh ${SSH_OPTS} ${SSH_HOST} bash << 'ENDSSH'
+ssh ${SSH_OPTS} ${SSH_HOST} REMOTE_DIR="${RUNPOD_REMOTE_DIR:-/workspace/cuvarbase}" bash << 'ENDSSH'
 set -e
 
-cd /workspace/cuvarbase
+cd "${REMOTE_DIR}"
 
 # Set up CUDA environment (auto-detect version)
 if [ -d /usr/local/cuda ]; then
