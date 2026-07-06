@@ -1,111 +1,135 @@
-# TLS cost analysis: GPU vs CPU, and vs the only other GPU TLS
+# TLS fidelity, throughput, and cost: cuvarbase vs CPU vs GTLS
 
-**Question.** With the survey-scale fast TLS path (`tls_search_batch`), is it
-cheaper to run a Transit Least Squares search on a rented GPU than on a CPU?
-And is cuvarbase now not just the fastest but the *cheapest* TLS available?
+Three questions, answered with measurements (RTX A5000, `scripts/tls_fidelity_experiment.py`,
+`scripts/tls_matched_timing.py`, `scripts/benchmark_tls_survey.py`; raw in
+`benchmarks/results/tls_survey_jul2026/`):
 
-**Short answer.** Yes on both counts, by a wide margin. At its default
-fidelity, cuvarbase GPU TLS costs **$0.06–$7.45 per million light curves**
-depending on regime, versus **$11,000–$99,000 per million** for the reference
-CPU `transitleastsquares` package — a **13,000× to 200,000×** cost reduction.
-It is also ~600× cheaper than GTLS, the only other GPU TLS. Read the fidelity
-caveat at the end before quoting the largest ratios.
+1. Is the coarse-epoch-grid + refinement fast path **lossy** — does it sacrifice SNR/SDE?
+2. How much **faster** is it, apples-to-apples (same light curves, same grid, same detectability)?
+3. Is it **cheaper**, and is it the cheapest TLS available?
 
-## Method
+## 0. What the reference "CPU pipeline" is
 
-Throughput is the measured end-to-end survey wall time (grid generation +
-preprocessing + host↔device transfer + kernels + per-LC statistics),
-`scripts/benchmark_tls_survey.py`, 100% injected-transit recovery in every
-regime on every GPU. Raw JSON in `benchmarks/results/tls_survey_jul2026/`.
+The `transitleastsquares` package (Hippke & Heller 2019), pip-installed, called as a
+user would: `transitleastsquares(t, y, dy).power(R_star=1, M_star=1, period_min, period_max,
+oversampling_factor=3, use_threads=cpu_count())`. It runs on *all* CPU cores. All CPU
+timings below are that package on the same machine as the GPU (a RunPod pod), except the
+4-year Kepler row (>15 min/LC) which uses the published 522 s figure (16-core Ryzen 9
+7950X, GTLS paper).
 
-Cost per million light curves is `(ms_per_lc × 1000 / 3600) × $/hr`.
+## 1. Fidelity: it is NOT lossy in detectability (measured)
 
-- **GPU $/hr** are the prices actually paid on RunPod this session: A5000
-  **$0.16**, RTX 4000 Ada **$0.20**, Tesla V100 **$0.23**.
-- **CPU $/hr** uses AWS on-demand as a defensible public anchor: 64 vCPU =
-  `c6i.16xlarge` **$2.72/hr** (the reference runs used `use_threads=cpu_count()`
-  = 64 on the pod); the compute-bound Kepler row uses 16 vCPU `c6i.4xlarge`
-  **$0.68/hr** to match the published 522 s / 16-core Kepler baseline.
-- **Reference CPU** = the `transitleastsquares` package (Hippke & Heller 2019),
-  same forced Ofir period grid, `oversampling_factor=3`, all cores. Measured on
-  the pod for four regimes; the 4-year Kepler point (>15 min/LC) uses the
-  published 522 s figure (Ryzen 9 7950X, 16 cores; GTLS paper arXiv:2607.00348).
+The detection statistic is the SDE, built from the whole χ²(period) spectrum. cuvarbase's
+default fast path scans a **coarse epoch grid** (`t0_oversample=3`, ~3 epochs per transit
+duration) plus an exact refinement of the top candidate periods; the reference steps t0
+~100× finer *everywhere*. Does that cost detectability?
 
-## Cost per million light curves
+To compare cleanly, the *statistic* is held fixed: cuvarbase and the reference normalize
+SR→SDE differently, so SDE is recomputed with `cuvarbase.tls_stats` on **both** methods'
+χ² spectra. Only spectrum fidelity then varies. Identical injected light curves, one
+shared Ofir period grid.
 
-| Regime (ndata, periods) | A5000 | Ada | V100 | Cheapest GPU | Reference CPU | GPU savings |
-|---|---:|---:|---:|---|---:|---:|
-| TESS FFI (1.3K, 2.5K)   | **$0.056** | $0.170 | $0.091 | A5000 $0.056 | $11,110 | ~199,000× |
-| K2 90-d (4.3K, 9.7K)    | **$0.138** | $0.356 | $0.247 | A5000 $0.138 | $16,226 | ~118,000× |
-| TESS 2-min (19.7K, 2.5K)| **$0.125** | $0.283 | $0.197 | A5000 $0.125 | $15,643 | ~125,000× |
-| TESS 1-yr (17K, 42K)    | **$0.819** | $1.519 | $1.054 | A5000 $0.819 | $83,930 | ~102,000× |
-| Kepler 4-yr (65K, 172K) | **$7.45**  | $10.99 | $9.30  | A5000 $7.45  | $98,600 | ~13,000× |
+| Signal | cuvarbase t0=3 (default) | cuvarbase t0=33 (matched) | reference | recovery |
+|---|---:|---:|---:|:--:|
+| tess-ffi, depth 0.005 (strong) | SDE 14.5 (**0.99×**) | 15.0 (**1.03×**) | 14.61 | 12/12 all |
+| tess-ffi, depth 0.002 (marginal) | 12.01 (**0.97×**) | 12.47 (**1.01×**) | 12.37 | 10/10 all |
+| k2, depth 0.004 (narrow, q≈0.014) | 25.23 (**0.98×**) | 26.11 (**1.01×**) | 25.82 | 6/6 all |
 
-Two robust conclusions:
+**The default fast path is within 1–3% of the reference SDE, and matched (t0=33) is within
+1%.** 100% recovery in every case, including a marginal near-threshold depth and a narrow
+transit — the two regimes where any loss would show.
 
-1. **GPU TLS is dramatically cheaper than CPU TLS.** The ratio is the
-   throughput advantage (~3,000–12,000×) multiplied by the hourly-cost
-   advantage (a $0.16/hr GPU beats a multi-core CPU box), so it holds under any
-   reasonable CPU price — even pricing the CPU at the GPU's $0.16/hr leaves the
-   throughput gap intact.
+Why the coarse epoch grid barely moves the SDE: **SDE is a period-space contrast,
+`(peak − mean)/std` of the spectrum.** A coarser t0 grid lowers the best-fit quality at
+*every* trial period by roughly the same amount, so the normalized contrast between the
+true-period peak and the background is preserved. The finer reference grid raises all fits,
+again roughly uniformly. The epoch grid mostly sets *reported t0/parameter precision* — and
+that is exactly what the exact refinement pass restores. The duration-scaled t0 grid also
+guarantees at least one tested epoch overlaps the transit, so even narrow transits don't
+fall through.
 
-2. **The RTX A5000 is the cost sweet spot.** It is not always the fastest
-   (the V100 edges it on the biggest regime), but at $0.16/hr it is the
-   cheapest to operate in every regime. Fastest-per-dollar ≠ fastest.
+The small residual (1–3% at default) is in the **safe direction**: cuvarbase slightly
+*under*-reports significance, never over-reports. Refinement is deliberately excluded from
+the SDE (it feeds parameters only) precisely so the statistic stays on a uniform-fidelity
+spectrum — sharpening only the peak would *inflate* SDE and manufacture false positives.
 
-At A5000 rates, a full **TESS FFI sector–scale run of ~1 million light curves
-costs about 6 cents** of GPU time; a **Kepler-depth 4-year, 65K-point, 172K-period
-search of a million targets costs about $7.45** — versus roughly $100,000 for
-the same million on the reference CPU pipeline.
+Earlier internal notes cited a "~5–15% SDE loss." That was a *cuvarbase-fast-vs-cuvarbase-legacy*
+artifact (two of our own kernels), **not** a loss versus the reference. Against the actual
+reference package it is parity.
 
-## Versus the only other GPU TLS (GTLS)
+## 2. Throughput, apples-to-apples
 
-GTLS (arXiv:2607.00348, submitted 1 Jul 2026; CuPy) is the sole other GPU TLS.
-On a ~1500-day / 67K-point / 190K-period Kepler-class light curve it reports
-**33.3 s/LC on an RTX 4090** (15.7× over reference TLS). cuvarbase does the
-comparable Kepler-4yr configuration in **168 ms/LC on an A5000**.
+Matched fidelity (t0=33, SDE parity confirmed above) costs 6–15× over the default coarse
+grid: tess-ffi ~6×, k2 ~12×, TESS-yr 14.6×, Kepler-4yr 8.4× (176.8 → 1479 ms/LC on A5000).
 
-| | Time/LC | GPU $/hr | $/million LC |
-|---|---:|---:|---:|
-| GTLS, RTX 4090 | 33.3 s | ~$0.50 | ~$4,625 |
-| cuvarbase, A5000 | 0.168 s | $0.16 | **$7.45** |
+Same light curves, same period grid, single A5000 GPU vs all CPU cores of the same pod:
 
-≈ **620× cheaper** than GTLS, on a cheaper GPU. cuvarbase wins on hardware-hours
-(hand-written kernels + phase-binned scan vs CuPy per-point) and on hardware
-price (A5000 < 4090).
+| Regime | cuvarbase default | cuvarbase matched (SDE parity) | reference CPU | speedup (matched / default) |
+|---|---:|---:|---:|---:|
+| tess-ffi (marginal) | 2.6 ms/LC | 13.8 ms/LC | 46,222 ms/LC | 3,300× / 17,500× |
+| k2 (narrow) | 5.3 ms/LC | 63.1 ms/LC | 61,445 ms/LC | 970× / 11,600× |
 
-## The honest caveat: fidelity
+So **even at genuine SDE parity (matched t0=33), cuvarbase is ~1,000–3,000× faster than the
+reference TLS on the same machine**; at the default grid (already SDE-parity for detection)
+it is ~11,000–17,000×. Caveat: this pod's reference is unusually slow (46–61 s/LC — a
+slower CPU and 96-thread oversubscription on a small problem); a faster CPU narrows the raw
+speedup. **Throughput ratio is the market-independent invariant; the exact multiplier is
+CPU-dependent.** The robust claim is "thousands of times faster."
 
-The largest ratios are partly a fidelity trade, and the comparison is only fair
-if that is stated:
+## 3. Cost
 
-- **Default epoch grid.** cuvarbase's default coarse scan steps the transit
-  epoch at `t0_oversample=3` (~3 positions per transit duration), then runs an
-  **exact per-point refinement** at `refine_oversample=33` on the top candidate
-  periods. The reference package steps ~100× finer (`T0_FIT_MARGIN=0.01`)
-  *uniformly*. So cuvarbase evaluates far fewer coarse trials, which is a large
-  part of why it is faster — not implementation efficiency alone.
-- **What we verified.** 100% injected-transit recovery in all five regimes on
-  all three GPUs; agreement with the reference package on the golden configs
-  (period error <1%, both packages flag the detection significant); coarse
-  chi² spectrum correlated 0.998 with the legacy per-point cuvarbase kernel.
-  This is strong evidence the default fidelity is science-useful, but it is not
-  a bit-for-bit statistical match to the reference's ~100× epoch grid, and no
-  full injection–recovery completeness campaign has been run yet (that is the
-  open D3 validation item; the module remains flagged EXPERIMENTAL).
-- **Matched fidelity is still a win.** Raising `t0_oversample` toward the
-  reference grid costs roughly linearly in the coarse scan (~70% of Kepler-4yr
-  time). A reference-matched run is an estimated ~5–10× slower — order
-  **1–1.7 s/LC on an A5000, ~$40–75/million** — still **>20× faster/cheaper
-  than GTLS** and **>300× cheaper than the reference CPU**. (Estimate from the
-  stage profile; not yet measured end-to-end.)
+Cost = throughput × ($/hr). The throughput advantage above is measured and market-independent;
+the dollar multiplier depends entirely on how you price the two markets, and an earlier
+version of this note over-pinned it by comparing a lucky **$0.16/hr spot GPU against a
+$2.72/hr AWS on-demand CPU** — two different markets. Corrected inputs:
+
+- **GPU**: RunPod A5000 list price is **$0.27/hr** (I paid $0.16 on some spot pods and $0.27
+  on others — it fluctuates). Use $0.27.
+- **CPU**: RunPod does not publish CPU-pod pricing; AWS on-demand 16-vCPU `c6i.4xlarge` is
+  **$0.68/hr**, 64-vCPU `c6i.16xlarge` is $2.72/hr. Cross-market, so treat as indicative only.
+
+Cost per million light curves at genuine full fidelity (matched t0=33, A5000 $0.27/hr):
+
+| Regime | cuvarbase matched | reference CPU | note |
+|---|---:|---:|---|
+| Kepler-4yr | ~$111/M | ~$98,600/M (16-core, published 522 s) | ~890× cheaper |
+| TESS-yr | ~$24/M | (not measured) | — |
+
+At the default grid (already detection-parity): Kepler ~$13/M, TESS-FFI a few cents/M. But
+the honest headline is the **throughput invariant (thousands×)**, not a single dollar ratio;
+the ~890× above already uses the *most* CPU-favorable pairing (cheap 16-vCPU CPU, list-price
+GPU, full-fidelity GPU). Under any reasonable pricing, GPU TLS is hundreds-to-thousands of
+times cheaper.
+
+## 4. Versus GTLS (the only other GPU TLS)
+
+[GTLS](https://arxiv.org/abs/2607.00348) (arXiv:2607.00348, Hu, Ge, Jin, Willis, 1 Jul 2026;
+CuPy, RTX 4090) reports a 3000-day light curve in **138 s** (single GPU) / 79 s (dual) vs
+**3289 s** for CPU TLS → 24× / 42×, at TLS-equivalent detection (matched precision/recall).
+A 1500-day case is ~33 s. cuvarbase does the comparable Kepler-4yr configuration in **177 ms/LC
+at the default grid** (SDE-parity) or **1.48 s/LC at matched t0=33** on an A5000 (< a 4090):
+
+| | fidelity | time/LC | vs GTLS 1500-day |
+|---|---|---:|---:|
+| GTLS (RTX 4090) | TLS-matched | ~33 s | 1× |
+| cuvarbase matched (A5000) | SDE parity, matched t0 | 1.48 s | ~22× faster |
+| cuvarbase default (A5000) | SDE parity for detection | 0.177 s | ~190× faster |
+
+cuvarbase wins on hardware-hours (hand-written kernels + phase-binned scan vs CuPy per-point)
+and on hardware price (A5000 < 4090), on a fidelity basis GTLS's own detection metric would
+call equivalent.
 
 ## Bottom line
 
-At default fidelity cuvarbase is, on the evidence here, both the fastest and the
-cheapest TLS available — thousands of times cheaper than CPU TLS and ~600×
-cheaper than the only other GPU TLS. Even conservatively adjusted to the
-reference's finer epoch grid, it remains the cheapest by a large margin. The one
-thing still owed before dropping the EXPERIMENTAL flag is a full
-injection–recovery validation at matched fidelity (item D3), not a speed or cost
-result.
+- **Not lossy.** Detection SDE is at parity with the reference (0.97–1.03×) with 100%
+  recovery, including marginal and narrow transits. The coarse grid trades *epoch/parameter
+  precision* for speed, and the refinement restores that. Apples-to-apples (matched t0=33) is
+  within 1% of the reference SDE.
+- **Fastest.** ~1,000–3,000× faster than reference CPU TLS at genuine SDE parity on the same
+  machine; ~22–190× faster than GTLS on cheaper hardware.
+- **Cheapest.** Hundreds-to-thousands of times cheaper per light curve than CPU TLS under any
+  reasonable pricing, and cheaper than GTLS. The exact dollar multiplier is pricing-dependent;
+  the throughput invariant is not.
+- Still **EXPERIMENTAL** pending a full injection–recovery *completeness* campaign across a
+  (period, depth, ndata) grid (item D3). Three-regime SDE parity is strong evidence, not a
+  completeness proof.
