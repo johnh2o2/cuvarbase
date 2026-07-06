@@ -10,18 +10,19 @@ References
 .. [2] Kovács et al. (2002), "Box Least Squares", A&A 391, 369
 """
 
+import os
 import sys
 import threading
 import warnings
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 
 warnings.warn(
     "cuvarbase.tls is EXPERIMENTAL and not recommended for science use "
-    "in this release. The epoch (t0) grid is now duration-scaled and "
-    "failed periods are masked from the statistics, but the rework has "
-    "not yet been validated against the reference transitleastsquares "
-    "package. Light curves with more than ~3,500 points exceed the "
-    "kernel's shared-memory budget (a ValueError is raised). See "
+    "in this release. The default fast path (use_fast=True) is a "
+    "phase-binned scan with exact top-K refinement and supports "
+    "arbitrary ndata; the legacy kernel (use_fast=False) caps light "
+    "curves at ~3,500 points (a ValueError is raised). See "
     "analysis/V1_AUDIT_AND_GAMEPLAN.md in the repository. For validated "
     "transit searches use cuvarbase.bls (eebls_transit).",
     UserWarning)
@@ -438,6 +439,8 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
                    block_size=None, t0_oversample=3.0,
                    kernel=None, memory=None, stream=None,
                    transfer_to_device=True, transfer_to_host=True,
+                   use_fast=True, refine_top_k=50,
+                   refine_oversample=33.0, nbins=None,
                    **kwargs):
     """
     Run Transit Least Squares search on GPU.
@@ -533,21 +536,102 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
             n_transits_min=n_transits_min
         )
 
+    # The fast path keeps t in float64 for epoch subtraction; only the
+    # legacy path (below) downcasts inputs to float32 up front.
+    periods = np.asarray(periods, dtype=np.float32)
+    nperiods = len(periods)
+
+    # Determine if using Keplerian mode
+    use_keplerian = (qmin is not None and qmax is not None)
+
+    # Fast path: phase-binned batch engine with exact top-K refinement.
+    # Falls through to the legacy per-point kernel when the caller uses
+    # the low-level plumbing (pre-compiled kernel, external memory or
+    # stream, or transfer control), which the batch engine does not
+    # expose.
+    fast_gate = (kernel is None and memory is None and stream is None
+                 and transfer_to_device and transfer_to_host)
+    if use_fast and not fast_gate:
+        warnings.warn(
+            "use_fast=True is ignored because a pre-compiled kernel, "
+            "external memory/stream, or transfer control was supplied; "
+            "falling back to the legacy per-point kernel (which caps "
+            "ndata at ~3,500 points)")
+    if use_fast and fast_gate:
+        if use_keplerian:
+            qmin_arr = np.asarray(qmin, dtype=np.float64)
+            qmax_arr = np.asarray(qmax, dtype=np.float64)
+            if len(qmin_arr) != nperiods or len(qmax_arr) != nperiods:
+                raise ValueError(
+                    "qmin and qmax must have same length as periods "
+                    "(%d)" % nperiods)
+            n_durations_eff = n_durations
+        else:
+            # match the legacy standard kernel exactly: fixed duration
+            # range AND its hard-coded 15 durations (the legacy kernel
+            # ignores n_durations outside Keplerian mode)
+            qmin_arr = np.full(nperiods, 0.005)
+            qmax_arr = np.full(nperiods, 0.15)
+            if n_durations != 15:
+                warnings.warn(
+                    "n_durations is only honored in Keplerian mode "
+                    "(qmin/qmax provided); the standard TLS duration "
+                    "grid is fixed at 15 log-spaced durations")
+            n_durations_eff = 15
+
+        batch_results = tls_search_batch(
+            [(t, y, dy)],
+            periods=periods, qmin=qmin_arr, qmax=qmax_arr,
+            n_durations=n_durations_eff, t0_oversample=t0_oversample,
+            refine_top_k=refine_top_k,
+            refine_oversample=refine_oversample,
+            block_size=block_size, nbins=nbins,
+            limb_dark=limb_dark, u=u,
+            R_star=R_star, M_star=M_star,
+            return_arrays=True,
+            _warn_failed=True)
+        r = batch_results[0]
+        if 'error' in r:
+            raise RuntimeError(r['error'])
+
+        # legacy result dict ('T0' is the transit phase, as before)
+        return {
+            'periods': periods,
+            'chi2': r['chi2'],
+            'best_t0_per_period': r['best_t0_per_period'],
+            'best_duration_per_period': r['best_duration_per_period'],
+            'best_depth_per_period': r['best_depth_per_period'],
+            'valid_periods': r['valid_periods'],
+            'n_failed_periods': r['n_failed_periods'],
+            'period': r['period'],
+            'period_uncertainty': r['period_uncertainty'],
+            'T0': r['t0_phase'],
+            'duration': r['duration'],
+            'depth': r['depth'],
+            'chi2_min': r['chi2_min'],
+            'SDE': r['SDE'],
+            'SDE_raw': r['SDE_raw'],
+            'SNR': r['SNR'],
+            'FAP': r['FAP'],
+            'power': r['power'],
+            'SR': r['SR'],
+            'n_transits': r['n_transits'],
+            'R_star': R_star,
+            'M_star': M_star,
+        }
+
+    # ---- Legacy per-point kernel path ----
+
     # Convert to numpy arrays
     t = np.asarray(t, dtype=np.float32)
     y = np.asarray(y, dtype=np.float32)
     dy = np.asarray(dy, dtype=np.float32)
-    periods = np.asarray(periods, dtype=np.float32)
 
     ndata = len(t)
-    nperiods = len(periods)
 
     # Choose block size
     if block_size is None:
         block_size = _choose_block_size(ndata)
-
-    # Determine if using Keplerian mode
-    use_keplerian = (qmin is not None and qmax is not None)
 
     # Shared-memory budget check BEFORE compiling kernels or touching
     # the GPU. Layout: phases[ndata] + y_sorted[ndata] +
@@ -863,5 +947,669 @@ def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
         M_star=M_star,
         **kwargs
     )
+
+    return results
+
+
+# =====================================================================
+# Fast batch TLS engine (phase-binned scan + exact top-K refinement)
+# =====================================================================
+#
+# One kernel launch searches a whole batch of lightcurves over a shared
+# period grid: grid = (nperiods, n_lightcurves), one block per
+# (lightcurve, period). Each block folds its lightcurve once into
+# shared-memory phase bins and scans every (duration, t0) trial against
+# the bins, so trial cost is independent of ndata and there is no
+# shared-memory cap on the lightcurve length. A second, exact kernel
+# then re-fits the best `refine_top_k` candidate periods per lightcurve
+# with per-point template evaluation on a finer local (duration, t0)
+# grid. See kernels/tls_fast.cu for the algorithm notes.
+
+_TLS_FAST_NTEMPLATE = 1024
+_TLS_FAST_MAX_DURATIONS = 64
+_TLS_FAST_MAX_NBINS = 8192
+_TLS_FAST_DEFAULT_BLOCK = 256
+
+# Chunking budgets (per kernel launch)
+_TLS_FAST_MAX_OUT_FLOATS = 32 * 1024 * 1024   # per output array
+_TLS_FAST_MAX_POINTS = 16 * 1024 * 1024       # concatenated data points
+_TLS_FAST_MAX_GRID_Y = 65535
+
+
+def _next_pow2(n):
+    p = 1
+    while p < n:
+        p *= 2
+    return p
+
+
+def _device_max_shared():
+    """Max opt-in dynamic shared memory per block on the current device."""
+    ensure_context()
+    dev = cuda.Context.get_device()
+    try:
+        return dev.get_attribute(
+            cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK_OPTIN)
+    except Exception:
+        return dev.get_attribute(
+            cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
+
+
+def _tls_fast_shared_size(block_size, nbins):
+    """Dynamic shared memory (bytes) for tls_fast_search_kernel."""
+    nt = _TLS_FAST_NTEMPLATE
+    md = _TLS_FAST_MAX_DURATIONS
+    n_floats = 2 * nbins + 2 * (nt + 1) + 4 * block_size + md
+    n_ints = md + 1
+    return 4 * (n_floats + n_ints)
+
+
+def _tls_refine_shared_size(block_size):
+    """Dynamic shared memory (bytes) for tls_refine_kernel."""
+    return 4 * ((_TLS_FAST_NTEMPLATE + 1) + 4 * (block_size // 32))
+
+
+def _auto_nbins(qmin_global, t0_oversample, block_size):
+    """Pick the phase-bin count: bin width <= qmin/t0_oversample, power
+    of two, bounded by the device's shared-memory limit."""
+    need = t0_oversample / max(float(qmin_global), 1e-6)
+    nbins = _next_pow2(int(np.ceil(need)))
+    nbins = max(256, min(nbins, _TLS_FAST_MAX_NBINS))
+    max_shared = _device_max_shared()
+    while nbins > 256 and _tls_fast_shared_size(block_size, nbins) > max_shared:
+        nbins //= 2
+    if nbins < need:
+        warnings.warn(
+            "TLS fast path: %d phase bins under-resolve the narrowest "
+            "trial duration (q=%.2e wants %d bins); the coarse scan is "
+            "smeared there and recovery relies on the exact refinement "
+            "pass (refine_top_k)." % (nbins, qmin_global,
+                                      int(np.ceil(need))))
+    return nbins
+
+
+def compile_tls_fast(block_size=_TLS_FAST_DEFAULT_BLOCK, nbins=2048,
+                     t0_oversample=3.0, refine_nd=3):
+    """
+    Compile the fast (batched, phase-binned) TLS kernels.
+
+    Parameters
+    ----------
+    block_size : int
+        CUDA block size (multiple of 32).
+    nbins : int
+        Number of phase bins (power of two).
+    t0_oversample : float
+        Epoch oversampling: t0 stride = duration / t0_oversample in the
+        coarse scan (same convention as the legacy kernels).
+    refine_nd : int
+        Number of local durations in the refinement kernel (odd;
+        default 3 spans one coarse duration-grid step each way).
+
+    Returns
+    -------
+    kernels : dict
+        {'search': ..., 'refine': ...} PyCUDA functions.
+    """
+    ensure_context()
+    if block_size < 32 or (block_size & (block_size - 1)):
+        # the block max-reduction assumes a power-of-two blockDim
+        raise ValueError("block_size must be a power of two >= 32")
+    if nbins & (nbins - 1):
+        raise ValueError("nbins must be a power of two")
+    if int(refine_nd) != refine_nd or refine_nd < 2:
+        raise ValueError("refine_nd must be an integer >= 2 "
+                         "(odd recommended so the coarse duration sits "
+                         "on the refinement grid)")
+
+    cppd = dict(BLOCK_SIZE=block_size,
+                NBINS=nbins,
+                NTEMPLATE=_TLS_FAST_NTEMPLATE,
+                MAX_DURATIONS=_TLS_FAST_MAX_DURATIONS,
+                T0_OVERSAMPLE=float(t0_oversample),
+                REFINE_ND=refine_nd)
+    kernel_txt = _module_reader(find_kernel('tls_fast'), cpp_defs=cppd)
+    module = SourceModule(kernel_txt, options=['--use_fast_math'],
+                          no_extern_c=True)
+    search = module.get_function('tls_fast_search_kernel')
+    refine = module.get_function('tls_refine_kernel')
+
+    smem = _tls_fast_shared_size(block_size, nbins)
+    if smem > _SHARED_MEM_LIMIT:
+        max_shared = _device_max_shared()
+        if smem > max_shared:
+            raise ValueError(
+                "TLS fast kernel wants %d bytes of shared memory per "
+                "block but the device caps at %d; reduce nbins (or "
+                "block_size)" % (smem, max_shared))
+        # opt in to >48KB dynamic shared memory (sm_70+)
+        search.set_attribute(
+            cuda.function_attribute.MAX_DYNAMIC_SHARED_SIZE_BYTES, smem)
+
+    return {'search': search, 'refine': refine}
+
+
+def _get_cached_fast_kernels(block_size, nbins, t0_oversample,
+                             refine_nd=3):
+    key = ('fast', block_size, nbins, float(t0_oversample), refine_nd)
+    with _kernel_cache_lock:
+        if key in _kernel_cache:
+            _kernel_cache.move_to_end(key)
+            return _kernel_cache[key]
+        compiled = compile_tls_fast(block_size=block_size, nbins=nbins,
+                                    t0_oversample=t0_oversample,
+                                    refine_nd=refine_nd)
+        _kernel_cache[key] = compiled
+        _kernel_cache.move_to_end(key)
+        if len(_kernel_cache) > _KERNEL_CACHE_MAX_SIZE:
+            _kernel_cache.popitem(last=False)
+        return compiled
+
+
+def _preprocess_batch(lightcurves):
+    """Epoch-subtract, weight, and concatenate lightcurves (float64
+    accumulation; times stored as a float-float hi/lo pair so the
+    kernels can fold at ~float64 precision with pure FP32 math).
+
+    Returns (t_hi, t_lo, a_c, b_c, offs, lens, chi2_0, epochs, spans);
+    chi2_0 stays float64 for cancellation-free chi2 reconstruction.
+    """
+    n_lc = len(lightcurves)
+    lens = np.array([len(lc[0]) for lc in lightcurves], dtype=np.int64)
+    for i, (lc, n) in enumerate(zip(lightcurves, lens)):
+        if n == 0:
+            raise ValueError("lightcurve %d is empty" % i)
+        if len(lc[1]) != n or len(lc[2]) != n:
+            raise ValueError(
+                "lightcurve %d: t, y, dy lengths differ (%d, %d, %d)"
+                % (i, n, len(lc[1]), len(lc[2])))
+    # batch-wide offsets in int64 (a large survey can exceed 2^31
+    # total points); per-chunk offsets are rebased and cast to int32
+    # at upload, where the chunk-size cap keeps them small
+    offs = np.zeros(n_lc, dtype=np.int64)
+    if n_lc > 1:
+        offs[1:] = np.cumsum(lens)[:-1]
+    total = int(lens.sum())
+
+    t_hi = np.empty(total, dtype=np.float32)
+    t_lo = np.empty(total, dtype=np.float32)
+    a_c = np.empty(total, dtype=np.float32)
+    b_c = np.empty(total, dtype=np.float32)
+    chi2_0 = np.empty(n_lc, dtype=np.float64)
+    epochs = np.empty(n_lc, dtype=np.float64)
+    spans = np.empty(n_lc, dtype=np.float64)
+
+    for i, (t, y, dy) in enumerate(lightcurves):
+        t64 = np.asarray(t, dtype=np.float64)
+        y64 = np.asarray(y, dtype=np.float64)
+        dy64 = np.asarray(dy, dtype=np.float64)
+        epoch = np.floor(t64.min())
+        # sigma^2 regularizer matches the legacy kernel (float32 dy)
+        s2 = dy64 * dy64 + 1e-10
+        o, n = int(offs[i]), int(lens[i])
+        tshift = t64 - epoch
+        hi = tshift.astype(np.float32)
+        t_hi[o:o + n] = hi
+        t_lo[o:o + n] = (tshift - hi.astype(np.float64)).astype(np.float32)
+        resid = 1.0 - y64
+        a_c[o:o + n] = resid / s2
+        b_c[o:o + n] = 1.0 / s2
+        chi2_0[i] = np.sum(resid * resid / s2)
+        epochs[i] = epoch
+        spans[i] = t64.max() - t64.min()
+
+    return t_hi, t_lo, a_c, b_c, offs, lens, chi2_0, epochs, spans
+
+
+def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
+                     periods=None, qmin=None, qmax=None,
+                     period_min=None, period_max=None,
+                     n_transits_min=2, oversampling_factor=3,
+                     qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
+                     t0_oversample=3.0,
+                     refine_top_k=50, refine_oversample=33.0,
+                     block_size=None, nbins=None,
+                     limb_dark='quadratic', u=[0.4804, 0.1867],
+                     return_arrays=False, sde_kernel_size=None,
+                     _warn_failed=False):
+    """
+    Survey-scale Transit Least Squares search over a batch of
+    lightcurves sharing one trial-period grid.
+
+    This is the fast path for N >> 1 lightcurves: a single kernel
+    launch (per chunk) searches every (lightcurve, period) pair with a
+    phase-binned scan, then an exact per-point refinement kernel
+    re-fits the ``refine_top_k`` best candidate periods per lightcurve
+    on a finer local (duration, t0) grid. There is no cap on ndata.
+
+    Parameters
+    ----------
+    lightcurves : list of (t, y, dy) tuples
+        Times (days), fluxes (normalized to a baseline of 1.0), and
+        flux uncertainties. Each lightcurve's epoch floor(min(t)) is
+        subtracted internally (float64), so BJD-scale times are safe.
+    R_star, M_star : float
+        Stellar radius/mass in solar units; set the period grid and the
+        Keplerian duration window (shared by all lightcurves).
+    R_planet : float
+        Fiducial planet radius (Earth radii) for the duration window.
+    periods, qmin, qmax : array_like, optional
+        Explicit trial grid: periods (days) and per-period fractional
+        duration bounds. Auto-generated (Ofir 2014 grid + Keplerian
+        durations) when omitted.
+    period_min, period_max : float, optional
+        Period search range for the auto grid.
+    n_transits_min, oversampling_factor : optional
+        Auto period-grid parameters (see tls_grids.period_grid_ofir).
+    qmin_fac, qmax_fac : float
+        Keplerian duration window factors (search [qmin_fac*q,
+        qmax_fac*q] at each period).
+    n_durations : int
+        Trial durations per period (log-spaced), max 64.
+    t0_oversample : float
+        Coarse epoch oversampling; t0 stride = duration / t0_oversample.
+    refine_top_k : int
+        Number of best candidate periods per lightcurve re-fit exactly
+        (default 50; 0 disables refinement).
+    refine_oversample : float
+        Refinement epoch stride = duration / refine_oversample (the
+        reference transitleastsquares package uses ~100).
+    block_size : int, optional
+        CUDA block size override (power of two). By default each
+        bin-count band picks its own (256, or 512 for bands with 4096+
+        bins, shrunk to fit the device's shared-memory cap).
+    nbins : int, optional
+        Phase bins (power of two). Auto-sized so a bin is no wider than
+        the narrowest trial duration / t0_oversample, within the
+        device's shared-memory limit.
+    limb_dark, u : optional
+        Limb-darkening law/coefficients for the transit template.
+    return_arrays : bool
+        Also return the per-period chi2/t0/duration/depth arrays and
+        derived spectra for each lightcurve (adds D2H transfer time).
+    sde_kernel_size : int, optional
+        Median-detrend window for the SDE statistic (see tls_stats).
+
+    Returns
+    -------
+    results : list of dict
+        One dict per lightcurve:
+        'period', 'period_uncertainty', 't0_phase', 'T0' (absolute
+        mid-transit time near the epoch), 'duration', 'depth',
+        'chi2_min', 'SDE', 'SDE_raw', 'SNR', 'FAP', 'n_transits',
+        'n_failed_periods'; plus the per-period arrays when
+        ``return_arrays`` is set. A lightcurve whose every trial period
+        failed gets {'error': message} instead.
+
+        The best-fit parameters (including 'chi2_min') come from the
+        exact refinement pass, so 'chi2_min' is generally slightly
+        below the minimum of the returned coarse 'chi2' spectrum; the
+        SDE/FAP statistics are computed from the uniform coarse
+        spectrum only, keeping the detection statistic's scale
+        consistent across periods.
+    """
+    tls_grids.validate_stellar_parameters(R_star, M_star)
+    tls_models.validate_limb_darkening_coeffs(u, limb_dark)
+
+    if len(lightcurves) == 0:
+        return []
+    if n_durations < 2 or n_durations > _TLS_FAST_MAX_DURATIONS:
+        raise ValueError("n_durations must be in [2, %d]" %
+                         _TLS_FAST_MAX_DURATIONS)
+    if refine_top_k is not None and refine_top_k < 0:
+        raise ValueError("refine_top_k must be >= 0 (got %r)"
+                         % (refine_top_k,))
+    if refine_top_k and not refine_oversample > 0:
+        raise ValueError("refine_oversample must be > 0 (got %r)"
+                         % (refine_oversample,))
+
+    # ---- Trial grid (shared across the batch) ----
+    if periods is None:
+        # build the grid from the longest lightcurve baseline
+        spans_probe = [np.max(lc[0]) - np.min(lc[0]) for lc in lightcurves]
+        t_ref = lightcurves[int(np.argmax(spans_probe))][0]
+        periods = tls_grids.period_grid_ofir(
+            t_ref, R_star=R_star, M_star=M_star,
+            oversampling_factor=oversampling_factor,
+            period_min=period_min, period_max=period_max,
+            n_transits_min=n_transits_min)
+    periods = np.asarray(periods, dtype=np.float32)
+    nperiods = len(periods)
+    if nperiods == 0:
+        raise ValueError("periods must be non-empty")
+
+    if (qmin is None) != (qmax is None):
+        raise ValueError("provide both qmin and qmax, or neither")
+    if qmin is None:
+        # only the q bounds are needed here; skip building the
+        # (nperiods x n_durations) duration table
+        q_values = tls_grids.q_transit(periods.astype(np.float64),
+                                       R_star=R_star, M_star=M_star,
+                                       R_planet=R_planet)
+        qmin = q_values * qmin_fac
+        qmax = q_values * qmax_fac
+    qmin = np.ascontiguousarray(qmin, dtype=np.float32)
+    qmax = np.ascontiguousarray(qmax, dtype=np.float32)
+    if len(qmin) != nperiods or len(qmax) != nperiods:
+        raise ValueError("qmin and qmax must have same length as periods "
+                         "(%d)" % nperiods)
+    if np.any(qmin <= 0) or np.any(qmax < qmin) or np.any(qmax >= 1):
+        raise ValueError(
+            "need 0 < qmin <= qmax < 1 at every period (the transit "
+            "duration must be shorter than the period; the binned scan "
+            "would double-count phase bins for q >= 1)")
+
+    # ---- Kernel configuration: band the grid by required bin count.
+    # The trial-scan cost is proportional to NBINS, while the bin count
+    # a period actually needs scales with 1/qmin at that period, so
+    # running the whole grid at the finest band's NBINS overpays by 2x+
+    # on long-baseline searches. Each band compiles (and caches) its
+    # own NBINS variant and scatters results through period_map. ----
+    qmin_global = float(np.min(qmin))
+    max_dev_shared = _device_max_shared()
+    ensure_context()
+    cc_major = cuda.Context.get_device().compute_capability()[0]
+
+    def _band_block_size(nb):
+        if block_size is not None:
+            return block_size
+        # Swept on RTX A5000 (sm_86), RTX 4000 Ada (sm_89) and Tesla
+        # V100 (sm_70), kepler-4yr config with the float-float fold:
+        # 256 beats 128 everywhere; 512 wins on the big-bin bands on
+        # Ampere/Ada from 4096 bins up, while Volta prefers 256 until
+        # shared memory forces one block per SM (8192 bins).
+        # On devices with a hard 48KB cap (no opt-in; Pascal and
+        # earlier) prefer shrinking the block over losing phase bins.
+        big_bin_threshold = 4096 if cc_major >= 8 else 8192
+        bs = 512 if nb >= big_bin_threshold else 256
+        while bs > 64 and _tls_fast_shared_size(bs, nb) > max_dev_shared:
+            bs //= 2
+        return bs
+
+    need = t0_oversample / np.maximum(qmin.astype(np.float64), 1e-6)
+    if nbins is None:
+        nbins_per = np.power(
+            2, np.ceil(np.log2(np.clip(need, 256, None)))).astype(np.int64)
+        nbins_per = np.minimum(nbins_per, _TLS_FAST_MAX_NBINS)
+        # shared-memory cap for this device
+        while _tls_fast_shared_size(
+                _band_block_size(int(nbins_per.max())),
+                int(nbins_per.max())) > max_dev_shared:
+            cap = int(nbins_per.max()) // 2
+            nbins_per = np.minimum(nbins_per, cap)
+            if cap <= 256:
+                break
+        short = need > nbins_per
+        if np.any(short):
+            warnings.warn(
+                "TLS fast path: %d of %d trial periods have their "
+                "narrowest durations under-resolved by the phase bins "
+                "(device shared-memory cap); their coarse scan is "
+                "smeared and recovery there relies on the exact "
+                "refinement pass." % (int(short.sum()), nperiods))
+        bands = [(int(nb), np.flatnonzero(nbins_per == nb).astype(np.int32))
+                 for nb in np.unique(nbins_per)]
+        smear = float(np.max(need / nbins_per))
+    else:
+        bands = [(int(nbins), np.arange(nperiods, dtype=np.int32))]
+        smear = float(np.max(need / nbins))
+
+    # When the coarse bins under-resolve a duration (smear > 1), the
+    # coarse best duration is biased wide by the bin convolution;
+    # widen the refinement's duration window accordingly and use more
+    # local durations so the true value stays inside it.
+    smear = max(1.0, smear)
+    refine_nd = 3 if smear <= 1.3 else 5
+
+    band_launches = []   # (kernels, block_size, smem, n, per_g, qmn_g, qmx_g, map_g)
+    for nb, idx in bands:
+        bs = _band_block_size(nb)
+        kern = _get_cached_fast_kernels(bs, nb, t0_oversample,
+                                        refine_nd=refine_nd)
+        band_launches.append((
+            kern, bs, _tls_fast_shared_size(bs, nb), len(idx),
+            gpuarray.to_gpu(periods[idx]),
+            gpuarray.to_gpu(qmin[idx]),
+            gpuarray.to_gpu(qmax[idx]),
+            gpuarray.to_gpu(idx)))
+
+    # refinement runs at the first band's block size (any variant works)
+    refine_bs = _band_block_size(bands[0][0])
+    refine_kern = band_launches[0][0]
+    refine_smem = _tls_refine_shared_size(refine_bs)
+
+    # refinement trial-grid shape (see kernels/tls_fast.cu). The t0
+    # halfwidth must cover the worst coarse quantization, which lives
+    # in the FINEST band if the device cap clamped it below its need.
+    dur_ratio = float(np.median(qmax / qmin))
+    dur_span = dur_ratio ** (1.0 / (2.0 * max(n_durations - 1, 1)))
+    dur_span *= min(smear, 4.0)
+    nbins_finest = bands[-1][0]
+    t0_halfwidth = min(3.0, max(0.5, 1.5 / (nbins_finest * qmin_global)))
+
+    # ---- Template tables ----
+    T_tab, S1_tab, S2_tab = tls_models.generate_template_tables(
+        n_table=_TLS_FAST_NTEMPLATE, limb_dark=limb_dark, u=u)
+
+    # ---- Host preprocessing ----
+    t_hi_c, t_lo_c, a_c, b_c, offs, lens, chi2_0, epochs, spans = \
+        _preprocess_batch(lightcurves)
+    n_lc = len(lightcurves)
+
+    # ---- Static GPU arrays ----
+    periods_g = gpuarray.to_gpu(periods)
+    T_g = gpuarray.to_gpu(T_tab)
+    S1_g = gpuarray.to_gpu(S1_tab)
+    S2_g = gpuarray.to_gpu(S2_tab)
+
+    # ---- Chunk plan: bound output size, data size, and grid.y ----
+    max_lcs_by_out = max(1, _TLS_FAST_MAX_OUT_FLOATS // max(nperiods, 1))
+    chunks = []          # list of (i0, i1)
+    i0 = 0
+    while i0 < n_lc:
+        i1 = i0 + 1
+        pts = int(lens[i0])
+        while (i1 < n_lc
+               and i1 - i0 < max_lcs_by_out
+               and i1 - i0 < _TLS_FAST_MAX_GRID_Y
+               and pts + int(lens[i1]) <= _TLS_FAST_MAX_POINTS):
+            pts += int(lens[i1])
+            i1 += 1
+        chunks.append((i0, i1))
+        i0 = i1
+
+    max_chunk_lcs = max(i1 - i0 for i0, i1 in chunks)
+    max_chunk_pts = max(int(lens[i0:i1].sum()) for i0, i1 in chunks)
+
+    # reusable per-chunk GPU buffers
+    thi_g = gpuarray.empty(max_chunk_pts, np.float32)
+    tlo_g = gpuarray.empty(max_chunk_pts, np.float32)
+    a_g = gpuarray.empty(max_chunk_pts, np.float32)
+    b_g = gpuarray.empty(max_chunk_pts, np.float32)
+    off_g = gpuarray.empty(max_chunk_lcs, np.int32)
+    len_g = gpuarray.empty(max_chunk_lcs, np.int32)
+    out_n = max_chunk_lcs * nperiods
+    score_g = gpuarray.empty(out_n, np.float32)
+    t0_g = gpuarray.empty(out_n, np.float32)
+    dur_g = gpuarray.empty(out_n, np.float32)
+    depth_g = gpuarray.empty(out_n, np.float32)
+
+    # Refinement targets the peak region only: capping K at ~10% of the
+    # grid keeps the SDE background dominated by uniformly-treated
+    # (coarse) periods, so the refined peak stands out the same way it
+    # would in a full-fidelity spectrum.
+    K = int(min(refine_top_k, max(16, nperiods // 10),
+                nperiods)) if refine_top_k else 0
+    if K:
+        cand_g = gpuarray.empty(max_chunk_lcs * K, np.int32)
+        # compact refined outputs, one slot per candidate; the coarse
+        # spectrum is never overwritten (SDE needs uniform fidelity)
+        rscore_g = gpuarray.empty(max_chunk_lcs * K, np.float32)
+        rt0_g = gpuarray.empty(max_chunk_lcs * K, np.float32)
+        rdur_g = gpuarray.empty(max_chunk_lcs * K, np.float32)
+        rdepth_g = gpuarray.empty(max_chunk_lcs * K, np.float32)
+
+    results = [None] * n_lc
+
+    for (i0, i1) in chunks:
+        nc = i1 - i0
+        p0 = int(offs[i0])
+        pts = int(lens[i0:i1].sum())
+
+        # H2D (chunk-relative offsets are bounded by the points cap,
+        # so the int32 cast is safe)
+        thi_g[:pts].set(t_hi_c[p0:p0 + pts])
+        tlo_g[:pts].set(t_lo_c[p0:p0 + pts])
+        a_g[:pts].set(a_c[p0:p0 + pts])
+        b_g[:pts].set(b_c[p0:p0 + pts])
+        off_g[:nc].set((offs[i0:i1] - p0).astype(np.int32))
+        len_g[:nc].set(lens[i0:i1].astype(np.int32))
+
+        # coarse binned scan, one launch per bin-count band
+        for kern, bs, smem, band_n, per_g, qmn_g, qmx_g, map_g \
+                in band_launches:
+            kern['search'](
+                thi_g, tlo_g, a_g, b_g, off_g, len_g,
+                per_g, qmn_g, qmx_g, map_g, S1_g, S2_g,
+                np.int32(band_n), np.int32(nperiods),
+                np.int32(n_durations),
+                score_g, t0_g, dur_g, depth_g,
+                block=(bs, 1, 1), grid=(band_n, nc, 1),
+                shared=smem)
+
+        # score = chi2_0 - chi2 (cancellation-free); <= 0 marks failure
+        score_h = score_g[:nc * nperiods].get().reshape(nc, nperiods)
+
+        # exact refinement of the best K candidate periods per LC
+        # (parameters only; the coarse spectrum feeds the statistics)
+        rscore_h = rt0_h = rdur_h = rdepth_h = cand = None
+        if K:
+            cand = np.empty((nc, K), dtype=np.int32)
+            for j in range(nc):
+                if K < nperiods:
+                    # K largest scores = K smallest chi2; failed
+                    # periods (score < 0) sort last automatically
+                    cand[j] = np.argpartition(-score_h[j], K)[:K]
+                else:
+                    cand[j] = np.arange(nperiods)
+            cand_g[:nc * K].set(cand.ravel())
+            refine_kern['refine'](
+                thi_g, tlo_g, a_g, b_g, off_g, len_g,
+                periods_g, cand_g, T_g,
+                np.int32(nperiods), np.int32(K),
+                np.float32(dur_span), np.float32(t0_halfwidth),
+                np.float32(refine_oversample),
+                t0_g, dur_g,
+                rscore_g, rt0_g, rdur_g, rdepth_g,
+                block=(refine_bs, 1, 1), grid=(K, nc, 1),
+                shared=refine_smem)
+            rscore_h = rscore_g[:nc * K].get().reshape(nc, K)
+            rt0_h = rt0_g[:nc * K].get().reshape(nc, K)
+            rdur_h = rdur_g[:nc * K].get().reshape(nc, K)
+            rdepth_h = rdepth_g[:nc * K].get().reshape(nc, K)
+
+        if return_arrays or not K:
+            t0_h = t0_g[:nc * nperiods].get().reshape(nc, nperiods)
+            dur_h = dur_g[:nc * nperiods].get().reshape(nc, nperiods)
+            depth_h = depth_g[:nc * nperiods].get().reshape(nc, nperiods)
+
+        # ---- Per-LC statistics (pure CPU; threaded across the chunk,
+        # scipy/numpy release the GIL in the hot medfilt) ----
+        def _finish_lc(j):
+            lc_idx = i0 + j
+            srow = score_h[j]
+            valid = srow > 0.0
+            n_failed = int(nperiods - valid.sum())
+            if n_failed == nperiods:
+                return lc_idx, {
+                    'error': "TLS kernel returned no valid solution for "
+                             "any of the %d trial periods" % nperiods}
+            if n_failed and _warn_failed:
+                warnings.warn(
+                    "%d of %d trial periods returned no valid TLS "
+                    "solution (chi2 sentinel); they are excluded from "
+                    "the best-fit search and the SDE/FAP statistics and "
+                    "appear as NaN in the returned arrays"
+                    % (n_failed, nperiods))
+
+            # chi2 reconstructed in float64 against the float64 chi2_0
+            row = chi2_0[lc_idx] - srow.astype(np.float64)
+            chi2_valid = row[valid]
+            periods_valid = periods[valid]
+
+            # Best-fit parameters come from the exact refinement pass
+            # when available; the coarse spectrum (row) is what feeds
+            # the SDE/FAP statistics either way.
+            slot = int(np.argmax(rscore_h[j])) if K else 0
+            if K and rscore_h[j, slot] > 0.0:
+                best_idx = int(cand[j, slot])
+                best_t0 = float(rt0_h[j, slot])
+                best_duration = float(rdur_h[j, slot])
+                best_depth = float(rdepth_h[j, slot])
+                chi2_min = float(chi2_0[lc_idx] - rscore_h[j, slot])
+                best_valid_idx = int(np.searchsorted(
+                    np.flatnonzero(valid), best_idx))
+            else:
+                best_valid_idx = int(np.argmin(chi2_valid))
+                best_idx = int(np.flatnonzero(valid)[best_valid_idx])
+                chi2_min = float(row[best_idx])
+                best_t0 = float(t0_h[j, best_idx])
+                best_duration = float(dur_h[j, best_idx])
+                best_depth = float(depth_h[j, best_idx])
+
+            best_period = float(periods[best_idx])
+            n_transits = int(spans[lc_idx] / best_period)
+
+            stats = tls_stats.compute_all_statistics(
+                chi2_valid, periods_valid, best_valid_idx,
+                best_depth, best_duration, n_transits,
+                kernel_size=sde_kernel_size)
+            period_uncertainty = tls_stats.compute_period_uncertainty(
+                periods_valid, chi2_valid, best_valid_idx)
+
+            res = {
+                'period': best_period,
+                'period_uncertainty': period_uncertainty,
+                't0_phase': best_t0,
+                'T0': epochs[lc_idx] + best_t0 * best_period,
+                'duration': best_duration,
+                'depth': best_depth,
+                'chi2_min': chi2_min,
+                'SDE': stats['SDE'],
+                'SDE_raw': stats['SDE_raw'],
+                'SNR': stats['SNR'],
+                'FAP': stats['FAP'],
+                'n_transits': n_transits,
+                'n_failed_periods': n_failed,
+            }
+            if return_arrays:
+                def _expand(values):
+                    full = np.full(nperiods, np.nan)
+                    full[valid] = values
+                    return full
+                res.update({
+                    'periods': periods,
+                    'chi2': np.where(valid, row, np.nan),
+                    'best_t0_per_period': t0_h[j].copy(),
+                    'best_duration_per_period': dur_h[j].copy(),
+                    'best_depth_per_period': depth_h[j].copy(),
+                    'valid_periods': valid,
+                    'power': _expand(stats['power']),
+                    'SR': _expand(stats['SR']),
+                })
+            return lc_idx, res
+
+        if nc > 1:
+            n_workers = min(8, os.cpu_count() or 1, nc)
+        else:
+            n_workers = 1
+        if n_workers > 1:
+            with ThreadPoolExecutor(max_workers=n_workers) as pool:
+                for lc_idx, res in pool.map(_finish_lc, range(nc)):
+                    results[lc_idx] = res
+        else:
+            for j in range(nc):
+                lc_idx, res = _finish_lc(j)
+                results[lc_idx] = res
 
     return results

@@ -49,7 +49,7 @@ def signal_residue(chi2, chi2_null=None):
 
 
 def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
-                                window_length=None):
+                                kernel_size=None, window_length=None):
     """
     Calculate Signal Detection Efficiency (SDE).
 
@@ -64,8 +64,18 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
         Null hypothesis chi-squared
     detrend : bool, optional
         Apply median filter detrending (default: True)
+    kernel_size : int, optional
+        Running-median kernel size for detrending. If None (default),
+        uses ``min(len(SR)//10 forced odd (min 3), 91)``: small period
+        grids keep the length-proportional window, while large grids
+        are capped at 91 points -- the fixed-kernel convention of the
+        reference ``transitleastsquares`` package (oversampling factor
+        3 x SDE_MEDIAN_KERNEL_SIZE 30, forced odd). Passing an explicit
+        value overrides the automatic choice (even values are rounded
+        up to the next odd integer, as required by the median filter).
     window_length : int, optional
-        Window length for median filter (default: len(chi2)//10)
+        Deprecated alias for ``kernel_size``; ignored when
+        ``kernel_size`` is given.
 
     Returns
     -------
@@ -82,6 +92,10 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
     SDE = (max(SR) - mean(SR)) / std(SR)
 
     Typical threshold: SDE > 7 for 1% false alarm probability
+
+    Following ``transitleastsquares`` (Hippke & Heller 2019), detrending
+    is skipped entirely when ``len(SR) <= 2 * kernel_size``; in that
+    case the raw SDE and raw SR are returned unchanged.
     """
     chi2 = np.asarray(chi2)
 
@@ -99,28 +113,45 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
 
     # Detrend with median filter if requested
     if detrend:
-        if window_length is None:
-            window_length = max(len(SR) // 10, 3)
+        if kernel_size is None:
+            kernel_size = window_length  # deprecated alias
+        if kernel_size is None:
+            kernel_size = max(len(SR) // 10, 3)
             # Ensure odd window
-            if window_length % 2 == 0:
-                window_length += 1
+            if kernel_size % 2 == 0:
+                kernel_size += 1
+            # Cap at the fixed 91-point kernel used by the reference
+            # transitleastsquares implementation; an uncapped len//10
+            # window makes medfilt O(n*k) ~ O(n^2/10) and takes minutes
+            # of CPU at survey-scale period grids (n ~ 1e5).
+            kernel_size = min(kernel_size, 91)
+        elif kernel_size % 2 == 0:
+            # medfilt requires an odd kernel
+            kernel_size += 1
 
-        # Apply median filter to remove trends
-        SR_trend = signal.medfilt(SR, kernel_size=window_length)
-
-        # Detrended signal residue
-        SR_detrended = SR - SR_trend + np.median(SR)
-
-        # Calculate SDE on detrended signal
-        mean_SR_detrended = np.mean(SR_detrended)
-        std_SR_detrended = np.std(SR_detrended)
-
-        if std_SR_detrended < 1e-10:
-            SDE = 0.0
+        if len(SR) <= 2 * kernel_size:
+            # Too few points to estimate a trend; follow the reference
+            # transitleastsquares behavior and skip detrending.
+            SDE = SDE_raw
+            power = SR
         else:
-            SDE = (np.max(SR_detrended) - mean_SR_detrended) / std_SR_detrended
+            # Apply median filter to remove trends
+            SR_trend = signal.medfilt(SR, kernel_size=kernel_size)
 
-        power = SR_detrended
+            # Detrended signal residue
+            SR_detrended = SR - SR_trend + np.median(SR)
+
+            # Calculate SDE on detrended signal
+            mean_SR_detrended = np.mean(SR_detrended)
+            std_SR_detrended = np.std(SR_detrended)
+
+            if std_SR_detrended < 1e-10:
+                SDE = 0.0
+            else:
+                SDE = ((np.max(SR_detrended) - mean_SR_detrended)
+                       / std_SR_detrended)
+
+            power = SR_detrended
     else:
         SDE = SDE_raw
         power = SR
@@ -279,7 +310,7 @@ def odd_even_mismatch(depths_odd, depths_even):
 
 def compute_all_statistics(chi2, periods, best_period_idx,
                            depth, duration, n_transits,
-                           depths_per_transit=None):
+                           depths_per_transit=None, kernel_size=None):
     """
     Compute all TLS statistics for a search result.
 
@@ -299,6 +330,11 @@ def compute_all_statistics(chi2, periods, best_period_idx,
         Number of transits at best period
     depths_per_transit : array_like, optional
         Individual transit depths
+    kernel_size : int, optional
+        Running-median kernel for SDE detrending, passed through to
+        :func:`signal_detection_efficiency`. Default (None) uses
+        ``min(len(chi2)//10 forced odd, 91)``, following the fixed
+        91-point kernel convention of ``transitleastsquares``.
 
     Returns
     -------
@@ -313,7 +349,8 @@ def compute_all_statistics(chi2, periods, best_period_idx,
         - odd_even_mismatch: Odd/even depth difference (if available)
     """
     # Signal residue and SDE
-    SDE, SDE_raw, power = signal_detection_efficiency(chi2, detrend=True)
+    SDE, SDE_raw, power = signal_detection_efficiency(
+        chi2, detrend=True, kernel_size=kernel_size)
 
     SR = signal_residue(chi2)
 
