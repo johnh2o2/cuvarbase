@@ -12,7 +12,7 @@ import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
 from ._host import host_array
-from ..utils import subtract_epoch
+from ..utils import subtract_epoch, conflict_scatter_perm
 
 
 class BLSBatchMemory:
@@ -160,14 +160,28 @@ class BLSBatchMemory:
         w = np.power(dy, -2)
         w /= w.sum()
 
-        # Weighted mean and normalization
-        ybar = np.dot(y, w)
-        self.yy[idx] = np.dot(w, (y - ybar) ** 2)
+        # Weighted mean and normalization. einsum, not np.dot: BLAS
+        # ddot spawns a threadpool for large vectors and trips CFS
+        # throttling on CPU-quota-limited hosts (see BLSMemory.setdata).
+        ybar = float(np.einsum('i,i->', y, w))
+        self.yy[idx] = float(np.einsum('i,i->', w, (y - ybar) ** 2))
 
         # Store (use float64 for computation, cast to float32 for GPU)
-        self.t[offset:offset + ndata] = t.astype(self.rtype)
-        self.yw[offset:offset + ndata] = ((y - ybar) * w).astype(self.rtype)
-        self.w[offset:offset + ndata] = w.astype(self.rtype)
+        # in conflict-scattered order: time-sorted input serializes the
+        # batch kernel's shared-memory atomics (warp-adjacent samples
+        # fold into the same phase bin; 3.1x measured on TESS-like
+        # cadence). Binning is a sum, so order is semantically free.
+        perm = conflict_scatter_perm(ndata)
+        if perm is None:
+            self.t[offset:offset + ndata] = t.astype(self.rtype)
+            self.yw[offset:offset + ndata] = \
+                ((y - ybar) * w).astype(self.rtype)
+            self.w[offset:offset + ndata] = w.astype(self.rtype)
+        else:
+            self.t[offset:offset + ndata] = t.astype(self.rtype)[perm]
+            self.yw[offset:offset + ndata] = \
+                ((y - ybar) * w).astype(self.rtype)[perm]
+            self.w[offset:offset + ndata] = w.astype(self.rtype)[perm]
 
         # Zero-pad remainder (should already be zero from aligned_zeros,
         # but be explicit in case of reuse)
@@ -175,8 +189,22 @@ class BLSBatchMemory:
         self.yw[offset + ndata:offset + self.max_ndata] = 0.0
         self.w[offset + ndata:offset + self.max_ndata] = 0.0
 
-    def transfer_to_gpu(self):
-        """Transfer all host arrays to GPU asynchronously."""
+    def transfer_to_gpu(self, n_lcs_active=None, transfer_freqs=True):
+        """Transfer host arrays to GPU asynchronously.
+
+        Parameters
+        ----------
+        n_lcs_active : int, optional
+            Transfer only the first ``n_lcs_active`` lightcurve slots
+            (chunked reuse: a batch call processing fewer LCs than the
+            allocation avoids re-uploading the padded tail). Default:
+            all slots.
+        transfer_freqs : bool, optional (default: True)
+            Upload the frequency grid + bin-count arrays. Chunk loops
+            reusing the same grid only need this once.
+        """
+        n_act = self.n_lcs if n_lcs_active is None else int(n_lcs_active)
+        n_act = min(n_act, self.n_lcs)
         total_data = self.max_ndata * self.n_lcs
         total_bls = self.nfreqs * self.n_lcs
 
@@ -191,36 +219,76 @@ class BLSBatchMemory:
             self.nbinsf_g = gpuarray.zeros(self.nfreqs, dtype=np.uint32)
             self.bls_g = gpuarray.zeros(total_bls, dtype=self.rtype)
 
-        self.t_g.set_async(self.t, stream=self.stream)
-        self.yw_g.set_async(self.yw, stream=self.stream)
-        self.w_g.set_async(self.w, stream=self.stream)
-        self.ndata_per_lc_g.set_async(
-            self.ndata_per_lc, stream=self.stream)
-        self.freqs_g.set_async(self.freqs, stream=self.stream)
-        self.nbins0_g.set_async(self.nbins0, stream=self.stream)
-        self.nbinsf_g.set_async(self.nbinsf, stream=self.stream)
-
-    def transfer_to_cpu(self):
-        """Transfer BLS results from GPU to host."""
+        nd = self.max_ndata * n_act
+        # driver-level prefix copies (contiguous views of the pinned
+        # buffers stay page-locked, so these are genuinely async)
         if self.stream is not None:
-            self.bls_g.get_async(ary=self.bls, stream=self.stream)
+            cuda.memcpy_htod_async(self.t_g.gpudata, self.t[:nd],
+                                   self.stream)
+            cuda.memcpy_htod_async(self.yw_g.gpudata, self.yw[:nd],
+                                   self.stream)
+            cuda.memcpy_htod_async(self.w_g.gpudata, self.w[:nd],
+                                   self.stream)
+            cuda.memcpy_htod_async(self.ndata_per_lc_g.gpudata,
+                                   self.ndata_per_lc[:n_act], self.stream)
+        else:
+            cuda.memcpy_htod(self.t_g.gpudata, self.t[:nd])
+            cuda.memcpy_htod(self.yw_g.gpudata, self.yw[:nd])
+            cuda.memcpy_htod(self.w_g.gpudata, self.w[:nd])
+            cuda.memcpy_htod(self.ndata_per_lc_g.gpudata,
+                             self.ndata_per_lc[:n_act])
+
+        if transfer_freqs:
+            self.freqs_g.set_async(self.freqs, stream=self.stream)
+            self.nbins0_g.set_async(self.nbins0, stream=self.stream)
+            self.nbinsf_g.set_async(self.nbinsf, stream=self.stream)
+
+    def transfer_to_cpu(self, n_lcs_active=None):
+        """Transfer BLS results from GPU to host.
+
+        Parameters
+        ----------
+        n_lcs_active : int, optional
+            Read back only the first ``n_lcs_active`` result rows.
+        """
+        n_act = self.n_lcs if n_lcs_active is None else int(n_lcs_active)
+        n_act = min(n_act, self.n_lcs)
+        nb = self.nfreqs * n_act
+        if self.stream is not None:
+            cuda.memcpy_dtoh_async(self.bls[:nb], self.bls_g.gpudata,
+                                   self.stream)
             self.stream.synchronize()
         else:
-            self.bls[:] = self.bls_g.get()
+            cuda.memcpy_dtoh(self.bls[:nb], self.bls_g.gpudata)
 
-    def get_results(self):
+    def get_results(self, n_lcs_active=None, nfreq_active=None):
         """
         Return normalized BLS results per lightcurve.
+
+        Parameters
+        ----------
+        n_lcs_active : int, optional
+            Number of populated lightcurve slots to return (chunked
+            reuse). Default: all slots.
+        nfreq_active : int, optional
+            Number of valid frequencies per row (a memory allocated
+            for more frequencies than the current call uses -- the
+            ``memory=`` reuse path -- keeps its allocation pitch, and
+            the row tails are stale). Default: the full allocation.
 
         Returns
         -------
         results : list of ndarray
             BLS power for each lightcurve, normalized by yy.
         """
+        n_act = self.n_lcs if n_lcs_active is None else int(n_lcs_active)
+        n_act = min(n_act, self.n_lcs)
+        nf = self.nfreqs if nfreq_active is None else int(nfreq_active)
+        nf = min(nf, self.nfreqs)
         results = []
-        for i in range(self.n_lcs):
+        for i in range(n_act):
             offset = i * self.nfreqs
-            raw = self.bls[offset:offset + self.nfreqs].copy()
+            raw = self.bls[offset:offset + nf].copy()
             if self.yy[i] > 0:
                 raw /= self.yy[i]
             results.append(raw)

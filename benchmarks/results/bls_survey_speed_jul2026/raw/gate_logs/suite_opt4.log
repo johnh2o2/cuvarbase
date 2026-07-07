@@ -1,0 +1,53 @@
+........................................................................ [  9%]
+........................................................................ [ 18%]
+........................................................................ [ 27%]
+........................................................................ [ 37%]
+........................................................................ [ 46%]
+........................................................................ [ 55%]
+........................................................................ [ 65%]
+........................................................................ [ 74%]
+........................................................................ [ 83%]
+........................................................................ [ 93%]
+..sss.ss.................................ss..........                    [100%]
+=============================== warnings summary ===============================
+cuvarbase/nufft_lrt.py:22
+  /workspace/cuvarbase/cuvarbase/nufft_lrt.py:22: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and not yet validated against a reference transit search; use with care. The NFFT transforms now run on the GPU over the full baseline (the earlier CPU-rfft / median(dt)*nf grid-truncation issues are fixed), but the matched-filter combination is still computed on the host and the method has not had a full injection-recovery validation.
+    warnings.warn(
+
+cuvarbase/tls_models.py:23
+  /workspace/cuvarbase/cuvarbase/tls_models.py:23: UserWarning: batman package not available. Install with: pip install batman-package
+    warnings.warn("batman package not available. Install with: pip install batman-package")
+
+cuvarbase/tls.py:18
+  /workspace/cuvarbase/cuvarbase/tls.py:18: UserWarning: cuvarbase.tls is EXPERIMENTAL and not recommended for science use in this release. The epoch (t0) grid is now duration-scaled and failed periods are masked from the statistics, but the rework has not yet been validated against the reference transitleastsquares package. Light curves with more than ~3,500 points exceed the kernel's shared-memory budget (a ValueError is raised). See analysis/V1_AUDIT_AND_GAMEPLAN.md in the repository. For validated transit searches use cuvarbase.bls (eebls_transit).
+    warnings.warn(
+
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_snr_matches_astropy
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_loglik_matches_astropy_up_to_reference
+  /usr/local/lib/python3.11/dist-packages/astropy/timeseries/periodograms/bls/methods.py:113: RuntimeWarning: invalid value encountered in scalar divide
+    y_in = np.sum(y[m_in] * ivar[m_in]) / ivar_in
+
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_snr_matches_astropy
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_loglik_matches_astropy_up_to_reference
+  /usr/local/lib/python3.11/dist-packages/astropy/timeseries/periodograms/bls/methods.py:118: RuntimeWarning: divide by zero encountered in scalar divide
+    depth_err = np.sqrt(1.0 / ivar_in + 1.0 / ivar_out)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+766 passed, 7 skipped, 7 warnings in 405.02s (0:06:45)
+[PASS] reduction_max equivalence (standard vs optimized kernel) — corr=1.000000 max_rel_diff=7.35e-08 argmax same (std=1842 opt=1842)
+[PASS] BLS recovers injected transit — best=0.4001 injected=0.4000
+[PASS] kernel cache: eebls_gpu_fast 2nd call faster — first=1812ms second=7ms
+[PASS] kernel cache: eebls_gpu_fast_optimized 2nd call faster — first=343ms second=6ms
+[PASS] lomb_scargle_simple recovers injected frequency — best=0.1999 injected=0.2000
+[PASS] batched_run_const_nfreq (memory_requirement/cufftEstimate1d) — 3 result sets, all finite
+[PASS] CE recovers strong sinusoid frequency — best=0.2002 injected=0.2000
+[PASS] CE periodogram matches numpy reference — corr=0.9503 argmin same (ref=0.9363 gpu=0.9363)
+[PASS] CE compute_log_prob=True returns finite periodogram — min=-104 max=-81.2
+[PASS] CE rejects use_fast + weighted — ValueError
+[PASS] PDM new (t,y,err) API matches deprecated path — corr=1.000000
+[PASS] PDM fast kernel matches reference kernel — corr=1.000000
+[PASS] PDM recovers injected frequency — best=0.1999 injected=0.2000
+[PASS] PDM rejects block_size > 256 — ValueError
+
+RELEASE GATE: ALL CHECKS PASSED
+GATEDONE

@@ -1093,6 +1093,180 @@ class TestEeblsGpuFastNoverlap(object):
         assert np.all(p3 >= p1 - 1e-6)
 
 
+class TestFusedNoverlapKernel(object):
+    """The fused-noverlap kernel (full_bls_no_sol_fused /
+    full_bls_batch_fused) replaces the dphi-shifted multi-pass host
+    loop for power-of-two noverlap with dphi == 0: it histograms once
+    at noverlap-times finer phase resolution and derives every pass's
+    box sums from runs of fine bins. Bin assignment is bit-identical
+    to the multi-pass launches on this path; box sums differ only at
+    float32 accumulation-order level (which the multi-pass path
+    already doesn't pin down, shared atomics being order-free)."""
+
+    def _data(self, **kw):
+        kw.setdefault('snr', 30)
+        kw.setdefault('q', 0.05)
+        kw.setdefault('phi0', 0.317)
+        kw.setdefault('freq', 1.0)
+        kw.setdefault('baseline', 365.)
+        kw.setdefault('ndata', 300)
+        return data(**kw)
+
+    @pytest.mark.parametrize("use_optimized,k",
+                             list(product([False, True], [2, 4])))
+    def test_fused_matches_manual_dphi_runs(self, use_optimized, k):
+        # For power-of-two k the fused kernel must reproduce the manual
+        # k-pass elementwise max (same gate as the multi-pass loop).
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+        fn = eebls_gpu_fast_optimized if use_optimized else eebls_gpu_fast
+        kw = dict(qmin=0.01, qmax=0.1, dlogq=0.2)
+
+        power_k = fn(t, y, dy, freqs, noverlap=k, **kw)
+        manual = np.max([fn(t, y, dy, freqs, noverlap=1,
+                            dphi=float(i) / k, **kw)
+                         for i in range(k)], axis=0)
+
+        assert_allclose(power_k, manual, rtol=1e-4, atol=1e-6)
+
+    def test_fused_nonzero_dphi_falls_back(self):
+        # dphi != 0 keeps the multi-pass path: noverlap=2 with base
+        # dphi=0.25 must equal the manual dphi = 0.25, 0.75 passes.
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+        kw = dict(qmin=0.01, qmax=0.1)
+
+        p = eebls_gpu_fast(t, y, dy, freqs, noverlap=2, dphi=0.25, **kw)
+        manual = np.max([eebls_gpu_fast(t, y, dy, freqs, noverlap=1,
+                                        dphi=0.25 + 0.5 * i, **kw)
+                         for i in range(2)], axis=0)
+        assert_allclose(p, manual, rtol=1e-4, atol=1e-6)
+
+    def test_fused_bjd_scale(self):
+        # BJD-scale timestamps (epoch ~2.455e6): the fused kernel must
+        # (i) keep the recovered peak at the same frequency as the
+        # epoch-subtracted input and (ii) match the manual dphi-shifted
+        # passes bit-tightly ON the BJD input. (Full periodogram
+        # correlation between BJD and non-BJD inputs is NOT gated at
+        # 0.999 here: the phase origin moves by epoch*f mod 1, so
+        # bin-edge quantization decorrelates off-peak power on the
+        # multi-pass path too -- measured corr 0.95 for the pre-fusion
+        # noverlap=3 loop on this exact dataset.)
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 500)
+        kw = dict(qmin=0.01, qmax=0.1)
+        t_bjd = t + 2455197.5
+
+        p0 = eebls_gpu_fast(t, y, dy, freqs, noverlap=2, **kw)
+        p1 = eebls_gpu_fast(t_bjd, y, dy, freqs, noverlap=2, **kw)
+        assert int(np.argmax(p0)) == int(np.argmax(p1))
+
+        manual = np.max([eebls_gpu_fast(t_bjd, y, dy, freqs, noverlap=1,
+                                        dphi=0.5 * i, **kw)
+                         for i in range(2)], axis=0)
+        assert_allclose(p1, manual, rtol=1e-4, atol=1e-6)
+
+    def test_batch_fused_matches_manual_passes(self):
+        from ..bls import eebls_gpu_batch
+
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+        kw = dict(qmin=0.01, qmax=0.1)
+
+        p2 = eebls_gpu_batch([(t, y, dy)], freqs, noverlap=2, **kw)[0]
+        manual = np.max([eebls_gpu_batch([(t, y, dy)], freqs,
+                                         noverlap=1,
+                                         dphi=0.5 * i, **kw)[0]
+                         for i in range(2)], axis=0)
+        assert_allclose(p2, manual, rtol=1e-4, atol=1e-6)
+
+
+class TestBatchMemoryReuse(object):
+    """eebls_gpu_batch(memory=...) reuses one BLSBatchMemory across
+    calls and chunks (per-call pinned/device allocation costs several
+    ms at survey nfreq); results must match the allocate-per-call
+    path, including across chunked processing and back-to-back calls
+    with different data."""
+
+    @staticmethod
+    def _lcs(seeds, ndatas, baseline=365.0):
+        out = []
+        for seed, nd in zip(seeds, ndatas):
+            rand = np.random.RandomState(seed)
+            t = np.sort(baseline * rand.rand(nd)) + 4.5
+            phase = (t * 0.5) % 1.0
+            y = 12.0 - 0.05 * (phase < 0.04)
+            y += 0.01 * rand.randn(nd)
+            dy = 0.01 * np.ones(nd)
+            out.append((t, y, dy))
+        return out
+
+    def test_memory_reuse_matches_fresh(self):
+        from ..bls import eebls_gpu_batch
+        from ..memory.bls_memory import BLSBatchMemory
+        import pycuda.driver as cuda
+
+        freqs = np.linspace(0.1, 1.0, 500)
+        mem = BLSBatchMemory(400, 2, len(freqs), stream=cuda.Stream())
+
+        for seeds in ((1, 2), (3, 4)):
+            lcs = self._lcs(seeds, (200, 400))
+            expect = eebls_gpu_batch(lcs, freqs)
+            got = eebls_gpu_batch(lcs, freqs, memory=mem)
+            for a, b in zip(expect, got):
+                assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+
+    def test_chunked_matches_single_chunk(self):
+        from ..bls import eebls_gpu_batch
+
+        freqs = np.linspace(0.1, 1.0, 300)
+        lcs = self._lcs((5, 6, 7, 8, 9), (150, 220, 300, 80, 260))
+
+        p_one = eebls_gpu_batch(lcs, freqs)
+        p_chunks = eebls_gpu_batch(lcs, freqs, max_batch_lcs=2)
+        for a, b in zip(p_one, p_chunks):
+            assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+
+    def test_too_small_memory_raises(self):
+        from ..bls import eebls_gpu_batch
+        from ..memory.bls_memory import BLSBatchMemory
+
+        freqs = np.linspace(0.1, 1.0, 100)
+        lcs = self._lcs((1,), (200,))
+        mem = BLSBatchMemory(100, 1, len(freqs))  # max_ndata too small
+        with pytest.raises(ValueError, match="too small"):
+            eebls_gpu_batch(lcs, freqs, memory=mem)
+
+    def test_freq_chunked_batch_matches(self):
+        # freq-chunked launches (occupancy-aware path) must reproduce
+        # the single-launch result; odd chunk size to catch
+        # offset/stride mistakes.
+        from ..bls import eebls_gpu_batch
+
+        freqs = np.linspace(0.1, 1.0, 500)
+        lcs = self._lcs((1, 2), (200, 400))
+        p_full = eebls_gpu_batch(lcs, freqs)
+        p_chunk = eebls_gpu_batch(lcs, freqs, freq_batch_size=97)
+        for a, b in zip(p_full, p_chunk):
+            assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+
+    def test_oversized_memory_reuse_matches(self):
+        # memory allocated for MORE freqs/LCs/ndata than the call uses:
+        # output row pitch is the allocation, results must still match.
+        from ..bls import eebls_gpu_batch
+        from ..memory.bls_memory import BLSBatchMemory
+        import pycuda.driver as cuda
+
+        freqs = np.linspace(0.1, 1.0, 400)
+        lcs = self._lcs((3, 4), (150, 250))
+        mem = BLSBatchMemory(600, 4, 900, stream=cuda.Stream())
+        expect = eebls_gpu_batch(lcs, freqs)
+        got = eebls_gpu_batch(lcs, freqs, memory=mem)
+        for a, b in zip(expect, got):
+            assert len(a) == len(b) == len(freqs)
+            assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+
+
 class TestAllWeightBoxStability(object):
     """Regression tests for the nondeterministic bogus-peak bug behind
     PR #65's fabs(ybar) guard (attila's HATPI reproducer): bls_value's
@@ -1488,7 +1662,10 @@ class TestEpochHandling(object):
         mem = BLSMemory.fromdata(t + self.bjd_offset, y, dy,
                                  qmin=1e-2, qmax=0.5, freqs=freqs,
                                  transfer=False)
-        assert_allclose(mem.t[:len(t)], t.astype(np.float32), atol=1e-3)
+        # staging buffers hold the samples in conflict-scattered order
+        # (utils.conflict_scatter_perm); compare as sets via sort
+        assert_allclose(np.sort(mem.t[:len(t)]),
+                        np.sort(t.astype(np.float32)), atol=1e-3)
         assert mem.epoch == pytest.approx(
             np.floor(self.bjd_offset + t.min()))
 
@@ -1498,7 +1675,10 @@ class TestEpochHandling(object):
         t, y, dy, freq, q, phi0 = self._signal()
         mem = BLSBatchMemory(len(t), 1, 8)
         mem.set_lightcurve(0, t + self.bjd_offset, y, dy)
-        assert_allclose(mem.t[:len(t)], t.astype(np.float32), atol=1e-3)
+        # staging buffers hold the samples in conflict-scattered order
+        # (utils.conflict_scatter_perm); compare as sets via sort
+        assert_allclose(np.sort(mem.t[:len(t)]),
+                        np.sort(t.astype(np.float32)), atol=1e-3)
         assert mem.epochs[0] == pytest.approx(
             np.floor(self.bjd_offset + t.min()))
 

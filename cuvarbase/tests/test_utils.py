@@ -54,3 +54,25 @@ def test_normalize_legacy_four_tuple():
     assert_allclose(wn, w)
     assert_allclose(fn, freqs)
     assert_allclose(yn, y - np.mean(y))
+
+
+def test_conflict_scatter_perm_is_permutation():
+    from cuvarbase.utils import conflict_scatter_perm
+
+    for n in (64, 65, 1000, 20000, 65537):
+        p = conflict_scatter_perm(n)
+        assert p is not None
+        assert len(p) == n
+        # a true permutation of 0..n-1
+        assert_allclose(np.sort(p), np.arange(n))
+        # deterministic
+        assert np.array_equal(p, conflict_scatter_perm(n))
+        # actually scatters: adjacent outputs come from far-apart inputs
+        assert np.min(np.abs(np.diff(p.astype(np.int64)))) > n // 4
+
+
+def test_conflict_scatter_perm_small_n_passthrough():
+    from cuvarbase.utils import conflict_scatter_perm
+
+    for n in (0, 1, 2, 32, 63):
+        assert conflict_scatter_perm(n) is None

@@ -132,6 +132,162 @@ __global__ void store_best_sols(unsigned int *argmaxes, float *best_phi,
 	}
 }
 
+// Fused-noverlap fast BLS kernel (one block per frequency, grid-stride).
+//
+// The multi-pass host loop launches the full fold+histogram+scan kernel
+// ``noverlap`` times with the phase-bin grid shifted by 1/noverlap of a
+// bin between passes and takes the elementwise max. This kernel fuses
+// all passes into ONE launch: it histograms the data once at
+// ``noverlap``-times finer phase resolution and derives every pass's
+// box sums from runs of fine bins.
+//
+// Derivation. Pass s assigns a point with phase phi to coarse bin
+//   b_s = floor(nbf*phi - s/noverlap) mod nbf.
+// With u = nbf*phi and fine bin j = floor(noverlap*u) mod (noverlap*nbf):
+//   b_s = floor((j - s)/noverlap) mod nbf        (integer identity)
+// so the box of pass s starting at coarse bin n with width m covers
+// exactly the fine bins [noverlap*n + s, noverlap*(n+m) + s): every
+// (n, s) box is a contiguous run of noverlap*m fine bins whose fine
+// start jj = noverlap*n + s enumerates [0, noverlap*nbf) bijectively.
+//
+// Float32 caveat: the host only routes here for power-of-two noverlap
+// with base dphi == 0, where fl(noverlap*u) == noverlap*u and
+// u - s/noverlap are exact, so bin assignment is bit-identical to the
+// multi-pass kernels; other noverlap values fall back to the host
+// loop. (Box SUMS still differ from the multi-pass path at float32
+// rounding level: fine-bin partials accumulate in a different order,
+// on top of the run-to-run atomic nondeterminism both paths share.)
+//
+// Cost vs the host loop: shared-memory atomics and folds drop by
+// noverlap-x (histogram built once), per-frequency fixed costs (bin
+// init, syncthreads, block reduction) are paid once instead of
+// noverlap times; the box scan reads noverlap-x more (cheap,
+// conflict-free) fine-bin partials. Shared memory grows to
+// 2 * noverlap * max_nbins + blockDim floats; the host checks the
+// limit and falls back to the multi-pass loop when it doesn't fit.
+//
+// hist_size here is the FINE histogram size: noverlap * max(nbinsf).
+__global__ void full_bls_no_sol_fused(
+	                    const float* __restrict__ t,
+	                    const float* __restrict__ yw,
+	                    const float* __restrict__ w,
+						float* __restrict__ bls,
+						const float* __restrict__ freqs,
+						const unsigned int * __restrict__ nbins0,
+						const unsigned int * __restrict__ nbinsf,
+						unsigned int ndata,
+						unsigned int nfreq,
+						unsigned int freq_offset,
+						unsigned int hist_size,
+						unsigned int noverlap,
+						float dlogq,
+						float dphi,
+                        unsigned int ignore_negative_delta_sols){
+	extern __shared__ float sh[];
+
+	// separate yw/w arrays (bank-conflict-free layout)
+	float *fine_yw = sh;
+	float *fine_w = (float *)&sh[hist_size];
+	float *best_bls = (float *)&sh[2 * hist_size];
+
+	__shared__ float f0;
+	__shared__ int nb0, nbf, max_bin_width, nfine;
+
+	float phi, bls1, bls2, thread_max_bls, thread_yw, thread_w;
+
+	unsigned int i_freq = blockIdx.x;
+	while (i_freq < nfreq){
+
+		thread_max_bls = 0.f;
+
+		if (threadIdx.x == 0){
+			f0 = freqs[i_freq + freq_offset];
+			nb0 = nbins0[i_freq + freq_offset];
+			nbf = nbinsf[i_freq + freq_offset];
+			max_bin_width = divrndup(nbf, nb0);
+			nfine = nbf * ((int) noverlap);
+		}
+
+		__syncthreads();
+
+		for(unsigned int k = threadIdx.x; k < nfine; k += blockDim.x){
+			fine_yw[k] = 0.f;
+			fine_w[k] = 0.f;
+		}
+
+		__syncthreads();
+
+		// fold + fine histogram: ndata (not noverlap*ndata) atomics
+		for (unsigned int k = threadIdx.x; k < ndata; k += blockDim.x){
+			phi = mod1(t[k] * f0);
+
+			// u reproduces the multi-pass pass-0 expression exactly;
+			// dphi is 0 on this path (host guarantees it).
+			float u = ((float) nbf) * phi - dphi;
+			int j = mod((int) floorf(((float) noverlap) * u), nfine);
+
+			atomicAdd(&(fine_yw[j]), yw[k]);
+			atomicAdd(&(fine_w[j]), w[k]);
+		}
+
+		__syncthreads();
+
+		// scan: fine start jj <-> (coarse start n = jj/noverlap,
+		// pass s = jj%noverlap); box width m coarse = noverlap*m fine
+		for (unsigned int jj = threadIdx.x; jj < nfine; jj += blockDim.x){
+
+			thread_yw = 0.f;
+			thread_w = 0.f;
+			unsigned int f_m0 = 0;
+
+			for (unsigned int m = 1; m < max_bin_width; m += dnbins(m, dlogq)){
+				unsigned int f_m = m * noverlap;
+				for (unsigned int u = f_m0; u < f_m; u++){
+					unsigned int idx = jj + u;
+					if (idx >= (unsigned int) nfine)
+						idx -= nfine;
+					thread_yw += fine_yw[idx];
+					thread_w += fine_w[idx];
+				}
+				f_m0 = f_m;
+
+				bls1 = bls_value(thread_yw, thread_w, ignore_negative_delta_sols);
+				if (bls1 > thread_max_bls)
+					thread_max_bls = bls1;
+			}
+		}
+
+		best_bls[threadIdx.x] = thread_max_bls;
+
+		__syncthreads();
+
+		// tree reduction to one warp, then warp shuffle
+		for(unsigned int k = (blockDim.x / 2); k >= 32; k /= 2){
+			if(threadIdx.x < k){
+				bls1 = best_bls[threadIdx.x];
+				bls2 = best_bls[threadIdx.x + k];
+				best_bls[threadIdx.x] = (bls1 > bls2) ? bls1 : bls2;
+			}
+			__syncthreads();
+		}
+
+		if (threadIdx.x < 32){
+			float val = best_bls[threadIdx.x];
+			for(int offset = 16; offset > 0; offset /= 2){
+				float other = __shfl_down_sync(0xffffffff, val, offset);
+				val = (val > other) ? val : other;
+			}
+			if (threadIdx.x == 0)
+				best_bls[0] = val;
+		}
+
+		if (threadIdx.x == 0)
+			bls[i_freq + freq_offset] = best_bls[0];
+
+		i_freq += gridDim.x;
+	}
+}
+
 // needs ndata * nfreq threads
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)
 // Note: this thread heavily utilizes global atomic operations, and could
