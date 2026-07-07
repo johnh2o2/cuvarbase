@@ -103,6 +103,32 @@ paper's reported 121.1 s cuvarbase-BLS on a 4090 — ~23× faster on weaker
 hardware** (opt1–opt4 + batched kernel; the paper's exact cuvarbase entry point /
 version is unspecified).
 
+## 2b. Single light curve — GTLS's home turf, and the cold-start case
+
+Every number above is already **single-light-curve** (GTLS has no batch API, so
+cuvarbase was timed one LC at a time too — batching would only widen the gap). The
+warm speedups assume the kernel JIT is compiled, which amortizes across any real
+workload. For the strict **cold single shot** — one star, a fresh process, kernel
+compile *included*, and the on-disk pycuda/cupy kernel cache *cleared* before every
+run (first-run / fresh-container worst case) — full launch-to-answer wall time on a
+second A5000:
+
+| baseline | cuvarbase-TLS (matched) | GTLS-skip8 | cold ratio |
+|---:|---:|---:|---:|
+| 200 d  | 4.1 s | 10.7 s | **2.6×** |
+| 500 d  | 4.5 s | 27.8 s | **6.1×** |
+| 1000 d | 4.8 s | 83.8 s | **17×** |
+| 1500 d | 5.6 s | 191.0 s | **34×** |
+
+cuvarbase's cold cost is a ~fixed **~3–4 s kernel compile** that barely grows with
+baseline (its search is 0.04–1.4 s); GTLS's cost is its *search*, which explodes —
+so the ratio grows from 2.6× (both fixed-cost-bound at short baselines) to 34× at
+Kepler length. This is the pessimistic floor: from the **2nd star onward** (disk
+kernel cache warm) cuvarbase drops to ~0.5–2 s and the ratio snaps back toward the
+warm 30–171×, while GTLS recompiles *and* re-searches on every call. SDE parity
+holds cold too. (Raw: `benchmarks/results/gtls_comparison_jul2026/cold_single_shot_a5000.txt`;
+harness: `scripts/gtls_benchmark/cold_shot.py` + `cold_driver.sh`.)
+
 ## 3. Results — detection significance (SDE parity)
 
 Scored by the one identical statistic, **every method agrees closely at every

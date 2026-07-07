@@ -1,0 +1,24 @@
+Cold single-shot: one light curve, fresh process, NO in-process warmup, on-disk
+pycuda/cupy kernel cache CLEARED before each run (true first-run / fresh-container
+case). NVIDIA RTX A5000, 7 Jul 2026. Injected transit P=8.13d depth=4e-3.
+full_wall_s   = python import + CUDA context init + JIT compile + search
+search_compile = compile + search only (context pre-initialized)
+
+method            baseline full_wall_s search_compile     nper    SDE
+cuv_tls_default      200        4.27         2.826    23057  33.48
+cuv_tls_matched      200        4.10         2.852    23057  34.12
+gtls_skip8           200       10.69         8.402    23057  34.41
+cuv_tls_default      500        4.75         3.620    61017  57.59
+cuv_tls_matched      500        4.52         3.226    61017  57.09
+gtls_skip8           500       27.79        25.730    61017  58.53
+cuv_tls_default     1000        5.58         4.346   125932  85.35
+cuv_tls_matched     1000        4.81         3.668   125932  85.79
+gtls_skip8          1000       83.75        81.607   125932  87.28
+cuv_tls_default     1500        5.83         4.612   191742 102.07
+cuv_tls_matched     1500        5.59         4.264   191742 104.03
+gtls_skip8          1500      191.00       188.714   191742 106.91
+
+Cold ratio (full_wall, cuv_tls_matched vs gtls_skip8): 2.6x / 6.1x / 17x / 34x
+Grows because cuvarbase's cost is a ~fixed ~3-4s compile while GTLS's is its
+exploding search. 2nd star onward (disk cache warm): cuvarbase ~0.5-2s -> ratio
+snaps back toward the warm 30-171x. GTLS recompiles+re-searches every call.
