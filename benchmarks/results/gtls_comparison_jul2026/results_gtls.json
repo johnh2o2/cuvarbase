@@ -1,0 +1,194 @@
+{
+  "script": "gtls_apples_bench.py",
+  "timestamp": "2026-07-06T20:28:31",
+  "inj": {
+    "period": 8.13,
+    "depth": 0.004,
+    "noise": 0.004,
+    "u": [
+      0.4804,
+      0.1867
+    ],
+    "cadence_days": 0.020833333333333332
+  },
+  "match_template": false,
+  "baselines": [
+    200,
+    500,
+    1000,
+    1500
+  ],
+  "results": {
+    "200": {
+      "meta": {
+        "ndata": 9600,
+        "period": 8.13,
+        "depth": 0.004,
+        "noise": 0.004,
+        "baseline": 200,
+        "cadence": 0.020833333333333332,
+        "t0": 2.8455,
+        "a_over_Rstar": 17.01495360210589,
+        "T14_days": 0.1618178876422576,
+        "q_true": 0.019903799217989862,
+        "snr": 13.653358801550656
+      },
+      "nperiods": 23057,
+      "n_dur_matched": 38,
+      "methods": {
+        "gtls_full": {
+          "method": "gtls",
+          "t0_fit_margin": 0.0,
+          "time_s": 5.91833676956594,
+          "times_s": [
+            5.91833676956594
+          ],
+          "compile_s": 0.8467772686854005,
+          "search_s": 5.071559500880539,
+          "period_native": 8.130030176386265,
+          "sde_native": 34.570831298828125,
+          "sde_identical": 34.12735534425686,
+          "best_period_identical": 8.130030176386265,
+          "depth_snr": 0.064205851315256,
+          "recovered": true,
+          "recovered_native": true,
+          "n_periods": 23057,
+          "n_durations": 52
+        },
+        "gtls_skip8": {
+          "method": "gtls",
+          "t0_fit_margin": 0.125,
+          "time_s": 4.130032569169998,
+          "times_s": [
+            4.130032569169998
+          ],
+          "compile_s": 0.6914869425818324,
+          "search_s": 3.4385456265881658,
+          "period_native": 8.130030176386265,
+          "sde_native": 34.657554626464844,
+          "sde_identical": 34.21832717591669,
+          "best_period_identical": 8.130030176386265,
+          "depth_snr": 0.06429166510831873,
+          "recovered": true,
+          "recovered_native": true,
+          "n_periods": 23057,
+          "n_durations": 52
+        }
+      }
+    },
+    "500": {
+      "meta": {
+        "ndata": 24000,
+        "period": 8.13,
+        "depth": 0.004,
+        "noise": 0.004,
+        "baseline": 500,
+        "cadence": 0.020833333333333332,
+        "t0": 2.8455,
+        "a_over_Rstar": 17.01495360210589,
+        "T14_days": 0.1618178876422576,
+        "q_true": 0.019903799217989862,
+        "snr": 21.767011164065
+      },
+      "nperiods": 61017,
+      "n_dur_matched": 38,
+      "methods": {
+        "gtls_full": {
+          "method": "gtls",
+          "t0_fit_margin": 0.0,
+          "time_s": 60.17078699544072,
+          "times_s": [
+            60.17078699544072
+          ],
+          "compile_s": 1.1312147621065378,
+          "search_s": 59.039572233334184,
+          "period_native": 8.130175785064758,
+          "sde_native": 53.85988235473633,
+          "sde_identical": 53.24109400906245,
+          "best_period_identical": 8.130175785064758,
+          "depth_snr": 0.09136765145994989,
+          "recovered": true,
+          "recovered_native": true,
+          "n_periods": 61017,
+          "n_durations": 58
+        },
+        "gtls_skip8": {
+          "method": "gtls",
+          "t0_fit_margin": 0.125,
+          "time_s": 22.259925242513418,
+          "times_s": [
+            22.259925242513418
+          ],
+          "compile_s": 1.3329955143854022,
+          "search_s": 20.926929728128016,
+          "period_native": 8.130175785064758,
+          "sde_native": 54.02534866333008,
+          "sde_identical": 53.40667252573126,
+          "best_period_identical": 8.130175785064758,
+          "depth_snr": 0.09142911576104762,
+          "recovered": true,
+          "recovered_native": true,
+          "n_periods": 61017,
+          "n_durations": 58
+        }
+      }
+    },
+    "1000": {
+      "meta": {
+        "ndata": 48000,
+        "period": 8.13,
+        "depth": 0.004,
+        "noise": 0.004,
+        "baseline": 1000,
+        "cadence": 0.020833333333333332,
+        "t0": 2.8455,
+        "a_over_Rstar": 17.01495360210589,
+        "T14_days": 0.1618178876422576,
+        "q_true": 0.019903799217989862,
+        "snr": 30.909105594304876
+      },
+      "nperiods": 125932,
+      "n_dur_matched": 38,
+      "methods": {
+        "gtls_full": {
+          "method": "gtls",
+          "t0_fit_margin": 0.0,
+          "time_s": 392.6445415560156,
+          "times_s": [
+            392.6445415560156
+          ],
+          "compile_s": 2.5499397944658995,
+          "search_s": 390.0946017615497,
+          "period_native": 8.12995822670441,
+          "sde_native": 90.32481384277344,
+          "sde_identical": 89.23306877100191,
+          "best_period_identical": 8.12995822670441,
+          "depth_snr": 0.12784462932992,
+          "recovered": true,
+          "recovered_native": true,
+          "n_periods": 125932,
+          "n_durations": 63
+        },
+        "gtls_skip8": {
+          "method": "gtls",
+          "t0_fit_margin": 0.125,
+          "time_s": 75.80983891524374,
+          "times_s": [
+            75.80983891524374
+          ],
+          "compile_s": 3.2179553182795644,
+          "search_s": 72.59188359696418,
+          "period_native": 8.12995822670441,
+          "sde_native": 90.60254669189453,
+          "sde_identical": 89.51449068514454,
+          "best_period_identical": 8.12995822670441,
+          "depth_snr": 0.12784742666257284,
+          "recovered": true,
+          "recovered_native": true,
+          "n_periods": 125932,
+          "n_durations": 63
+        }
+      }
+    }
+  }
+}

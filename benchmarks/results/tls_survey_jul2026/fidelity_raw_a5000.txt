@@ -1,0 +1,22 @@
+# TLS fidelity experiment raw output (A5000, 2026-07-06)
+## strong signal (tess-ffi depth=0.005)
+  reference transitleastsquares          SDE(identical)= 14.61  SDE(native)= 17.71  depthSNR= 0.03  recov=12/12   39077.1 ms/LC
+  cuvarbase t0os=3 (default)       SDE ratio=0.99  depthSNR ratio=1000.85  speedup=17351x
+  cuvarbase t0os=33 (matched)      SDE ratio=1.03  depthSNR ratio=1002.64  speedup=2914x
+## marginal + narrow stress
+########## MARGINAL depth=0.002 (near threshold), tess-ffi ##########
+=== tess-ffi: ndata=1310 nperiods=2486 P_inj=7.70d depth=0.0020 (10 inj LCs) ===
+  SDE(identical) = cuvarbase SDE recomputed on each method's chi2 spectrum;
+  cuvarbase t0os=3 (default)             SDE(identical)= 12.01  SDE(native)= 12.01  depthSNR= 9.66  recov=10/10       2.6 ms/LC
+  cuvarbase t0os=33 (matched)            SDE(identical)= 12.47  SDE(native)= 12.47  depthSNR= 9.75  recov=10/10      13.8 ms/LC
+  reference transitleastsquares          SDE(identical)= 12.37  SDE(native)= 12.91  depthSNR= 0.01  recov=10/10   46222.2 ms/LC
+  cuvarbase t0os=3 (default)       SDE ratio=0.97  depthSNR ratio=996.36  speedup=17475x
+  cuvarbase t0os=33 (matched)      SDE ratio=1.01  depthSNR ratio=1006.34  speedup=3349x
+########## NARROW transit, k2 (q~0.014) ##########
+=== k2: ndata=4320 nperiods=9672 P_inj=12.40d depth=0.0040 (6 inj LCs) ===
+  SDE(identical) = cuvarbase SDE recomputed on each method's chi2 spectrum;
+  cuvarbase t0os=3 (default)             SDE(identical)= 25.23  SDE(native)= 25.23  depthSNR=37.74  recov=6/6       5.3 ms/LC
+  cuvarbase t0os=33 (matched)            SDE(identical)= 26.11  SDE(native)= 26.11  depthSNR=37.92  recov=6/6      63.1 ms/LC
+  reference transitleastsquares          SDE(identical)= 25.82  SDE(native)= 29.97  depthSNR= 0.03  recov=6/6   61444.9 ms/LC
+  cuvarbase t0os=3 (default)       SDE ratio=0.98  depthSNR ratio=1236.37  speedup=11578x
+  cuvarbase t0os=33 (matched)      SDE ratio=1.01  depthSNR ratio=1242.21  speedup=974x

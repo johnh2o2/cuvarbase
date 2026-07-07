@@ -368,6 +368,62 @@ def generate_transit_template(n_template=1000, limb_dark='quadratic',
         return _trapezoid_template(n_template)
 
 
+def generate_template_tables(n_table=1024, limb_dark='quadratic',
+                             u=[0.4804, 0.1867], oversample=8):
+    """
+    Generate the template lookup tables used by the fast TLS kernel.
+
+    The fast kernel evaluates the transit template two ways:
+
+    - The binned scan needs the template's *running integrals* so it can
+      compute the exact bin-averaged template over any transit-coordinate
+      interval (area sampling): ``S1(x) = int_{-1}^{x} T dx`` and
+      ``S2(x) = int_{-1}^{x} T^2 dx``.
+    - The refinement kernel needs the pointwise template ``T(x)`` itself.
+
+    All three are tabulated on the same uniform grid of ``n_table + 1``
+    knots spanning transit_coord in [-1, 1]. The integrals are computed
+    from a template oversampled by ``oversample`` relative to the knot
+    grid (trapezoid rule), so S1/S2 are accurate even where T is curved.
+
+    Parameters
+    ----------
+    n_table : int, optional
+        Number of table intervals; the returned arrays have
+        ``n_table + 1`` entries (default: 1024).
+    limb_dark : str, optional
+        Limb darkening law (default: 'quadratic')
+    u : list, optional
+        Limb darkening coefficients (default: [0.4804, 0.1867])
+    oversample : int, optional
+        Oversampling of the integrand relative to the knot grid.
+
+    Returns
+    -------
+    T, S1, S2 : ndarray
+        Float32 arrays of shape (n_table + 1,).
+    """
+    n_fine = n_table * oversample
+    fine = generate_transit_template(n_template=n_fine + 1,
+                                     limb_dark=limb_dark, u=u)
+    fine = np.asarray(fine, dtype=np.float64)
+    dx = 2.0 / n_fine
+
+    def running_integral(values):
+        # cumulative trapezoid on the fine grid, then subsample to knots
+        cum = np.concatenate([
+            [0.0], np.cumsum(0.5 * (values[1:] + values[:-1]) * dx)])
+        return cum[::oversample]
+
+    S1 = running_integral(fine)
+    S2 = running_integral(fine ** 2)
+    T = fine[::oversample]
+
+    return (T.astype(np.float32),
+            S1.astype(np.float32),
+            S2.astype(np.float32))
+
+
 def _trapezoid_template(n_template=1000, ingress_fraction=0.1):
     """
     Generate a trapezoidal transit template as fallback.

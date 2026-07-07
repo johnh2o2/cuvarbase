@@ -465,8 +465,9 @@ if __name__ == '__main__':
 
 
 class TestSharedMemoryGuard:
-    """tls_search_gpu must fail loudly (before touching the GPU) when
-    the shared-memory layout exceeds the 48 KB per-block budget."""
+    """The LEGACY kernel (use_fast=False) must fail loudly (before
+    touching the GPU) when its shared-memory layout exceeds the 48 KB
+    per-block budget. The default fast path has no such cap."""
 
     def test_large_ndata_raises_value_error(self):
         from cuvarbase.tls import tls_search_gpu
@@ -476,7 +477,8 @@ class TestSharedMemoryGuard:
         y = 1 + 0.001 * rand.randn(ndata)
         dy = 0.001 * np.ones(ndata)
         with pytest.raises(ValueError, match="shared memory"):
-            tls_search_gpu(t, y, dy, periods=np.array([1.0, 2.0]))
+            tls_search_gpu(t, y, dy, periods=np.array([1.0, 2.0]),
+                           use_fast=False)
 
     def test_guard_accounts_for_template_size(self):
         from cuvarbase.tls import tls_search_gpu
@@ -489,7 +491,20 @@ class TestSharedMemoryGuard:
         dy = 0.001 * np.ones(ndata)
         with pytest.raises(ValueError, match="shared memory"):
             tls_search_gpu(t, y, dy, periods=np.array([1.0, 2.0]),
-                           n_template=4000)
+                           n_template=4000, use_fast=False)
+
+    def test_fast_path_has_no_ndata_cap(self):
+        # regression for the removed cap: the default (fast) path must
+        # accept TESS-length lightcurves outright
+        from cuvarbase.tls import tls_search_gpu
+        rand = np.random.RandomState(3)
+        ndata = 20000
+        t = np.sort(27 * rand.rand(ndata))
+        y = 1 + 0.001 * rand.randn(ndata)
+        dy = 0.001 * np.ones(ndata)
+        results = tls_search_gpu(t, y, dy,
+                                 periods=np.linspace(2.0, 5.0, 50))
+        assert np.isfinite(results['chi2_min'])
 
 
 class TestFailedPeriodMasking:
@@ -651,8 +666,12 @@ class TestTLSStreamParity:
         dy = np.ones(400) * 0.001
         periods = np.linspace(5, 15, 10)
 
+        # use_fast=False on both sides: this is a regression test for
+        # the LEGACY kernel's async D2H sequencing (the fast path does
+        # not take a user stream and would silently fall back to the
+        # legacy kernel anyway when one is passed)
         r_default = tls.tls_search_gpu(t, y, dy, periods=periods,
-                                       block_size=64)
+                                       block_size=64, use_fast=False)
         ensure_context()
         r_stream = tls.tls_search_gpu(t, y, dy, periods=periods,
                                       block_size=64,

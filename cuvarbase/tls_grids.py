@@ -339,20 +339,18 @@ def duration_grid_keplerian(periods, R_star=1.0, M_star=1.0, R_planet=1.0,
     qmin_vals = q_values * qmin_fac
     qmax_vals = q_values * qmax_fac
 
-    durations = []
     duration_counts = np.full(len(periods), n_durations, dtype=np.int32)
 
-    for period, qmin, qmax in zip(periods, qmin_vals, qmax_vals):
-        # Logarithmically-spaced durations from qmin to qmax
-        # (in absolute time, not fractional)
-        dur_min = qmin * period
-        dur_max = qmax * period
-
-        # Log-spaced grid
-        dur = np.logspace(np.log10(dur_min), np.log10(dur_max),
-                         n_durations, dtype=np.float32)
-
-        durations.append(dur)
+    # Logarithmically-spaced durations from qmin*P to qmax*P per period
+    # (absolute time, not fractional), vectorized over the whole grid:
+    # equivalent to np.logspace per period, but one broadcast instead of
+    # len(periods) Python-level calls (which dominate at ~1e5 periods).
+    log_min = np.log10(qmin_vals * periods)
+    log_max = np.log10(qmax_vals * periods)
+    frac = np.linspace(0.0, 1.0, n_durations)
+    dur_2d = 10.0 ** (log_min[:, None]
+                      + (log_max - log_min)[:, None] * frac[None, :])
+    durations = list(dur_2d.astype(np.float32))
 
     return durations, duration_counts, q_values
 
