@@ -50,6 +50,147 @@ __device__ unsigned int batch_dnbins(unsigned int nbins, float dlogq){
 }
 
 
+// Fused-noverlap batch kernel: same derivation as full_bls_no_sol_fused
+// in bls_common.cuh (fine histogram at noverlap-times finer phase
+// resolution; every pass's box = contiguous run of fine bins). Host
+// routes here only for power-of-two noverlap with dphi == 0, where the
+// fine-bin assignment is bit-identical to the multi-pass launches.
+// hist_size is the FINE histogram size: noverlap * max(nbinsf).
+__global__ void full_bls_batch_fused(
+        const float* __restrict__ t_all,
+        const float* __restrict__ yw_all,
+        const float* __restrict__ w_all,
+        float* __restrict__ bls_all,
+        const float* __restrict__ freqs,
+        const unsigned int* __restrict__ nbins0,
+        const unsigned int* __restrict__ nbinsf,
+        const unsigned int* __restrict__ ndata_per_lc,
+        unsigned int max_ndata,
+        unsigned int nfreq,
+        unsigned int freq_offset,
+        unsigned int hist_size,
+        unsigned int noverlap,
+        float dlogq,
+        float dphi,
+        unsigned int ignore_negative_delta_sols,
+        unsigned int n_lcs,
+        unsigned int bls_stride){
+
+    extern __shared__ float sh[];
+
+    float *fine_yw = sh;
+    float *fine_w = (float *)&sh[hist_size];
+    float *best_bls = (float *)&sh[2 * hist_size];
+
+    __shared__ float f0;
+    __shared__ int nb0, nbf, max_bin_width, nfine;
+    __shared__ unsigned int ndata_lc;
+
+    unsigned int lc_idx = blockIdx.y;
+    if (lc_idx >= n_lcs)
+        return;
+
+    unsigned int data_offset = lc_idx * max_ndata;
+    const float *t = t_all + data_offset;
+    const float *yw = yw_all + data_offset;
+    const float *w = w_all + data_offset;
+
+    // bls_stride, not nfreq: freq-chunked launches pass nfreq = the
+    // chunk's frequency count while rows of bls_all stay one full
+    // grid apart.
+    float *bls_out = bls_all + lc_idx * bls_stride;
+
+    float phi, bls1, bls2, thread_max_bls, thread_yw, thread_w;
+
+    unsigned int i_freq = blockIdx.x;
+    while (i_freq < nfreq){
+
+        thread_max_bls = 0.f;
+
+        if (threadIdx.x == 0){
+            f0 = freqs[i_freq + freq_offset];
+            nb0 = nbins0[i_freq + freq_offset];
+            nbf = nbinsf[i_freq + freq_offset];
+            max_bin_width = batch_divrndup(nbf, nb0);
+            nfine = nbf * ((int) noverlap);
+            ndata_lc = ndata_per_lc[lc_idx];
+        }
+
+        __syncthreads();
+
+        for(unsigned int k = threadIdx.x; k < nfine; k += blockDim.x){
+            fine_yw[k] = 0.f;
+            fine_w[k] = 0.f;
+        }
+
+        __syncthreads();
+
+        for (unsigned int k = threadIdx.x; k < ndata_lc; k += blockDim.x){
+            phi = batch_mod1_fast(t[k] * f0);
+            float u = ((float) nbf) * phi - dphi;
+            int j = batch_mod((int) floorf(((float) noverlap) * u), nfine);
+
+            atomicAdd(&(fine_yw[j]), yw[k]);
+            atomicAdd(&(fine_w[j]), w[k]);
+        }
+
+        __syncthreads();
+
+        for (unsigned int jj = threadIdx.x; jj < nfine; jj += blockDim.x){
+
+            thread_yw = 0.f;
+            thread_w = 0.f;
+            unsigned int f_m0 = 0;
+
+            for (unsigned int m = 1; m < max_bin_width; m += batch_dnbins(m, dlogq)){
+                unsigned int f_m = m * noverlap;
+                for (unsigned int u = f_m0; u < f_m; u++){
+                    unsigned int idx = jj + u;
+                    if (idx >= (unsigned int) nfine)
+                        idx -= nfine;
+                    thread_yw += fine_yw[idx];
+                    thread_w += fine_w[idx];
+                }
+                f_m0 = f_m;
+
+                bls1 = batch_bls_value(thread_yw, thread_w, ignore_negative_delta_sols);
+                if (bls1 > thread_max_bls)
+                    thread_max_bls = bls1;
+            }
+        }
+
+        best_bls[threadIdx.x] = thread_max_bls;
+
+        __syncthreads();
+
+        for(unsigned int k = (blockDim.x / 2); k >= 32; k /= 2){
+            if(threadIdx.x < k){
+                bls1 = best_bls[threadIdx.x];
+                bls2 = best_bls[threadIdx.x + k];
+                best_bls[threadIdx.x] = (bls1 > bls2) ? bls1 : bls2;
+            }
+            __syncthreads();
+        }
+
+        if (threadIdx.x < 32){
+            float val = best_bls[threadIdx.x];
+
+            for(int offset = 16; offset > 0; offset /= 2){
+                float other = __shfl_down_sync(0xffffffff, val, offset);
+                val = (val > other) ? val : other;
+            }
+
+            if (threadIdx.x == 0)
+                best_bls[0] = val;
+        }
+
+        if (threadIdx.x == 0)
+            bls_out[i_freq + freq_offset] = best_bls[0];
+
+        i_freq += gridDim.x;
+    }
+}
+
 __global__ void full_bls_batch(
         const float* __restrict__ t_all,
         const float* __restrict__ yw_all,
@@ -67,7 +208,8 @@ __global__ void full_bls_batch(
         float dlogq,
         float dphi,
         unsigned int ignore_negative_delta_sols,
-        unsigned int n_lcs){
+        unsigned int n_lcs,
+        unsigned int bls_stride){
 
     extern __shared__ float sh[];
 
@@ -91,7 +233,10 @@ __global__ void full_bls_batch(
     const float *w = w_all + data_offset;
 
     // Output offset: bls_all[lc_idx * nfreq + freq_idx]
-    float *bls_out = bls_all + lc_idx * nfreq;
+    // bls_stride, not nfreq: freq-chunked launches pass nfreq = the
+    // chunk's frequency count while rows of bls_all stay one full
+    // grid apart.
+    float *bls_out = bls_all + lc_idx * bls_stride;
 
     unsigned int s;
     int b;

@@ -22,7 +22,8 @@ import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
 from .core import ensure_context
-from .utils import find_kernel, _module_reader, subtract_epoch
+from .utils import (find_kernel, _module_reader, subtract_epoch,
+                    conflict_scatter_perm)
 from .memory.bls_memory import BLSBatchMemory
 from .memory._host import host_array
 
@@ -31,6 +32,7 @@ import numpy as np
 _default_block_size = 256
 _all_function_names = ['full_bls_no_sol',
                        'full_bls_no_sol_optimized',
+                       'full_bls_no_sol_fused',
                        'bin_and_phase_fold_custom',
                        'reduction_max',
                        'store_best_sols',
@@ -78,6 +80,33 @@ def _choose_block_size(ndata):
         return 128  # Four warps
     else:
         return 256  # Default (8 warps)
+
+
+# Frequency-chunk size for occupancy-aware launches (see
+# _shmem_limits_occupancy): 8192 measured best on an RTX A5000 Kepler
+# grid (131K freqs; 8192 -> 114.8 ms vs 151.2 ms unchunked, 16384
+# within 2%), and small enough that launch overhead stays negligible
+# for any grid where chunking triggers at all.
+_OCCUPANCY_FREQ_CHUNK = 8192
+
+
+def _shmem_limits_occupancy(mem_req, block_size):
+    """True when a launch needing ``mem_req`` bytes of shared memory
+    per block caps resident blocks/SM below the thread-count limit --
+    i.e. shared memory, not threads, is the occupancy limiter and
+    frequency-chunked launches (which size shared memory per chunk)
+    can win occupancy back."""
+    dev = ensure_context().device
+    try:
+        smem_sm = dev.get_attribute(
+            cuda.device_attribute.MAX_SHARED_MEMORY_PER_MULTIPROCESSOR)
+        thr_sm = dev.get_attribute(
+            cuda.device_attribute.MAX_THREADS_PER_MULTIPROCESSOR)
+    except Exception:
+        return False
+    blocks_by_threads = max(1, thr_sm // block_size)
+    blocks_by_shmem = max(1, smem_sm // max(1, int(mem_req)))
+    return blocks_by_shmem < blocks_by_threads
 
 
 def _get_cached_kernels(block_size, use_optimized=False, function_names=None):
@@ -149,6 +178,13 @@ _function_signatures = {
                         np.uint32, np.uint32, np.uint32,
                         np.float32, np.float32, np.uint32],
     'full_bls_no_sol_optimized': [np.intp, np.intp, np.intp,
+                        np.intp, np.intp, np.intp,
+                        np.intp, np.uint32, np.uint32,
+                        np.uint32, np.uint32, np.uint32,
+                        np.float32, np.float32, np.uint32],
+    # fused-noverlap variant (bls_common.cuh, present in both modules);
+    # identical argument list, hist_size = noverlap * max_nbins
+    'full_bls_no_sol_fused': [np.intp, np.intp, np.intp,
                         np.intp, np.intp, np.intp,
                         np.intp, np.uint32, np.uint32,
                         np.uint32, np.uint32, np.uint32,
@@ -548,21 +584,40 @@ class BLSMemory:
         # Epoch-subtract in float64 before the float32 cast: absolute
         # timestamps (e.g. BJD) would otherwise destroy the phase fold.
         t, self.epoch = subtract_epoch(t)
-        self.t[:len(t)] = t.astype(self.rtype)[:]
 
         w = np.power(dy, -2)
         w /= np.sum(w)
-        self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
 
         self.ybar = np.sum(y * w)
-        self.yy = np.dot(w, np.power(y - self.ybar, 2))
+        # einsum, not np.dot: BLAS ddot spawns a full threadpool for
+        # large vectors, and on CPU-quota-limited containers (RunPod,
+        # K8s) the burst trips CFS throttling and freezes the process
+        # ~90 ms per 100 ms period (measured 8x end-to-end slowdown at
+        # TESS scale). einsum stays in numpy core, single-threaded.
+        self.yy = float(np.einsum('i,i->', w,
+                                  np.power(y - self.ybar, 2)))
         # chi2 of the constant model for the data actually loaded here;
         # convert_bls_power scalings must use this rather than whatever
         # y/dy a later (memory-reuse) call happens to pass.
         self.chi2_0 = _chi2_null(y, dy)
 
         u = (y - self.ybar) * w
-        self.yw[:len(t)] = np.asarray(u).astype(self.rtype)[:]
+
+        # Store in conflict-scattered order: time-sorted input puts
+        # warp-adjacent samples into the same phase bin at nearly every
+        # trial frequency, serializing the kernels' shared-memory
+        # atomics (3.1x on a TESS-like cadence). Binning is a sum, so
+        # the order is semantically free. See
+        # utils.conflict_scatter_perm.
+        perm = conflict_scatter_perm(len(t))
+        if perm is None:
+            self.t[:len(t)] = t.astype(self.rtype)[:]
+            self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
+            self.yw[:len(t)] = np.asarray(u).astype(self.rtype)[:]
+        else:
+            self.t[:len(t)] = t.astype(self.rtype)[perm]
+            self.w[:len(t)] = np.asarray(w).astype(self.rtype)[perm]
+            self.yw[:len(t)] = np.asarray(u).astype(self.rtype)[perm]
 
         if any([x is None for x in [self.t_g, self.yw_g, self.w_g]]):
             self.allocate_data()
@@ -624,16 +679,38 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
         # Use the thread-safe LRU kernel cache (compilation costs ~150 ms
         # per call otherwise). Fall back to a direct compile only for
         # non-default compile options that aren't part of the cache key.
+        # The fused-noverlap kernel ships in the same module, so request
+        # it alongside (same single compilation).
         if kwargs.get('prepare', True):
             functions = _get_cached_kernels(
                 kwargs.get('block_size', _default_block_size),
-                use_optimized, [fname])
+                use_optimized, [fname, 'full_bls_no_sol_fused'])
         else:
             ckw = dict(kwargs)
             ckw.setdefault('use_optimized', use_optimized)
-            functions = compile_bls(function_names=[fname], **ckw)
+            functions = compile_bls(
+                function_names=[fname, 'full_bls_no_sol_fused'], **ckw)
 
     func = functions[fname]
+
+    # Fused-noverlap fast path: for power-of-two noverlap with no base
+    # phase offset, one launch histograms at noverlap-times finer phase
+    # resolution and derives every pass's box sums from it -- the
+    # noverlap-x fold + histogram (and per-frequency fixed costs) are
+    # paid once. Bin assignment is bit-identical to the multi-pass loop
+    # there (see full_bls_no_sol_fused in bls_common.cuh); any other
+    # (noverlap, dphi) combination keeps the host-side loop, as do
+    # caller-provided ``functions`` dicts without the fused kernel.
+    fused_func = None
+    try:
+        fused_func = functions.get('full_bls_no_sol_fused')
+    except AttributeError:
+        fused_func = None
+    noverlap_int = int(noverlap)
+    use_fused = (fused_func is not None
+                 and noverlap_int >= 2
+                 and float(dphi) == 0.0
+                 and (noverlap_int & (noverlap_int - 1)) == 0)
 
     if shmem_lim is None:
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
@@ -652,6 +729,7 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
     float_size = np.float32(1).nbytes
     block_size = kwargs.get('block_size', _default_block_size)
 
+    auto_freq_batch = freq_batch_size is None
     if freq_batch_size is None:
         freq_batch_size = len(freqs)
 
@@ -660,14 +738,36 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
     # minimum q value that we can handle with the shared memory limit
     qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
 
+    # The fused kernel needs (block_size + 2*noverlap*max_nbins) floats
+    # of shared memory; fall back to the multi-pass loop when that
+    # exceeds the device limit (the loop only needs the 1x histogram).
+    if use_fused:
+        global_max_nbins = int(np.max(memory.nbinsf[:len(freqs)]))
+        fused_req = (block_size
+                     + 2 * noverlap_int * global_max_nbins) * float_size
+        if fused_req > shmem_lim:
+            use_fused = False
+        elif auto_freq_batch and _shmem_limits_occupancy(fused_req,
+                                                         block_size):
+            # Occupancy-aware chunking: launches size shared memory by
+            # the max bin count of the frequencies they cover, and
+            # ascending grids have monotonically decreasing bin counts
+            # -- chunked launches let everything past the first chunks
+            # run at full occupancy (measured +32% on the Kepler
+            # config; only triggers when shared memory is the
+            # occupancy limiter).
+            freq_batch_size = _OCCUPANCY_FREQ_CHUNK
+
     # Phase oversampling: the kernel's box start positions step one
     # fine phase bin, so a single pass undersamples boxes whose width
-    # is near the finest bin. Run ``noverlap`` passes with the bin
-    # grid shifted by 1/noverlap of a bin each time and keep the
-    # elementwise max -- equivalent to the manual dphi re-run
-    # procedure this replaces.
+    # is near the finest bin. Fused path: one launch builds the
+    # noverlap-times finer histogram and evaluates all shifted grids.
+    # Fallback: run ``noverlap`` passes with the bin grid shifted by
+    # 1/noverlap of a bin each time and keep the elementwise max --
+    # equivalent to the manual dphi re-run procedure this replaces.
     best_bls_g = None
-    for i_pass in range(noverlap):
+    n_passes = 1 if use_fused else noverlap
+    for i_pass in range(n_passes):
         dphi_pass = dphi + float(i_pass) / noverlap
 
         i_freq = 0
@@ -675,9 +775,16 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
             j_freq = min([i_freq + freq_batch_size, len(freqs)])
             nfreqs = j_freq - i_freq
 
-            max_nbins = max(memory.nbinsf[i_freq:j_freq])
+            # np.max, not builtin max(): iterating a 300K-element numpy
+            # array through Python scalars cost 10+ ms per call at
+            # HAT-Net/Kepler grid sizes.
+            max_nbins = int(np.max(memory.nbinsf[i_freq:j_freq]))
 
-            mem_req = (block_size + 2 * max_nbins) * float_size
+            if use_fused:
+                hist_size = noverlap_int * int(max_nbins)
+            else:
+                hist_size = int(max_nbins)
+            mem_req = (block_size + 2 * hist_size) * float_size
 
             if mem_req > shmem_lim:
                 s = "qmin = %.2e requires too much shared memory." \
@@ -700,21 +807,30 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
             args += (memory.nbins0_g.ptr, memory.nbinsf_g.ptr)
             args += (np.uint32(len(t)), np.uint32(nfreqs),
                      np.uint32(i_freq))
-            # The kernel's own noverlap argument is a no-op in the
-            # compiled (linear bin spacing) branch; phase oversampling
-            # is implemented by the dphi-shifted passes above.
-            args += (np.uint32(max_nbins), np.uint32(1))
-            args += (np.float32(dlogq), np.float32(dphi_pass))
+            if use_fused:
+                # hist_size is the fine histogram size; the fused
+                # kernel consumes the real noverlap and the base dphi.
+                args += (np.uint32(hist_size), np.uint32(noverlap_int))
+                args += (np.float32(dlogq), np.float32(dphi))
+            else:
+                # The kernel's own noverlap argument is a no-op in the
+                # compiled (linear bin spacing) branch; phase
+                # oversampling is implemented by the dphi-shifted
+                # passes above.
+                args += (np.uint32(max_nbins), np.uint32(1))
+                args += (np.float32(dlogq), np.float32(dphi_pass))
             args += (np.uint32(ignore_negative_delta_sols),)
 
+            launch_func = fused_func if use_fused else func
             if stream is not None:
-                func.prepared_async_call(*args, shared_size=int(mem_req))
+                launch_func.prepared_async_call(*args,
+                                                shared_size=int(mem_req))
             else:
-                func.prepared_call(*args, shared_size=int(mem_req))
+                launch_func.prepared_call(*args, shared_size=int(mem_req))
 
             i_freq = j_freq
 
-        if noverlap > 1:
+        if not use_fused and noverlap > 1:
             if best_bls_g is None:
                 best_bls_g = memory.bls_g.copy()
             else:
@@ -1592,8 +1708,11 @@ def _chi2_null(y, dy):
     conventions."""
     y = np.asarray(y, dtype=np.float64)
     w = np.power(np.asarray(dy, dtype=np.float64), -2)
-    ybar = np.dot(w, y) / np.sum(w)
-    return float(np.dot(w, np.power(y - ybar, 2)))
+    # einsum, not np.dot: keep the per-LC path off BLAS threadpools
+    # (CFS-throttling cliff on CPU-quota-limited hosts; see
+    # BLSMemory.setdata).
+    ybar = float(np.einsum('i,i->', w, y)) / np.sum(w)
+    return float(np.einsum('i,i->', w, np.power(y - ybar, 2)))
 
 
 def _validate_convention(convention):
@@ -2247,6 +2366,20 @@ _batch_function_signature = {
         np.uint32, np.uint32,             # hist_size, noverlap
         np.float32, np.float32,           # dlogq, dphi
         np.uint32, np.uint32,             # ignore_neg, n_lcs
+        np.uint32,                        # bls_stride (output row pitch)
+    ],
+    # fused-noverlap variant: identical argument list; hist_size is the
+    # FINE histogram size (noverlap * max_nbins)
+    'full_bls_batch_fused': [
+        np.intp, np.intp, np.intp,
+        np.intp, np.intp,
+        np.intp, np.intp,
+        np.intp,
+        np.uint32, np.uint32, np.uint32,
+        np.uint32, np.uint32,
+        np.float32, np.float32,
+        np.uint32, np.uint32,
+        np.uint32,
     ],
 }
 
@@ -2306,7 +2439,8 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
                     noverlap=2, dlogq=0.3, dphi=0.0,
                     ignore_negative_delta_sols=False,
                     max_batch_lcs=256, block_size=None,
-                    functions=None, convention='chi2ratio', **kwargs):
+                    functions=None, convention='chi2ratio',
+                    memory=None, freq_batch_size=None, **kwargs):
     """
     Process multiple lightcurves in batched GPU operations.
 
@@ -2347,6 +2481,20 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         CUDA threads per block. If None, auto-selects based on max ndata.
     functions : dict, optional
         Pre-compiled batch kernel functions.
+    memory : :class:`cuvarbase.memory.bls_memory.BLSBatchMemory`, optional
+        Reusable staging/device memory. Streaming many chunks of
+        lightcurves through repeated ``eebls_gpu_batch`` calls pays
+        several ms of pinned-host + device allocation per call
+        otherwise; construct one ``BLSBatchMemory(max_ndata,
+        min(max_batch_lcs, n_lcs), nfreq, stream=Stream())`` sized for
+        the largest chunk and pass it to every call. Must satisfy
+        ``max_ndata >= max(len(t))``, ``n_lcs >= min(max_batch_lcs,
+        len(lightcurves))`` and ``nfreqs >= len(freqs)``.
+    freq_batch_size : int, optional
+        Frequencies per kernel launch. ``None`` (default) launches the
+        whole grid at once unless shared memory would limit occupancy
+        (large bin counts from small Keplerian ``qmin``), in which
+        case an occupancy-aware chunk size is used automatically.
 
     Returns
     -------
@@ -2387,6 +2535,16 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
 
     func = functions['full_bls_batch']
 
+    # Fused-noverlap path (mirrors _eebls_gpu_fast_impl): one launch
+    # with a noverlap-times finer histogram replaces the dphi-shifted
+    # multi-pass loop for power-of-two noverlap with dphi == 0.
+    fused_func = functions.get('full_bls_batch_fused')
+    noverlap_int = int(noverlap)
+    use_fused = (fused_func is not None
+                 and noverlap_int >= 2
+                 and float(dphi) == 0.0
+                 and (noverlap_int & (noverlap_int - 1)) == 0)
+
     # Process in batches
     all_results = [None] * n_total  # indexed by original order
 
@@ -2398,6 +2556,64 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
 
     float_size = np.float32(1).nbytes
 
+    # One BLSBatchMemory serves every chunk (and, via ``memory=``,
+    # every future call with compatible sizes): allocating the pinned
+    # staging buffers + device arrays per chunk cost multiple ms per
+    # call (cuMemHostAlloc dominates at survey nfreq).
+    batch_cap = min(max_batch_lcs, n_total)
+    if memory is not None:
+        mem = memory
+        if (mem.max_ndata < max_ndata_all or mem.n_lcs < batch_cap
+                or mem.nfreqs < nfreq):
+            raise ValueError(
+                "eebls_gpu_batch: provided memory is too small "
+                f"(max_ndata {mem.max_ndata} < {max_ndata_all}, "
+                f"n_lcs {mem.n_lcs} < {batch_cap}, or nfreqs "
+                f"{mem.nfreqs} < {nfreq})")
+        stream = mem.stream
+    else:
+        stream = cuda.Stream()
+        mem = BLSBatchMemory(max_ndata_all, batch_cap, nfreq,
+                             stream=stream)
+
+    # Set frequency grid once for all chunks
+    max_nbins = mem.set_freqs(freqs, qmin=qmin, qmax=qmax)
+
+    # Check shared memory (qmin may be a per-frequency array)
+    mem_req = (block_size + 2 * max_nbins) * float_size
+    if mem_req > shmem_lim:
+        qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
+        raise ValueError(
+            f"qmin={float(np.min(qmin)):.2e} requires too much "
+            f"shared memory ({mem_req} > {shmem_lim}). "
+            f"Try qmin > {qmin_min:.2e}."
+        )
+
+    # Fused path needs the noverlap-times finer histogram to fit;
+    # otherwise fall back to the multi-pass loop.
+    batch_use_fused = use_fused
+    if batch_use_fused:
+        fused_req = (block_size
+                     + 2 * noverlap_int * max_nbins) * float_size
+        if fused_req > shmem_lim:
+            batch_use_fused = False
+        else:
+            mem_req = fused_req
+
+    # Occupancy-aware frequency chunking: each launch sizes its shared
+    # memory by the max bin count of the frequencies it covers, and
+    # ascending frequency grids have monotonically decreasing bin
+    # counts -- so when the global max would cap resident blocks below
+    # the thread limit (Kepler-scale qmin), chunked launches let all
+    # but the first chunks run at full occupancy (measured +32% on
+    # Kepler, neutral elsewhere; only triggers when shared memory is
+    # the occupancy limiter).
+    if freq_batch_size is None:
+        freq_batch_size = nfreq
+        if _shmem_limits_occupancy(mem_req, block_size):
+            freq_batch_size = _OCCUPANCY_FREQ_CHUNK
+
+    freqs_uploaded = False
     i = 0
     while i < len(sorted_indices):
         # Take up to max_batch_lcs from sorted order
@@ -2405,65 +2621,79 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         batch_indices = sorted_indices[i:batch_end]
         batch_n = len(batch_indices)
 
-        # Max ndata in this batch
-        max_ndata_batch = max(lc_ndatas[idx] for idx in batch_indices)
-
-        # Allocate batch memory
-        stream = cuda.Stream()
-        mem = BLSBatchMemory(max_ndata_batch, batch_n, nfreq, stream=stream)
-
-        # Set frequency grid
-        max_nbins = mem.set_freqs(freqs, qmin=qmin, qmax=qmax)
-
-        # Check shared memory (qmin may be a per-frequency array)
-        mem_req = (block_size + 2 * max_nbins) * float_size
-        if mem_req > shmem_lim:
-            qmin_min = 2 * float_size / (shmem_lim - float_size * block_size)
-            raise ValueError(
-                f"qmin={float(np.min(qmin)):.2e} requires too much "
-                f"shared memory ({mem_req} > {shmem_lim}). "
-                f"Try qmin > {qmin_min:.2e}."
-            )
-
         # Set lightcurve data
         for j, orig_idx in enumerate(batch_indices):
             t, y, dy = lightcurves[orig_idx]
             mem.set_lightcurve(j, t, y, dy)
 
-        # Transfer to GPU
-        mem.transfer_to_gpu()
+        # Transfer to GPU (frequency grid only once; only the
+        # populated LC slots)
+        mem.transfer_to_gpu(n_lcs_active=batch_n,
+                            transfer_freqs=not freqs_uploaded)
+        freqs_uploaded = True
 
-        # Launch kernel
-        max_nblocks = min(nfreq, 5000)
-        grid = (max_nblocks, batch_n)
+        # Launch kernel(s)
         block = (block_size, 1, 1)
 
-        # Phase oversampling, mirroring _eebls_gpu_fast_impl (A2): the
-        # kernel's own noverlap argument is a no-op in its box scan, so
-        # run ``noverlap`` passes with the bin grid shifted by
-        # 1/noverlap of a fine bin and keep the elementwise max.
-        # Without this the batch path was single-pass while the
-        # fast/adaptive reference multi-passes -- the small-ndata
-        # periodogram divergence flagged in the Jun GPU batch (E1).
+        # Phase oversampling, mirroring _eebls_gpu_fast_impl (A2).
+        # Fused path: a single launch of full_bls_batch_fused evaluates
+        # all noverlap bin grids from one finer histogram. Fallback
+        # (non-power-of-two noverlap, dphi != 0, or fused histogram over
+        # the shared-memory limit): run ``noverlap`` passes with the bin
+        # grid shifted by 1/noverlap of a fine bin and keep the
+        # elementwise max. Without multi-passing the batch path was
+        # single-pass while the fast/adaptive reference multi-passes --
+        # the small-ndata periodogram divergence flagged in the Jun GPU
+        # batch (E1). Frequency chunks size their shared memory by the
+        # chunk's own max bin count (occupancy; see freq_batch_size
+        # above).
         best_bls_g = None
-        for i_pass in range(noverlap):
+        n_passes = 1 if batch_use_fused else noverlap
+        for i_pass in range(n_passes):
             dphi_pass = dphi + float(i_pass) / noverlap
 
-            args = (grid, block, stream)
-            args += (mem.t_g.ptr, mem.yw_g.ptr, mem.w_g.ptr)
-            args += (mem.bls_g.ptr, mem.freqs_g.ptr)
-            args += (mem.nbins0_g.ptr, mem.nbinsf_g.ptr)
-            args += (mem.ndata_per_lc_g.ptr,)
-            args += (np.uint32(max_ndata_batch),)
-            args += (np.uint32(nfreq), np.uint32(0))
-            args += (np.uint32(max_nbins), np.uint32(1))
-            args += (np.float32(dlogq), np.float32(dphi_pass))
-            args += (np.uint32(int(ignore_negative_delta_sols)),)
-            args += (np.uint32(batch_n),)
+            i_freq = 0
+            while i_freq < nfreq:
+                j_freq = min(i_freq + freq_batch_size, nfreq)
+                nf_chunk = j_freq - i_freq
+                chunk_nbins = int(np.max(mem.nbinsf[i_freq:j_freq]))
 
-            func.prepared_async_call(*args, shared_size=int(mem_req))
+                if batch_use_fused:
+                    hist_size = noverlap_int * chunk_nbins
+                else:
+                    hist_size = chunk_nbins
+                chunk_req = (block_size + 2 * hist_size) * float_size
 
-            if noverlap > 1:
+                grid = (min(nf_chunk, 5000), batch_n)
+                args = (grid, block, stream)
+                args += (mem.t_g.ptr, mem.yw_g.ptr, mem.w_g.ptr)
+                args += (mem.bls_g.ptr, mem.freqs_g.ptr)
+                args += (mem.nbins0_g.ptr, mem.nbinsf_g.ptr)
+                args += (mem.ndata_per_lc_g.ptr,)
+                # per-LC stride of the padded data layout = the
+                # memory's allocation stride (constant across chunks
+                # on reuse)
+                args += (np.uint32(mem.max_ndata),)
+                args += (np.uint32(nf_chunk), np.uint32(i_freq))
+                if batch_use_fused:
+                    args += (np.uint32(hist_size),
+                             np.uint32(noverlap_int))
+                    args += (np.float32(dlogq), np.float32(dphi))
+                else:
+                    args += (np.uint32(hist_size), np.uint32(1))
+                    args += (np.float32(dlogq), np.float32(dphi_pass))
+                args += (np.uint32(int(ignore_negative_delta_sols)),)
+                args += (np.uint32(batch_n),)
+                # output row pitch = the memory's frequency allocation
+                # (may exceed len(freqs) on reuse)
+                args += (np.uint32(mem.nfreqs),)
+
+                launch_func = fused_func if batch_use_fused else func
+                launch_func.prepared_async_call(*args,
+                                                shared_size=int(chunk_req))
+                i_freq = j_freq
+
+            if not batch_use_fused and noverlap > 1:
                 if best_bls_g is None:
                     best_bls_g = mem.bls_g.copy()
                 else:
@@ -2474,9 +2704,10 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
             cuda.memcpy_dtod(mem.bls_g.gpudata, best_bls_g.gpudata,
                              best_bls_g.nbytes)
 
-        # Transfer results back
-        mem.transfer_to_cpu()
-        batch_results = mem.get_results()
+        # Transfer results back (only the populated rows)
+        mem.transfer_to_cpu(n_lcs_active=batch_n)
+        batch_results = mem.get_results(n_lcs_active=batch_n,
+                                        nfreq_active=nfreq)
 
         # Store results in original order
         for j, orig_idx in enumerate(batch_indices):
