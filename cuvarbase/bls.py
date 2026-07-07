@@ -774,6 +774,23 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         No extra global memory is needed, meaning you likely do *not* need
         to use ``large_run`` with this function.
 
+    .. warning::
+
+        BLS weights each observation by ``1/dy**2`` (normalized). A
+        point with a near-zero reported uncertainty concentrates
+        essentially all of the statistical weight in one phase bin and
+        deterministically produces spurious power of ~0.99 in pure
+        noise, at nearly every trial frequency. Symptoms:
+        ``max(dy**-2) / sum(dy**-2)`` close to 1, and suspiciously
+        high, nearly flat power on noise-like data. Guard with a
+        percentile-based error floor before calling::
+
+            dy_floor = np.percentile(dy, 10)
+            dy = np.clip(dy, dy_floor, None)
+
+        See the "Data hygiene: near-zero uncertainties" section of the
+        BLS documentation for details.
+
     Parameters
     ----------
     t: array_like, float
@@ -1264,6 +1281,23 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     """
     Box-Least Squares, accelerated with PyCUDA
+
+    .. warning::
+
+        BLS weights each observation by ``1/dy**2`` (normalized). A
+        point with a near-zero reported uncertainty concentrates
+        essentially all of the statistical weight in one phase bin and
+        deterministically produces spurious power of ~0.99 in pure
+        noise, at nearly every trial frequency. Symptoms:
+        ``max(dy**-2) / sum(dy**-2)`` close to 1, and suspiciously
+        high, nearly flat power on noise-like data. Guard with a
+        percentile-based error floor before calling::
+
+            dy_floor = np.percentile(dy, 10)
+            dy = np.clip(dy, dy_floor, None)
+
+        See the "Data hygiene: near-zero uncertainties" section of the
+        BLS documentation for details.
 
     Parameters
     ----------
@@ -2522,6 +2556,23 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     Compute BLS for timeseries assuming edge-on keplerian
     orbit of a planet with Mp/Ms << 1, Rp/Rs < 1, Lp/Ls << 1 and
     negligible eccentricity.
+
+    .. warning::
+
+        BLS weights each observation by ``1/dy**2`` (normalized). A
+        point with a near-zero reported uncertainty concentrates
+        essentially all of the statistical weight in one phase bin and
+        deterministically produces spurious power of ~0.99 in pure
+        noise, at nearly every trial frequency. Symptoms:
+        ``max(dy**-2) / sum(dy**-2)`` close to 1, and suspiciously
+        high, nearly flat power on noise-like data. Guard with a
+        percentile-based error floor before calling::
+
+            dy_floor = np.percentile(dy, 10)
+            dy = np.clip(dy, dy_floor, None)
+
+        See the "Data hygiene: near-zero uncertainties" section of the
+        BLS documentation for details.
 
     Parameters
     ----------
