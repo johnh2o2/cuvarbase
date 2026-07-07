@@ -183,5 +183,41 @@ class TestValidation:
             tls.tls_search_batch([lc], n_durations=100)
 
 
+class TestRefinementFallback:
+    """PR #68 review regression: the coarse-parameter fallback in _finish_lc
+    must not depend on return_arrays being set."""
+
+    def test_all_refinements_fail_falls_back_no_crash(self, monkeypatch):
+        # Force every top-K exact refinement to return the failure sentinel
+        # (rscore <= 0) while the coarse phase-binned scan still finds valid
+        # periods. With the default batch args (refine_top_k > 0 and
+        # return_arrays=False) the else-branch in _finish_lc must fall back to
+        # the coarse best-fit t0/duration/depth — it must NOT raise
+        # UnboundLocalError because those coarse arrays were fetched only under
+        # `return_arrays or not K`.
+        from cuvarbase import tls
+        orig = tls._get_cached_fast_kernels
+
+        def patched(*a, **k):
+            kern = dict(orig(*a, **k))          # copy cached {'search','refine'}
+
+            def fail_refine(*args, **kwargs):   # rscore_g is positional arg 16
+                args[16].fill(np.float32(-1.0))
+
+            kern['refine'] = fail_refine
+            return kern
+
+        monkeypatch.setattr(tls, '_get_cached_fast_kernels', patched)
+        periods = shared_grid()
+        lcs = [make_transit_lc(3.3, 0.03, 0.012, seed=1),
+               make_transit_lc(7.7, 0.02, 0.012, seed=2)]
+        res = tls.tls_search_batch(lcs, periods=periods)   # defaults
+        assert len(res) == 2
+        for r in res:
+            assert 'error' not in r
+            assert np.isfinite(r['period']) and r['period'] > 0
+            assert np.isfinite(r['duration']) and np.isfinite(r['depth'])
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

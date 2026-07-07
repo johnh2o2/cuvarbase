@@ -1508,7 +1508,14 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
             rdur_h = rdur_g[:nc * K].get().reshape(nc, K)
             rdepth_h = rdepth_g[:nc * K].get().reshape(nc, K)
 
-        if return_arrays or not K:
+        # Coarse per-period best-fit params. Needed when return_arrays is set,
+        # when there is no refinement (K == 0), AND as the fallback in
+        # _finish_lc when a light curve's top-K exact refinements all return
+        # the sentinel (the else-branch below reads t0_h/dur_h/depth_h). Fetch
+        # only when actually needed so the common default path pays no extra
+        # D2H. (`rscore_h` is only touched when K > 0, where it is bound.)
+        if (return_arrays or not K
+                or bool((rscore_h.max(axis=1) <= 0.0).any())):
             t0_h = t0_g[:nc * nperiods].get().reshape(nc, nperiods)
             dur_h = dur_g[:nc * nperiods].get().reshape(nc, nperiods)
             depth_h = depth_g[:nc * nperiods].get().reshape(nc, nperiods)
