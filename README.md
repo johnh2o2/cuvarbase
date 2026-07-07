@@ -11,6 +11,7 @@ cuvarbase is built for processing millions of lightcurves, and it is proven in p
 The headline numbers, all traceable to benchmark data in this repository:
 
 - **Standard BLS is 257-354x faster than astropy's `BoxLeastSquares`**, measured consistently across all 7 GPU architectures tested (V100 through H200)
+- **Transit Least Squares is 30-170x faster than GTLS** — the only other GPU TLS — on the same GPU at matched search settings and equal (1-3%) detection significance, and thousands of times faster than the reference CPU `transitleastsquares` ([details](#transit-least-squares-tls))
 - **Keplerian frequency grids search 4-37x fewer frequencies** than uniform grids at survey baselines by exploiting the orbital-mechanics link between period and transit duration
 - **All four major surveys for ~$33 of GPU time**: running both Lomb-Scargle and BLS over ZTF + HAT-Net + TESS + Kepler scale lightcurve collections costs roughly $33 total on a rented RTX A5000 at $0.20/hr (tables below)
 
@@ -40,6 +41,18 @@ At the frequency counts real variability surveys require (100K-1.8M), GPU LS is 
 frequencies, single lightcurves), nifty-ls on CPU is faster than cuvarbase's
 GPU LS — the GPU advantage appears at survey-scale frequency grids (>~100K
 frequencies) and batched workloads. Use nifty-ls for one-off small searches.
+
+### Transit Least Squares (TLS)
+
+cuvarbase's survey-scale TLS ([Hippke & Heller 2019](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract)) is, to our knowledge, the fastest GPU TLS available. Reproducing the benchmark from the GTLS paper ([arXiv:2607.00348](https://arxiv.org/abs/2607.00348)) apples-to-apples on one RTX A5000 — identical Ofir period grid, matched per-period duration window, matched epoch density, one injected transit — cuvarbase-TLS is **30–170x faster than GTLS** over 200–2000 day baselines (the gap grows with baseline), at **1–3% detection-significance (SDE) parity** and 100% recovery:
+
+| Baseline | GTLS | cuvarbase TLS | Speedup |
+|--------|-------:|-------------:|--------:|
+| 200 d | 4.1 s | 0.14 s | **30x** |
+| 1000 d | 75.8 s | 0.88 s | **86x** |
+| 2000 d | 348 s | 2.0 s | **171x** |
+
+It also beats GTLS's *own* published RTX-4090 numbers by 23–40x from a slower A5000, and runs thousands of times faster than the reference CPU `transitleastsquares`. Full methodology and the reproduced figure: [analysis/GTLS_COMPARISON.md](analysis/GTLS_COMPARISON.md).
 
 See [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for methodology, competitive analysis, and cost projections.
 
@@ -76,12 +89,17 @@ This module ships in this release but has **known correctness issues** and
 is not recommended for science use yet. It emits a `UserWarning` on import.
 
 - **Transit Least Squares ([TLS](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract))** (`cuvarbase.tls`) - GPU transit
-  detection with optimal depth fitting and Ofir (2014) period grids.
-  The epoch grid is duration-scaled and failed trial periods are masked
-  out of the SDE/FAP statistics, but the rework has not yet been
-  validated against the reference `transitleastsquares` package. Light
-  curves above ~3,500 points exceed the kernel's shared-memory budget
-  (a `ValueError` is raised).
+  detection with a limb-darkened template, optimal depth fitting, and
+  Ofir (2014) period grids. The survey-scale fast path
+  (`tls_search_batch`, default) folds each light curve once into phase
+  bins and refines the top candidates exactly, handling **arbitrary
+  light-curve length** (the legacy per-point kernel is still available
+  and caps at ~3,500 points). Detection significance now matches both
+  the reference `transitleastsquares` and the GTLS package to **1–3%**
+  with 100% injected-transit recovery in our tests (see
+  [Performance](#transit-least-squares-tls)), but a full
+  injection-recovery completeness campaign is still outstanding — so it
+  remains flagged experimental and emits a `UserWarning` on import.
 
 - **NUFFT-based Likelihood Ratio Test** (`cuvarbase.nufft_lrt`,
   contributed by **Jamila Taaki** / [@xiaziyna](https://github.com/xiaziyna)) -
@@ -203,23 +221,21 @@ v1.0 is a major modernization of cuvarbase — the first major release since the
 
 ### ⚡ Performance Improvements (Major Update)
 
-**Dramatically Faster BLS Transit Detection** — **257-354x faster** than astropy `BoxLeastSquares`, consistent across all 7 GPU architectures tested (V100 through H200):
-- Adaptive block sizing automatically selects the CUDA block size from
-  the dataset size. In the v1.0 release benchmark it measures parity to
-  ~1.3x over the fixed-block kernel on realistic Keplerian grids (RTX
-  A5000, Jun 2026;
-  `benchmarks/results/bls_adaptive_keplerian_benchmark_rtxa5000_jun2026.json`).
-  Earlier pre-release measurements showed 1.4-5.3x (up to 90x for tiny
-  lightcurves), but those gains shrank once thread-safe kernel caching
-  landed and amortized the per-call kernel handling the adaptive path
-  used to avoid
-- Particularly beneficial for ground-based surveys and sparse time series
-- Thread-safe kernel caching with LRU eviction for production environments
-- **New function**: `eebls_gpu_fast_adaptive()` - drop-in replacement with automatic optimization
-- Best cost-efficiency: RTX 4000 Ada at **$0.14 per million lightcurves**
-- See [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for full results across GPUs
+**Faster BLS transit search** — **257-354x faster** than astropy `BoxLeastSquares`, consistent across all 7 GPU architectures tested (V100 through H200). Relative to the last release (0.2.6), whose BLS *kernel* v1.0 inherits essentially unchanged:
 
-This optimization makes large-scale BLS searches practical and efficient for all-sky surveys.
+- **Survey-speed kernels** (fused-noverlap, conflict-scatter, occupancy-aware
+  chunking) make the per-frequency kernel **2.9-9.2x faster** and end-to-end
+  survey searches **2.0-12.7x faster** than the pre-optimization v1.0 path
+- **Batched multi-lightcurve search** (`eebls_gpu_batch`) is new — 0.2.6 offered
+  only single-lightcurve calls, which recompiled the kernel on *every* call;
+  v1.0's LRU kernel cache alone makes a naive per-lightcurve loop **34x faster**
+- **Adaptive block sizing** (`eebls_gpu_fast_adaptive()`) auto-tunes the CUDA
+  block size from the dataset (~1.3x over the fixed-block kernel on realistic
+  Keplerian grids)
+- Best cost-efficiency: RTX 4000 Ada at **$0.14 per million lightcurves**;
+  see [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for full results across GPUs
+
+This makes large-scale BLS searches practical and efficient for all-sky surveys.
 
 ### Breaking Changes
 - **Dropped Python 2.7 support** - now requires Python 3.9+
