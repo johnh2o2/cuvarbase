@@ -3,13 +3,18 @@
 
 #define RESTRICT __restrict__
 #define CONSTANT const
-#define PI 3.14159265358979323846264338327950288f
 //{CPP_DEFS}
 
 #ifdef DOUBLE_PRECISION
 	#define FLT double
+	// PI must be a double literal in double-precision mode (same defect
+	// class as the cunfft.cu A3 fix, Jul 2026). PI is currently
+	// unreferenced in this file; the guard keeps any future phase
+	// computation from inheriting the float32 literal.
+	#define PI 3.14159265358979323846264338327950288
 #else
 	#define FLT float
+	#define PI 3.14159265358979323846264338327950288f
 #endif
 
 #define CMPLX pycuda::complex<FLT>
@@ -37,7 +42,7 @@ __global__ void nufft_matched_filter(
 	
 	// Each thread processes one or more frequency bins
 	if (i < nf) {
-		FLT P_inv = 1.0f / fmaxf(P_s[i], eps_floor);
+		FLT P_inv = 1.0f / fmax(P_s[i], eps_floor);
 		FLT w = weights[i];
 		
 		// Numerator: real(Y * conj(T) * w / P_s)
@@ -182,7 +187,7 @@ __global__ void generate_transit_template(
 	
 	if (i < n) {
 		// Phase fold
-		FLT phase = fmodf(t[i] - epoch, period) / period;
+		FLT phase = fmod(t[i] - epoch, period) / period;
 		if (phase < 0) phase += 1.0f;
 		
 		// Center phase around 0.5
@@ -190,7 +195,7 @@ __global__ void generate_transit_template(
 		
 		// Check if in transit
 		FLT phase_width = duration / (2.0f * period);
-		if (fabsf(phase) <= phase_width) {
+		if (fabs(phase) <= phase_width) {
 			template_out[i] = -depth;
 		} else {
 			template_out[i] = 0.0f;
