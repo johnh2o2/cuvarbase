@@ -6,8 +6,8 @@ algorithm for detecting planetary transits in photometric time series.
 
 References
 ----------
-.. [1] Hippke & Heller (2019), "Transit Least Squares",  A&A 623, A39
-.. [2] Kovács et al. (2002), "Box Least Squares", A&A 391, 369
+- Hippke & Heller (2019), "Transit Least Squares", A&A 623, A39
+- Kovács et al. (2002), "Box Least Squares", A&A 391, 369
 """
 
 import os

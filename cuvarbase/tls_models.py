@@ -6,10 +6,10 @@ using the Batman package for limb-darkened transits.
 
 References
 ----------
-.. [1] Kreidberg (2015), "batman: BAsic Transit Model cAlculatioN in Python",
-       PASP 127, 1161
-.. [2] Mandel & Agol (2002), "Analytic Light Curves for Planetary Transit
-       Searches", ApJ 580, L171
+- Kreidberg (2015), "batman: BAsic Transit Model cAlculatioN in Python",
+  PASP 127, 1161
+- Mandel & Agol (2002), "Analytic Light Curves for Planetary Transit
+  Searches", ApJ 580, L171
 """
 
 import warnings

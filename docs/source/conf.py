@@ -18,28 +18,10 @@
 #
 import os
 import sys
-import ctypes
 import io
 import re
 
-cuda_dir = "/Developer/NVIDIA/CUDA-8.0/lib/"
 sys.path.insert(0, os.path.abspath('../..'))
-sys.path.insert(0, cuda_dir)
-
-# Set DYLD and LD library paths
-dyld_lpath = os.environ.get('DYLD_LIBRARY_PATH', '')
-ld_lpath = os.environ.get('LD_LIBRARY_PATH', '')
-
-
-def lpath_insert(p, lpath):
-    return '%s:%s' % (p, lpath)
-
-dyld_lpath = lpath_insert(cuda_dir, dyld_lpath)
-ld_lpath = lpath_insert(cuda_dir, ld_lpath)
-
-
-os.environ['DYLD_LIBRARY_PATH'] = dyld_lpath
-os.environ['LD_LIBRARY_PATH'] = ld_lpath
 
 
 def read(path, encoding='utf-8'):
@@ -82,11 +64,19 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.viewcode',
               'sphinx.ext.githubpages',
               'sphinx.ext.napoleon',
-              'matplotlib.sphinxext.only_directives',
               'matplotlib.sphinxext.plot_directive']
 
+# Build the API docs without CUDA hardware or drivers: cuvarbase imports
+# pycuda at package-import time, so autodoc mocks the whole GPU stack.
+# (batman and cufinufft are optional and already guarded in the source.)
+autodoc_mock_imports = ['pycuda']
+
+# The plot_directive figures require a GPU to render; when they fail on a
+# GPU-less builder the pages keep the source code and lose only the image.
+plot_include_source = True
+
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['.templates']
+templates_path = []
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -116,7 +106,7 @@ release = VERSION
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -147,7 +137,7 @@ html_logo = './logo.png'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['.static']
+html_static_path = []
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.

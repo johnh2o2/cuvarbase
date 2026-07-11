@@ -154,7 +154,7 @@ def time_group(task_dict, group_func, values):
     return times
 
 n0 = 1000
-ndatas = np.floor(np.logspace(1, 4.5, num=8)).astype(np.int)
+ndatas = np.floor(np.logspace(1, 4.5, num=8)).astype(int)
 #nblocks = np.arange(1, 25)
 #nblocks = np.concatenate((nblocks, np.arange(nblocks[-1], 3000, 50)))
 nblocks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 50, 100, 200, 500, 1000, 2000, 5000]

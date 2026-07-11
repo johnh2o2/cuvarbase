@@ -339,7 +339,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         Returns
         -------
-        mem: ConditionalEntropyMemory
+        mem: ~cuvarbase.memory.ce_memory.ConditionalEntropyMemory
             Memory object.
         """
 

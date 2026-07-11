@@ -30,7 +30,7 @@ def data(ndata=100, baseline=1, freq=10, sigma=1., **kwargs):
 
 
 def plot_bls_model(ax, y0, delta, q, phi0, **kwargs):
-    phi_plot = np.linspace(0, 1, 50./q)
+    phi_plot = np.linspace(0, 1, int(50. / q))
     y_plot = transit_model(phi_plot, 1., y0=y0,
                            delta=delta, q=q, phi0=phi0)
 

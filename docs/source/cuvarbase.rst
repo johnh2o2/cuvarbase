@@ -1,13 +1,6 @@
 cuvarbase package
 =================
 
-Subpackages
------------
-
-.. toctree::
-
-    cuvarbase.tests
-
 Submodules
 ----------
 
@@ -76,8 +69,8 @@ cuvarbase\.pdm module
     :show-inheritance:
 
 
-cuvarbase\.tls module (experimental)
-------------------------------------
+cuvarbase\.tls module
+---------------------
 
 .. automodule:: cuvarbase.tls
     :members:

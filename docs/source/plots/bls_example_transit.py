@@ -30,7 +30,7 @@ def data(ndata=100, baseline=1, freq=10, sigma=1., **kwargs):
 
 
 def plot_bls_model(ax, y0, delta, q, phi0, **kwargs):
-    phi_plot = np.linspace(0, 1, 50./q)
+    phi_plot = np.linspace(0, 1, int(50. / q))
     y_plot = transit_model(phi_plot, 1., y0=y0,
                            delta=delta, q=q, phi0=phi0)
 
@@ -92,8 +92,8 @@ search_params = dict(
 
                      # The min/max frequencies as a fraction
                      # of their autoset values
-                     fmin_fac=1.0,
-                     fmax_fac=1.5,
+                     fmin_frac=1.0,
+                     fmax_frac=1.5,
 
                      # oversampling factor; frequency spacing
                      # is multiplied by 1/samples_per_peak

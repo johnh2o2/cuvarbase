@@ -30,7 +30,7 @@ An example with ``cuvarbase``
 	dy = np.ones_like(t)
 
 	# start a conditional entropy process
-	proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5)
+	proc = ce.ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5)
 
 	# format your data as a list of lightcurves (t, y, dy)
 	data = [(t, y, dy)]

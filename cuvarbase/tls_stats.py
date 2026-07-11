@@ -6,8 +6,8 @@ False Alarm Probability (FAP), and related metrics.
 
 References
 ----------
-.. [1] Hippke & Heller (2019), A&A 623, A39
-.. [2] Kovács et al. (2002), A&A 391, 369
+- Hippke & Heller (2019), A&A 623, A39
+- Kovács et al. (2002), A&A 391, 369
 """
 
 import numpy as np

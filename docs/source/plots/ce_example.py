@@ -45,15 +45,15 @@ def plot_ce_bins(ax, t, y, dy, freq, ce_proc):
     phi = phase(t, freq)
 
     # Bin the data
-    phi_bins = np.floor(phi * ce_proc.phase_bins).astype(np.int)
+    phi_bins = np.floor(phi * ce_proc.phase_bins).astype(int)
 
     yi = ce_proc.mag_bins * (y - y0)/yrange
-    mag_bins = np.floor(yi).astype(np.int)
+    mag_bins = np.floor(yi).astype(int)
 
     bins = [[sum((phi_bins == i) & (mag_bins == j))
              for j in range(ce_proc.mag_bins)]
             for i in range(ce_proc.phase_bins)]
-    bins = np.array(bins).astype(np.float)
+    bins = np.array(bins).astype(float)
 
     # Convert to N(bin) / Ntotal
     bins /= np.sum(bins.ravel())
