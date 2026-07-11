@@ -147,6 +147,10 @@ limitations and deferred work" section is the user-facing summary.
       currently credits cuvarbase only in a GitHub footnote)
 - [ ] ASCL record update
 
+**Algorithm wishlist** (formerly the README "Planned Features" section)
+- [ ] (Weighted) wavelet transforms
+- [ ] Spectrograms (for PDM and GLS)
+
 **Benchmarks to refresh when the ecosystem moves**
 - [ ] astropy 8.0 re-benchmark when its LRA-NUFFT Lomb–Scargle default ships
 - [ ] CETRA comparison remains out of scope (different algorithm family) —
