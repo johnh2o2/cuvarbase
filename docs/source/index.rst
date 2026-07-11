@@ -17,6 +17,7 @@
    ce
    lomb
    bls
+   tls
    pdm
    modules
 

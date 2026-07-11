@@ -86,7 +86,7 @@ The frequency spacing :math:`\delta f` needed to resolve a BLS signal with width
 
 where :math:`T` is the baseline of the observations (:math:`T = {\rm max}(t) - {\rm min}(t)`). This can be especially problematic if no assumptions are made about the nature of the signal (e.g., a Keplerian assumption). If you want to resolve a transit signal with a few observations, the minimum :math:`q` value that you would need to search is :math:`\propto 1/N` where :math:`N` is the number of observations.
 
-For a typical Lomb-Scargle periodogram, the frequency spacing is :math:`\delta f \lesssim 1/T`, so running a BLS spectrum with an adequate frequency spacing over the same frequency range requires a factor of :math:`\mathcal{O}(N)` more trial frequencies, each of which requiring :math:`\mathcal{O}(N)` computations to estimate the best fit BLS parameters. That means that BLS scales as :math:`\mathcal{O}(N^2N_f)` while Lomb-Scargle only scales as :math:`\mathcal{O}(N_f\log N_f)`
+For a typical Lomb-Scargle periodogram, the frequency spacing is :math:`\delta f \lesssim 1/T`, so running a BLS spectrum with an adequate frequency spacing over the same frequency range requires a factor of :math:`\mathcal{O}(N)` more trial frequencies, each of which requiring :math:`\mathcal{O}(N)` computations to estimate the best fit BLS parameters. That means that BLS scales as :math:`\mathcal{O}(NN_f)` in the number of trial frequencies actually searched -- a grid that is itself a factor :math:`\mathcal{O}(N)` denser than the corresponding Lomb-Scargle grid -- while Lomb-Scargle only scales as :math:`\mathcal{O}(N_f\log N_f)`
 
 However, if you can use the assumption that the transit is caused by an edge-on transit of a circularly orbiting planet, we not only eliminate a degree of freedom, but (assuming :math:`\sin{\pi q}\approx \pi q`)
 
@@ -183,6 +183,7 @@ per-frequency arrays) restrict the candidate durations:
 
 .. [BLS] `Kovacs et al. 2002 <http://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
 .. [SparseBLS] `Panahi & Zucker 2021 <https://arxiv.org/abs/2103.06193>`_
+
 Power-spectrum convention
 -------------------------
 

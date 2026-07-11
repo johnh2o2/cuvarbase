@@ -9,8 +9,6 @@ assumption fixes the transit-duration/period relation [SM03]_ and, with
 it, the optimal frequency-grid spacing for a transit search [O2014]_.
 
 .. [K2002] `Kovacs et al. 2002, A&A 391, 369 <https://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
-.. [SM03] `Seager & Mallen-Ornelas 2003, ApJ 585, 1038 <https://ui.adsabs.harvard.edu/abs/2003ApJ...585.1038S>`_, "A Unique Solution of Planet and Star Parameters from an Extrasolar Planet Transit Light Curve" (eq. 3-4)
-.. [O2014] `Ofir 2014, A&A 561, A138 <https://ui.adsabs.harvard.edu/abs/2014A%26A...561A.138O>`_, "Optimizing the search for transiting planets in long time series" (arXiv:1307.7330; corrigendum A&A 597, C2)
 
 """
 import threading

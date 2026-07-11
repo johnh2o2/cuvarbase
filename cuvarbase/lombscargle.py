@@ -673,7 +673,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         Returns
         -------
-        mem: LombScargleMemory
+        mem: ~cuvarbase.memory.lombscargle_memory.LombScargleMemory
             Memory object.
         """
         m = self.nfft_proc.get_m(nf)

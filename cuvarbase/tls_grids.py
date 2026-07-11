@@ -6,9 +6,9 @@ logarithmically-spaced duration grids based on stellar parameters.
 
 References
 ----------
-.. [1] Ofir (2014), "Optimizing the search for transiting planets in
-       long time series", A&A 561, A138 (arXiv:1307.7330)
-.. [2] Hippke & Heller (2019), "Transit Least Squares", A&A 623, A39
+- Ofir (2014), "Optimizing the search for transiting planets in
+  long time series", A&A 561, A138 (arXiv:1307.7330)
+- Hippke & Heller (2019), "Transit Least Squares", A&A 623, A39
 """
 
 import numpy as np

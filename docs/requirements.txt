@@ -1,5 +1,10 @@
-sphinx
-astropy
-astrobase
-numpy
-matplotlib
+# Documentation build requirements. Modern Sphinx plus the real
+# dependencies autodoc needs to import cuvarbase (pycuda is mocked via
+# autodoc_mock_imports in conf.py, so no CUDA stack is required to build
+# the API pages). The plot-directive figures DO need a CUDA GPU to
+# render; on a GPU-less builder those plots fail as warnings and the
+# pages keep their source listings.
+sphinx>=7,<9
+matplotlib>=3.7
+numpy>=1.22
+scipy>=1.8

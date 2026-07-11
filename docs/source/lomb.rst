@@ -54,7 +54,7 @@ Where
 
 	SS_{\tau} &= \sum_i w_i\sin^2{\omega (t_i - \tau)}\\
 
-	\tan{2\omega\tau} &= \frac{\sum_i w_i \sin{2\omega t_i}}{\sum_i w_i \sin{2\omega t_i}}
+	\tan{2\omega\tau} &= \frac{\sum_i w_i \sin{2\omega t_i}}{\sum_i w_i \cos{2\omega t_i}}
 
 For the original formulation of the Lomb-Scargle periodogram without the constant offset term. 
 
@@ -90,7 +90,28 @@ of LS without any FFT's.
 Estimating significance
 -----------------------
 
-See [Baluev2008]_ for more information (TODO.)
+``cuvarbase`` implements the [Baluev2008]_ analytic upper bound on the
+false-alarm probability of a periodogram peak, which accounts for the
+effective number of independent frequencies searched without resorting
+to bootstrap simulations:
+
+.. code-block:: python
+
+    from cuvarbase.lombscargle import fap_baluev
+
+    # t, dy: observation times and uncertainties
+    # z:     the periodogram value of the peak
+    # fmax:  the maximum frequency searched
+    fap = fap_baluev(t, dy, z, fmax)
+
+:func:`cuvarbase.lombscargle.LombScargleAsyncProcess.batched_run_const_nfreq`
+applies the same bound when called with ``only_return_best_freqs=True``,
+returning the significance of each lightcurve's best peak alongside the
+frequency. Two caveats: the bound is one-sided (an upper limit on the
+false-alarm probability, tight in the interesting low-FAP regime), and
+it assumes uncorrelated Gaussian noise -- correlated ("red") noise or
+strong aliasing can make the true false-alarm rate higher than the
+bound suggests.
 
 
 Example: Basic
@@ -206,6 +227,7 @@ Example: Batches of lightcurves
 .. [Vanicek1969] `Vaníček, P. 1969, APSS, 4, 387 <http://adsabs.harvard.edu/abs/1969Ap&SS...4..387V>`_
 .. [Scargle1982] `Scargle, J. D. 1982, ApJ, 263, 835 <http://adsabs.harvard.edu/abs/1982ApJ...263..835S>`_
 .. [Lomb1976] `Lomb, N. R. 1976, APSS, 39, 447 <http://adsabs.harvard.edu/abs/1976Ap%26SS..39..447L>`_
+
 Power-spectrum convention
 -------------------------
 
