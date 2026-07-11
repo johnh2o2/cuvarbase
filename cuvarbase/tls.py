@@ -17,16 +17,6 @@ import warnings
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
-warnings.warn(
-    "cuvarbase.tls is EXPERIMENTAL and not recommended for science use "
-    "in this release. The default fast path (use_fast=True) is a "
-    "phase-binned scan with exact top-K refinement and supports "
-    "arbitrary ndata; the legacy kernel (use_fast=False) caps light "
-    "curves at ~3,500 points (a ValueError is raised). See "
-    "analysis/V1_AUDIT_AND_GAMEPLAN.md in the repository. For validated "
-    "transit searches use cuvarbase.bls (eebls_transit).",
-    UserWarning)
-
 import pycuda.driver as cuda  # noqa: E402
 import pycuda.gpuarray as gpuarray  # noqa: E402
 from pycuda.compiler import SourceModule  # noqa: E402
@@ -448,13 +438,23 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     Parameters
     ----------
     t : array_like
-        Observation times (days)
+        Observation times (days). Absolute BJD-scale times are safe on
+        the default fast path (the epoch is subtracted in float64); the
+        legacy path (``use_fast=False``) folds float32 times directly
+        and silently loses phase precision at BJD magnitudes.
     y : array_like
-        Flux measurements (arbitrary units, will be normalized)
+        Fluxes, normalized so the out-of-transit baseline is ~1.0. The
+        transit model is ``1 - depth * T``; no TLS path rescales the
+        input, so unnormalized flux (e.g. raw counts) gives meaningless
+        depths.
     dy : array_like
         Flux uncertainties
     periods : array_like, optional
         Custom period grid. If None, generated automatically.
+    durations : array_like, optional
+        Unused; accepted for backward compatibility only (a warning is
+        raised if passed). Trial durations are derived from qmin/qmax
+        in Keplerian mode, or the fixed standard grid otherwise.
     qmin : array_like, optional
         Minimum fractional duration per period (for Keplerian search).
         If provided, enables Keplerian mode.
@@ -504,6 +504,22 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         Transfer data to GPU (default: True)
     transfer_to_host : bool, optional
         Transfer results to CPU (default: True)
+    use_fast : bool, optional (default: True)
+        Use the phase-binned batch engine with exact top-K refinement
+        (no ndata cap; see :func:`tls_search_batch`). Ignored with a
+        warning when a pre-compiled kernel, external memory/stream, or
+        transfer control is supplied — those fall back to the legacy
+        per-point kernel.
+    refine_top_k : int, optional (default: 50)
+        Fast path only: number of best candidate periods per lightcurve
+        re-fit exactly on a finer local (duration, t0) grid (0
+        disables).
+    refine_oversample : float, optional (default: 33.0)
+        Fast path only: refinement epoch stride = duration / this.
+    nbins : int, optional
+        Fast path only: phase-bin override (power of two). By default
+        the period grid is banded into per-band bin counts
+        automatically.
 
     Returns
     -------
@@ -526,6 +542,13 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
 
     # Validate limb darkening
     tls_models.validate_limb_darkening_coeffs(u, limb_dark)
+
+    if durations is not None:
+        warnings.warn(
+            "tls_search_gpu: the `durations` parameter has never been "
+            "used by any TLS path and is ignored; trial durations are "
+            "derived from qmin/qmax (Keplerian mode) or the fixed "
+            "standard grid")
 
     # Generate period grid if not provided
     if periods is None:
@@ -1009,25 +1032,6 @@ def _tls_refine_shared_size(block_size):
     return 4 * ((_TLS_FAST_NTEMPLATE + 1) + 4 * (block_size // 32))
 
 
-def _auto_nbins(qmin_global, t0_oversample, block_size):
-    """Pick the phase-bin count: bin width <= qmin/t0_oversample, power
-    of two, bounded by the device's shared-memory limit."""
-    need = t0_oversample / max(float(qmin_global), 1e-6)
-    nbins = _next_pow2(int(np.ceil(need)))
-    nbins = max(256, min(nbins, _TLS_FAST_MAX_NBINS))
-    max_shared = _device_max_shared()
-    while nbins > 256 and _tls_fast_shared_size(block_size, nbins) > max_shared:
-        nbins //= 2
-    if nbins < need:
-        warnings.warn(
-            "TLS fast path: %d phase bins under-resolve the narrowest "
-            "trial duration (q=%.2e wants %d bins); the coarse scan is "
-            "smeared there and recovery relies on the exact refinement "
-            "pass (refine_top_k)." % (nbins, qmin_global,
-                                      int(np.ceil(need))))
-    return nbins
-
-
 def compile_tls_fast(block_size=_TLS_FAST_DEFAULT_BLOCK, nbins=2048,
                      t0_oversample=3.0, refine_nd=3):
     """
@@ -1119,6 +1123,10 @@ def _preprocess_batch(lightcurves):
     for i, (lc, n) in enumerate(zip(lightcurves, lens)):
         if n == 0:
             raise ValueError("lightcurve %d is empty" % i)
+        if n > np.iinfo(np.int32).max:
+            raise ValueError(
+                "lightcurve %d has %d points; the TLS kernels index "
+                "points within a chunk with int32" % (i, n))
         if len(lc[1]) != n or len(lc[2]) != n:
             raise ValueError(
                 "lightcurve %d: t, y, dy lengths differ (%d, %d, %d)"

@@ -969,7 +969,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     -------
     bls: array_like, float
         BLS periodogram, normalized to
-        :math:`1 - \chi_2(\omega) / \chi_2(constant)`
+        :math:`1 - \\chi_2(\\omega) / \\chi_2(constant)`
 
     """
     return _eebls_gpu_fast_impl(
@@ -1051,7 +1051,7 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     -------
     bls: array_like, float
         BLS periodogram, normalized to
-        :math:`1 - \chi_2(\omega) / \chi_2(constant)`
+        :math:`1 - \\chi_2(\\omega) / \\chi_2(constant)`
 
     """
     kwargs.pop('use_optimized', None)
@@ -1455,7 +1455,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     -------
     bls: array_like, float
         BLS periodogram; in the default convention, normalized to
-        :math:`1 - \chi^2(f) / \chi^2_0`
+        :math:`1 - \\chi^2(f) / \\chi^2_0`
     qphi_sols: list of ``(q, phi)`` tuples
         Best ``(q, phi)`` solution at each frequency
 
@@ -2264,7 +2264,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     freqs: array_like, float
         Frequencies where BLS is evaluated
     bls: array_like, float
-        BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
+        BLS periodogram, normalized to :math:`1 - \\chi^2(f) / \\chi^2_0`
     solutions: list of ``(q, phi)`` tuples
         Best ``(q, phi)`` solution at each frequency
 
@@ -2852,7 +2852,7 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     freqs: array_like, float
         Frequencies where BLS is evaluated
     bls: array_like, float
-        BLS periodogram, normalized to :math:`1 - \chi^2(f) / \chi^2_0`
+        BLS periodogram, normalized to :math:`1 - \\chi^2(f) / \\chi^2_0`
     solutions: list of ``(q, phi)`` tuples, or None
         Best ``(q, phi)`` solution at each frequency; ``phi`` is in the
         original input timescale. ``None`` when ``use_fast=True`` or

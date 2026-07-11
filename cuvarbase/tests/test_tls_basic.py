@@ -289,6 +289,87 @@ class TestStatistics:
         assert snr == 0.0
 
 
+class TestSDEKernelSize:
+    """SDE median-detrend kernel selection (fast-TLS survey rework):
+    auto kernel = min(len//10 forced odd, 91), even values round up,
+    and short series skip detrending like the reference package."""
+
+    @staticmethod
+    def _trended_chi2(n, seed=0):
+        # slow trend + one sharp dip so different medfilt windows give
+        # measurably different detrended spectra
+        rng = np.random.RandomState(seed)
+        chi2 = 1000.0 - 30.0 * np.sin(np.linspace(0, 3, n)) \
+            + rng.normal(0, 1.0, n)
+        chi2[int(0.7 * n)] -= 200.0
+        return chi2
+
+    def test_auto_kernel_capped_at_91(self):
+        chi2 = self._trended_chi2(5000)
+        auto = tls_stats.signal_detection_efficiency(chi2, detrend=True)
+        capped = tls_stats.signal_detection_efficiency(
+            chi2, detrend=True, kernel_size=91)
+        uncapped = tls_stats.signal_detection_efficiency(
+            chi2, detrend=True, kernel_size=501)
+        assert auto[0] == capped[0]
+        np.testing.assert_array_equal(auto[2], capped[2])
+        assert auto[0] != uncapped[0]
+
+    def test_small_grids_keep_length_scaled_kernel(self):
+        chi2 = self._trended_chi2(400)  # len//10 = 40 -> odd 41 < 91
+        auto = tls_stats.signal_detection_efficiency(chi2, detrend=True)
+        k41 = tls_stats.signal_detection_efficiency(
+            chi2, detrend=True, kernel_size=41)
+        assert auto[0] == k41[0]
+
+    def test_even_kernel_rounds_up_to_odd(self):
+        chi2 = self._trended_chi2(2000)
+        k10 = tls_stats.signal_detection_efficiency(
+            chi2, detrend=True, kernel_size=10)
+        k11 = tls_stats.signal_detection_efficiency(
+            chi2, detrend=True, kernel_size=11)
+        assert k10[0] == k11[0]
+        np.testing.assert_array_equal(k10[2], k11[2])
+
+    def test_short_series_skips_detrending(self):
+        chi2 = self._trended_chi2(100)
+        # len(SR) <= 2 * kernel_size -> reference behavior: raw SDE
+        sde, sde_raw, power = tls_stats.signal_detection_efficiency(
+            chi2, detrend=True, kernel_size=51)
+        assert sde == sde_raw
+        np.testing.assert_array_equal(
+            power, tls_stats.signal_residue(chi2))
+
+
+class TestBatchPreprocessValidation:
+    """CPU-side validation in the fast path's batch preprocessing."""
+
+    class _FakeArr(object):
+        def __init__(self, n):
+            self.n = n
+
+        def __len__(self):
+            return self.n
+
+    def test_int32_point_count_guard(self):
+        from cuvarbase import tls
+        fake = self._FakeArr(2 ** 31)
+        with pytest.raises(ValueError, match="int32"):
+            tls._preprocess_batch([(fake, fake, fake)])
+
+    def test_durations_param_warns(self):
+        from cuvarbase import tls
+        t = np.linspace(0, 10, 100)
+        y = np.ones(100)
+        dy = np.full(100, 1e-3)
+        with pytest.warns(UserWarning, match="durations"):
+            with pytest.raises(ValueError):
+                # empty period grid aborts (ValueError) before any GPU
+                # work, on CPU-only and GPU machines alike
+                tls.tls_search_gpu(t, y, dy, periods=np.array([]),
+                                   durations=np.array([0.1]))
+
+
 @pytest.mark.skipif(not PYCUDA_AVAILABLE,
                    reason="PyCUDA not available")
 class TestTLSKernel:

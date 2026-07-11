@@ -183,6 +183,46 @@ class TestValidation:
             tls.tls_search_batch([lc], n_durations=100)
 
 
+class TestBanding:
+    """The period grid is banded by required bin count (NBINS variants
+    + period_map scatter); banded results must match a single-band
+    (fixed nbins) run over the identical trial grid."""
+
+    def test_banded_matches_single_band(self):
+        from cuvarbase import tls
+        periods = np.asarray(shared_grid(), dtype=np.float64)
+        n = len(periods)
+        # interleaved qmin values straddle a power-of-two boundary in
+        # need = t0_oversample/qmin (3/0.02 -> 256 bins, 3/0.008 -> 512
+        # bins), so the banded run launches two NBINS variants with a
+        # non-contiguous period_map scatter; the duration and t0 trial
+        # grids depend only on qmin/qmax and are identical in both runs,
+        # and both duration windows bracket the injected q = 0.03
+        qmin = np.where(np.arange(n) % 2 == 0, 0.02, 0.008)
+        qmax = np.full(n, 0.09)
+        lc = make_transit_lc(3.3, 0.03, 0.012, seed=11)
+
+        r_banded = tls.tls_search_batch([lc], periods=periods,
+                                        qmin=qmin, qmax=qmax,
+                                        return_arrays=True)[0]
+        r_fixed = tls.tls_search_batch([lc], periods=periods,
+                                       qmin=qmin, qmax=qmax,
+                                       nbins=512,
+                                       return_arrays=True)[0]
+
+        assert abs(r_banded['period'] - 3.3) / 3.3 < 0.01
+        assert abs(r_banded['period'] - r_fixed['period']) / 3.3 < 5e-3
+        ok = (np.isfinite(r_banded['chi2'])
+              & np.isfinite(r_fixed['chi2']))
+        assert ok.sum() > 0.9 * n
+        # the odd-index periods run at 512 bins in BOTH configurations;
+        # the even-index ones differ only in bin resolution (256 vs
+        # 512), so the spectra must agree closely everywhere
+        corr = np.corrcoef(r_banded['chi2'][ok],
+                           r_fixed['chi2'][ok])[0, 1]
+        assert corr > 0.99
+
+
 class TestRefinementFallback:
     """PR #68 review regression: the coarse-parameter fallback in _finish_lc
     must not depend on return_arrays being set."""
