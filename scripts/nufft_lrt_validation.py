@@ -168,26 +168,6 @@ class TLSSearch:
         return float(r['SDE']), float(r['period'])
 
 
-class LSSearch:
-    """Lomb-Scargle reference arm: same trial periods, max power. LS
-    tests a *sinusoid* -- a short-duty-cycle box leaves little power in
-    the fundamental, so this arm quantifies why sinusoid searches lose
-    on transits (it is not a serious transit competitor)."""
-
-    def __init__(self, periods):
-        from cuvarbase.lombscargle import LombScargleAsyncProcess
-        self.proc = LombScargleAsyncProcess()
-        order = np.argsort(1.0 / periods)
-        self.freqs = (1.0 / periods)[order].astype(np.float64)
-
-    def __call__(self, t, y, dy):
-        res = self.proc.run([(t, y, dy)], freqs=[self.freqs])
-        self.proc.finish()
-        frq, power = res[0]
-        i = int(np.argmax(power))
-        return float(power[i]), float(1.0 / frq[i])
-
-
 # ------------------------------------------- shared systematics (paper)
 
 def make_systematics_modes(t, baseline):
@@ -359,7 +339,6 @@ def main():
     methods = {
         'lrt': lrt,
         'bls': BLSSearch(periods, qvals),
-        'ls': LSSearch(periods),
     }
     if not args.skip_tls:
         methods['tls'] = TLSSearch(periods, qvals)
