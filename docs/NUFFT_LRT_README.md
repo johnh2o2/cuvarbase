@@ -1,11 +1,13 @@
 # NUFFT-based Likelihood Ratio Test (LRT) for Transit Detection
 
-> **⚠️ EXPERIMENTAL — not recommended for science use in this release.**
-> The current implementation computes on the CPU (the CUDA kernels are
-> compiled but never invoked), and the uniform grid spans only
-> median(dt)*nf from the first observation — data beyond that span is
-> silently ignored for multi-season/gappy baselines. See
-> analysis/V1_AUDIT_AND_GAMEPLAN.md.
+> **⚠️ EXPERIMENTAL** — this module emits a `UserWarning` on import
+> because it has not yet had a full injection-recovery validation against
+> a reference transit search. The July 2026 GPU rewire fixed the earlier
+> defects (the transforms now run through the GPU adjoint NFFT over the
+> full non-uniform baseline, so multi-season/gappy data is no longer
+> truncated), and the matched-filter statistic itself has been audited
+> for correctness (`analysis/nufft-lrt-audit-jul2026.md`) — but its
+> detection performance has not been characterized yet.
 
 
 ## Overview

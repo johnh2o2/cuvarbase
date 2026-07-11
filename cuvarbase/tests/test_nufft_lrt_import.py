@@ -77,3 +77,39 @@ class TestNUFFTLRTImport:
 
         # Should parse without errors
         ast.parse(content)
+
+
+class TestPsdSmoothing:
+    """CPU tests for the edge-corrected periodogram smoothing (audit
+    finding: plain np.convolve 'same' depressed the PSD at the spectrum
+    edges, overweighting those bins by up to ~2x after 1/P whitening)."""
+
+    def test_flat_periodogram_stays_flat_at_edges(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import _smoothed_periodogram
+
+        power = np.ones(64, dtype=np.float32)
+        smoothed = _smoothed_periodogram(power, 5)
+        # Un-corrected smoothing gives 3/5 and 4/5 at the edges; the
+        # count-normalized version is exactly flat everywhere.
+        np.testing.assert_allclose(smoothed, 1.0, rtol=1e-6)
+
+    def test_interior_matches_plain_boxcar(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import _smoothed_periodogram
+
+        rng = np.random.RandomState(0)
+        power = rng.rand(128).astype(np.float64)
+        k = 7
+        smoothed = _smoothed_periodogram(power, k)
+        plain = np.convolve(power, np.ones(k) / k, mode='same')
+        # away from the edges the two agree
+        np.testing.assert_allclose(smoothed[k:-k], plain[k:-k], rtol=1e-12)
+
+    def test_window_one_is_identity(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import _smoothed_periodogram
+
+        power = np.arange(16, dtype=np.float32)
+        out = _smoothed_periodogram(power, 1)
+        np.testing.assert_array_equal(out, power)
