@@ -93,7 +93,7 @@ Projects that are sometimes confused with GPU BLS but are fundamentally differen
 | **CETRA** (Smith et al. 2025) | Linear-time transit search + phase fold | Yes | No — different algorithm, different statistics |
 | **GPFC** (Wang et al. 2024) | Phase folding + CNN classifier | Yes | No — ML classifier, not a periodogram |
 | **fBLS** (Shahaf et al. 2022) | Fast Folding BLS (O(N log N)) | No (CPU) | Yes — same BLS output, faster algorithm |
-| **TLS** (Hippke & Heller 2019) | Transit-shaped template (not box) | No (CPU) | No — different model, more sensitive |
+| **TLS** (Hippke & Heller 2019 reference package) | Transit-shaped template (not box) | No (CPU) — **cuvarbase 1.0 ships a GPU TLS; see section 4** | No — different model, more sensitive |
 
 > **Comparison-version pin:** all astropy Lomb-Scargle and BoxLeastSquares comparisons in this document were measured against **astropy 7.2.0** (the latest release as of June 2026). astropy 8.0 is expected to ship an LRA-NUFFT default for Lomb-Scargle that may change the comparison; re-run before citing these numbers against astropy >= 8.
 
@@ -133,7 +133,7 @@ We claim **no raw-kernel speedup** over the previous release — the wins are ar
 
 ### BLS survey-scale throughput
 
-Using Keplerian frequency grids (see Section 4):
+Using Keplerian frequency grids (see Section 5):
 
 | Survey | N_obs | N_freq (Keplerian) | LC/s (batch) | LC/s (single) | Best mode |
 |--------|------:|-------------------:|-------------:|--------------:|-----------|
@@ -157,7 +157,42 @@ Using Keplerian frequency grids (see Section 4):
 
 BLS transit searches across entire surveys cost **under $15 on a single consumer GPU**.
 
-## 4. Keplerian Frequency Grid
+## 4. Transit Least Squares (TLS): survey-scale GPU engine
+
+cuvarbase 1.0's fast TLS path (`tls_search_batch()`: batch-native phase-binned
+kernel + exact top-K refinement) measured end-to-end, 100% injected-transit
+recovery in every regime (raw JSON in `benchmarks/results/tls_survey_jul2026/`,
+provenance notes in that directory's README):
+
+| Regime | RTX A5000 (sm86) | RTX 4000 Ada (sm89) | V100 (sm70) |
+|---|---:|---:|---:|
+| TESS FFI sector (1k pts, 8.5k periods) | **1.25 ms/LC** (~800 LC/s) | 3.05 ms | 1.42 ms |
+| K2 90-d | 3.1 ms | 6.4 ms | 3.9 ms |
+| TESS 2-min sector (20k pts) | 2.8 ms | 5.1 ms | 3.1 ms |
+| 1-yr / 30-min cadence | 18.4 ms | 27.3 ms | 16.5 ms |
+| Kepler 4-yr (65k pts, 172k periods) | **168 ms/LC** | 198 ms | 146 ms |
+
+**Versus GTLS** (arXiv:2607.00348, the only other GPU TLS, CuPy-based): measured
+head-to-head on the *same* RTX A5000 with an identical Ofir period grid, matched
+per-period duration windows, matched epoch density, and the SDE recomputed with
+one identical statistic on both methods' chi2 spectra — cuvarbase-TLS is
+**30–171× faster over 200–2000-day baselines** (30× at 200 d growing to 171× at
+2000 d) at 1–3% SDE parity and 100% recovery, and beats GTLS's own published
+RTX-4090 numbers by 23–40× from the slower A5000. Cold single-shot (one star,
+fresh process, compile included) still favors cuvarbase by 2.6–34× over the same
+baselines. Full methodology: `analysis/GTLS_COMPARISON.md`.
+
+**Versus the reference CPU `transitleastsquares`** (all cores of the same pod,
+same light curves and grid): thousands of times faster — ~1,000–3,000× at
+reference-matched epoch density (`t0_oversample=33`), ~10,000×+ at the default
+grid; the exact multiple is CPU-dependent (archived references for one config
+vary 2.7× between pods). Detection significance is preserved: SDE within 1–3%
+of the reference at the default grid, within 1% at matched density (~5–15×
+cost), with the exact refinement pass restoring full parameter precision either
+way. Fidelity data: `benchmarks/results/tls_survey_jul2026/fidelity_raw_a5000.txt`
+and `analysis/TLS_COST_ANALYSIS.md`.
+
+## 5. Keplerian Frequency Grid
 
 ### What problem does it solve?
 
@@ -183,7 +218,7 @@ The frequency reduction translates almost directly to BLS speedup because BLS is
 
 The Keplerian grid helps most when the ratio of maximum to minimum period is large. For Kepler (P_max/P_min = 1000), this yields 37x fewer frequencies. For TESS 1-sector (P_max/P_min = 27), only 4.4x. Long-baseline ground-based surveys benefit enormously.
 
-## 5. Combined LS + BLS Survey Cost
+## 6. Combined LS + BLS Survey Cost
 
 Total cost to run a complete variability + transit search pipeline (LS for variable star classification, BLS for transit detection) on a single RTX A5000 at $0.20/hr:
 
