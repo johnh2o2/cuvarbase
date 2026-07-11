@@ -89,6 +89,14 @@ git push origin gh-pages-staging:gh-pages --force
 #    (b) replace #ROADMAP placeholders in the drafted comments with it
 #    (c) close #14 #15 #17 #19 #28 #29 #30 #32 #33 #63 with their comments
 
+# 7b. post-publish README flip (single commit to master):
+#     - remove the top "current PyPI release is 0.2.5" banner
+#     - Installation: replace the git+ URL with `pip install cuvarbase`
+#     - update test_readme_consistency.py: the
+#       test_readme_install_not_pinned_to_stale_pypi guard inverts once
+#       1.0.0 is live (bare `pip install cuvarbase` becomes CORRECT) —
+#       repoint it at whatever claim should now be guarded
+
 # 8. post-publish verification
 python3 -m venv /tmp/relverify && source /tmp/relverify/bin/activate
 pip install cuvarbase
