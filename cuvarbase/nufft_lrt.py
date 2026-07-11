@@ -36,6 +36,73 @@ from .cunfft import NFFTAsyncProcess
 from .utils import find_kernel, _module_reader
 
 
+def _whitened_inner(A, B, psd, weights):
+    """Whitened frequency-domain inner product Re sum_k A_k B_k* w_k / P_k
+    -- the metric of the stationary matched filter."""
+    return float(np.real(np.sum(A * np.conj(B) * weights / psd)))
+
+
+def _marginal_statistic(Y, T, V_ks, psd, weights, prior_cov,
+                        eps_floor=1e-12):
+    """Taaki et al. (2020) Detector A (marginalized joint detector) in
+    the whitened frequency domain, via the Woodbury identity.
+
+    The joint model is y = t + V c + s with c ~ N(mu_c, Cov_c) and s
+    stationary with PSD P(k); marginalizing c gives a matched filter
+    under the combined covariance Cov_z = Cov_s + V Cov_c V^T. With
+    W = Cov_s^{-1} applied diagonally in the frequency domain,
+
+        <a, b>_z = <a, b>_W - w_a^T (Cov_c^{-1} + G)^{-1} w_b,
+
+    where G_ij = <v_i, v_j>_W and (w_a)_j = <v_j, a>_W. The statistic is
+    T_A = <y_hat, t>_z / sqrt(<t, t>_z) with y_hat = y - V mu_c
+    (the mean-systematics subtraction happens in the time domain before
+    the transform). The K basis transforms V_ks are computed once per
+    lightcurve; per template this adds only K-dimensional algebra.
+
+    Parameters: Y, T = NFFTs of the (mean-subtracted) data and template;
+    V_ks = list/array of K basis NFFTs; prior_cov = Cov_c (K x K).
+    Returns the marginalized SNR (float).
+    """
+    K = len(V_ks)
+    if K == 0:
+        num = _whitened_inner(Y, T, psd, weights)
+        den = _whitened_inner(T, T, psd, weights)
+        return num / np.sqrt(den) if den > 0 else 0.0
+
+    G = np.empty((K, K))
+    for i in range(K):
+        for j in range(i, K):
+            G[i, j] = G[j, i] = _whitened_inner(V_ks[i], V_ks[j],
+                                                psd, weights)
+    prior_cov = np.atleast_2d(np.asarray(prior_cov, dtype=np.float64))
+    M = np.linalg.pinv(np.linalg.pinv(prior_cov) + G)
+
+    w_y = np.array([_whitened_inner(V_ks[j], Y, psd, weights)
+                    for j in range(K)])
+    w_t = np.array([_whitened_inner(V_ks[j], T, psd, weights)
+                    for j in range(K)])
+
+    num = _whitened_inner(Y, T, psd, weights) - w_y @ M @ w_t
+    den = _whitened_inner(T, T, psd, weights) - w_t @ M @ w_t
+    if den <= eps_floor:
+        return 0.0
+    return float(num / np.sqrt(den))
+
+
+def _sequential_detrend(t, y, basis):
+    """The papers' "standard" baseline: ordinary least-squares cotrend
+    against the systematics basis (time domain, unwhitened -- as a
+    pipeline would), returning the residual for the stationary matched
+    filter."""
+    V = np.asarray(basis, dtype=np.float64)
+    if V.ndim == 1:
+        V = V[:, None]
+    coeff, *_ = np.linalg.lstsq(V, np.asarray(y, dtype=np.float64),
+                                rcond=None)
+    return y - V @ coeff
+
+
 def _smoothed_periodogram(power, window):
     """Boxcar-smooth a periodogram with edge correction.
 
@@ -273,10 +340,12 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         
     def run(self, t, y, periods, durations=None, epochs=None,
             depth=1.0, nf=None, estimate_psd=True, psd=None,
-            smooth_window=5, eps_floor=1e-12, **kwargs):
+            smooth_window=5, eps_floor=1e-12,
+            detector='matched', systematics_basis=None,
+            coeff_prior_mean=None, coeff_prior_cov=None, **kwargs):
         """
         Run NUFFT LRT for transit detection.
-        
+
         Parameters
         ----------
         t : array-like
@@ -301,9 +370,38 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             Window size for smoothing power spectrum estimate
         eps_floor : float, optional (default: 1e-12)
             Floor for power spectrum to avoid division by zero
+        detector : str, optional (default: 'matched')
+            Which detector of Taaki, Kamalabadi & Kemball (2020) to run:
+
+            * ``'matched'`` -- the stationary PSD-whitened matched
+              filter (no systematics model). The pre-2026 behavior.
+            * ``'marginal'`` -- Detector A: the joint detector with the
+              Gaussian prior on systematics coefficients marginalized
+              in closed form (Woodbury, in the whitened frequency
+              domain). Requires ``systematics_basis`` and
+              ``coeff_prior_cov``.
+            * ``'sequential'`` -- the papers' "standard" baseline:
+              ordinary least-squares cotrend against
+              ``systematics_basis`` in the time domain, then the
+              stationary matched filter on the residual.
+
+            The papers' Detector B (joint MAP plug-in over a depth
+            grid) is intentionally not implemented: the 2020 paper
+            found it comparable to Detector A ("exploratory"), and the
+            closed-form marginalization supersedes the plug-in.
+        systematics_basis : array-like (n, K), optional
+            K systematics basis vectors sampled at the observation
+            times (e.g. instrument cotrending vectors, or PCA modes of
+            a lightcurve population).
+        coeff_prior_mean : array-like (K,), optional
+            Prior mean of the systematics coefficients (default: zeros).
+        coeff_prior_cov : array-like (K, K), optional
+            Prior covariance of the coefficients (required for
+            ``detector='marginal'``; estimate it from population fits
+            as in the papers).
         **kwargs : dict
             Additional parameters
-            
+
         Returns
         -------
         snr : np.ndarray
@@ -313,6 +411,34 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         t = np.asarray(t, dtype=self.real_type)
         y = np.asarray(y, dtype=self.real_type)
         periods = np.atleast_1d(np.asarray(periods, dtype=self.real_type))
+
+        if detector not in ('matched', 'marginal', 'sequential'):
+            raise ValueError("detector must be 'matched', 'marginal' or "
+                             "'sequential' (got %r)" % (detector,))
+        V = None
+        if detector in ('marginal', 'sequential'):
+            if systematics_basis is None:
+                raise ValueError("detector=%r requires systematics_basis"
+                                 % (detector,))
+            V = np.atleast_2d(np.asarray(systematics_basis,
+                                         dtype=np.float64))
+            if V.shape[0] != len(t):
+                V = V.T
+            if V.shape[0] != len(t):
+                raise ValueError("systematics_basis must be (n, K) with "
+                                 "n = len(t)")
+        if detector == 'marginal' and coeff_prior_cov is None:
+            raise ValueError("detector='marginal' requires "
+                             "coeff_prior_cov (estimate it from "
+                             "population fits, as in Taaki et al. 2020)")
+
+        if detector == 'sequential':
+            y = _sequential_detrend(t, y, V).astype(self.real_type)
+        elif detector == 'marginal':
+            mu = (np.zeros(V.shape[1]) if coeff_prior_mean is None
+                  else np.asarray(coeff_prior_mean, dtype=np.float64))
+            y = (np.asarray(y, dtype=np.float64) - V @ mu).astype(
+                self.real_type)
         
         # Durations: default to 10% of period if not provided
         if durations is None:
@@ -362,6 +488,23 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # all bins are weighted equally (the old rfft one-sided 1/2/1
         # weighting was tied to the now-removed uniform-grid RFFT packing).
         weights = np.ones(nf, dtype=self.real_type)
+
+        # Detector A: transform the (demeaned) systematics basis once;
+        # per template the marginalization is K-dimensional algebra.
+        V_ks = None
+        if detector == 'marginal':
+            V_ks = [self.compute_nufft(t, (V[:, j] - V[:, j].mean())
+                                       .astype(self.real_type), nf,
+                                       **kwargs)
+                    for j in range(V.shape[1])]
+
+        def _statistic(T_nufft):
+            if detector == 'marginal':
+                return _marginal_statistic(Y_nufft, T_nufft, V_ks, psd,
+                                           weights, coeff_prior_cov,
+                                           eps_floor)
+            return self._compute_matched_filter_snr(
+                Y_nufft, T_nufft, psd, weights, eps_floor)
         
         # Prepare results array
         if return_epoch_axis:
@@ -379,18 +522,12 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
                         template = self._generate_template(t, period, epoch, duration, depth)
                         template = template - np.mean(template)
                         T_nufft = self.compute_nufft(t, template, nf, **kwargs)
-                        snr = self._compute_matched_filter_snr(
-                            Y_nufft, T_nufft, psd, weights, eps_floor
-                        )
-                        snr_results[i, j, k] = snr
+                        snr_results[i, j, k] = _statistic(T_nufft)
                 else:
                     template = self._generate_template(t, period, 0.0, duration, depth)
                     template = template - np.mean(template)
                     T_nufft = self.compute_nufft(t, template, nf, **kwargs)
-                    snr = self._compute_matched_filter_snr(
-                        Y_nufft, T_nufft, psd, weights, eps_floor
-                    )
-                    snr_results[i, j] = snr
+                    snr_results[i, j] = _statistic(T_nufft)
         
         return snr_results
         

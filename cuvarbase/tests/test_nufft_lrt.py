@@ -203,6 +203,61 @@ class TestNUFFTLRT:
         assert np.isfinite(snr[0, 0])
         
     @mark_cuda_test
+    def test_marginal_detector_ignores_shared_systematic(self):
+        """Detector A (marginalized joint detector): a strong
+        basis-aligned trend must not derail the period search, while
+        the plain matched filter's ranking degrades."""
+        proc = NUFFTLRTAsyncProcess()
+
+        true_period, true_duration, depth = 2.5, 0.25, 0.5
+        signal = self.generate_transit_signal(
+            self.t, true_period, 0.0, true_duration, depth)
+        trend = np.sin(2 * np.pi * self.t / 9.0)      # slow systematic
+        rng = np.random.RandomState(11)
+        y = signal + 4.0 * trend + 0.1 * rng.randn(len(self.t))
+
+        periods = np.linspace(2.0, 3.0, 20)
+        durations = np.array([true_duration])
+        V = trend[:, None]
+
+        snr_marg = proc.run(self.t, y, periods, durations=durations,
+                            detector='marginal', systematics_basis=V,
+                            coeff_prior_cov=np.array([[100.0]]))
+        best = periods[int(np.argmax(snr_marg[:, 0]))]
+        assert np.abs(best - true_period) < 0.3
+
+    @mark_cuda_test
+    def test_sequential_detector_runs_and_detects(self):
+        proc = NUFFTLRTAsyncProcess()
+        true_period, true_duration, depth = 2.5, 0.25, 0.5
+        signal = self.generate_transit_signal(
+            self.t, true_period, 0.0, true_duration, depth)
+        trend = (self.t - self.t.mean()) / self.t.std()
+        rng = np.random.RandomState(12)
+        y = signal + 2.0 * trend + 0.1 * rng.randn(len(self.t))
+
+        periods = np.linspace(2.0, 3.0, 20)
+        snr = proc.run(self.t, y, periods,
+                       durations=np.array([true_duration]),
+                       detector='sequential',
+                       systematics_basis=trend[:, None])
+        assert snr.shape == (len(periods), 1)
+        best = periods[int(np.argmax(snr[:, 0]))]
+        assert np.abs(best - true_period) < 0.3
+
+    @mark_cuda_test
+    def test_marginal_requires_basis_and_prior(self):
+        proc = NUFFTLRTAsyncProcess()
+        y = np.random.randn(len(self.t))
+        with pytest.raises(ValueError, match="systematics_basis"):
+            proc.run(self.t, y, np.array([2.0]), detector='marginal')
+        with pytest.raises(ValueError, match="coeff_prior_cov"):
+            proc.run(self.t, y, np.array([2.0]), detector='marginal',
+                     systematics_basis=np.ones((len(self.t), 1)))
+        with pytest.raises(ValueError, match="detector"):
+            proc.run(self.t, y, np.array([2.0]), detector='bogus')
+
+    @mark_cuda_test
     def test_multiple_epochs(self):
         """Test searching over multiple epochs"""
         proc = NUFFTLRTAsyncProcess()

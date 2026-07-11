@@ -79,10 +79,13 @@ def box_transit(t, period, epoch, duration, depth):
     return y
 
 
-def make_lc(rng, t, sigma_white, sigma_red, tau, inject=None):
+def make_lc(rng, t, sigma_white, sigma_red, tau, inject=None,
+            sys_modes=None, sys_amps=None):
     y = 1.0 + sigma_white * rng.randn(len(t))
     if sigma_red > 0:
         y += ou_noise(rng, t, sigma_red, tau)
+    if sys_modes is not None:
+        y += sys_modes @ (rng.randn(sys_modes.shape[1]) * sys_amps)
     if inject is not None:
         y += box_transit(t, **inject)
     dy = np.full(len(t), sigma_white)   # what a pipeline would believe:
@@ -99,7 +102,8 @@ class LRTSearch:
     leave long periods unsearchable for box overlap."""
 
     def __init__(self, periods, durations, epoch_oversample=2.0,
-                 max_epochs=96, flat_psd=False, **proc_kwargs):
+                 max_epochs=96, flat_psd=False, run_kwargs=None,
+                 **proc_kwargs):
         from cuvarbase.nufft_lrt import NUFFTLRTAsyncProcess
         self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
         self.periods = periods
@@ -107,6 +111,7 @@ class LRTSearch:
         self.epoch_oversample = epoch_oversample
         self.max_epochs = max_epochs
         self.flat_psd = flat_psd
+        self.run_kwargs = dict(run_kwargs or {})
         self.n_templates = sum(
             self._n_epochs(P) * len(durations) for P in periods)
 
@@ -116,10 +121,10 @@ class LRTSearch:
 
     def __call__(self, t, y, dy):
         best = (-np.inf, np.nan)
-        kwargs = {}
+        kwargs = dict(self.run_kwargs)
         if self.flat_psd:
             nf = 2 * len(t)
-            kwargs = dict(estimate_psd=False,
+            kwargs.update(estimate_psd=False,
                           psd=np.ones(nf, dtype=np.float32), nf=nf)
         for P in self.periods:
             epochs = np.linspace(0, P, self._n_epochs(P), endpoint=False)
@@ -163,6 +168,62 @@ class TLSSearch:
         return float(r['SDE']), float(r['period'])
 
 
+class LSSearch:
+    """Lomb-Scargle reference arm: same trial periods, max power. LS
+    tests a *sinusoid* -- a short-duty-cycle box leaves little power in
+    the fundamental, so this arm quantifies why sinusoid searches lose
+    on transits (it is not a serious transit competitor)."""
+
+    def __init__(self, periods):
+        from cuvarbase.lombscargle import LombScargleAsyncProcess
+        self.proc = LombScargleAsyncProcess()
+        order = np.argsort(1.0 / periods)
+        self.freqs = (1.0 / periods)[order].astype(np.float64)
+
+    def __call__(self, t, y, dy):
+        res = self.proc.run([(t, y, dy)], freqs=[self.freqs])
+        self.proc.finish()
+        frq, power = res[0]
+        i = int(np.argmax(power))
+        return float(power[i]), float(1.0 / frq[i])
+
+
+# ------------------------------------------- shared systematics (paper)
+
+def make_systematics_modes(t, baseline):
+    """Three plausible shared instrument/site modes: a slow drift, a
+    within-night 'airmass' parabola, and a long-period thermal-like
+    oscillation."""
+    m1 = (t - t.mean()) / (0.5 * baseline)
+    night = np.floor(t)
+    tn = t - night - 0.125                       # hours from mid-window
+    m2 = (tn / 0.125) ** 2 - 0.5
+    m3 = np.sin(2 * np.pi * t / (0.4 * baseline))
+    M = np.stack([m1, m2, m3], axis=1)
+    return M / np.std(M, axis=0)
+
+
+def build_basis_from_population(rng, t, baseline, sigma_white, sigma_red,
+                                tau, amps, n_pop=60, K=3):
+    """Paper-style systematics model: PCA basis from a population of
+    signal-free lightcurves sharing the true modes, plus a Gaussian
+    prior on coefficients from per-lightcurve least-squares fits."""
+    M = make_systematics_modes(t, baseline)
+    pop = np.empty((n_pop, len(t)))
+    for i in range(n_pop):
+        c = rng.randn(M.shape[1]) * amps
+        y, _ = make_lc(rng, t, sigma_white, sigma_red, tau)
+        pop[i] = y + M @ c
+    pop -= pop.mean(axis=1, keepdims=True)
+    # PCA over the population (as in Taaki et al. 2020)
+    _, _, VT = np.linalg.svd(pop, full_matrices=False)
+    V = VT[:K].T
+    coeffs = pop @ V           # per-lightcurve LS fits (V orthonormal)
+    prior_mean = coeffs.mean(axis=0)
+    prior_cov = np.cov(coeffs.T)
+    return M, V, prior_mean, prior_cov
+
+
 def period_hit(p_found, p_true, tol=0.01):
     if not np.isfinite(p_found):
         return False
@@ -175,15 +236,18 @@ def period_hit(p_found, p_true, tol=0.01):
 # ------------------------------------------------------------ protocol
 
 def run_config(cfg, methods, rng, n_null, n_inj, depths, t):
-    out = {'config': {k: v for k, v in cfg.items() if k != 'name'},
+    out = {'config': {k: v for k, v in cfg.items()
+                      if k != 'name' and not k.startswith('_')},
            'methods': {}}
     p_true, dur_true = cfg['p_true'], cfg['dur_true']
+    sys_kw = dict(sys_modes=cfg.get('_sys_modes'),
+                  sys_amps=cfg.get('_sys_amps'))
 
     # 1. null threshold per method
     nulls = {name: [] for name in methods}
     for i in range(n_null):
         y, dy = make_lc(rng, t, cfg['sigma_white'], cfg['sigma_red'],
-                        cfg['tau'])
+                        cfg['tau'], **sys_kw)
         for name, search in methods.items():
             stat, _ = search(t, y, dy)
             nulls[name].append(stat)
@@ -205,7 +269,8 @@ def run_config(cfg, methods, rng, n_null, n_inj, depths, t):
             y, dy = make_lc(rng, t, cfg['sigma_white'], cfg['sigma_red'],
                             cfg['tau'],
                             inject=dict(period=p_true, epoch=epoch,
-                                        duration=dur_true, depth=depth))
+                                        duration=dur_true, depth=depth),
+                            **sys_kw)
             for name, search in methods.items():
                 stat, p_found = search(t, y, dy)
                 if (stat > out['methods'][name]['null_max_p95']
@@ -261,20 +326,40 @@ def main():
     qvals = (0.005, 0.08)
 
     sigma_w = 3e-3
+    # deeper sweeps where the noise is stronger, so each config brackets
+    # its own detectability transition
+    base_depths = depths
     configs = [
         dict(name='white', sigma_white=sigma_w, sigma_red=0.0, tau=1.0,
-             p_true=p_true, dur_true=dur_true),
+             p_true=p_true, dur_true=dur_true, depths=base_depths),
         dict(name='red_1x', sigma_white=sigma_w, sigma_red=1.0 * sigma_w,
-             tau=0.8, p_true=p_true, dur_true=dur_true),
+             tau=0.8, p_true=p_true, dur_true=dur_true,
+             depths=[2 * d for d in base_depths]),
         dict(name='red_3x', sigma_white=sigma_w, sigma_red=3.0 * sigma_w,
-             tau=0.8, p_true=p_true, dur_true=dur_true),
+             tau=0.8, p_true=p_true, dur_true=dur_true,
+             depths=[4 * d for d in base_depths]),
     ]
 
-    lrt = LRTSearch(periods, durations,
-                    epoch_oversample=1.0 if args.quick else 2.0)
+    # shared-systematics config (the paper's core contrast): PCA basis +
+    # coefficient prior estimated from a signal-free population, exactly
+    # as Taaki et al. (2020) do with Kepler PCA modes
+    sys_amps = np.array([6.0, 3.0, 6.0]) * sigma_w
+    true_modes, V_est, mu_c, cov_c = build_basis_from_population(
+        rng, t, 90.0, sigma_w, 1.0 * sigma_w, 0.8, sys_amps,
+        n_pop=20 if args.quick else 60)
+    configs.append(
+        dict(name='red_sys', sigma_white=sigma_w, sigma_red=1.0 * sigma_w,
+             tau=0.8, p_true=p_true, dur_true=dur_true,
+             depths=[2 * d for d in base_depths],
+             sys_amp_over_white=[float(a / sigma_w) for a in sys_amps],
+             _sys_modes=true_modes, _sys_amps=sys_amps))
+
+    eo = 1.0 if args.quick else 2.0
+    lrt = LRTSearch(periods, durations, epoch_oversample=eo)
     methods = {
         'lrt': lrt,
         'bls': BLSSearch(periods, qvals),
+        'ls': LSSearch(periods),
     }
     if not args.skip_tls:
         methods['tls'] = TLSSearch(periods, qvals)
@@ -283,9 +368,19 @@ def main():
     # the flat-PSD arm isolates what the whitening itself buys; it runs
     # on the strongest-red config only (in white noise the estimated
     # PSD is ~flat and the arms coincide)
-    lrt_flat = LRTSearch(periods, durations,
-                         epoch_oversample=1.0 if args.quick else 2.0,
+    lrt_flat = LRTSearch(periods, durations, epoch_oversample=eo,
                          flat_psd=True)
+
+    # joint (Detector A) and sequential-detrend arms for the
+    # systematics config, sharing the population-estimated basis/prior
+    lrt_marg = LRTSearch(periods, durations, epoch_oversample=eo,
+                         run_kwargs=dict(detector='marginal',
+                                         systematics_basis=V_est,
+                                         coeff_prior_mean=mu_c,
+                                         coeff_prior_cov=cov_c))
+    lrt_seq = LRTSearch(periods, durations, epoch_oversample=eo,
+                        run_kwargs=dict(detector='sequential',
+                                        systematics_basis=V_est))
 
     results = {'meta': dict(seed=args.seed, n_null=n_null, n_inj=n_inj,
                             n_periods=n_periods,
@@ -307,12 +402,16 @@ def main():
         cfg_methods = dict(methods)
         if cfg['name'] == 'red_3x':
             cfg_methods['lrt_flat'] = lrt_flat
-        r = run_config(cfg, cfg_methods, rng, n_null, n_inj, depths, t)
+        if cfg['name'] == 'red_sys':
+            cfg_methods['lrt_marg'] = lrt_marg
+            cfg_methods['lrt_seq'] = lrt_seq
+        r = run_config(cfg, cfg_methods, rng, n_null, n_inj,
+                       cfg['depths'], t)
         r['name'] = cfg['name']
         r['wall_s'] = time.time() - t0
         results['configs'].append(r)
         for name, m in r['methods'].items():
-            print('  %-4s null_p95=%8.3f  completeness=%s'
+            print('  %-8s null_p95=%8.3f  completeness=%s'
                   % (name, m['null_max_p95'],
                      {d: c for d, c in m['completeness'].items()}),
                   flush=True)
