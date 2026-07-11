@@ -23,7 +23,8 @@ pre-release claims audit, `analysis/claims-trace-jul2026.md`):
   from a slow pod CPU (46–61 s/LC) — 2.7× slower than the reference column
   in `tls_survey_a5000.json` for the same config; speedup-vs-CPU claims are
   therefore quoted as "thousands×" with the multiplier marked CPU-dependent.
-- The TESS-yr 14.6× / Kepler-4yr 8.4× matched-fidelity costs (and the
-  1479 ms/LC Kepler matched timing) were printed by
-  `scripts/tls_matched_timing.py` but not archived; a re-run + archival is
-  queued with the v1.0.0 release-gate pod session.
+- `matched_timing_a5000_jul2026.txt`: the re-measured matched-fidelity
+  costs from the v1.0.0 release-gate pod (TESS-yr 12.8×, 25.3→325.2 ms/LC;
+  Kepler-4yr 8.1×, 188.3→1520.5 ms/LC; 100% recovery both fidelities). The
+  original session printed 14.6×/8.4× (176.8→1479 ms) but was not archived;
+  the published "~5–13×" range uses the archived measurements.

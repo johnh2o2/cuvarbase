@@ -63,9 +63,12 @@ python3 -m venv /tmp/relbuild && source /tmp/relbuild/bin/activate
 pip install -q build twine
 python -m build                             # sdist + wheel into dist/
 twine check dist/*
-# wheel smoke: install into ANOTHER clean venv with only numpy+scipy,
-# import cuvarbase, check __version__ == 1.0.0 (mirrors scripts/ci_wheel_smoke.py)
-python scripts/ci_wheel_smoke.py dist/*.whl
+# wheel smoke (ci_wheel_smoke.py takes no args — it validates the
+# INSTALLED package, so install the wheel into a fresh venv and run the
+# script from outside the source tree):
+deactivate && python3 -m venv /tmp/wheelsmoke && source /tmp/wheelsmoke/bin/activate
+pip install dist/cuvarbase-1.0.0-py3-none-any.whl
+(cd /tmp && python "$OLDPWD"/scripts/ci_wheel_smoke.py)
 
 # 4. publish to PyPI  (maintainer token — see note above)
 twine upload dist/*

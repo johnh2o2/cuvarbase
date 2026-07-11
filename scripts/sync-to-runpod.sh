@@ -40,6 +40,7 @@ rsync -avz --progress \
     --exclude '.runpod.env' \
     --exclude 'work/' \
     --exclude 'testing/' \
+    --include 'docs/source/logo.png' \
     --exclude '*.png' \
     --exclude '*.gif' \
     ./ ${SSH_HOST}:${RUNPOD_REMOTE_DIR}/

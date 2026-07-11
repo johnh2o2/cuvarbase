@@ -217,6 +217,7 @@ def normalize_light_curves(data: list[tuple[np.array, ...]]):
     ----------
     data: list of tuples
         list of [(t, y, ...), ...] containing
+
         * ``t``: observation times
         * ``y``: observations
         * ... other columns
@@ -225,6 +226,7 @@ def normalize_light_curves(data: list[tuple[np.array, ...]]):
     -------
     data: list of tuples
         list of [(t, y, ...), ...] containing
+
         * ``t``: updated observation times
         * ``y``: updated observations
         * ... other columns (preserved as in input; ``None`` entries --
