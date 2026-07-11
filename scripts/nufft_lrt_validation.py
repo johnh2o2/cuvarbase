@@ -293,7 +293,7 @@ def main():
 
     n_null = args.n_null or (12 if args.quick else 60)
     n_inj = args.n_inj or (8 if args.quick else 60)
-    n_periods = 16 if args.quick else 48
+    n_periods = 16 if args.quick else 32
     depths = [0.004, 0.008] if args.quick else [0.002, 0.004, 0.008, 0.016]
 
     t = make_times(rng, 'ground', baseline=90.0, n=600)
