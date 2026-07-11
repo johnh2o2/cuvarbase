@@ -11,7 +11,7 @@ cuvarbase is built for processing millions of lightcurves, and it is proven in p
 The headline numbers, all traceable to benchmark data in this repository:
 
 - **Standard BLS is 257-354x faster than astropy's `BoxLeastSquares`**, measured consistently across all 7 GPU architectures tested (V100 through H200)
-- **Transit Least Squares is 30-170x faster than GTLS** — the only other GPU TLS — on the same GPU at matched search settings and equal (1-3%) detection significance, and thousands of times faster than the reference CPU `transitleastsquares` ([details](#transit-least-squares-tls))
+- **Transit Least Squares is 30-171x faster than GTLS** — the only other GPU TLS — on the same GPU at matched search settings and equal (1-3%) detection significance, and thousands of times faster than the reference CPU `transitleastsquares` ([details](#transit-least-squares-tls))
 - **Keplerian frequency grids search 4-37x fewer frequencies** than uniform grids at survey baselines by exploiting the orbital-mechanics link between period and transit duration
 - **All four major surveys for ~$33 of GPU time**: running both Lomb-Scargle and BLS over ZTF + HAT-Net + TESS + Kepler scale lightcurve collections costs roughly $33 total on a rented RTX A5000 at $0.20/hr (tables below)
 
@@ -44,7 +44,7 @@ frequencies) and batched workloads. Use nifty-ls for one-off small searches.
 
 ### Transit Least Squares (TLS)
 
-cuvarbase's survey-scale TLS ([Hippke & Heller 2019](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract)) is, to our knowledge, the fastest GPU TLS available. Reproducing the benchmark from the GTLS paper ([arXiv:2607.00348](https://arxiv.org/abs/2607.00348)) apples-to-apples on one RTX A5000 — identical Ofir period grid, matched per-period duration window, matched epoch density, one injected transit — cuvarbase-TLS is **30–170x faster than GTLS** over 200–2000 day baselines (the gap grows with baseline), at **1–3% detection-significance (SDE) parity** and 100% recovery:
+cuvarbase's survey-scale TLS ([Hippke & Heller 2019](https://ui.adsabs.harvard.edu/abs/2019A%26A...623A..39H/abstract)) is, to our knowledge, the fastest GPU TLS available. Reproducing the benchmark from the GTLS paper ([arXiv:2607.00348](https://arxiv.org/abs/2607.00348)) apples-to-apples on one RTX A5000 — identical Ofir period grid, matched per-period duration window, matched epoch density, one injected transit — cuvarbase-TLS is **30–171x faster than GTLS** over 200–2000 day baselines (the gap grows with baseline), at **1–3% detection-significance (SDE) parity** and 100% recovery:
 
 | Baseline | GTLS | cuvarbase TLS | Speedup |
 |--------|-------:|-------------:|--------:|
@@ -226,12 +226,15 @@ v1.0 is a major modernization of cuvarbase — the first major release since the
 - **Survey-speed kernels** (fused-noverlap, conflict-scatter, occupancy-aware
   chunking) make the per-frequency kernel **2.9-9.2x faster** and end-to-end
   survey searches **2.0-12.7x faster** than the pre-optimization v1.0 path
+  (the TESS-scale 12.7x includes curing a default-environment BLAS
+  threadpool pathology in-library; 5.8x against an already-tuned baseline)
 - **Batched multi-lightcurve search** (`eebls_gpu_batch`) is new — 0.2.6 offered
   only single-lightcurve calls, which recompiled the kernel on *every* call;
   v1.0's LRU kernel cache alone makes a naive per-lightcurve loop **34x faster**
 - **Adaptive block sizing** (`eebls_gpu_fast_adaptive()`) auto-tunes the CUDA
-  block size from the dataset (~1.3x over the fixed-block kernel on realistic
-  Keplerian grids)
+  block size from the dataset (~1.0-1.3x over the fixed-block kernel on
+  realistic Keplerian grids — data-dependent, and a wash on some
+  configurations)
 - Best cost-efficiency: RTX 4000 Ada at **$0.14 per million lightcurves**;
   see [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) for full results across GPUs
 

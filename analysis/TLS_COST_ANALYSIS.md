@@ -59,8 +59,11 @@ reference package it is parity.
 
 ## 2. Throughput, apples-to-apples
 
-Matched fidelity (t0=33, SDE parity confirmed above) costs 6–15× over the default coarse
-grid: tess-ffi ~6×, k2 ~12×, TESS-yr 14.6×, Kepler-4yr 8.4× (176.8 → 1479 ms/LC on A5000).
+Matched fidelity (t0=33, SDE parity confirmed above) costs ~5–15× over the default coarse
+grid. Archived points (benchmarks/results/tls_survey_jul2026/fidelity_raw_a5000.txt):
+tess-ffi 5.3–6.0×, k2 11.9×. The TESS-yr 14.6× and Kepler-4yr 8.4× (176.8 → 1479 ms/LC
+on A5000) figures came from scripts/tls_matched_timing.py, whose raw output was not
+archived at the time — re-run and archival queued with the v1.0.0 release-gate pod session.
 
 Same light curves, same period grid, single A5000 GPU vs all CPU cores of the same pod:
 
@@ -93,7 +96,7 @@ Cost per million light curves at genuine full fidelity (matched t0=33, A5000 $0.
 | Regime | cuvarbase matched | reference CPU | note |
 |---|---:|---:|---|
 | Kepler-4yr | ~$111/M | ~$98,600/M (16-core, published 522 s) | ~890× cheaper |
-| TESS-yr | ~$24/M | (not measured) | — |
+| TESS-yr | ~$20/M | (not measured) | arithmetic from the published 18.4 ms/LC × 14.6× matched cost (raw pending re-archival) |
 
 At the default grid (already detection-parity): Kepler ~$13/M, TESS-FFI a few cents/M. But
 the honest headline is the **throughput invariant (thousands×)**, not a single dollar ratio;

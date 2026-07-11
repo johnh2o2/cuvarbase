@@ -64,7 +64,7 @@ directly through 1000 d; `skip8` also at the paper's 1500/2000/3000 d anchors;
 | 2000 d | —      | 348.3 s | 2.037 s | 0.627 s | 7.499 s | 0.346 s |
 | 3000 d | —      | (~830 s*) | 3.460 s | 1.162 s | 12.626 s | 0.730 s |
 
-\* extrapolated. GTLS scales **super-quadratically** (measured exponent ≈2.5–2.7),
+\* extrapolated. GTLS's full-scan mode scales **super-quadratically** (measured exponent ≈2.5–2.7; the skip-8 mode used for the headline comparison measures ≈1.9–2.2),
 because on a 24 GB GPU long light curves force tiny period batches → thousands of
 Python-driven per-batch kernel launches. cuvarbase scales cleanly ~linearly.
 (For reference the paper's own 4090 GTLS points are 33.3 s @1500 d and 138 s
@@ -137,10 +137,10 @@ includes BLS, whose box template scores marginally higher on this signal) ≤~10
 
 | baseline | SDE: GTLS-skip8 / cuv-TLS-matched | full 6-method spread |
 |---:|---|---|
-| 200 d  | 34.2 / 33.8  (−1%) | 33.4 – 35.2 |
-| 500 d  | 53.4 / 53.2  (−0.4%) | 53.1 – 56.5 |
+| 200 d  | 34.2 / 33.8  (−1.4%) | 33.4 – 35.2 |
+| 500 d  | 53.4 / 53.2  (−0.5%) | 53.1 – 56.5 |
 | 1000 d | 89.5 / 88.7  (−0.9%) | 86.6 – 93.4 |
-| 1500 d | — / 103.5 | 99.9 – 110.9 |
+| 1500 d | 104.2 / 103.5  (−0.6%) | 99.9 – 110.9 |
 | 3000 d | — / 150.4 | 150.2 – 161.7 |
 
 100% recovery of the injected period in all cells. So the large speed gaps are
@@ -203,7 +203,7 @@ That comparison flatters GTLS:
   fine, but its cumsum moving-average makes fine durations O(1); cuvarbase's BLS
   kernel re-bins the folded curve into up to `1/qmin = 5000` phase bins per
   duration level, so its cost scales with `1/qmin`. Same qmin, wildly different
-  cost. (Measured: BLS 1.47 s at qmin=2e-4 vs **0.059 s** at qmin=4e-3, 500 d.)
+  cost. (Measured at 500 d: BLS 1.48 s at qmin=2e-4 vs **0.032 s** at the archived qmin=2e-3 config — results_cuv.json.)
 - `noverlap=3` is not a power of two, so it bypasses cuvarbase's fastest *fused*
   BLS kernel (opt1) and runs 3 separate phase passes.
 - The paper predates our July BLS optimizations (opt1–opt4).
