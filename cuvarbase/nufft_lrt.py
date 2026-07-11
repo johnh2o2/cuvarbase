@@ -14,7 +14,6 @@ observational baseline. The per-template matched-filter combination
 (SNR = sum_k Y_k T_k* w_k / P_s(k) / sqrt(sum_k |T_k|^2 w_k / P_s(k)))
 runs on the host -- it is an O(nf) reduction, negligible next to the NFFT.
 """
-import sys
 import warnings
 
 import numpy as np
@@ -34,8 +33,25 @@ from pycuda.compiler import SourceModule
 
 from .base import GPUAsyncProcess, ensure_context
 from .cunfft import NFFTAsyncProcess
-from .memory import NFFTMemory
 from .utils import find_kernel, _module_reader
+
+
+def _smoothed_periodogram(power, window):
+    """Boxcar-smooth a periodogram with edge correction.
+
+    Each output bin is the mean of the *available* neighbors inside the
+    window, so the first/last ``window//2`` bins are not biased low by
+    the implicit zero-padding of a plain ``np.convolve(..., 'same')``
+    (which would overweight those bins by up to ~2x after the 1/P(k)
+    whitening).
+    """
+    k = int(window)
+    if k <= 1:
+        return power
+    kernel = np.ones(k, dtype=power.dtype)
+    num = np.convolve(power, kernel, mode='same')
+    den = np.convolve(np.ones_like(power), kernel, mode='same')
+    return (num / den).astype(power.dtype, copy=False)
 
 
 class NUFFTLRTMemory:
@@ -331,12 +347,9 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # a physical Fourier coefficient at every one of the nf modes (no
         # rfft-style zero-padded upper half), so the PSD spans all nf bins.
         if estimate_psd:
-            psd = np.abs(Y_nufft) ** 2
+            psd = (np.abs(Y_nufft) ** 2).astype(self.real_type, copy=False)
             if smooth_window and smooth_window > 1:
-                k = int(smooth_window)
-                window = np.ones(k, dtype=self.real_type) / self.real_type(k)
-                psd = np.convolve(psd, window, mode='same').astype(
-                    self.real_type, copy=False)
+                psd = _smoothed_periodogram(psd, smooth_window)
             # Floor to avoid division issues
             median_ps = np.median(psd[psd > 0]) if np.any(psd > 0) else self.real_type(1.0)
             psd = np.maximum(psd, self.real_type(eps_floor) * self.real_type(median_ps)).astype(self.real_type, copy=False)
