@@ -1,9 +1,9 @@
 <!--
 DRAFT for review — not yet published.
-Pending before publishing: (1) confirm final release commit and re-tag v1.0.0
-(currently points behind the release branch tip); (2) refresh the GPU test
-count below from the final release-gate run. PR #65-#68 merged 2026-07-07;
-phi convention below reflects the final merged state.
+Pending before publishing: confirm final release commit and re-tag v1.0.0
+(currently points behind the release branch tip). GPU test count is from the
+Jul 10 release gate (analysis/v1.0-release-gate-jul2026/: 796 passed, 0
+skipped; 14/14 gate checks). PR #65-#68 merged 2026-07-07.
 -->
 
 # cuvarbase 1.0.0
@@ -24,7 +24,7 @@ In production: cuvarbase's BLS has powered the TESS Quick-Look Pipeline's planet
 - **Deterministic periodograms.** A float32 guard bug let degenerate trial boxes produce run-to-run-varying spurious peaks on single-site ground-based data (reported by @astrobatty against HATPI light curves). Fixed at the root, with regression tests proving 500 ppm transits still survive.
 - **New algorithms and APIs**: sparse BLS for small datasets (Panahi & Zucker 2021), batched multi-lightcurve BLS, Keplerian frequency grids (4–37× fewer trial frequencies at survey baselines), multiharmonic generalized Lomb–Scargle on GPU, fast PDM kernels, CE log-probability periodograms, and an experimental NUFFT matched-filter transit search.
 - **Modern, lighter install**: Python 3.9–3.12, numpy 2.x, no more scikit-cuda or `future`; `import cuvarbase` works on GPU-less machines.
-- **Trustworthy by construction**: the GPU test suite grew from ~37 tests with no CI to **731 tests (0 skips) passing on-device**, plus a 14-check on-GPU release gate, CPU CI across Python 3.9–3.12, and a published benchmark methodology with archived raw results.
+- **Trustworthy by construction**: the GPU test suite grew from ~37 tests with no CI to **796 tests (0 skips) passing on-device** (v1.0.0 release gate, RTX A5000), plus a 14-check on-GPU release gate, CPU CI across Python 3.9–3.12, and a published benchmark methodology with archived raw results.
 
 ## Performance
 
@@ -89,7 +89,7 @@ Honesty notes: we claim **no** raw-kernel speedup — the kernel-only decomposit
 - **`tls_search_batch()`** searches whole surveys against a shared period grid: one block per (light curve, period) folds into shared-memory phase bins and scans every (duration, epoch) trial against integrated-template tables with a closed-form χ²; a second kernel re-fits the best `refine_top_k` candidates exactly. The fast path is the default for `tls_search`/`tls_search_gpu`/`tls_transit` (`use_fast=False` keeps the legacy per-point kernel and its ~3,500-point cap).
 - No cap on points per light curve; BJD-scale timestamps are safe (float64 epoch subtraction); the period grid is banded by required phase resolution so long-period searches don't pay the finest band's cost.
 - Limb-darkened templates (optional batman-package), Ofir (2014) period grids, Keplerian per-period duration windows.
-- **Statistics discipline**: SDE/FAP come from the uniform coarse spectrum while refinement sharpens only the reported parameters. At the default epoch grid the SDE lands within 1–3% of the reference package (within 1% at `t0_oversample=33`, ~5–15× cost), with 100% injected recovery in every tested regime.
+- **Statistics discipline**: SDE/FAP come from the uniform coarse spectrum while refinement sharpens only the reported parameters. At the default epoch grid the SDE lands within 1–3% of the reference package (within 1% at `t0_oversample=33`, ~5–13× cost), with 100% injected recovery in every tested regime.
 - Golden-tested against `transitleastsquares`; validated on RTX A5000 (sm86), RTX 4000 Ada (sm89), and V100 (sm70).
 
 ### Experimental (import warns; not yet recommended for science use)
