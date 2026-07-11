@@ -92,22 +92,40 @@ def make_lc(rng, t, sigma_white, sigma_red, tau, inject=None):
 # ------------------------------------------------------------- methods
 
 class LRTSearch:
-    def __init__(self, periods, durations, n_epochs, **proc_kwargs):
+    """PSD-whitened NUFFT matched filter over a (period, duration,
+    epoch) template grid. The epoch grid scales with period so template
+    misalignment stays below ~half the narrowest trial duration
+    (epoch_oversample boxes per duration) -- a fixed epoch count would
+    leave long periods unsearchable for box overlap."""
+
+    def __init__(self, periods, durations, epoch_oversample=2.0,
+                 max_epochs=96, flat_psd=False, **proc_kwargs):
         from cuvarbase.nufft_lrt import NUFFTLRTAsyncProcess
         self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
         self.periods = periods
         self.durations = durations
-        self.n_epochs = n_epochs
+        self.epoch_oversample = epoch_oversample
+        self.max_epochs = max_epochs
+        self.flat_psd = flat_psd
+        self.n_templates = sum(
+            self._n_epochs(P) * len(durations) for P in periods)
+
+    def _n_epochs(self, P):
+        n = int(round(self.epoch_oversample * P / self.durations.min()))
+        return int(min(max(n, 8), self.max_epochs))
 
     def __call__(self, t, y, dy):
         best = (-np.inf, np.nan)
-        # per-period epoch grid (epoch in [0, P)); scan period-by-period
-        # so the epoch grid can scale with P
+        kwargs = {}
+        if self.flat_psd:
+            nf = 2 * len(t)
+            kwargs = dict(estimate_psd=False,
+                          psd=np.ones(nf, dtype=np.float32), nf=nf)
         for P in self.periods:
-            epochs = np.linspace(0, P, self.n_epochs, endpoint=False)
+            epochs = np.linspace(0, P, self._n_epochs(P), endpoint=False)
             snr = self.proc.run(t, y, np.array([P]),
                                 durations=self.durations,
-                                epochs=epochs)
+                                epochs=epochs, **kwargs)
             m = float(np.max(snr))
             if m > best[0]:
                 best = (m, float(P))
@@ -222,19 +240,23 @@ def main():
                     help='smoke-test sizes')
     ap.add_argument('--seed', type=int, default=20260711)
     ap.add_argument('--skip-tls', action='store_true')
+    ap.add_argument('--n-null', type=int, default=None)
+    ap.add_argument('--n-inj', type=int, default=None)
     args = ap.parse_args()
 
     rng = np.random.RandomState(args.seed)
 
-    n_null = 12 if args.quick else 60
-    n_inj = 8 if args.quick else 60
+    n_null = args.n_null or (12 if args.quick else 60)
+    n_inj = args.n_inj or (8 if args.quick else 60)
     n_periods = 16 if args.quick else 48
-    n_epochs = 6 if args.quick else 10
     depths = [0.004, 0.008] if args.quick else [0.002, 0.004, 0.008, 0.016]
 
     t = make_times(rng, 'ground', baseline=90.0, n=600)
     p_true, dur_true = 5.3, 0.22
     periods = np.exp(np.linspace(np.log(2.0), np.log(18.0), n_periods))
+    # inject exactly on the shared grid: completeness then measures
+    # detection, not grid-resolution luck (all methods share the grid)
+    periods[np.argmin(np.abs(periods - p_true))] = p_true
     durations = np.array([0.12, 0.25])
     qvals = (0.005, 0.08)
 
@@ -248,15 +270,25 @@ def main():
              tau=0.8, p_true=p_true, dur_true=dur_true),
     ]
 
+    lrt = LRTSearch(periods, durations,
+                    epoch_oversample=1.0 if args.quick else 2.0)
     methods = {
-        'lrt': LRTSearch(periods, durations, n_epochs),
+        'lrt': lrt,
         'bls': BLSSearch(periods, qvals),
     }
     if not args.skip_tls:
         methods['tls'] = TLSSearch(periods, qvals)
+    print('LRT templates per search: %d' % lrt.n_templates, flush=True)
+
+    # the flat-PSD arm isolates what the whitening itself buys; it runs
+    # on the strongest-red config only (in white noise the estimated
+    # PSD is ~flat and the arms coincide)
+    lrt_flat = LRTSearch(periods, durations,
+                         epoch_oversample=1.0 if args.quick else 2.0,
+                         flat_psd=True)
 
     results = {'meta': dict(seed=args.seed, n_null=n_null, n_inj=n_inj,
-                            n_periods=n_periods, n_epochs=n_epochs,
+                            n_periods=n_periods,
                             ndata=len(t), baseline=90.0,
                             p_true=p_true, dur_true=dur_true,
                             depths=depths, sigma_white=sigma_w),
@@ -272,7 +304,10 @@ def main():
     for cfg in configs:
         t0 = time.time()
         print('config %s ...' % cfg['name'], flush=True)
-        r = run_config(cfg, methods, rng, n_null, n_inj, depths, t)
+        cfg_methods = dict(methods)
+        if cfg['name'] == 'red_3x':
+            cfg_methods['lrt_flat'] = lrt_flat
+        r = run_config(cfg, cfg_methods, rng, n_null, n_inj, depths, t)
         r['name'] = cfg['name']
         r['wall_s'] = time.time() - t0
         results['configs'].append(r)
