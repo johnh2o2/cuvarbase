@@ -3,6 +3,7 @@ from pycuda.tools import mark_cuda_test
 import pycuda.gpuarray as gpuarray
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
+from scipy.special import ndtr
 from ..ce import ConditionalEntropyAsyncProcess
 from ..memory import ConditionalEntropyMemory
 from ..utils import normalize_light_curves
@@ -85,6 +86,31 @@ def cpu_ce(t, y, freqs, nphase, nmag, phase_overlap=0, mag_overlap=0,
                                        / np.where(H > 0, H, 1)), 0.0)
         out[k] = term.sum() / H.sum()
     return out
+
+
+def exact_weighted_hist(t, y, dy, freqs, nphase, nmag):
+    """Weighted-CE histogram with the EXACT Gaussian probability mass of
+    every point in every magnitude bin (no truncation)."""
+    t, Y, yscale = _prep(t, y, np.float32)
+    Y = Y.astype(np.float64)
+    DY = (np.asarray(dy, dtype=np.float32) / yscale).astype(np.float64)
+    m = np.arange(nmag)
+    P = (ndtr(((m + 1) / nmag - Y[:, None]) / DY[:, None])
+         - ndtr((m / nmag - Y[:, None]) / DY[:, None]))
+    H = np.zeros((len(freqs), nphase, nmag))
+    for i, f in enumerate(freqs):
+        n0 = _phase_bins(t, f, nphase, np.float32)
+        np.add.at(H, (i, n0), P)
+    return H
+
+
+def weighted_ce_from_hist(H, nmag):
+    Nphi = H.sum(axis=2, keepdims=True)
+    dm = 1.0 / nmag
+    with np.errstate(divide='ignore', invalid='ignore'):
+        term = np.where((H > 0) & (Nphi > 1e-10),
+                        H * np.log(dm * Nphi / np.where(H > 0, H, 1)), 0)
+    return term.sum(axis=(1, 2)) / H.sum(axis=(1, 2))
 
 
 def run_ce(proc, t, y, dy, freqs, **kw):
@@ -583,3 +609,83 @@ class TestCEBrightestPoint(object):
         mem.setdata(t - t.mean(), y - y.mean())
         assert mem.y.max() == 4
         assert_allclose(mem.mag_bin_fracs.sum(), 1.0, rtol=0, atol=1e-6)
+
+
+class TestCEWeighted(object):
+    """Defect 16 (ce-weighted-asym): the weighted histogram skipped a bin
+    by the distance to its LOWER edge only, dropping the mass of bins
+    below the datum, and the brightest point entirely."""
+
+    def test_hand_placed_points_match_exact_masses(self):
+        MB, PB, sig = 5, 1, 0.02
+        Yc = np.array([0.0, 0.41, 0.5, 0.59, 1.0])
+        proc = ConditionalEntropyAsyncProcess(phase_bins=PB, mag_bins=MB,
+                                              weighted=True, max_phi=3.0)
+        _, mem = run_ce_with_memory(proc, np.linspace(0, 1, 5), Yc,
+                                    sig * np.ones(5), np.array([0.0]))
+        bins = mem.bins_g.get().reshape(1, PB, MB)[0, 0]
+        m = np.arange(MB)
+        P = (ndtr(((m + 1) / MB - Yc[:, None]) / sig)
+             - ndtr((m / MB - Yc[:, None]) / sig))
+        # old kernel: [0.5, 0, 2.38, 0.31, 0] (bin 1 and the Y=1 point lost)
+        assert_allclose(bins, P.sum(axis=0), rtol=0, atol=1e-4)
+        assert bins[1] > 0.3 and bins[4] > 0.49
+
+    @pytest.mark.parametrize('mag_bins', [5, 10])
+    @pytest.mark.parametrize('noise', [0.05, 0.15])
+    def test_bins_and_ce_vs_ndtr_reference(self, mag_bins, noise):
+        r = np.random.RandomState(3)
+        N = 300
+        t = np.sort(r.rand(N)) * 20.0
+        y = (12 + np.sin(2 * np.pi * 1.3 * t) + 0.3 * np.sin(4 * np.pi * 1.3 * t)
+             + noise * r.randn(N))
+        dy = noise * np.ones(N)
+        freqs = np.linspace(0.1, 3.0, 40)
+        He = exact_weighted_hist(t, y, dy, freqs, 10, mag_bins)
+        ce_exact = weighted_ce_from_hist(He, mag_bins)
+
+        # default max_phi=3: only bins wholly beyond 3 sigma are skipped
+        proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=mag_bins,
+                                              weighted=True, max_phi=3.0)
+        ce, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        bins = mem.bins_g.get().reshape(len(freqs), 10, mag_bins)
+        assert np.all(np.isfinite(ce))
+        # audit-measured post-fix levels: bins 6e-3, CE 1.1e-3 (old: 1.5-4.2
+        # in the bins, 2e-2 .. 5e-2 in the CE)
+        assert_allclose(bins, He, rtol=0, atol=2e-2)
+        assert_allclose(ce, ce_exact, rtol=0, atol=5e-3)
+        # the per-frequency mass totals match the exact ones to the mass
+        # of the skipped > 3-sigma bins (points near the range edges
+        # legitimately lose the mass outside [0, 1]; old: -2 .. -12%)
+        assert_allclose(bins.sum(axis=(1, 2)), He.sum(axis=(1, 2)),
+                        rtol=3e-3, atol=0)
+
+        # with a wide max_phi nothing is truncated: float32 normcdf level
+        proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=mag_bins,
+                                              weighted=True, max_phi=50.0)
+        ce, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        bins = mem.bins_g.get().reshape(len(freqs), 10, mag_bins)
+        assert_allclose(bins, He, rtol=0, atol=2e-3)
+        assert_allclose(bins.sum(axis=(1, 2)), He.sum(axis=(1, 2)),
+                        rtol=1e-5, atol=0)
+        assert_allclose(ce, ce_exact, rtol=0, atol=1e-4)
+
+    def test_large_max_phi_is_finite(self):
+        """Tiny bin masses used to make ``dm * p_phi / pmn`` overflow to
+        inf (3 of 3000 frequencies for this lightcurve)."""
+        r = np.random.RandomState(2)
+        N = 200
+        t = np.sort(r.rand(N)) * 20.0
+        y = 12 + np.sin(2 * np.pi * 1.3 * t) + 0.3 * np.sin(4 * np.pi * 1.3 * t) + 0.05 * r.randn(N)
+        dy = 0.05 * np.ones(N)
+        freqs = np.linspace(0.1, 3.0, 3000)
+        proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5,
+                                              weighted=True, max_phi=1e6)
+        ce = run_ce(proc, t, y, dy, freqs)
+        assert np.all(np.isfinite(ce))
+        proc3 = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5,
+                                               weighted=True, max_phi=3.0)
+        ce3 = run_ce(proc3, t, y, dy, freqs)
+        assert np.all(np.isfinite(ce3))
+        assert abs(freqs[np.argmin(ce3)] - 1.3) < 0.01
+        assert abs(freqs[np.argmin(ce)] - 1.3) < 0.01
