@@ -277,7 +277,9 @@ class PDMAsyncProcess(GPUAsyncProcess):
             * ``t``: observation times
             * ``y``: observations
             * ``err``: observation uncertainties
-            Alternatively, [(t, y, w, freqs), ...] for backward compatibility.
+            Alternatively, [(t, y, w, freqs), ...] for backward compatibility
+            (deprecated). ``w`` are observation weights of any scale (they
+            are normalized to sum to one internally).
         gpu_data: list, optional
             list of GPU arrays from ``allocate``
         pow_cpus: list, optional
@@ -345,6 +347,12 @@ class PDMAsyncProcess(GPUAsyncProcess):
         # Prepare data and determine frequencies
         if is_deprecated:
             norm_data = normalize_light_curves(data)
+            # The host-side weighted mean/variance and the kernels assume
+            # sum(w) == 1; the statistic is invariant to the scale of w,
+            # so normalize whatever the caller supplied (raw 1/err^2 or
+            # all-ones weights used to give a flat spectrum of 1.0).
+            norm_data = [(t, y, np.asarray(w, dtype=np.float64) / np.sum(w), f)
+                         for (t, y, w, f) in norm_data]
             frqs = [d[3] for d in data]
         else:
             frqs = freqs
