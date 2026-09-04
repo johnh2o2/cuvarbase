@@ -164,6 +164,26 @@ search with :func:`cuvarbase.bls.eebls_transit_gpu` or
 and of the free device memory; before 1.0 the standard path collapsed
 them to one batch-wide window).
 
+The shared-memory kernels do not search a continuum of durations.
+Phase is binned into :math:`n_f = \lfloor 1/q_{\rm min} \rfloor`
+bins and a trial box spans :math:`m` of them, so the durations
+actually searched are :math:`q = m / n_f` for
+:math:`m = 1, 1 + \Delta(1), \ldots` (``dlogq`` sets the geometric
+step :math:`\Delta`) up to and including
+:math:`\lfloor n_f / \lfloor 1/q_{\rm max} \rfloor \rfloor`, the
+widest box with :math:`q \le q_{\rm max}`. Before 1.0 the loop
+stopped one rung short and never tested ``qmax`` itself -- with
+``qmin=0.025``, ``qmax=0.1`` the widest box searched was ``q=0.075``,
+and an on-grid ``q=0.1`` transit was recovered at ~73% of its exact
+power. The geometric step can still overshoot the last rung: with the
+defaults (``qmin=0.01``, ``qmax=0.5``, ``dlogq=0.3``) the ladder ends
+at ``q=0.48``. Box start phases step one fine bin divided by
+``noverlap``, so a box of :math:`m` bins can be misaligned by up to
+:math:`1/(2 m\,{\rm noverlap})` of its width; boxes near ``qmin``
+therefore recover only part of their exact power (49-90% in the Sep
+2026 audit). Raise ``noverlap`` (nearly free on the fused kernel) or
+lower ``qmin`` before comparing fast-path power with an exact box fit.
+
 You can also use sparse BLS directly with ``sparse_bls_cpu`` (or
 ``sparse_bls_gpu``). By default all durations :math:`q \in (0, 0.5]`
 are searched; the optional ``qmin``/``qmax`` arguments (scalar or

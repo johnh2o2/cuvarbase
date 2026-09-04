@@ -2162,11 +2162,14 @@ class TestPerFrequencyQBounds(object):
             noverlap)
         p_scan = val / YY
 
-        # brute force over the same grid, in the original timescale
+        # brute force over the same grid, in the original timescale.
+        # The ladder runs up to and including nbf // nb0 = 5 (q = 0.25
+        # = qmax); before the id-64 fix it stopped at 4 (q = 0.2).
         ms, m = [], 1
-        while m < -(-nbf // nb0):
+        while m <= nbf // nb0:
             ms.append(m)
             m += m * 3 // 10 if m * 3 // 10 > 0 else 1
+        assert ms[-1] == nbf // nb0 and ms[-1] / nbf == qmax
         best = 0.
         for s_pass in range(noverlap):
             for m in ms:
@@ -2533,6 +2536,182 @@ class TestSparseCentering(object):
             assert np.all(p <= 1.0)
             assert abs(p[ok].max() - ref[ok].max()) < tol * ref[ok].max()
             assert _same_peak(p[ok], ref[ok])
+
+
+class TestFastPathQmaxBox(object):
+    """Sep 2026 audit, id 64: the fast (shared-memory) kernels built
+    their box ladder as ``max_bin_width = divrndup(nbinsf, nbins0)``
+    and looped ``m < max_bin_width``. That is the same set of widths
+    whenever ``nbins0`` does not divide ``nbinsf``, but one level short
+    when it does, so ``qmax`` itself was never tested: with
+    ``qmin=0.025, qmax=0.1`` (nbinsf=40, nbins0=10) the widest box
+    searched was ``q = 0.075``, and an on-grid ``q = qmax`` transit was
+    recovered at ~74-86 % of its exact power. The bound is now
+    ``max_bin_width = nbinsf // nbins0`` with ``m <= max_bin_width``:
+    the widest box with ``q = m/nbinsf <= 1/nbins0`` is included and no
+    box wider than the discretized ``qmax`` is ever evaluated.
+    """
+
+    # ---- CPU: the ladder itself ----
+
+    def test_ladder_includes_the_qmax_box(self):
+        from ..bls import _fast_box_widths
+        # qmin = 0.025, qmax = 0.1 -> nbinsf = 40, nbins0 = 10
+        nb0, nbf = _fast_path_nbins(np.float32([1.0]), 0.025, 0.1)
+        assert (int(nb0[0]), int(nbf[0])) == (10, 40)
+        widths = _fast_box_widths(int(nbf[0]), int(nb0[0]), 0.3)
+        assert widths == [1, 2, 3, 4]
+        assert widths[-1] / int(nbf[0]) == 0.1        # == qmax
+        # the old ladder stopped at 3 (q = 0.075)
+        assert 4 in widths
+
+    def test_ladder_never_exceeds_the_discretized_qmax(self):
+        from ..bls import _fast_box_widths, dnbins
+        for dlogq in (0.2, 0.3, 0.5, -1.0):
+            for nb0 in range(1, 25):
+                for nbf in range(nb0, 220, 7):
+                    widths = _fast_box_widths(nbf, nb0, dlogq)
+                    assert widths[0] == 1
+                    # every searched q is within the discretized qmax
+                    assert widths[-1] <= nbf // nb0
+                    assert widths[-1] / nbf <= 1.0 / nb0 + 1e-12
+                    # ... and it is the LAST rung that fits: the next
+                    # step would overshoot
+                    assert (widths[-1] + dnbins(widths[-1], dlogq)
+                            > nbf // nb0)
+
+    def test_default_bounds_are_unchanged_by_the_fix(self):
+        # qmin=0.01, qmax=0.5 -> nbinsf=100, nbins0=2, max width 50,
+        # but the geometric step jumps 48 -> 62, so the default fast
+        # path searches exactly what it did before.
+        from ..bls import _fast_box_widths
+        assert _fast_box_widths(100, 2, 0.3)[-1] == 48
+        assert _fast_box_widths(100, 2, 0.2)[-1] == 44
+
+    # ---- CPU: the box scan used for the eebls_transit solution pass ----
+
+    @staticmethod
+    def _on_grid_box(nbf=40, m=4, n0=10, ndays=10, depth=0.02,
+                     sigma=1e-3, seed=17):
+        """Light curve whose flux dips in exactly bins ``n0 ..
+        n0+m-1`` of an ``nbf``-bin phase grid at f = 1 c/d, i.e. a box
+        of q = m/nbf starting at phi0 = n0/nbf."""
+        rand = np.random.RandomState(seed)
+        phase = (np.arange(nbf) + 0.5) / nbf
+        t = np.concatenate([d + phase for d in range(ndays)])
+        y = np.ones(len(t))
+        b = np.tile(np.arange(nbf), ndays)
+        y[(b >= n0) & (b < n0 + m)] -= depth
+        y += sigma * rand.randn(len(t))
+        dy = sigma * np.ones(len(t))
+        return t, y, dy
+
+    @staticmethod
+    def _scan_power(t, y, dy, freq, qmin, qmax, dlogq=0.3, noverlap=2):
+        """(power, q, phi0) of the fast-kernel box grid at one
+        frequency, in the caller's timescale."""
+        from ..utils import subtract_epoch
+        t64, epoch = subtract_epoch(t)
+        w = np.asarray(dy, dtype=np.float64) ** -2
+        w /= w.sum()
+        ybar = float(np.dot(w, y))
+        YY = float(np.dot(w, (np.asarray(y) - ybar) ** 2))
+        nb0, nbf = _fast_path_nbins(np.float32([freq]), qmin, qmax)
+        val, q, phi = _fast_bls_box_scan(
+            t64.astype(np.float32), ((y - ybar) * w).astype(np.float32),
+            w.astype(np.float32), np.float32(freq),
+            int(nb0[0]), int(nbf[0]), dlogq, noverlap)
+        return val / YY, q, (phi + epoch * freq) % 1.0
+
+    def test_box_scan_finds_the_qmax_wide_box(self):
+        t, y, dy = self._on_grid_box()
+        p, q, phi0 = self._scan_power(t, y, dy, 1.0, 0.025, 0.1)
+        # the injected box is exactly qmax wide and on the bin grid
+        assert q == pytest.approx(0.1, abs=1e-7)
+        assert phi0 == pytest.approx(0.25, abs=1e-6)
+        # the widest box the OLD ladder could reach (q = 0.075) leaves
+        # a quarter of the transit out and scores clearly lower
+        p3 = single_bls(t, y, dy, 1.0, 3. / 40., 0.25)
+        p3 = max(p3, single_bls(t, y, dy, 1.0, 3. / 40., 0.275))
+        assert p > 1.2 * p3
+        # the reported solution reproduces the power exactly
+        assert single_bls(t, y, dy, 1.0, q, phi0) == pytest.approx(
+            p, rel=1e-5)
+
+    # ---- GPU ----
+
+    def test_fast_kernel_evaluates_the_qmax_box(self):
+        # the kernel must agree with the CPU replica of its own grid
+        # (which now includes m = nbinsf // nbins0) and must recover
+        # the on-grid q = qmax transit at nearly its exact power
+        t, y, dy = self._on_grid_box()
+        freqs = np.array([1.0], dtype=np.float64)
+        p_gpu = eebls_gpu_fast(t, y, dy, freqs, qmin=0.025, qmax=0.1,
+                               dlogq=0.3, noverlap=2)
+        p_ref, q_ref, phi_ref = self._scan_power(t, y, dy, 1.0,
+                                                 0.025, 0.1)
+        assert_allclose(p_gpu[0], p_ref, rtol=2e-4, atol=1e-6)
+        assert q_ref == pytest.approx(0.1, abs=1e-7)
+        exact = single_bls(t, y, dy, 1.0, 0.1, 0.25)
+        assert p_gpu[0] > 0.95 * exact
+
+    def test_optimized_kernel_matches_the_standard_one(self):
+        t, y, dy = self._on_grid_box(seed=18)
+        freqs = np.linspace(0.9, 1.1, 201)
+        kw = dict(qmin=0.025, qmax=0.1, dlogq=0.3, noverlap=2)
+        p_std = eebls_gpu_fast(t, y, dy, freqs, **kw)
+        p_opt = eebls_gpu_fast_optimized(t, y, dy, freqs, **kw)
+        assert_allclose(p_opt, p_std, rtol=1e-4, atol=1e-6)
+
+    def test_batch_kernel_uses_the_same_ladder(self):
+        # bls_batch.cu carries its own copy of the box loop; it must
+        # keep the same widths as the single-LC kernels or the batch
+        # periodogram silently differs at the widest box
+        from ..bls import eebls_gpu_batch
+        t, y, dy = self._on_grid_box(seed=19)
+        freqs = np.linspace(0.9, 1.1, 201)
+        kw = dict(qmin=0.025, qmax=0.1, dlogq=0.3, noverlap=2)
+        p_fast = eebls_gpu_fast(t, y, dy, freqs, **kw)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            p_batch = eebls_gpu_batch([(t, y, dy)], freqs, **kw)[0]
+        assert_allclose(p_batch, p_fast, rtol=1e-3, atol=1e-5)
+
+
+class TestBatchNoverlapValidation(object):
+    """Sep 2026 audit, id 75: ``eebls_gpu_batch(noverlap=0)`` computed
+    ``n_passes = 1 if fused else noverlap`` and therefore launched
+    nothing, returning the untouched device buffer -- all zeros, or a
+    stale periodogram when a ``memory=`` was reused -- while
+    ``eebls_gpu_fast(noverlap=0)`` raised. A non-integer ``noverlap``
+    hit ``range(3.0)`` with a TypeError. The batch entry point now runs
+    the same ``_validate_noverlap`` guard as the fast paths."""
+
+    @staticmethod
+    def _data():
+        rand = np.random.RandomState(23)
+        t = np.sort(365. * rand.rand(300))
+        y = 1. + 0.01 * rand.randn(300)
+        dy = 0.01 * np.ones(300)
+        return t, y, dy
+
+    def test_bad_noverlap_raises(self):
+        # CPU-runnable: validation precedes any GPU work
+        from ..bls import eebls_gpu_batch
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 20)
+        for bad in (0, -1, 1.5, 3.0, "2", None):
+            with pytest.raises(ValueError, match="noverlap"):
+                eebls_gpu_batch([(t, y, dy)], freqs, noverlap=bad)
+
+    def test_valid_noverlap_still_runs(self):
+        from ..bls import eebls_gpu_batch
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            p = eebls_gpu_batch([(t, y, dy)], freqs, noverlap=1)[0]
+        assert np.all(np.isfinite(p)) and np.max(p) > 0.
 
 
 class TestSparseSharedMemoryLimit(object):
