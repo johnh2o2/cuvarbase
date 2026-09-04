@@ -1,4 +1,5 @@
 from itertools import product
+import os
 import warnings
 
 import pytest
@@ -2303,13 +2304,35 @@ class TestPerFrequencyQBounds(object):
         kw = dict(fmin=0.05, fmax=1.0)
         fr, p, sols = eebls_transit(t, y, dy, **kw)
         fr2, p2, sols2 = eebls_transit(t, y, dy, freq_batch_size=97, **kw)
-        fr3, p3, sols3 = eebls_transit(t, y, dy, max_memory=int(2e9),
-                                       nstreams=2, **kw)
+        with pytest.warns(UserWarning, match="eebls_transit ignores"):
+            fr3, p3, sols3 = eebls_transit(t, y, dy, max_memory=int(2e9),
+                                           nstreams=2, **kw)
         assert_allclose(p2, p, rtol=1e-4, atol=1e-6)
         assert_allclose(p3, p, rtol=1e-4, atol=1e-6)
         for a, b in ((sols2, sols), (sols3, sols)):
             assert [i for i, s_ in enumerate(a) if s_ is not None] \
                 == [i for i, s_ in enumerate(b) if s_ is not None]
+
+    def test_eebls_transit_warns_about_ignored_eebls_gpu_kwargs(self):
+        # the default path runs eebls_gpu_fast, so nstreams / max_memory
+        # (a resource bound the caller may be relying on) do not apply;
+        # dropping them silently was the complaint.
+        t, y, dy = self._lc(ndata=600)
+        kw = dict(fmin=0.1, fmax=0.5)
+        for key, value in (('nstreams', 2), ('max_memory', int(2e9))):
+            with pytest.warns(UserWarning) as rec:
+                eebls_transit(t, y, dy, **dict(kw, **{key: value}))
+            msgs = [str(w.message) for w in rec
+                    if issubclass(w.category, UserWarning)]
+            assert any(key in m and 'eebls_transit ignores' in m
+                       for m in msgs), msgs
+            assert any('eebls_gpu' in m for m in msgs), msgs
+        # ... and no warning when they are not passed
+        with warnings.catch_warnings(record=True) as rec:
+            warnings.simplefilter('always')
+            eebls_transit(t, y, dy, **kw)
+        assert not [w for w in rec
+                    if 'eebls_transit ignores' in str(w.message)]
 
     def test_eebls_transit_solution_keywords(self):
         t, y, dy = self._lc(ndata=800)
@@ -2538,6 +2561,39 @@ class TestSparseCentering(object):
             assert _same_peak(p[ok], ref[ok])
 
 
+class TestBlsPrecisionDocs(object):
+    """Sep 2026 audit section 3.3: the float32 fold limit, the
+    time-origin sensitivity of binned power and the run-to-run
+    float32-atomic tolerance had to be stated somewhere a user reads.
+    CPU-only."""
+
+    @staticmethod
+    def _bls_rst():
+        here = os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))))
+        path = os.path.join(here, 'docs', 'source', 'bls.rst')
+        with open(path, encoding='utf-8') as f:
+            return f.read()
+
+    def test_bls_rst_has_precision_section(self):
+        rst = self._bls_rst()
+        assert 'Precision and reproducibility' in rst
+        # the section header must be underlined (valid rst)
+        i = rst.index('Precision and reproducibility')
+        underline = rst[i:].split('\n')[1]
+        assert set(underline) == {'-'}
+        assert len(underline) >= len('Precision and reproducibility')
+        for phrase in (r'\mathrm{ulp}', r'q_\mathrm{min}',
+                       r'n_\mathrm{overlap}', 'float32 atomics',
+                       'fractional', 'bitwise'):
+            assert phrase in rst, phrase
+
+    def test_eebls_gpu_fast_docstring_mirrors_it(self):
+        doc = ' '.join(eebls_gpu_fast.__doc__.split())
+        assert 'ulp(T * max(freqs))' in doc
+        assert 'qmin / noverlap' in doc
+        assert '1e-8 to 1e-7' in doc
+
 class TestFastPathQmaxBox(object):
     """Sep 2026 audit, id 64: the fast (shared-memory) kernels built
     their box ladder as ``max_bin_width = divrndup(nbinsf, nbins0)``
@@ -2564,6 +2620,18 @@ class TestFastPathQmaxBox(object):
         assert widths[-1] / int(nbf[0]) == 0.1        # == qmax
         # the old ladder stopped at 3 (q = 0.075)
         assert 4 in widths
+
+    def test_helper_docstrings_state_the_floor_bound(self):
+        # the bound is floor(nbinsf / nbins0), inclusive -- not the
+        # pre-fix ceil(...); _fast_path_nbins' docstring said "ceil"
+        # long after the kernels changed.
+        from ..bls import _fast_box_widths
+        for doc in (_fast_path_nbins.__doc__, _fast_box_widths.__doc__):
+            assert 'nbinsf / nbins0' in doc or 'nbinsf // nbins0' in doc
+        assert 'ceil(nbinsf /' not in _fast_path_nbins.__doc__.replace(
+            '\n', ' ').replace('  ', ' ')
+        assert 'floor(nbinsf / nbins0)' in ' '.join(
+            _fast_path_nbins.__doc__.split())
 
     def test_ladder_never_exceeds_the_discretized_qmax(self):
         from ..bls import _fast_box_widths, dnbins

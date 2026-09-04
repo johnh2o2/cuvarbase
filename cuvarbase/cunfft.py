@@ -16,7 +16,7 @@ from pycuda.compiler import SourceModule
 from . import _cufft as cufft
 
 from .core import GPUAsyncProcess
-from .utils import find_kernel, _module_reader
+from .utils import find_kernel, _module_reader, check_lightcurve
 from .memory import NFFTMemory
 
 
@@ -35,7 +35,9 @@ def nfft_adjoint_async(memory, functions,
     ----------
     memory: ``NFFTMemory``
         Allocated memory, must have data already set (see, e.g.,
-        ``NFFTAsyncProcess.allocate()``)
+        ``NFFTAsyncProcess.allocate()``, which validates the light
+        curve with :func:`cuvarbase.utils.check_lightcurve`; this
+        low-level entry point cannot re-check data it does not see)
     functions: tuple, length 5
         Tuple of compiled functions from `SourceModule`. Must be prepared with
         their appropriate dtype.
@@ -80,6 +82,21 @@ def nfft_adjoint_async(memory, functions,
     synchronized: call ``memory.stream.synchronize()`` (or
     ``NFFTAsyncProcess.finish()``) before reading ``ghat_g``.
     """
+
+    # The light curve behind ``memory`` was validated where it was
+    # loaded (NFFTAsyncProcess.allocate / LombScargleMemory.setdata);
+    # only the transform's own scalars can be checked here. A
+    # non-finite minimum_frequency poisons every mode's phase factor
+    # and a non-positive samples_per_peak collapses the grid.
+    # ``minimum_frequency`` may be negative: the adjoint transform is
+    # defined over modes -nf/2 .. nf/2 and the tests exercise
+    # ``minimum_frequency = -nf // 2``.
+    if not np.isfinite(minimum_frequency):
+        raise ValueError("nfft_adjoint_async: minimum_frequency must be "
+                         "finite; got %r" % (minimum_frequency,))
+    if not (np.isfinite(samples_per_peak) and samples_per_peak > 0):
+        raise ValueError("nfft_adjoint_async: samples_per_peak must be "
+                         "finite and > 0; got %r" % (samples_per_peak,))
 
     precompute_psi, fast_gaussian_grid, slow_gaussian_grid, \
         nfft_shift, normalize = functions
@@ -438,6 +455,14 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         # Purge any previously allocated memory
         allocated_memory = []
 
+        for i, d in enumerate(data):
+            if len(d) != 3:
+                raise ValueError(
+                    "NFFTAsyncProcess.allocate: dataset %d must be a "
+                    "(t, y, nf) tuple; got %d elements" % (i, len(d)))
+            check_lightcurve(d[0], d[1], min_n=2,
+                             name='NFFTAsyncProcess.allocate dataset %d' % i)
+
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
@@ -484,6 +509,27 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             ``memory.stream.synchronize()``) before reading ``ghat_g``.
 
         """
+        # Validate before any device work (kernel compile included).
+        # ``data`` is ignored when ``memory`` is supplied, and the
+        # light curve behind a memory object was validated when it was
+        # allocated. min_n = 2: NFFTMemory rescales the times to
+        # [-1/2, 1/2) by the baseline max(t) - min(t), which is zero
+        # for a single sample -- the transform came back all-NaN.
+        if memory is None:
+            for i, d in enumerate(data):
+                if len(d) != 3:
+                    raise ValueError(
+                        "NFFTAsyncProcess.run: dataset %d must be a "
+                        "(t, y, nf) tuple; got %d elements" % (i, len(d)))
+                check_lightcurve(d[0], d[1], min_n=2,
+                                 name='NFFTAsyncProcess.run dataset %d' % i)
+                nf = d[2]
+                if not (np.isscalar(nf) and np.isfinite(nf)
+                        and nf > 0 and int(nf) == nf):
+                    raise ValueError(
+                        "NFFTAsyncProcess.run: dataset %d: nf must be a "
+                        "positive integer; got %r" % (i, nf))
+
         if not hasattr(self, 'prepared_functions') or \
             not all([func in self.prepared_functions
                      for func in self.function_names]):

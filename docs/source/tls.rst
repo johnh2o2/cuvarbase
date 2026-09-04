@@ -40,6 +40,15 @@ same detection to within the coarse-vs-fine epoch grid difference
 (measured 5-15%) at a small fraction of the cost; see
 ``docs/BENCHMARK_RESULTS.md`` for measured numbers.
 
+.. note::
+
+   **Input validation.** Since 1.0 every entry point rejects
+   non-finite ``t``/``y``/``dy``, ``dy <= 0``, mismatched array
+   lengths, too-short light curves and non-finite or non-positive
+   frequency grids with a ``ValueError`` raised on the host, before
+   any GPU work. See :ref:`Input validation <input-validation>` for
+   the full rules and the pre-1.0 behaviour they replace.
+
 Input conventions
 -----------------
 

@@ -646,6 +646,28 @@ class TestSep2026Defects:
         # L1 bound over all vectors, the per-call path from each y)
         assert rel < (1e-6 if use_double else 3e-5), rel
 
+    def test_small_nf_does_not_break_the_psd_smoother(self):
+        """nf < smooth_window used to die inside numpy with 'operands
+        could not be broadcast together with shapes (4,) (5,)': the
+        boxcar 'same' convolution returns max(nf, window) samples. The
+        window is now clamped to nf."""
+        rng = np.random.RandomState(5)
+        n = 40
+        t = np.sort(rng.rand(n) * 12.0)
+        y = 1.0 + 0.004 * rng.randn(n)
+        periods = np.array([2.0, 3.0])
+        durations = np.array([0.2])
+        proc = NUFFTLRTAsyncProcess()
+        for nf in (1, 2, 3, 4, 5, 6, 9):
+            s = proc.run(t, y, periods, durations,
+                         epochs=np.array([0.0, 0.5]), nf=nf)
+            assert s.shape == (2, 1, 2)
+            assert np.all(np.isfinite(s))
+        # a huge window is equally harmless
+        s = proc.run(t, y, periods, durations, epochs=np.array([0.0]),
+                     nf=8, smooth_window=1000)
+        assert np.all(np.isfinite(s))
+
     @mark_cuda_test
     def test_sequential_nonzero_mean_basis(self):
         """Defect 21 (lrt-sequential-intercept): a basis column with a 1%

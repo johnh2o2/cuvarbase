@@ -4,6 +4,186 @@ import re
 import numpy as np
 
 
+# ---------------------------------------------------------------------
+# Input validation (shared by every public entry point)
+#
+# Before 1.0 nothing checked the light curve: a single NaN in ``t``
+# produced a finite periodogram with a wrong argmax on the BLS and CE
+# paths, ``dy = 0`` gave all-NaN (PDM), an undocumented ``-1`` sentinel
+# (Lomb-Scargle) or a 1e3 relative chi2 error (TLS), and a NaN in a
+# per-frequency q bound or a light curve with fewer points than the
+# Keplerian grid needs crashed the kernel with an illegal memory
+# access -- which kills the CUDA context for the rest of the process,
+# so every later call in the same interpreter fails too (Sep 2026
+# audit, defect 23 ``input-validation``). The helpers below are called
+# before any device work in every public entry point; they raise
+# ``ValueError`` naming the array, the number of offending entries and
+# the first few of their indices.
+# ---------------------------------------------------------------------
+
+#: How many offending indices a validation message lists before "...".
+_MAX_BAD_INDICES = 5
+
+
+def _bad_indices(bad):
+    """``(count, "i, j, k, ...")`` for a boolean mask of bad entries."""
+    idx = np.flatnonzero(bad)
+    shown = ', '.join(str(int(i)) for i in idx[:_MAX_BAD_INDICES])
+    if idx.size > _MAX_BAD_INDICES:
+        shown += ', ...'
+    return int(idx.size), shown
+
+
+def _as_1d_numeric(arr, label, prefix):
+    """``np.asarray`` plus the shape/dtype checks the kernels assume.
+
+    No copy is made for arrays that are already numeric ndarrays.
+    """
+    a = np.asarray(arr)
+    if not np.issubdtype(a.dtype, np.number):
+        raise ValueError("%s%s must be a numeric array; got dtype %s"
+                         % (prefix, label, a.dtype))
+    if a.ndim != 1:
+        raise ValueError("%s%s must be a 1-D array; got shape %r"
+                         % (prefix, label, a.shape))
+    return a
+
+
+def _check_finite(a, label, prefix):
+    """Raise unless every entry of ``a`` is finite (one pass)."""
+    finite = np.isfinite(a)
+    if finite.all():
+        return
+    n_bad, where = _bad_indices(~finite)
+    raise ValueError(
+        "%s%s contains %d non-finite value(s) (NaN or inf) out of %d; "
+        "first at index/indices %s. Remove or interpolate the bad "
+        "samples before searching." % (prefix, label, n_bad, a.size, where))
+
+
+def check_lightcurve(t, y, dy=None, *, min_n=1, name=''):
+    """
+    Validate a light curve before any GPU work.
+
+    Every public periodogram entry point calls this first. It rejects
+    the inputs that used to produce a silently wrong periodogram, an
+    all-NaN spectrum, an undocumented sentinel value, or (with
+    per-frequency transit-duration bounds) an illegal memory access
+    that leaves the process's CUDA context unusable.
+
+    Parameters
+    ----------
+    t: array_like, float
+        Observation times. Must be 1-D, numeric and finite.
+    y: array_like, float
+        Observations. Must be the same length as ``t`` and finite.
+    dy: array_like, float, optional (default: ``None``)
+        Observation uncertainties. ``None`` (unit weights) is accepted
+        by the entry points that document it; otherwise ``dy`` must be
+        the same length as ``t``, finite and strictly positive -- it is
+        converted to inverse-variance weights ``dy ** -2``, so a zero
+        or negative entry is not a valid uncertainty.
+    min_n: int, optional (default: 1)
+        Minimum number of observations the caller's algorithm needs.
+    name: str, optional (default: ``''``)
+        Entry-point name, prefixed to the error message.
+
+    Returns
+    -------
+    t, y, dy: ndarray (``dy`` is ``None`` if it was ``None``)
+        The inputs as numpy arrays (no copy when they already were).
+
+    Raises
+    ------
+    ValueError
+        With the offending array's name, the number of offending
+        entries and the first few of their indices.
+
+    Examples
+    --------
+    ``check_lightcurve(np.array([0., 1., np.nan]), np.ones(3),
+    np.ones(3), name='eebls_gpu')`` raises::
+
+        ValueError: eebls_gpu: t contains 1 non-finite value(s) (NaN
+        or inf) out of 3; first at index/indices 2. Remove or
+        interpolate the bad samples before searching.
+    """
+    prefix = ('%s: ' % name) if name else ''
+
+    t = _as_1d_numeric(t, 't', prefix)
+    y = _as_1d_numeric(y, 'y', prefix)
+    if y.size != t.size:
+        raise ValueError("%st and y must have the same length; got %d "
+                         "and %d" % (prefix, t.size, y.size))
+    if dy is not None:
+        dy = _as_1d_numeric(dy, 'dy', prefix)
+        if dy.size != t.size:
+            raise ValueError("%st and dy must have the same length; got "
+                             "%d and %d" % (prefix, t.size, dy.size))
+
+    min_n = max(1, int(min_n))
+    if t.size < min_n:
+        raise ValueError("%sneed at least %d observation(s); got %d"
+                         % (prefix, min_n, t.size))
+
+    _check_finite(t, 't', prefix)
+    _check_finite(y, 'y', prefix)
+    if dy is not None:
+        _check_finite(dy, 'dy', prefix)
+        positive = dy > 0
+        if not positive.all():
+            n_bad, where = _bad_indices(~positive)
+            raise ValueError(
+                "%sdy must be > 0 (uncertainties become "
+                "inverse-variance weights dy**-2); %d of %d entries are "
+                "not; first at index/indices %s"
+                % (prefix, n_bad, dy.size, where))
+
+    return t, y, dy
+
+
+def check_freqs(freqs, *, name=''):
+    """
+    Validate a trial-frequency grid before any GPU work.
+
+    The grid must be a non-empty 1-D numeric array of finite, strictly
+    positive frequencies (every method folds the data at ``1 / f``).
+
+    Parameters
+    ----------
+    freqs: array_like, float
+        Trial frequencies (cycles per unit time).
+    name: str, optional (default: ``''``)
+        Entry-point name, prefixed to the error message.
+
+    Returns
+    -------
+    freqs: ndarray
+        ``freqs`` as a numpy array (no copy when it already was one).
+
+    Raises
+    ------
+    ValueError
+        With the number of offending entries and the first few of
+        their indices.
+    """
+    prefix = ('%s: ' % name) if name else ''
+
+    f = _as_1d_numeric(freqs, 'freqs', prefix)
+    if f.size == 0:
+        raise ValueError("%sfreqs must be a non-empty frequency grid"
+                         % prefix)
+    _check_finite(f, 'freqs', prefix)
+    positive = f > 0
+    if not positive.all():
+        n_bad, where = _bad_indices(~positive)
+        raise ValueError(
+            "%sfreqs must be > 0 (the data are folded at 1 / f); %d of "
+            "%d entries are not; first at index/indices %s"
+            % (prefix, n_bad, f.size, where))
+    return f
+
+
 def weights(err):
     """ generate observation weights from uncertainties """
     w = np.power(err, -2)

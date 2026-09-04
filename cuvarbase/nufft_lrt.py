@@ -79,7 +79,7 @@ from .base import GPUAsyncProcess, ensure_context  # noqa: E402
 from .cunfft import NFFTAsyncProcess  # noqa: E402
 from .memory import NFFTMemory  # noqa: E402
 from .utils import (find_kernel, _module_reader,  # noqa: E402
-                    subtract_epoch)
+                    subtract_epoch, check_lightcurve)
 
 
 def _whitened_inner(A, B, psd, weights):
@@ -222,8 +222,14 @@ def _smoothed_periodogram(power, window):
     the implicit zero-padding of a plain ``np.convolve(..., 'same')``
     (which would overweight those bins by up to ~2x after the 1/P(k)
     whitening).
+
+    The window is clamped to ``len(power)``: ``np.convolve(..., 'same')``
+    returns ``max(len(power), window)`` samples, so a window wider than
+    the spectrum used to lengthen the PSD and fail later with a raw
+    numpy broadcast error (``nf < smooth_window``, e.g. nf = 4 with the
+    default ``smooth_window=5``).
     """
-    k = int(window)
+    k = min(int(window), len(power))
     if k <= 1:
         return power
     kernel = np.ones(k, dtype=power.dtype)
@@ -384,6 +390,9 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     >>> # focused search around a candidate: the period step must keep
     >>> # the box aligned over the baseline T, dP <~ dur * P / (2 T)
     >>> periods = np.arange(4.8, 5.8, 0.22 * 4.8 / (2 * 60))
+    >>> # periods x durations is a full outer product, so always pass a
+    >>> # short explicit duration array (the ``durations=None`` default
+    >>> # is 0.1 * periods, i.e. len(periods)**2 cells)
     >>> durations = np.array([0.12, 0.25])
     >>> # epochs=None scans an automatic epoch grid per (period,
     >>> # duration) and returns the max over epochs plus the best epoch
@@ -570,7 +579,20 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         periods : array-like
             Trial periods to test (same units as ``t``)
         durations : array-like, optional
-            Trial transit durations. If None, uses 0.1 * periods
+            Trial transit durations, searched as a full outer product
+            with ``periods``: every (period, duration) pair is
+            evaluated, not the elementwise pairing.
+
+            ``None`` (the default) sets ``durations = 0.1 * periods``,
+            i.e. ``len(periods)`` durations, so the default call costs
+            ``len(periods)**2`` cells -- quadratic in the size of the
+            period grid, and with the automatic epoch grid
+            (``epochs=None``) up to ``max_epochs`` transforms per cell
+            (154 periods is already ~2.3 million templates at ~0.2 ms
+            each). **Pass an explicit, short duration array** (a
+            handful of physically motivated durations, or
+            ``0.1 * P`` for one representative ``P``) for anything but
+            a toy grid.
         epochs : array-like, optional
             Trial epochs (transit mid-times) in the caller's time scale.
             ``None`` (default) scans an automatic epoch grid per
@@ -603,7 +625,9 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             Required if ``estimate_psd=False``. Floored at
             ``eps_floor * median`` like the estimate.
         smooth_window : int, optional (default: 5)
-            Window size for smoothing power spectrum estimate
+            Window size (in frequency bins) for smoothing the power
+            spectrum estimate; clamped to ``nf`` when the grid is
+            shorter than the window.
         eps_floor : float, optional (default: 1e-3)
             The PSD (estimated or supplied) is floored at ``eps_floor``
             times its positive median once, for every detector, capping
@@ -677,14 +701,13 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # ---- validate and epoch-subtract (float64) before ANY cast
         t = np.asarray(t, dtype=np.float64).ravel()
         y = np.asarray(y, dtype=np.float64).ravel()
-        if t.shape != y.shape:
-            raise ValueError("t and y must have the same length (got %d "
-                             "and %d)" % (len(t), len(y)))
-        if len(t) < 3:
-            raise ValueError("need at least 3 observations (got %d)"
-                             % len(t))
-        if not (np.all(np.isfinite(t)) and np.all(np.isfinite(y))):
-            raise ValueError("t and y must be finite")
+        # Shared validator, so the message reads the same as every
+        # other entry point's. min_n = 3: the detrending and PSD
+        # estimate need more than a two-point series (Detector A's
+        # marginal statistic raises a broadcast error at N <= 2).
+        # ``dy`` is deliberately not passed: no detector uses it (the
+        # noise model is the PSD) and it is warned about below.
+        check_lightcurve(t, y, min_n=3, name='NUFFTLRTAsyncProcess.run')
         if dy is not None:
             warnings.warn("NUFFTLRTAsyncProcess.run: dy is not used by any "
                           "detector (the noise model is the PSD); it is "
