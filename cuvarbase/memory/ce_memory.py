@@ -254,9 +254,38 @@ class ConditionalEntropyMemory:
             self.mag_bin_fracs = np.zeros(self.mag_bins, dtype=self.real_type)
         self.mag_bin_fracs[:self.mag_bins] = mbf[:]
 
+    # Lower limit on a balanced bin's width, as a fraction of the
+    # (already normalized) magnitude range.  Only reached when a whole
+    # bin (and the neighbouring edges) sit on one quantized magnitude
+    # value; it keeps ``log(width)`` finite.
+    balanced_min_width = 1e-6
+
     def balance_magbins(self, y, **kwargs):
-        """Create balanced magnitude bins with equal number of observations."""
-        yinds = np.argsort(y)
+        """Create balanced magnitude bins with equal number of observations.
+
+        The ``mag_bins`` bins each hold (as nearly as possible) the same
+        number of points.  Bin edges are placed at the midpoints between
+        the largest value of one group and the smallest value of the next,
+        so the widths ``mag_bwf`` tile the normalized magnitude range
+        ``[0, 1]`` (they sum to 1).  Widths are floored at
+        ``balanced_min_width`` so that quantized magnitudes (fewer distinct
+        values than points) cannot produce a zero-width bin, which would
+        make the conditional entropy ``-inf``.
+
+        Parameters
+        ----------
+        y : array-like
+            Magnitudes, normalized to ``[0, 1]``.
+
+        Returns
+        -------
+        ybins : array
+            Balanced bin index of each point.
+        mag_bwf : array, ``real_type``
+            Width of each bin (fraction of the magnitude range).
+        """
+        y = np.asarray(y)
+        yinds = np.argsort(y, kind='stable')
         ybins = np.zeros(len(y))
 
         if len(y) < self.mag_bins:
@@ -265,7 +294,9 @@ class ConditionalEntropyMemory:
                 "observations; got %d" % (self.mag_bins, len(y)))
 
         di = len(y) / self.mag_bins
-        mag_bwf = np.zeros(self.mag_bins)
+        edges = np.zeros(self.mag_bins + 1, dtype=np.float64)
+        edges[0] = np.min(y)
+        edges[-1] = np.max(y)
         for i in range(self.mag_bins):
             imin = max([0, int(i * di)])
             imax = min([len(y), int((i + 1) * di)])
@@ -273,9 +304,18 @@ class ConditionalEntropyMemory:
             inds = yinds[imin:imax]
             ybins[inds] = i
 
-            mag_bwf[i] = y[inds[-1]] - y[inds[0]]
+            if i > 0:
+                # midpoint between the previous group's largest value
+                # and this group's smallest value
+                edges[i] = 0.5 * (float(y[yinds[imin - 1]])
+                                  + float(y[yinds[imin]]))
 
-        mag_bwf /= (max(y) - min(y))
+        yrange = float(edges[-1] - edges[0])
+        if yrange > 0:
+            mag_bwf = np.diff(edges) / yrange
+        else:
+            mag_bwf = np.full(self.mag_bins, 1.0 / self.mag_bins)
+        mag_bwf = np.maximum(mag_bwf, self.balanced_min_width)
 
         return ybins, mag_bwf.astype(self.real_type)
 

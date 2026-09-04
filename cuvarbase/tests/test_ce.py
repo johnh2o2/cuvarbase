@@ -287,19 +287,24 @@ class TestCE(object):
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
 
+    # balanced_magbins is only implemented for the standard, unweighted
+    # kernel (the other combinations raise ValueError); it used to be
+    # parametrized independently, which silently ran the uniform kernel
+    # because the constructor dropped the flag.
     @pytest.mark.parametrize('use_double', [True, False])
-    @pytest.mark.parametrize('use_fast,weighted,shmem_lc,freq_batch_size',
-                             [(True, False, False, 1),
-                              (True, False, True, None),
-                              (False, True, False, None),
-                              (False, False, False, None)])
+    @pytest.mark.parametrize(
+        'use_fast,weighted,shmem_lc,freq_batch_size,balanced_magbins',
+        [(True, False, False, 1, False),
+         (True, False, True, None, False),
+         (False, True, False, None, False),
+         (False, False, False, None, False),
+         (False, False, False, None, True)])
     @pytest.mark.parametrize('phase_bins,phase_overlap',
                              [(10, 1)])
     @pytest.mark.parametrize('mag_bins,mag_overlap',
                              [(5, 0)])
     @pytest.mark.parametrize('freq', [10.0])
     @pytest.mark.parametrize('t0', [0.0])
-    @pytest.mark.parametrize('balanced_magbins', [True, False])
     def test_inject_and_recover(self, freq,
                                 use_double, mag_bins, phase_bins, mag_overlap,
                                 phase_overlap, use_fast, t0, balanced_magbins,
@@ -361,14 +366,15 @@ class TestCE(object):
         assert_allclose(p0, p1, rtol=1e-4, atol=1e-2)
 
     @pytest.mark.parametrize('use_double', [True, False])
-    @pytest.mark.parametrize('use_fast,weighted,shmem_lc,freq_batch_size',
-                             [(True, False, False, 1)])
+    @pytest.mark.parametrize(
+        'use_fast,weighted,shmem_lc,freq_batch_size,balanced_magbins',
+        [(True, False, False, 1, False),
+         (False, False, False, None, True)])
     @pytest.mark.parametrize('phase_bins,phase_overlap',
                              [(10, 1)])
     @pytest.mark.parametrize('mag_bins,mag_overlap',
                              [(5, 0)])
     @pytest.mark.parametrize('freq', [10.0])
-    @pytest.mark.parametrize('balanced_magbins', [True, False])
     def test_time_shift_invariance(self, freq,
                                    use_double, mag_bins, phase_bins,
                                    mag_overlap, phase_overlap, use_fast,
@@ -442,7 +448,6 @@ class TestCE(object):
                               (7, 0, 6, 0), (3, 0, 4, 0)])
     @pytest.mark.parametrize('freq', [12.0])
     @pytest.mark.parametrize('t0', [0.0])
-    #@pytest.mark.parametrize('balanced_magbins', [True, False])
     @pytest.mark.parametrize('balanced_magbins', [False])
     @pytest.mark.parametrize('weighted', [False])
     @pytest.mark.parametrize('force_nblocks', [1, None])
@@ -722,3 +727,129 @@ class TestCEDoubleFast(object):
         assert_allclose(p, ref, rtol=0, atol=1e-10)
         cpu = cpu_ce(t, y, freqs, phase_bins, mag_bins, dtype=np.float64)
         assert_allclose(p, cpu, rtol=0, atol=1e-10)
+
+
+class TestCEBalanced(object):
+    """Defect 18 (ce-balanced-ignored) and ids 105/106."""
+
+    @staticmethod
+    def _lc():
+        r = np.random.RandomState(0)
+        N = 400
+        t = np.sort(30 * r.rand(N))
+        y = 12 + 0.3 * np.cos(2 * np.pi * 3.1 * t) + 0.05 * r.randn(N)
+        y[:3] += 5.0     # outliers: balanced bins differ strongly from uniform
+        return t, y, 0.05 * np.ones(N)
+
+    def test_constructor_flag_is_forwarded(self):
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 1000)
+        plain = run_ce(ConditionalEntropyAsyncProcess(), t, y, dy, freqs)
+
+        def large(proc, **kw):
+            r = proc.large_run([(t, y, dy)], freqs=freqs, **kw)
+            proc.finish()
+            return np.copy(r[0][1])
+
+        def batched(proc, **kw):
+            r = proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs, **kw)
+            return np.copy(r[0][1])
+
+        for fn in (run_ce, large, batched):
+            if fn is run_ce:
+                ctor = fn(ConditionalEntropyAsyncProcess(balanced_magbins=True),
+                          t, y, dy, freqs)
+                runkw = fn(ConditionalEntropyAsyncProcess(), t, y, dy, freqs,
+                           balanced_magbins=True)
+            else:
+                ctor = fn(ConditionalEntropyAsyncProcess(balanced_magbins=True))
+                runkw = fn(ConditionalEntropyAsyncProcess(),
+                           balanced_magbins=True)
+            assert_array_equal(ctor, runkw)
+            assert np.max(np.abs(ctor - plain)) > 0.1
+
+        proc = ConditionalEntropyAsyncProcess(balanced_magbins=True)
+        assert proc.balanced_magbins
+        mems = proc.allocate([(t, y, dy)], freqs=[freqs])
+        assert mems[0].balanced_magbins
+        proc.preallocate(len(t), freqs, nlcs=1)
+        assert proc.memory[0].balanced_magbins
+
+    def test_widen_mag_range_is_forwarded(self):
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 500)
+        plain = run_ce(ConditionalEntropyAsyncProcess(weighted=True),
+                       t, y, dy, freqs)
+        ctor = run_ce(ConditionalEntropyAsyncProcess(weighted=True,
+                                                     widen_mag_range=True),
+                      t, y, dy, freqs)
+        runkw = run_ce(ConditionalEntropyAsyncProcess(weighted=True),
+                       t, y, dy, freqs, widen_mag_range=True)
+        assert_allclose(ctor, runkw, rtol=0, atol=1e-6)
+        assert np.max(np.abs(ctor - plain)) > 1e-3
+        proc = ConditionalEntropyAsyncProcess(weighted=True,
+                                              widen_mag_range=True)
+        proc.preallocate(len(t), freqs, nlcs=1)
+        assert proc.memory[0].widen_mag_range
+
+    def test_unsupported_combinations_raise_in_constructor(self):
+        # CPU-runnable: the checks run before the GPU context is touched
+        bad = [dict(weighted=True, use_fast=True),
+               dict(weighted=True, balanced_magbins=True),
+               dict(weighted=True, compute_log_prob=True),
+               dict(use_fast=True, balanced_magbins=True),
+               dict(balanced_magbins=True, compute_log_prob=True),
+               dict(mag_overlap=1, balanced_magbins=True)]
+        for kw in bad:
+            with pytest.raises(ValueError):
+                ConditionalEntropyAsyncProcess(**kw)
+
+    @pytest.mark.parametrize('ctor', [dict(weighted=True), dict(use_fast=True),
+                                      dict(compute_log_prob=True),
+                                      dict(mag_overlap=1)])
+    def test_unsupported_combinations_raise_for_run_kwargs(self, ctor):
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 100)
+        proc = ConditionalEntropyAsyncProcess(**ctor)
+        with pytest.raises(ValueError):
+            proc.run([(t, y, dy)], freqs=freqs, balanced_magbins=True)
+        with pytest.raises(ValueError):
+            proc.preallocate(len(t), freqs, balanced_magbins=True)
+
+    def test_balanced_matches_reference(self):
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 300)
+        proc = ConditionalEntropyAsyncProcess(balanced_magbins=True)
+        p, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        ybins = mem.y[:mem.n0].astype(int)
+        bwf = mem.mag_bwf.astype(np.float64)
+        # each bin holds N / mag_bins points; widths tile [0, 1]
+        assert_array_equal(np.bincount(ybins), np.full(5, 80))
+        assert_allclose(bwf.sum(), 1.0, rtol=0, atol=1e-6)
+        t32, _, _ = _prep(t, y, np.float32)
+        H = np.zeros((len(freqs), 10, 5))
+        for i, f in enumerate(freqs):
+            np.add.at(H, (i, _phase_bins(t32, f, 10, np.float32), ybins), 1)
+        Nphi = H.sum(axis=2, keepdims=True)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            term = np.where(H > 0, H * np.log(bwf[None, None, :] * Nphi
+                                              / np.where(H > 0, H, 1)), 0)
+        ref = term.sum(axis=(1, 2)) / H.sum(axis=(1, 2))
+        assert_allclose(p, ref, rtol=0, atol=2e-6)
+        assert abs(freqs[np.argmin(p)] - 3.1) < 0.01
+
+    def test_quantized_magnitudes_are_finite(self):
+        """id 106: a bin of identical values had zero width -> CE = -inf."""
+        r = np.random.RandomState(4)
+        N = 400
+        t = np.sort(r.rand(N) * 20)
+        y = np.round(12 + np.sin(2 * np.pi * 1.3 * t) + 0.3 * r.randn(N))
+        assert len(np.unique(y)) <= 6
+        dy = np.ones(N)
+        freqs = np.linspace(0.1, 3.0, 300)
+        proc = ConditionalEntropyAsyncProcess(balanced_magbins=True)
+        p, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        assert np.all(np.isfinite(p))
+        assert np.all(mem.mag_bwf > 0)
+        assert_allclose(mem.mag_bwf.sum(), 1.0, rtol=0, atol=1e-5)
+        assert abs(freqs[np.argmin(p)] - 1.3) < 0.02
