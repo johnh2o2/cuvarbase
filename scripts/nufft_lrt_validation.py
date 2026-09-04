@@ -270,9 +270,12 @@ def snr_calibration(rng, t, proc_kwargs, n=200):
     vals = []
     for i in range(n):
         y = 1 + 1e-3 * rng.randn(len(t))
+        # ONE fixed template (epochs=None now scans an epoch grid and
+        # returns (max, best_epoch); the calibration is single-template)
         snr = proc.run(t, y - np.mean(y), np.array([3.7]),
-                       durations=np.array([0.15]))
-        vals.append(float(snr[0, 0]))
+                       durations=np.array([0.15]),
+                       epochs=np.array([0.0]))
+        vals.append(float(snr[0, 0, 0]))
     v = np.asarray(vals)
     return {'mean': float(v.mean()), 'std': float(v.std()),
             'n': n}

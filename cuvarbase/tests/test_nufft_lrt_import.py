@@ -207,6 +207,19 @@ class TestDetectorAlgebra:
         assert np.std(leftover) < 0.1 * sigma        # was ~10 sigma
         assert np.std(r - r.mean()) < 1.2 * sigma
 
+    def test_epoch_grid(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import epoch_grid
+
+        g = epoch_grid(5.3, 0.22)                     # ceil(2*5.3/0.22)=49
+        assert len(g) == 49
+        assert g[0] == 0.0
+        np.testing.assert_allclose(np.diff(g), 5.3 / 49)
+        assert len(epoch_grid(0.5, 0.3)) == 8          # min clamp
+        assert len(epoch_grid(18.0, 0.12)) == 96       # max clamp
+        assert len(epoch_grid(18.0, 0.12, max_epochs=300)) == 300
+        assert len(epoch_grid(5.3, 0.22, oversample=3.0)) == 73
+
 
 class TestPsdSmoothing:
     """CPU tests for the edge-corrected periodogram smoothing (audit
