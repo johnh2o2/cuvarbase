@@ -20,6 +20,33 @@ def proc():
     return NUFFTLRTAsyncProcess()
 
 
+def test_smoothed_periodogram_clamps_the_window():
+    # CPU-only: np.convolve(..., 'same') returns max(len, window)
+    # samples, so an unclamped window > nf lengthened the PSD and blew
+    # up downstream with a raw numpy broadcast error.
+    from ..nufft_lrt import _smoothed_periodogram
+    for n in (1, 2, 3, 4, 5, 6, 7, 33):
+        p = np.arange(1.0, n + 1.0)
+        for window in (1, 2, 5, 1000):
+            out = _smoothed_periodogram(p, window)
+            assert len(out) == n, (n, window)
+            assert np.all(np.isfinite(out))
+        # any window >= n gives the same (fully clamped) result
+        assert np.allclose(_smoothed_periodogram(p, 1000),
+                           _smoothed_periodogram(p, n))
+        # ... and smoothing preserves the total (edge-corrected mean of
+        # the available neighbours, never zero-padded)
+        assert _smoothed_periodogram(p, 3).min() >= p.min()
+        assert _smoothed_periodogram(p, 3).max() <= p.max()
+
+
+def test_run_docstring_warns_about_the_duration_outer_product():
+    doc = ' '.join(NUFFTLRTAsyncProcess.run.__doc__.split())
+    assert 'outer product' in doc
+    assert 'len(periods)**2' in doc
+    assert '0.1 * periods' in doc
+
+
 class TestNUFFTLRTAlgorithm:
     """Test NUFFT LRT algorithm logic (CPU-only, real implementation)"""
 

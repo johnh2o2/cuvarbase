@@ -669,8 +669,9 @@ class BLSMemory:
 def _fast_path_nbins(freqs32, qmin, qmax):
     """Per-frequency bin counts of the fast (shared-memory) kernels:
     ``nbinsf = floor(1/qmin)`` fine bins and ``nbins0 = floor(1/qmax)``
-    (box widths ``m / nbinsf`` for ``m`` up to ``ceil(nbinsf /
-    nbins0)``), exactly as :meth:`BLSMemory.setdata` uploads them.
+    (box widths ``m / nbinsf`` for ``m`` up to and including
+    ``floor(nbinsf / nbins0)`` -- see :func:`_fast_box_widths`),
+    exactly as :meth:`BLSMemory.setdata` uploads them.
     ``freqs32`` is the float32 frequency array (only its length and
     dtype matter); ``qmin``/``qmax`` scalar or per-frequency."""
     nbinsf = (np.ones_like(freqs32) / qmin).astype(np.uint32)
@@ -1026,6 +1027,17 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     bls: array_like, float
         BLS periodogram, normalized to
         :math:`1 - \\chi_2(\\omega) / \\chi_2(constant)`
+
+    Notes
+    -----
+    The phase fold is float32, so it resolves ``ulp(T * max(freqs))``:
+    keep ``qmin / noverlap`` well above it or narrow boxes lose power
+    (``q = 0.01`` boxes recover 3-15 % less than the exact float64 box
+    at ``T * f > 7000``, 22 % less over a 10-year baseline at 20 c/d),
+    and binned power moves by up to ~10 % with the fractional part of
+    ``min(t)``. Because the kernels accumulate through float32 atomics,
+    two identical calls differ by ~1e-8 to 1e-7. See "Precision and
+    reproducibility" in the BLS documentation.
 
     """
     return _eebls_gpu_fast_impl(
@@ -2754,7 +2766,9 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         fast-kernel defaults ``dlogq=0.3``, ``noverlap=2`` apply),
         `compile_bls`, `fmax_transit`, `fmin_transit`, and
         `transit_autofreq`. The :func:`eebls_gpu`-only kwargs
-        ``nstreams`` and ``max_memory`` are ignored. On the sparse
+        ``nstreams`` and ``max_memory`` are ignored (with a
+        ``UserWarning``; use :func:`eebls_transit_gpu` or
+        :func:`eebls_gpu` if you need them). On the sparse
         path, only the kwargs that `sparse_bls_gpu` accepts
         (``block_size``, ``max_ndata``, ``stream``, ``kernel``,
         ``convention``) are forwarded to it. A ``convention=`` kwarg
@@ -2844,7 +2858,14 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     # window -- Sep 2026 audit defect 7); the best (q, phi) is recovered
     # at the top n_solutions peaks afterwards.
     for key in ('nstreams', 'max_memory'):   # eebls_gpu-only
-        kwargs.pop(key, None)
+        if kwargs.pop(key, None) is not None:
+            warnings.warn(
+                "eebls_transit ignores %s: the default path runs "
+                "eebls_gpu_fast, which uses one stream and sizes its "
+                "own shared-memory batches. Call eebls_transit_gpu "
+                "(Keplerian bounds, solution at every frequency) or "
+                "eebls_gpu directly if you need %s." % (key, key),
+                UserWarning, stacklevel=2)
     dlogq = kwargs.setdefault('dlogq', 0.3)
     noverlap = kwargs.setdefault('noverlap', 2)
     dphi = kwargs.get('dphi', 0.0)
