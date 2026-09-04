@@ -299,7 +299,12 @@ class PDMAsyncProcess(GPUAsyncProcess):
         nbins: int, optional (default: 10)
             Number of bins for binned PDM.
         dphi: float, optional (default: 0.05)
-            Phase width for binless PDM.
+            Kernel width of the binless kinds, in units of phase (cycles):
+            the **half-width** of the tophat window for
+            ``binless_tophat[_fast]`` (points with phase distance
+            ``< dphi`` enter the local mean) and the **standard deviation**
+            of the Gaussian weight for ``binless_gauss[_fast]``. Ignored by
+            the binned kinds.
         **pdm_kwargs:
             Extra arguments passed to ``autofrequency`` (when ``freqs``
             is not given) and to ``pdm_async`` (e.g. ``block_size``,

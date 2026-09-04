@@ -83,18 +83,24 @@ model:
 * ``binned_linterp`` (default) — like ``binned_step``, but the model is
   linearly interpolated between bin centers (a "PDM2"-style refinement
   that reduces binning artifacts).
-* ``binless_tophat`` — no binning; each point is compared against a local
-  mean computed from all points within a phase distance ``dphi``.
-* ``binless_gauss`` — like ``binless_tophat``, but neighbors are weighted
-  by a Gaussian in phase distance with width ``dphi``.
+* ``binless_tophat`` — no binning; each point is compared against the
+  weighted mean of all points within a phase distance ``dphi`` of it
+  (``dphi`` is the **half-width** of the tophat window, in cycles).
+* ``binless_gauss`` — like ``binless_tophat``, but every point enters the
+  local mean with a Gaussian weight in phase distance; ``dphi`` is the
+  **standard deviation** of that Gaussian, in cycles.
 
 Each variant also has a ``*_fast`` version (``binned_linterp_fast``,
 ``binned_step_fast``, ``binless_tophat_fast``, ``binless_gauss_fast``)
-that computes the same statistic with shared-memory tiling and a one-pass
-sum-of-squares formulation. The fast kernels are substantially quicker on
-large datasets and are numerically equivalent up to single-precision
-round-off; results may differ from the reference kernels at the
-:math:`\sim 10^{-6}` level.
+that computes the same statistic with the lightcurve staged through
+shared memory (and, for ``binned_step_fast``, a one-pass sum-of-squares
+formulation). They are numerically equivalent to the reference kernels up
+to single-precision round-off (differences at the :math:`\sim 10^{-6}`
+level) but are **not** guaranteed to be faster: the v1.0 audit measured
+0.7-2.0x relative to the reference kernels on an Ada-generation GPU
+(binned kinds 1.0-1.6x, ``binless_tophat_fast`` about 0.75x,
+``binless_gauss_fast`` 1.3-2.0x). They may be faster on some GPUs;
+benchmark both kinds on your hardware and data before choosing.
 
 An example with ``cuvarbase``
 -----------------------------
@@ -138,6 +144,40 @@ automatically:
     results = proc.run(data, freqs=freqs, kind='binless_gauss_fast',
                        dphi=0.05)
 
+Numerical notes
+---------------
+
+* **Single-precision phase folding.** Times, weights and frequencies are
+  transferred to the GPU as ``float32`` after ``t`` and ``y`` have been
+  mean-centered in float64 on the host (absolute BJD-scale times are
+  therefore safe), and the phase
+  :math:`\phi_i = t_i f - \lfloor t_i f \rfloor` is evaluated in
+  ``float32``. There is no double-precision option. The resulting phase
+  error is of order :math:`\epsilon_\phi \approx 3 \times 10^{-8}\,
+  T f_{\max}` cycles for a baseline :math:`T` (the largest :math:`|t|`
+  after centering is :math:`T/2`, and float32 resolves :math:`t f` to
+  about :math:`2^{-24}` relative) and has to stay small compared with the
+  bin width :math:`1/\mathrm{nbins}` (or ``dphi``). As a rule of thumb
+  keep :math:`T f_{\max}\, \mathrm{nbins} \lesssim 10^{5}` (phase error
+  below 0.3% of a bin). Measured against a float64 fold of the same
+  statistic (``binned_step``, 500 points): :math:`T = 365` d,
+  :math:`f_{\max} = 20\ \mathrm{d}^{-1}`, 10 bins: largest deviation
+  :math:`3 \times 10^{-3}`, peak unchanged; :math:`T = 3650` d,
+  :math:`f_{\max} = 50\ \mathrm{d}^{-1}`, 10 bins:
+  :math:`1 \times 10^{-2}`, peak unchanged; the same with 50 bins:
+  :math:`4 \times 10^{-2}` and the peak frequency moved. In that regime
+  reduce ``nbins``, restrict ``maximum_frequency``, or split the
+  baseline.
+* Apart from the phase resolution, the kernels agree with a float64
+  evaluation of the same statistic to float32 round-off; the remaining
+  differences come from points that land on the other side of a bin edge,
+  which can move individual values by up to a few :math:`10^{-2}` at
+  single frequencies for gappy data with many bins.
+* Results are bitwise reproducible from run to run, and the
+  multi-lightcurve ``run()``, ``batched_run_const_nfreq()`` and
+  ``large_run()`` paths are bit-identical to single-lightcurve ``run()``
+  calls.
+
 API notes
 ---------
 
@@ -147,8 +187,8 @@ API notes
   weights internally, and ``t`` and ``y`` are mean-centered before
   transfer to the GPU.
 * ``nbins`` controls the number of phase bins for the ``binned_*``
-  variants; ``dphi`` controls the phase window/width for the
-  ``binless_*`` variants.
+  variants; ``dphi`` (in cycles) is the tophat half-width or the Gaussian
+  standard deviation for the ``binless_*`` variants (see above).
 * The legacy input format ``[(t, y, w, freqs), ...]`` (weights and
   frequencies packed into the data tuples) is still accepted for
   backward compatibility but is **deprecated** and emits a
