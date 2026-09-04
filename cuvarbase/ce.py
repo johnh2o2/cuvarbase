@@ -279,11 +279,22 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     Notes
     -----
     The returned periodogram is Graham et al. (2013)'s conditional
-    entropy ``H(m|phi)`` plus the constant ``log((mag_overlap + 1) /
-    mag_bins)`` (the magnitude bin width, i.e. entropy of a density
-    rather than of bin probabilities). The offset is the same at every
-    frequency, so the location of the minimum is unaffected; subtract it
-    if you need the entropy in Graham's normalization.
+    entropy ``H(m|phi)`` plus a constant: the histogram is converted to
+    a *density* in magnitude, which adds ``sum_m p(m) log(dm_m)``, the
+    mass-weighted mean of the log bin widths ``dm_m`` (in units of the
+    normalized magnitude range). With ``mag_overlap=0`` every bin has
+    ``dm_m = 1 / mag_bins``, so the offset is ``log(1 / mag_bins)``
+    (``-1.609`` for the default ``mag_bins=5``). With ``mag_overlap > 0``
+    the unweighted kernels use ``dm_m = min(mag_overlap + 1, mag_bins -
+    m) / mag_bins`` (the top bins are truncated at the brightest
+    magnitude cell), whereas the weighted kernel integrates every bin
+    over the full window and uses the constant ``(mag_overlap + 1) /
+    mag_bins``; ``weighted=True`` and ``weighted=False`` spectra then
+    differ by a constant. With ``balanced_magbins=True`` each bin uses
+    its own width. In every case the offset is the same at every
+    frequency (the per-magnitude-bin totals do not depend on the trial
+    frequency), so the location of the minimum is unaffected; subtract
+    it if you need the entropy in Graham's normalization.
 
     Example
     -------
