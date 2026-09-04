@@ -8,7 +8,11 @@ from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
                   single_bls, eebls_gpu_custom, eebls_gpu_fast, \
                   eebls_gpu_fast_optimized, \
-                  sparse_bls_cpu, sparse_bls_gpu, eebls_transit
+                  sparse_bls_cpu, sparse_bls_gpu, eebls_transit, \
+                  count_tot_nbins, _bls_batch_table, _max_nbins_tot, \
+                  _cap_freq_batch_size, _q_bounds_to_nbins, \
+                  _MAX_FOLD_THREADS
+from ..bls_frequencies import keplerian_freq_grid
 
 
 def transit_model(phi0, q, delta, q1=0.):
@@ -1770,3 +1774,284 @@ class TestPinnedBufferStreamParity(object):
         # off by the factor 1/yy; torn: garbage), not atomic-order
         # jitter between runs.
         assert_allclose(p_stream, p_default, rtol=1e-3)
+
+
+class TestBlsBatchSizing(object):
+    """Defect 1 of the Sep 2026 audit (``bls-overflow-oob``), the
+    default ``eebls_transit`` path for ndata >= 500 (``eebls_gpu``):
+
+    (a) the fold kernels indexed their ``ndata * nfreq`` threads in 32
+        bits while the host launched the exact product with an
+        uncapped auto batch, so a TESS 2-min year (262,800 points x an
+        18,551-frequency batch = 4.9e9 > 2^32) silently returned
+        65,372 zero powers, a power of 1.678 (> 1) and the wrong peak;
+    (b) the device bin buffers were sized from
+        ``count_tot_nbins(grid-wide min nbins0, grid-wide max nbinsf)``,
+        which is NOT an upper bound over batches (``count_tot_nbins``
+        is non-monotone in ``nbins0``), so a Keplerian-q batched grid
+        could overrun its buffers: ``eebls_transit(t, y, dy, fmin=0.02,
+        fmax=0.5)`` on 70,000 points died with ``illegal memory
+        access``.
+
+    The kernels now index in 64 bits, the host caps ``freq_batch_size``
+    at ``len(freqs)`` and ``(2^31 - 1) // ndata``, and the batch table
+    is built before allocating so the buffers are sized from the
+    actual maximum over batches.
+    """
+
+    # ---- pure-CPU checks of the sizing helpers ----
+
+    def test_count_tot_nbins_is_not_monotone_in_nbins0(self):
+        # the property that broke the old sizing (audit's numbers)
+        assert [count_tot_nbins(nb0, 359, 0.2) for nb0 in (28, 29, 30)] \
+            == [1875, 1939, 1704]
+
+    def test_batch_table_sizes_from_the_actual_batches(self):
+        # batch 0 starts at nbins0 = 29 (1939 cells per frequency)
+        # although the grid-wide minimum nbins0 is 28 (1875 cells): the
+        # old gs = freq_batch_size * 1875 * noverlap under-allocated
+        # batch 0 and the fold kernel's atomics ran off the buffer
+        nbins0 = np.array([29] * 5 + [28] * 5 + [30] * 5)
+        nbinsf = np.full(15, 359)
+        noverlap = 3
+        table = _bls_batch_table(nbins0, nbinsf, 5, 0.2)
+        assert [(b[0], b[1]) for b in table] == [(0, 5), (5, 10), (10, 15)]
+        assert [(b[2], b[3]) for b in table] == [(29, 359), (28, 359),
+                                                 (30, 359)]
+        assert [b[4] for b in table] == [1939, 1875, 1704]
+
+        old_gs = 5 * count_tot_nbins(int(nbins0.min()), int(nbinsf.max()),
+                                     0.2) * noverlap
+        new_gs = max((b[1] - b[0]) * b[4] for b in table) * noverlap
+        batch0_bins = 5 * table[0][4] * noverlap
+        assert batch0_bins > old_gs      # the overrun
+        assert batch0_bins <= new_gs     # the fix
+
+        # the memory-budget estimate is an upper bound over batches
+        assert _max_nbins_tot(nbins0, nbinsf, 0.2) >= max(b[4]
+                                                          for b in table)
+
+    def test_batch_table_last_batch_and_uneven_grids(self):
+        nbins0 = np.array([4, 4, 2, 2, 2, 8, 8])
+        nbinsf = np.array([50, 40, 60, 60, 20, 100, 100])
+        table = _bls_batch_table(nbins0, nbinsf, 3, 0.3)
+        assert [(b[0], b[1]) for b in table] == [(0, 3), (3, 6), (6, 7)]
+        assert table[0][2:4] == (2, 60)   # collapsed min nb0 / max nbf
+        assert table[1][2:4] == (2, 100)
+        assert table[2][2:4] == (8, 100)
+        for b in table:
+            assert b[4] == count_tot_nbins(b[2], b[3], 0.3)
+        with pytest.raises(ValueError):
+            _bls_batch_table(nbins0, nbinsf, 0, 0.3)
+
+    def test_max_nbins_tot_bounds_every_batching_of_a_keplerian_grid(self):
+        # HAT-like Keplerian grid with 0.5 q .. 2 q bounds, as
+        # eebls_transit builds it: every batch of every batch size
+        # needs at most the estimated number of cells
+        freqs, qvals = keplerian_freq_grid(0.5, 100., 3650.,
+                                           oversampling=2,
+                                           return_qvals=True)
+        qvals = qvals.astype(np.float64)[:5000]
+        nbins0, nbinsf = _q_bounds_to_nbins(0.5 * qvals, 2.0 * qvals)
+        for dlogq in (0.2, 0.3, -1.0):
+            bound = _max_nbins_tot(nbins0, nbinsf, dlogq)
+            for fbs in (1, 7, 100, 1234, len(qvals)):
+                table = _bls_batch_table(nbins0, nbinsf, fbs, dlogq)
+                assert max(b[4] for b in table) <= bound
+
+    def test_cap_freq_batch_size(self):
+        # (2^31 - 1) // ndata: the audit's 66,000-point case
+        assert _cap_freq_batch_size(10 ** 9, 66000, 10 ** 9) \
+            == _MAX_FOLD_THREADS // 66000 == 32537
+        assert 66000 * 32537 <= 2 ** 31 - 1 < 66000 * 32538
+        # never more than the grid
+        assert _cap_freq_batch_size(500, 100, 300) == 300
+        # never less than one frequency
+        assert _cap_freq_batch_size(0, 100, 300) == 1
+        # a sane request is left alone
+        assert _cap_freq_batch_size(5, 100, 300) == 5
+
+    def test_q_bounds_to_nbins(self):
+        nb0, nbf = _q_bounds_to_nbins([0.01, 0.02], [0.5, 0.25])
+        assert list(nb0) == [2, 4] and list(nbf) == [100, 50]
+        with pytest.raises(ValueError, match="qmin must be > 0"):
+            _q_bounds_to_nbins([0.0], [0.5])
+        with pytest.raises(ValueError, match="qmax must be <= 1"):
+            _q_bounds_to_nbins([0.1], [1.5])
+
+    def test_eebls_gpu_rejects_bad_bounds_before_any_gpu_work(self):
+        # used to be a ZeroDivisionError (qmin > qmax) or a device
+        # divide-by-zero (qmax > 1); validation now precedes the compile,
+        # so this runs on CPU-only machines too
+        t, y, dy = data(ndata=50)
+        freqs = np.array([0.9, 1.0, 1.1])
+        with pytest.raises(ValueError, match="qmin > qmax"):
+            eebls_gpu(t, y, dy, freqs, qmin=0.2, qmax=0.1)
+        with pytest.raises(ValueError, match="qmax must be <= 1"):
+            eebls_gpu(t, y, dy, freqs, qmin=0.1, qmax=2.0)
+        with pytest.raises(ValueError, match="qmin must be > 0"):
+            eebls_gpu(t, y, dy, freqs, qmin=0.0, qmax=0.5)
+        with pytest.raises(ValueError, match="qmin"):
+            eebls_gpu(t, y, dy, freqs, qmin=np.array([0.01, 0.02]))
+
+    # ---- GPU ----
+
+    @staticmethod
+    def _big_lc(ndata=131072, seed=1):
+        rng = np.random.RandomState(seed)
+        t = np.sort(rng.uniform(0, 30., ndata))
+        y = 1 - 0.01 * (((t * 0.5) % 1) < 0.3) + 0.002 * rng.randn(ndata)
+        dy = np.full(ndata, 0.002)
+        return t, y, dy
+
+    def test_fold_kernel_index_is_64_bit(self):
+        # Direct launch of bin_and_phase_fold_bst_multifreq with
+        # ndata * nfreq = 131072 * 32769 = 4.295e9 > 2^32 (the host
+        # entry points now cap the batch, so only a direct launch
+        # reaches this). With the old 32-bit bound `i < ndata * nfreq`
+        # the product wrapped to 65536: only half of frequency 0's
+        # points were binned and every other frequency stayed empty.
+        # One q level of 1024 bins keeps the atomics cheap (~1 s).
+        import pycuda.gpuarray as gpuarray
+        from ..bls import _function_signatures, _default_block_size
+        ndata, nf, nb = 131072, 32769, 1024
+        assert ndata * nf > 2 ** 32
+        t, y, dy = self._big_lc(ndata)
+        t32 = (t - np.floor(t.min())).astype(np.float32)
+        rng = np.random.RandomState(5)
+        yw = (1e-4 * rng.randn(ndata)).astype(np.float32)
+        w = np.full(ndata, 1. / ndata, dtype=np.float32)
+        freqs = np.linspace(0.3, 0.7, nf).astype(np.float32)
+
+        funcs = compile_bls(
+            function_names=['bin_and_phase_fold_bst_multifreq'])
+        func = funcs['bin_and_phase_fold_bst_multifreq']
+        t_g, yw_g, w_g, f_g = (gpuarray.to_gpu(a)
+                               for a in (t32, yw, w, freqs))
+        yw_bin = gpuarray.zeros(nf * nb, np.float32)
+        w_bin = gpuarray.zeros(nf * nb, np.float32)
+        bs = _default_block_size
+        grid = (int(np.ceil(float(ndata) * nf / bs)), 1)
+        args = (t_g.ptr, yw_g.ptr, w_g.ptr, yw_bin.ptr, w_bin.ptr, f_g.ptr)
+        func.prepared_call(grid, (bs, 1, 1), *args, np.uint32(ndata),
+                           np.uint32(nf), np.uint32(nb), np.uint32(nb),
+                           np.uint32(0), np.uint32(1), np.float32(0.2),
+                           np.uint32(nb))
+        wb = w_bin.get()
+        ywb = yw_bin.get()
+
+        # float32 fold replica (bit-identical to the kernel's
+        # mod1(t * f) / floorf(nb * phi) for dphi = 0); check the first,
+        # a middle and the LAST frequency -- the last one's threads all
+        # lie beyond the 2^32 boundary
+        for k in (0, nf // 2, nf - 1):
+            phi = np.float32(t32 * freqs[k])
+            phi = phi - np.floor(phi)
+            b = np.floor(np.float32(nb) * phi).astype(np.int64) % nb
+            ref_w = np.bincount(b, weights=w.astype(np.float64),
+                                minlength=nb)
+            ref_yw = np.bincount(b, weights=yw.astype(np.float64),
+                                 minlength=nb)
+            assert_allclose(wb[k * nb:(k + 1) * nb], ref_w,
+                            rtol=1e-5, atol=1e-9)
+            assert_allclose(ywb[k * nb:(k + 1) * nb], ref_yw,
+                            rtol=1e-3, atol=1e-8)
+        # nothing was binned outside the requested cells, and every
+        # frequency saw all the weight
+        assert_allclose(wb.reshape(nf, nb).sum(axis=1), 1.0, rtol=1e-4)
+
+    def test_eebls_gpu_above_2_32_threads_matches_safe_batching(self):
+        # eebls_gpu with a user-supplied freq_batch_size whose
+        # ndata * batch exceeds 2^32 (before the fix: zeros / powers > 1;
+        # the audit's 66,000 x 66,000 case had corr -0.003 with the
+        # correct periodogram). One q level of 1024 bins keeps the two
+        # full-grid runs to well under a second each.
+        ndata, nf = 131072, 32769
+        t, y, dy = self._big_lc(ndata)
+        freqs = np.linspace(0.3, 0.7, nf)
+        q = 1. / 1024
+        kw = dict(qmin=q, qmax=q, noverlap=1)
+        p_big, sols_big = eebls_gpu(t, y, dy, freqs, freq_batch_size=nf,
+                                    **kw)
+        p_safe, sols_safe = eebls_gpu(t, y, dy, freqs,
+                                      freq_batch_size=4096, **kw)
+        assert not np.any(p_big == 0)
+        assert np.all(p_big <= 1.0)
+        assert_allclose(p_big, p_safe, rtol=1e-4, atol=1e-6)
+        assert np.argmax(p_big) == np.argmax(p_safe)
+
+    def test_eebls_gpu_keplerian_batches_do_not_overrun(self):
+        # The audit's reproducer for (b): HAT-like Keplerian grid
+        # (keplerian_freq_grid(0.5, 100, 3650), first 20,000
+        # frequencies, qmin = 0.5 q, qmax = 2 q), 600 points,
+        # freq_batch_size = 2435 (what a 1.5 GB budget gave the old
+        # sizing). Batch 0 starts at nbins0 = 131 and needs 2706 cells
+        # per frequency while the old buffers held 2565 (the grid-wide
+        # (81, 570) count): `illegal memory access` before the fix.
+        freqs, qvals = keplerian_freq_grid(0.5, 100., 3650.,
+                                           oversampling=2,
+                                           return_qvals=True)
+        freqs = freqs.astype(np.float64)[:20000]
+        qvals = qvals.astype(np.float64)[:20000]
+        qmins, qmaxes = 0.5 * qvals, 2.0 * qvals
+        nbins0, nbinsf = _q_bounds_to_nbins(qmins, qmaxes)
+        fbs, dlogq, noverlap = 2435, 0.2, 3
+        table = _bls_batch_table(nbins0, nbinsf, fbs, dlogq)
+        old_cells = count_tot_nbins(int(nbins0.min()), int(nbinsf.max()),
+                                    dlogq)
+        # the configuration really is one the old sizing overran
+        assert table[0][4] > old_cells
+
+        rng = np.random.RandomState(0)
+        ndata = 600
+        t = np.sort(rng.uniform(0, 3650., ndata))
+        y = 1 + 0.002 * rng.randn(ndata)
+        dy = np.full(ndata, 0.002)
+        p, sols = eebls_gpu(t, y, dy, freqs, qmin=qmins, qmax=qmaxes,
+                            freq_batch_size=fbs, dlogq=dlogq,
+                            noverlap=noverlap)
+        assert np.all(np.isfinite(p))
+        assert np.all((p >= 0) & (p <= 1))
+        assert len(sols) == len(freqs)
+
+    def test_eebls_gpu_small_grid_allocates_only_what_it_needs(self):
+        # finding 135 / plan item BLS-2: a 300-frequency grid used to
+        # allocate scratch for the ~100K-frequency batch the free
+        # memory allowed (4 arrays x 5 streams x ~0.9 x free). The
+        # batch is now capped at len(freqs), so the scratch buffers
+        # hold exactly nfreq * cells * noverlap floats, and one scratch
+        # set per batch (not per stream) is allocated. The periodogram
+        # is unchanged (scalar q: batch boundaries never change it).
+        import cuvarbase.bls as B
+        t, y, dy = data(snr=10, q=0.05, phi0=0.3, freq=1.0, baseline=365.)
+        freqs = np.linspace(0.95, 1.05, 300)
+        qmin, qmax, noverlap, dlogq = 0.01, 0.1, 3, 0.2
+        need = len(freqs) * count_tot_nbins(10, 100, dlogq) * noverlap
+
+        sizes = []
+        real = B.gpuarray
+
+        class Recorder(object):
+            to_gpu = staticmethod(real.to_gpu)
+            maximum = staticmethod(real.maximum)
+
+            @staticmethod
+            def zeros(n, dtype=np.float32):
+                sizes.append(int(n))
+                return real.zeros(n, dtype=dtype)
+
+        B.gpuarray = Recorder
+        try:
+            p, sols = eebls_gpu(t, y, dy, freqs, qmin=qmin, qmax=qmax,
+                                noverlap=noverlap, dlogq=dlogq)
+        finally:
+            B.gpuarray = real
+        assert max(sizes) == need
+        # single batch -> one scratch set of 4 arrays (+ the 4
+        # per-frequency result arrays)
+        assert sizes.count(need) == 4
+
+        p2, sols2 = eebls_gpu(t, y, dy, freqs, qmin=qmin, qmax=qmax,
+                              noverlap=noverlap, dlogq=dlogq,
+                              freq_batch_size=50)
+        assert_allclose(p, p2, rtol=1e-4, atol=1e-6)
