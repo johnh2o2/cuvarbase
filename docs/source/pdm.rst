@@ -8,24 +8,65 @@ folded data trace out a coherent curve and the scatter around that curve is
 small; at an unrelated frequency the fold looks like noise and the scatter
 is comparable to the total variance of the data.
 
-Classically, PDM bins the folded data into :math:`M` phase bins and
-computes the statistic
+Classically [S1978]_, PDM bins the folded data into :math:`M` phase bins
+and computes
 
 .. math::
-    \Theta(f) = \frac{s^2(f)}{\sigma^2},
+    \Theta(f) = \frac{s^2(f)}{\sigma^2}
+              = \frac{\sum_i \left(y_i - m_i(f)\right)^2 / (N - M)}
+                     {\sum_i \left(y_i - \bar{y}\right)^2 / (N - 1)},
 
-where :math:`s^2(f)` is the (weighted) variance of the data around the
-per-bin means at trial frequency :math:`f` and :math:`\sigma^2` is the
-total (weighted) variance. :math:`\Theta \approx 1` for noise and
-:math:`\Theta \ll 1` near the true frequency.
+where :math:`m_i(f)` is the mean of the bin that observation :math:`i`
+falls in at trial frequency :math:`f`, :math:`N` is the number of
+observations and :math:`M` the number of occupied bins.
+:math:`\Theta \approx 1` for noise and :math:`\Theta \ll 1` near the true
+frequency.
 
-``cuvarbase`` returns the equivalent *peak-finding* statistic
+The statistic ``cuvarbase`` computes
+------------------------------------
+
+The kernels return the *peak-finding* sum-of-squares ratio
 
 .. math::
-    P(f) = 1 - \Theta(f),
+    P(f) = 1 - \frac{\sum_i w_i \left(y_i - m_i(f)\right)^2}
+                    {\sum_i w_i \left(y_i - \bar{y}\right)^2},
+    \qquad \bar{y} = \sum_i w_i y_i,
 
-so the best candidate frequencies appear as **maxima** of the returned
-power array, consistent with the other periodograms in this package.
+with weights :math:`w_i \propto 1/\sigma_i^2` normalized to
+:math:`\sum_i w_i = 1` and :math:`m_i(f)` the model of the folded
+lightcurve at the phase of observation :math:`i` (a bin mean, an
+interpolation between bin means, or a local mean, depending on the
+variant; see below). The best candidate frequencies appear as **maxima**
+of the returned power array, consistent with the other periodograms in
+this package.
+
+:math:`P(f)` is **not** :math:`1 - \Theta(f)`: the degrees-of-freedom
+factors :math:`N - M` and :math:`N - 1` are not applied (for uniform
+weights, :math:`1 - P(f) = \frac{N - M}{N - 1}\,\Theta(f)`). Keep the
+consequences in mind:
+
+* **Noise floor.** For pure noise :math:`\Theta \approx 1`, but the
+  expected value of :math:`P` is :math:`(M - 1)/(N - 1)` (exact for
+  ``binned_step`` with Gaussian noise and uniform weights;
+  ``binned_linterp`` behaves similarly): up to 0.47 for :math:`N = 20`
+  observations in 10 bins, about 0.18 for :math:`N = 50` and 0.01 for
+  :math:`N = 1000`. Judge a peak against this floor, not against zero.
+* **Comparability.** Values are only comparable between runs with the
+  same ``nbins`` (or ``dphi``) and the same :math:`N`; more bins raise
+  the whole periodogram.
+* **Gappy data.** :math:`M` counts *occupied* bins, so with incomplete
+  phase coverage the floor varies along the periodogram and, for small
+  :math:`N`, the ranking of candidate peaks can differ from that of
+  :math:`\Theta`.
+* **Binless kinds.** ``binless_tophat`` and ``binless_gauss`` use the
+  same ratio with :math:`m_i(f)` the kernel-weighted local mean (which
+  includes the point itself); their noise floor depends on ``dphi`` and
+  :math:`N`.
+
+To recover Stellingwerf's :math:`\Theta` for a binned kind, rescale
+:math:`1 - P(f)` by :math:`(N - 1)/(N - M(f))` with :math:`M(f)` counted
+on the host (the kernels do not return it); ``cuvarbase`` does not do
+this for you.
 
 To our knowledge this is the only GPU implementation of PDM currently
 available. As of v1.0 it has fast kernels for all variants, unit tests,
