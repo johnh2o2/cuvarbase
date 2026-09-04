@@ -628,6 +628,16 @@ class BLSMemory:
             if nf is None:
                 nf = len(freqs)
             self.allocate_freqs(nfreqs=nf)
+        elif freqs is not None and len(self.freqs) != len(self.freqs_g):
+            # the device grid arrays keep their first size; a silent
+            # pycuda "ary and self must be the same size" used to
+            # surface from set_async
+            raise ValueError(
+                "BLSMemory: this memory's device frequency arrays hold "
+                "%d frequencies (sized by the first setdata call) but "
+                "%d were given; reuse a BLSMemory with the same "
+                "len(freqs) or construct a new one"
+                % (len(self.freqs_g), len(self.freqs)))
 
         if transfer:
             self.transfer_data_to_gpu(transfer_freqs=(freqs is not None))
@@ -638,9 +648,16 @@ class BLSMemory:
     def fromdata(cls, t, y, dy, qmin=None, qmax=None,
                  freqs=None, nf=None, transfer=True,
                  **kwargs):
-
-        max_ndata = kwargs.get('max_ndata', len(t))
-        max_nfreqs = kwargs.get('max_nfreqs', nf if freqs is None
+        """Construct a :class:`BLSMemory` sized for ``t``/``freqs`` and
+        load the data. ``max_ndata`` / ``max_nfreqs`` may be given as
+        keywords to over-allocate the host arrays (they used to be
+        passed on to ``__init__`` a second time and raise ``TypeError``;
+        Sep 2026 audit, id 67). Note the device frequency arrays are
+        sized by the first ``setdata`` call: reuse requires the same
+        ``len(freqs)``."""
+        # pop, not get: __init__ takes them positionally
+        max_ndata = kwargs.pop('max_ndata', len(t))
+        max_nfreqs = kwargs.pop('max_nfreqs', nf if freqs is None
                                 else len(freqs))
         c = cls(max_ndata, max_nfreqs, **kwargs)
 
@@ -966,7 +983,7 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         Maximum amount of shared memory to use per block in bytes.
         This is GPU-dependent but usually around 48KB. If ``None``,
         uses device information provided by PyCUDA (recommended).
-    max_nblocks: int, optional (default: 200)
+    max_nblocks: int, optional (default: 5000)
         Maximum grid size to use
     force_nblocks: int, optional (default: None)
         If this is set the gridsize is forced to be this value
@@ -1008,14 +1025,17 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    transfer_to_device=True,
                    transfer_to_host=True, **kwargs):
     """
-    Optimized version of eebls_gpu_fast with improved CUDA kernel.
+    Variant of eebls_gpu_fast built from the bls_optimized.cu module.
 
-    This uses an optimized kernel with:
-    - Fixed bank conflicts (separate yw/w arrays)
-    - Fast math intrinsics (floorf)
-    - Warp shuffle reduction (eliminates 4 __syncthreads calls)
-
-    Expected speedup: 20-30% over standard version
+    Its multi-pass kernel (``full_bls_no_sol_optimized``) uses separate
+    yw/w shared arrays (no bank conflicts) and a warp-shuffle finish
+    for the block reduction. At the default power-of-two ``noverlap``
+    with ``dphi=0`` both entry points launch the SAME fused kernel
+    (``full_bls_no_sol_fused``, shared through bls_common.cuh), so they
+    perform identically; only the multi-pass fallback (other
+    ``noverlap`` values, ``dphi != 0``) differs, where the v1.0
+    re-benchmark measured parity (~1.0x) rather than the 20-30 % once
+    claimed here.
 
     All parameters are identical to eebls_gpu_fast.
 
@@ -1200,18 +1220,27 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     q_values: array_like
         Set of q values to search at each trial frequency
     phi_values: float or array_like
-        Set of phi values to search at each trial frequency
+        Set of transit start phases to search at each trial frequency.
+        These are ABSOLUTE phases, ``(t * f) mod 1`` in the original
+        input timescale (the same convention as the ``phi`` returned
+        by :func:`eebls_gpu` and accepted by :func:`single_bls`); they
+        are re-referenced internally to the subtracted epoch in float64.
+        Consequently the same coarse ``phi_values`` grid samples
+        different absolute phases for ``t`` and ``t + 2457000.5``, and
+        low-power frequencies can differ between the two (a fine grid,
+        or :func:`hone_solution`, makes this negligible).
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     nstreams: int, optional (default: 5)
         Number of CUDA streams to utilize.
     freq_batch_size: int, optional (default: None)
-        Number of frequencies to compute in a single batch; determines
-        this automatically by default based on ``max_memory``
+        Number of frequencies to compute in a single batch; determined
+        automatically from ``max_memory`` when ``None``; capped at
+        ``len(freqs)`` and at ``(2**31 - 1) // len(t)`` either way.
     max_memory: float, optional (default: None)
-        Maximum memory to use in bytes. Will ignore this if
-        ``freq_batch_size`` is specified. If ``None``, will use the
-        free memory given by ``pycuda.driver.mem_get_info()``
+        Memory budget in bytes for the device scratch buffers. Ignored
+        if ``freq_batch_size`` is specified; ``None`` budgets half of
+        the free memory reported by ``pycuda.driver.mem_get_info()``.
     functions: tuple of CUDA functions
         Dictionary of prepared functions from :func:`compile_bls`.
     **kwargs:
@@ -2176,6 +2205,29 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             solutions)
 
 
+def _sparse_shared_mem_bytes(ndata, block_size):
+    """Dynamic shared memory ``sparse_bls_kernel`` needs per block for
+    ``ndata`` points: three arrays padded to the next power of two (for
+    the bitonic sort), two prefix-sum arrays and three per-thread
+    scratch values, all float32."""
+    n_pow2 = 1
+    while n_pow2 < ndata:
+        n_pow2 *= 2
+    return (3 * n_pow2 + 2 * int(ndata) + 3 * int(block_size)) * 4
+
+
+def _sparse_max_ndata(shmem_lim, block_size):
+    """Largest ``ndata`` whose :func:`_sparse_shared_mem_bytes` fits in
+    ``shmem_lim`` bytes."""
+    best = 0
+    n_pow2 = 1
+    while (3 * n_pow2 + 3 * block_size) * 4 <= shmem_lim:
+        n = min(n_pow2, (shmem_lim // 4 - 3 * n_pow2 - 3 * block_size) // 2)
+        best = max(best, int(n))
+        n_pow2 *= 2
+    return best
+
+
 def _reject_use_simple(kwargs, where):
     """The bubble-sort ``sparse_bls_simple.cu`` kernel was removed in
     1.0 (it still carried the pre-PR#65 ``MAX_W_COMPLEMENT 1E-9`` bound
@@ -2307,9 +2359,34 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     if max_ndata is None:
         max_ndata = ndata
 
+    # Block size must be a power of 2 for tree reductions
+    if block_size & (block_size - 1) != 0:
+        raise ValueError(f"block_size must be a power of 2, got {block_size}")
+
     # Compile kernel if not provided
     if kernel is None:
         kernel = compile_sparse_bls(block_size=block_size)
+
+    # Shared memory per block:
+    #   sh_phi[n_pow2] + sh_y[n_pow2] + sh_w[n_pow2]
+    #   + sh_cumsum_w[N] + sh_cumsum_yw[N] + 3*blockDim.x
+    shared_mem_size = _sparse_shared_mem_bytes(max_ndata, block_size)
+
+    # The kernel keeps the whole light curve in shared memory, so it is
+    # limited to ~2000 points on a 48 KB device; the launch used to fail
+    # with a bare "cuLaunchKernel failed: invalid argument" (Sep 2026
+    # audit, ids 77/126). Check before any allocation or launch.
+    att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
+    shmem_lim = int(ensure_context().device.get_attribute(att))
+    if shared_mem_size > shmem_lim:
+        raise ValueError(
+            "sparse_bls_gpu: %d points need %d bytes of shared memory "
+            "per block, above this device's %d-byte limit (the sparse "
+            "kernel handles at most %d points here with block_size=%d). "
+            "Use the binned kernels for larger light curves: "
+            "eebls_transit(use_sparse=False) / eebls_gpu_fast / eebls_gpu."
+            % (max_ndata, shared_mem_size, shmem_lim,
+               _sparse_max_ndata(shmem_lim, block_size), block_size))
 
     # Allocate GPU memory
     t_g = gpuarray.to_gpu(t)
@@ -2322,18 +2399,6 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     bls_powers_g = gpuarray.zeros(nfreqs, dtype=np.float32)
     best_q_g = gpuarray.zeros(nfreqs, dtype=np.float32)
     best_phi_g = gpuarray.zeros(nfreqs, dtype=np.float32)
-
-    # Block size must be a power of 2 for tree reductions
-    if block_size & (block_size - 1) != 0:
-        raise ValueError(f"block_size must be a power of 2, got {block_size}")
-
-    # Calculate shared memory size:
-    #   sh_phi[n_pow2] + sh_y[n_pow2] + sh_w[n_pow2]
-    #   + sh_cumsum_w[N] + sh_cumsum_yw[N] + 3*blockDim.x
-    n_pow2 = 1
-    while n_pow2 < max_ndata:
-        n_pow2 *= 2
-    shared_mem_size = (3 * n_pow2 + 2 * max_ndata + 3 * block_size) * 4
 
     # Launch kernel
     # Grid: one block per frequency (or fewer if limited by hardware)
@@ -2868,12 +2933,20 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
 
     Notes
     -----
-    With the kernel cache warm, batch mode beats a single-LC
-    ``eebls_gpu_fast`` loop at every measured scale (RTX A5000,
-    Jul 2026): ~10x at ndata=200, ~6x at 2,000, ~5x at 20,000
-    (10 LCs, nfreq ~1800-5000). The earlier "~12x slower at TESS
-    scale" regression was per-call kernel compilation (now LRU-cached
-    like the single-LC paths) and its warning has been retired; see
+    What batching buys is the removal of per-call host overhead
+    (pinned-host and device allocation, transfers, launches): the
+    kernel throughput per light curve is the same as the single-LC
+    fused kernel once one light curve fills the GPU (Sep 2026 audit,
+    id 139: 0.16-0.20 ms/LC batched vs 0.20 ms single at ZTF/TESS
+    scale, 8.5-9.3 vs 8.3-8.9 ms/LC at HAT scale). The ~5-10x measured
+    against a naive per-call ``eebls_gpu_fast`` loop (RTX A5000, Jul
+    2026; fresh ``BLSMemory`` per call) is that overhead; against a
+    single-LC loop that reuses its ``BLSMemory`` the whole-call cost
+    per light curve is about the same (~0.4 ms/LC either way at ZTF
+    scale). Pass ``memory=`` to keep the batch path itself from
+    re-allocating per chunk. The earlier "~12x slower at TESS scale"
+    regression was per-call kernel compilation (now LRU-cached like
+    the single-LC paths); see
     ``analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md``.
     """
     freqs = np.asarray(freqs).astype(np.float32)
@@ -3181,7 +3254,7 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     fmax_frac: float, optional (default: 1.0)
         Maximum frequency is `fmax_frac * fmax`, where
         `fmax` is automatically selected by `fmax_transit`.
-    fmin_frac: float, optional (default: 1.5)
+    fmin_frac: float, optional (default: 1.0)
         Minimum frequency is `fmin_frac * fmin`, where
         `fmin` is automatically selected by `fmin_transit`.
     fmin: float, optional (default: None)
