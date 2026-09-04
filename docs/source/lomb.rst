@@ -106,12 +106,72 @@ to bootstrap simulations:
 
 :func:`cuvarbase.lombscargle.LombScargleAsyncProcess.batched_run_const_nfreq`
 applies the same bound when called with ``only_return_best_freqs=True``,
-returning the significance of each lightcurve's best peak alongside the
-frequency. Two caveats: the bound is one-sided (an upper limit on the
-false-alarm probability, tight in the interesting low-FAP regime), and
-it assumes uncorrelated Gaussian noise -- correlated ("red") noise or
-strong aliasing can make the true false-alarm rate higher than the
-bound suggests.
+returning ``(best_freqs, best_freq_faps)``: the frequency of each
+lightcurve's best peak and the false-alarm probability of that peak
+(``d_K = 2 * nharmonics + 1``). Small is significant; an overwhelming
+peak can underflow to exactly ``0.0``. *Changed in 1.0:* earlier
+versions returned ``1 - FAP``, which rounds to exactly ``1.0`` for every
+FAP below 1e-16 and so could not rank detections. Two caveats: the
+bound is one-sided (an upper limit on the false-alarm probability,
+tight in the interesting low-FAP regime), and it assumes uncorrelated
+Gaussian noise -- correlated ("red") noise or strong aliasing can make
+the true false-alarm rate higher than the bound suggests. The FAP is
+exponentially sensitive to the peak power (:math:`d\ln{\rm FAP}/dP \sim
+-N/2`), so for FAP-grade work on large :math:`f T` grids use
+``use_double=True`` (see *Precision* below).
+
+Frequency grids, conventions and precision
+------------------------------------------
+
+**Uniform grids only.** Every GPU kernel evaluates the periodogram on
+``freqs = df * (k0 + np.arange(nf))`` with an integer ``k0 >= 1`` and
+``nf >= 2``; the array you pass only labels the output. ``run``,
+``batched_run_const_nfreq`` and ``preallocate`` validate the grid with
+:func:`cuvarbase.lombscargle.check_k0` and raise ``ValueError`` naming
+the first offending point for anything else -- two concatenated
+``arange`` segments, a uniform grid with points removed, ``geomspace``,
+or a ``linspace`` whose start is not a multiple of its step. (Before 1.0
+only the first two points were inspected and such grids were silently
+evaluated on the implied uniform grid.) Build one uniform grid per band
+instead; ``cuvarbase.utils.autofrequency`` and
+``run(minimum_frequency=..., maximum_frequency=...)`` produce valid
+grids. Bands that start far from zero (``fmin >= fmax / 2``, say) are
+fine: the NFFT grids are sized from the highest mode used. The NFFT
+oversampling factor must be ``sigma >= 3`` (default 4); smaller values
+alias the top of every band and are rejected.
+
+**Model conventions.** ``floating_mean=True`` (default) is the
+generalized Lomb-Scargle of [ZK2009]_ (astropy's ``fit_mean=True``) and
+is what all accuracy statements below refer to. ``floating_mean=False``
+is the classic periodogram of the data centred on the *unweighted* mean,
+which differs from astropy's ``fit_mean=False, center_data=True`` for
+heteroscedastic errors. ``window=True`` returns the spectral window as
+the periodogram of ``y = 1`` in the classic normalization, which is
+**4x** astropy's ``LombScargle(t, ones, fit_mean=False,
+center_data=False)``. ``nharmonics > 1`` (the multiharmonic GLS) is
+floating-mean only and is honoured on every path: the NFFT path solves
+the small per-frequency system on the host from the GPU spectra, and
+``use_fft=False`` / ``python_dir_sums=True`` run float64 direct sums on
+the host (correct but O(N nf)). ``amplitude_prior`` is the standard
+deviation of a Gaussian prior on the harmonic amplitudes (a ridge term
+``1 / amplitude_prior**2``) and is applied on every path. ``dy=None``
+gives unit weights.
+
+**The -1 sentinel.** A power of exactly ``-1`` marks a non-finite or
+negative value at that frequency (non-finite ``y`` or ``dy``, ``dy = 0``,
+degenerate ``t``); it is not a periodogram value. Check the input.
+
+**Precision.** The default float32 pipeline agrees with the exact
+float64 generalized Lomb-Scargle to about 1e-4 in power for
+:math:`f T \lesssim 10^4` (e.g. 300 points over a year to 20 cycles/day)
+and to about 1e-3 at survey scale (:math:`f T \sim 10^5`--:math:`10^6`,
+ten-year baselines to 50 cycles/day); the limit is the float32 storage
+of the (epoch-subtracted) times. ``use_double=True`` reaches ~1e-7 and
+is recommended whenever the *value* of the power matters -- false-alarm
+probabilities, amplitude estimates -- rather than the location of the
+peak, which float32 recovers identically in all tests. Times are
+mean-centred on the host in float64 before any cast, so absolute (BJD)
+timestamps are safe.
 
 
 Example: Basic

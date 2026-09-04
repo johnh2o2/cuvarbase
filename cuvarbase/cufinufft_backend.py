@@ -37,7 +37,7 @@ import pycuda.gpuarray as gpuarray
 from .base import ensure_context
 
 # LRU cache of cufinufft Plans keyed on (nf_total, eps, n_pts,
-# gpu_method). Plan creation (cuFFT plan + GPU workspace allocation)
+# gpu_method, dtype). Plan creation (cuFFT plan + GPU workspace allocation)
 # dominated the per-call cost of this backend; reuse amortizes it.
 # Cached plans hold GPU memory: the cache is small and evicted plans
 # free their resources on garbage collection; call free_plan_cache()
@@ -56,9 +56,11 @@ def check_cufinufft():
         )
 
 
-def _get_plan(nf_total, eps, n_pts, gpu_method=1):
-    """Return a cached cufinufft Plan for this problem shape."""
-    key = (int(nf_total), float(eps), int(n_pts), int(gpu_method))
+def _get_plan(nf_total, eps, n_pts, gpu_method=1, dtype='complex64'):
+    """Return a cached cufinufft Plan for this problem shape and
+    precision (``dtype``: 'complex64' or 'complex128')."""
+    key = (int(nf_total), float(eps), int(n_pts), int(gpu_method),
+           str(dtype))
     with _plan_cache_lock:
         if key in _plan_cache:
             _plan_cache.move_to_end(key)
@@ -69,7 +71,7 @@ def _get_plan(nf_total, eps, n_pts, gpu_method=1):
         n_modes=(int(nf_total),),
         n_trans=1,
         eps=eps,
-        dtype='complex64',
+        dtype=str(dtype),
         gpu_method=gpu_method,
     )
 
@@ -90,7 +92,7 @@ def free_plan_cache():
 
 
 def cufinufft_nfft_adjoint(memory, minimum_frequency=0.0,
-                           samples_per_peak=1.0, eps=1e-6,
+                           samples_per_peak=1.0, eps=None,
                            gpu_method=1,
                            transfer_to_device=True,
                            transfer_to_host=True, **kwargs):
@@ -127,8 +129,12 @@ def cufinufft_nfft_adjoint(memory, minimum_frequency=0.0,
         First frequency f0 = k0 * df.
     samples_per_peak : float, optional (default: 1)
         Oversampling factor.
-    eps : float, optional (default: 1e-6)
-        Requested precision for cufinufft.
+    eps : float, optional
+        Requested precision for cufinufft. Default: 1e-6 for a float32
+        memory, 1e-12 for a double one (``memory.use_double`` /
+        ``memory.real_type == np.float64``; the transform then runs in
+        complex128 -- before 1.0 the backend was complex64 only and
+        ``use_double=True`` raised ``TypeError``).
     gpu_method : int, optional (default: 1)
         cufinufft spreading method (1 = shared-memory subproblem,
         2 = global-memory; see the cufinufft documentation).
@@ -168,23 +174,33 @@ def cufinufft_nfft_adjoint(memory, minimum_frequency=0.0,
     # For mode M to be available, need N/2 - 1 >= M, so N >= 2*(M+1)
     nf_total = 2 * (max_mode + 1)
 
+    # precision follows the memory (float32 -> complex64, float64 ->
+    # complex128); cufinufft requires x, c and f to share it
+    real_type = np.dtype(getattr(memory, 'real_type', np.float32))
+    use_double = real_type == np.dtype(np.float64)
+    complex_type = np.complex128 if use_double else np.complex64
+    dtype_name = 'complex128' if use_double else 'complex64'
+    if eps is None:
+        eps = 1e-12 if use_double else 1e-6
+
     # Scale times to [-pi, pi]
     # x = 2*pi * (t - tmin) / (spp * dt) - pi
     # = scale * t + shift
-    scale = np.float32(2.0 * np.pi / (spp * dt))
-    shift = np.float32(-scale * tmin - np.pi)
+    scale = real_type.type(2.0 * np.pi / (spp * dt))
+    shift = real_type.type(-scale * tmin - np.pi)
 
     x_cu = memory.t_g * scale + shift
 
-    # cufinufft needs complex64 strengths
-    c = memory.y_g.astype(np.complex64)
+    # strengths in the matching complex precision
+    c = memory.y_g.astype(complex_type)
 
     # Output buffer for full transform
-    f_out = gpuarray.zeros(nf_total, dtype=np.complex64)
+    f_out = gpuarray.zeros(nf_total, dtype=complex_type)
 
     # Execute with a cached plan (creation dominates the per-call
     # cost); setpts re-bins the points for this call's data
-    plan = _get_plan(nf_total, eps, len(x_cu), gpu_method=gpu_method)
+    plan = _get_plan(nf_total, eps, len(x_cu), gpu_method=gpu_method,
+                     dtype=dtype_name)
     plan.setpts(x_cu)
     plan.execute(c, f_out)
 

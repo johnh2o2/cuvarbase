@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from ..cunfft import NFFTAsyncProcess
+from ..memory.nfft_memory import next_fast_len
 
 
 def _D(sigma):
@@ -76,3 +77,31 @@ class TestEstimateM(object):
         proc = NFFTAsyncProcess(m=8, autoset_m=False)
         assert proc.get_m() == 8
         assert proc.get_m(100, y=1e6 * np.ones(100)) == 8
+
+
+class TestNextFastLen(object):
+    """``next_fast_len`` (7-smooth padding of the NFFT grids, Sep 2026)
+    must return the smallest 2^a 3^b 5^c 7^d >= n."""
+
+    @staticmethod
+    def _smooth(x):
+        for p in (2, 3, 5, 7):
+            while x % p == 0:
+                x //= p
+        return x == 1
+
+    def test_matches_brute_force(self):
+        for n in list(range(1, 3000)) + [145996, 291996, 2920004]:
+            got = next_fast_len(n)
+            assert got >= max(n, 1)
+            assert self._smooth(got)
+            # minimal: nothing 7-smooth in [n, got)
+            assert not any(self._smooth(x) for x in range(max(n, 1), got))
+
+    def test_fixed_points_and_edges(self):
+        assert next_fast_len(0) == 1
+        assert next_fast_len(1) == 1
+        assert next_fast_len(7) == 7
+        assert next_fast_len(11) == 12
+        assert next_fast_len(1024) == 1024
+        assert next_fast_len(1025) == 1029     # 3 * 7^3
