@@ -242,9 +242,13 @@ class ConditionalEntropyMemory:
         self.ce_g.get_async(stream=self.stream, ary=self.ce_c)
 
     def compute_mag_bin_fracs(self, y, **kwargs):
-        """Compute magnitude bin fractions for probability calculations."""
+        """Compute magnitude bin fractions for probability calculations.
+
+        ``y`` holds integer magnitude-bin indices; the fractions sum to 1.
+        """
         N = float(len(y))
-        mbf = np.array([np.sum(y == i)/N for i in range(self.mag_bins)])
+        yb = np.minimum(np.asarray(y).astype(np.int64), self.mag_bins - 1)
+        mbf = np.bincount(yb, minlength=self.mag_bins)[:self.mag_bins] / N
 
         if self.mag_bin_fracs is None:
             self.mag_bin_fracs = np.zeros(self.mag_bins, dtype=self.real_type)
@@ -314,10 +318,15 @@ class ConditionalEntropyMemory:
                 y = y.astype(self.ytype)
 
             else:
-                y = np.floor(y * self.mag_bins).astype(self.ytype)
+                # y is normalized to [0, 1] with the brightest point at
+                # exactly 1.0, so floor(y * mag_bins) would give the
+                # out-of-range index mag_bins for it: clamp into the
+                # last bin.
+                y = np.minimum(np.floor(y * self.mag_bins),
+                               self.mag_bins - 1).astype(self.ytype)
 
             if self.compute_log_prob:
-                self.compute_mag_bin_fracs(y)
+                self.compute_mag_bin_fracs(y[:self.n0])
 
         if self.buffered_transfer:
             arrs = [self.t, self.y]
