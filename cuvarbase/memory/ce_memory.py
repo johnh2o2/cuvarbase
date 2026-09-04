@@ -87,6 +87,11 @@ class ConditionalEntropyMemory:
 
         self.freqs = kwargs.get('freqs', None)
         self.freqs_g = None
+        # True once ``freqs`` has been uploaded into ``freqs_g``;
+        # ``allocate_freqs`` creates a zero-filled array, so a run on a
+        # memory whose grid was never transferred would evaluate every
+        # frequency at f = 0 (``run(memory=...)`` checks this flag)
+        self._freqs_on_device = False
 
         self.mag_bin_fracs = None
         self.mag_bin_fracs_g = None
@@ -177,6 +182,7 @@ class ConditionalEntropyMemory:
                 "ConditionalEntropyMemory: requirement "
                 "`nf is not None` not satisfied")
         self.freqs_g = gpuarray.zeros(nf, dtype=self.real_type)
+        self._freqs_on_device = False
         if self.ce_g is None or self.ce_g.size != nf:
             self.ce_g = gpuarray.zeros(nf, dtype=self.real_type)
 
@@ -228,14 +234,26 @@ class ConditionalEntropyMemory:
                                            stream=self.stream)
 
     def transfer_freqs_to_gpu(self, **kwargs):
-        """Transfer frequency array to GPU."""
+        """Transfer frequency array to GPU.
+
+        Uses ``freqs`` if given (it then becomes the memory's grid),
+        otherwise ``self.freqs``; the grid is cast to ``real_type``.
+        """
         freqs = kwargs.get('freqs', self.freqs)
         if not (freqs is not None):
             raise ValueError(
                 "ConditionalEntropyMemory: requirement "
                 "`freqs is not None` not satisfied")
-
+        freqs = np.ascontiguousarray(freqs, dtype=self.real_type)
+        if self.freqs_g is None or self.freqs_g.size != len(freqs):
+            raise ValueError(
+                "ConditionalEntropyMemory: freqs_g holds %s frequencies "
+                "but %d were given; call allocate(freqs=...) first"
+                % (None if self.freqs_g is None else self.freqs_g.size,
+                   len(freqs)))
+        self.freqs = freqs
         self.freqs_g.set_async(freqs, stream=self.stream)
+        self._freqs_on_device = True
 
     def transfer_ce_to_cpu(self, **kwargs):
         """Transfer conditional entropy results from GPU to CPU."""

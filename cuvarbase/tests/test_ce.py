@@ -561,6 +561,12 @@ class TestCEBrightestPoint(object):
         proc = ConditionalEntropyAsyncProcess()
         mems = proc.allocate([(t, y, dy)], freqs=[freqs])
         mem = mems[0]
+        # ``allocate`` only creates a zero-filled ``freqs_g``; without this
+        # upload every trial frequency would be f = 0, the brightest point
+        # would never reach the last phase bin of the last frequency and
+        # the guard below could not fire (defect 19 closes the same trap
+        # inside ``run``, this makes the test independent of it)
+        mem.transfer_freqs_to_gpu()
         nb = mem.nbins
         guard = np.uint32(0xDEAD)
         big = gpuarray.zeros(nb + 8, dtype=np.uint32)
@@ -568,10 +574,15 @@ class TestCEBrightestPoint(object):
         mem.bins_g = big[:nb]
         proc.run([(t, y, dy)], memory=mems, freqs=[freqs])
         proc.finish()
+        assert mem.freqs_g.get().max() > 0
         full = big.get()
         assert_array_equal(full[nb:], np.full(8, guard))
         totals = full[:nb].reshape(len(freqs), -1).sum(axis=1)
         assert_array_equal(totals, np.full(len(freqs), N))
+        # the count that used to be written one element past ``bins_g``:
+        # brightest magnitude bin, last phase bin, last frequency
+        bins = full[:nb].reshape(len(freqs), proc.phase_bins, proc.mag_bins)
+        assert bins[-1, -1, -1] > 0
 
     @pytest.mark.parametrize('ndata', [5, 60])
     @pytest.mark.parametrize('use_double', [False, True])

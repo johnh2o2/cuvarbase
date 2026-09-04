@@ -615,8 +615,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     def _sync_memory_freqs(mem, freqs):
         """
         Make sure the frequency grid held by (and uploaded to) ``mem``
-        is ``freqs``; re-upload when a ``run`` call passes a grid that
-        differs from the one the memory was allocated with.
+        is ``freqs``: upload when the memory's grid was never transferred
+        (``allocate()`` only creates a zero-filled ``freqs_g``) and
+        re-upload when a ``run`` call passes a grid that differs from the
+        one the memory was allocated with.
         """
         f = np.asarray(freqs, dtype=mem.real_type)
         if mem.nf is not None and len(f) != mem.nf:
@@ -624,9 +626,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 "memory was allocated for %d frequencies but the call "
                 "passes %d; allocate (or preallocate) the memory for the "
                 "new grid" % (mem.nf, len(f)))
-        if mem.freqs is None or not np.array_equal(mem.freqs, f):
-            mem.freqs = f
-            mem.transfer_freqs_to_gpu()
+        if (not getattr(mem, '_freqs_on_device', False)
+                or mem.freqs is None or not np.array_equal(mem.freqs, f)):
+            mem.transfer_freqs_to_gpu(freqs=f)
 
     def run(self, data,
             memory=None,
