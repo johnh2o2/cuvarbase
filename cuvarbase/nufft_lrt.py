@@ -61,6 +61,7 @@ from pycuda.compiler import SourceModule
 
 from .base import GPUAsyncProcess, ensure_context
 from .cunfft import NFFTAsyncProcess
+from .memory import NFFTMemory
 from .utils import find_kernel, _module_reader, subtract_epoch
 
 
@@ -430,7 +431,28 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             func.prepare(self.dtypes[func_name])
             self.prepared_functions[func_name] = func
             
-    def compute_nufft(self, t, y, nf, **kwargs):
+    def _nfft_memory(self, t, nf, l1_max, **kwargs):
+        """Allocate ONE :class:`NFFTMemory` (device buffers, cuFFT plan,
+        pinned host buffer) for the epoch-subtracted times ``t`` and
+        ``nf`` modes, reused by :meth:`run` for the data, the basis
+        vectors and every template. The truncation radius ``m`` is
+        sized from ``l1_max``, an upper bound on the L1 norm of every
+        vector that will be transformed (the NFFT error bound scales
+        with ``||y||_1``; see :meth:`NFFTAsyncProcess.estimate_m`).
+        Allocating per transform cost 2.5-12 ms per template against
+        ~0.1 ms of transform (audit Sep 2026).
+        """
+        proc = self.nufft_proc
+        if not proc.streams:
+            proc._create_streams(1)
+        m = proc.get_m(int(nf), y=np.array([float(l1_max)]))
+        t = np.ascontiguousarray(t, dtype=self.real_type)
+        mem = NFFTMemory(proc.sigma, proc.streams[0], m,
+                         use_double=self.use_double, **kwargs)
+        return mem.fromdata(t, np.zeros(len(t), dtype=self.real_type),
+                            nf=int(nf), allocate=True, **kwargs)
+
+    def compute_nufft(self, t, y, nf, memory=None, **kwargs):
         """
         Compute the adjoint NUFFT of data on the GPU.
         
@@ -443,6 +465,10 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             Observation values
         nf : int
             Number of frequency samples
+        memory : NFFTMemory, optional
+            A buffer set from :meth:`_nfft_memory` already holding
+            these times; only ``y`` is uploaded and the buffers are
+            reused (``t`` must be the array the memory was built from).
         **kwargs : dict
             Additional parameters for NUFFT
             
@@ -483,6 +509,12 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         if len(t) < 2:
             return np.zeros(nf, dtype=self.complex_type)
         y = np.ascontiguousarray(y, dtype=self.real_type)
+        if memory is not None:
+            memory.y = y
+            ghat = self.nufft_proc.run([(memory.t, y, int(nf))],
+                                       memory=[memory], **kwargs)[0]
+            # ghat_c is the memory's reused pinned buffer: copy it out
+            return np.array(ghat, dtype=self.complex_type)
         # float64 epoch subtraction BEFORE the cast: float32 spacing at
         # BJD ~ 2.457e6 is 0.25 d (wider than a transit), so gridding
         # absolute times in float32 returned a different transform.
@@ -711,9 +743,22 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         else:
             y_work = y
         y_demeaned = y_work - np.mean(y_work)
-        
+        Vc = None
+        if detector == 'marginal':
+            Vc = V - V.mean(axis=0)
+
+        # ---- one NFFT buffer set for everything transformed in this run
+        l1 = [float(np.sum(np.abs(y_demeaned))), float(n * abs(depth))]
+        if resid is not None:
+            l1.append(float(np.sum(np.abs(resid))))
+        if Vc is not None:
+            l1.extend(float(np.sum(np.abs(Vc[:, j])))
+                      for j in range(Vc.shape[1]))
+        mem = self._nfft_memory(t, nf, max(l1), **kwargs)
+
         # Compute NUFFT of lightcurve
-        Y_nufft = self.compute_nufft(t, y_demeaned, nf, **kwargs)
+        Y_nufft = self.compute_nufft(t, y_demeaned, nf, memory=mem,
+                                     **kwargs)
         
         # ---- power spectrum: estimated or supplied, floored ONCE here.
         # The adjoint NFFT returns a physical Fourier coefficient at every
@@ -721,7 +766,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # the PSD spans all nf bins.
         if estimate_psd:
             if resid is not None:
-                src = self.compute_nufft(t, resid, nf, **kwargs)
+                src = self.compute_nufft(t, resid, nf, memory=mem, **kwargs)
             else:
                 src = Y_nufft
             psd = (np.abs(src) ** 2).astype(self.real_type, copy=False)
@@ -751,9 +796,9 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # hoist the template-independent algebra (G, M, w_y) out of the
         # template loop; per template only K inner products remain.
         if detector == 'marginal':
-            V_ks = [self.compute_nufft(t, V[:, j] - V[:, j].mean(), nf,
+            V_ks = [self.compute_nufft(t, Vc[:, j], nf, memory=mem,
                                        **kwargs)
-                    for j in range(V.shape[1])]
+                    for j in range(Vc.shape[1])]
             Vw, M, w_y = _marginal_precompute(Y_nufft, V_ks, psd, weights,
                                               coeff_prior_cov)
 
@@ -770,7 +815,8 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             template = self._generate_template(t, period, epoch, duration,
                                                depth)
             template = template - np.mean(template)
-            T_nufft = self.compute_nufft(t, template, nf, **kwargs)
+            T_nufft = self.compute_nufft(t, template, nf, memory=mem,
+                                         **kwargs)
             return _statistic(T_nufft)
         
         # ---- template loop

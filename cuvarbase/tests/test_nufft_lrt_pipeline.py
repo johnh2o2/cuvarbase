@@ -3,8 +3,8 @@
 ``compute_nufft`` is mocked with a direct adjoint DFT -- the exact math
 the GPU NFFT approximates, at the same convention (modes k=0..nf-1,
 frequency k/(max(t)-min(t)); the transform's time reference is a common
-per-mode phase that cancels in every whitened inner product) -- so the
-host pipeline (epoch subtraction, PSD, weights, matched filter, epoch
+per-mode phase that cancels in every whitened inner product) -- and the
+per-run NFFT buffer allocation is mocked away, so the host pipeline (epoch subtraction, PSD, weights, matched filter, epoch
 grid, return shapes, input validation) runs on CPU:
 
 * the matched filter is sensitive to data across the WHOLE baseline
@@ -47,6 +47,8 @@ def _mock_proc(monkeypatch):
     monkeypatch.setattr(
         proc, 'compute_nufft',
         lambda t, y, nf, **kw: _adjoint_dft(t, y, nf).astype(proc.complex_type))
+    # no device buffers on CPU: run() passes memory=None to the mock
+    monkeypatch.setattr(proc, '_nfft_memory', lambda *a, **kw: None)
     return proc
 
 

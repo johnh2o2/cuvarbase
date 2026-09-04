@@ -608,6 +608,41 @@ class TestSep2026Defects:
         rel_hi = np.abs(np.abs(Gy[hi]) - np.abs(Ey[hi])).max() / np.abs(Ey).max()
         assert rel_hi < tol, rel_hi
 
+    @pytest.mark.parametrize('use_double', [False, True])
+    def test_reused_memory_parity(self, use_double):
+        """LRT-1: run() allocates one NFFT buffer set and reuses it for
+        the data, the basis vectors and every template. The result must
+        equal the per-template path (a fresh transform per call) to
+        run-to-run NFFT noise (audit: 1.4e-6 on the transform)."""
+        rng = np.random.RandomState(3)
+        t = ground_times(rng, n=300)
+        n = len(t)
+        nf = 2 * n
+        P, dur = 5.3, 0.22
+        y = 1 + 3e-3 * rng.randn(n) + box_transit(t, P, 1.3, dur, 0.01)
+        periods = np.array([4.0, P, 7.0])
+        epochs = np.linspace(0, P, 6, endpoint=False)
+        proc = NUFFTLRTAsyncProcess(use_double=use_double)
+        got = proc.run(t, y, periods, np.array([dur]), epochs=epochs,
+                       eps_floor=1e-12)
+        # independent per-template evaluation with fresh memory per call
+        from ..nufft_lrt import _smoothed_periodogram
+        y0 = y - y.mean()
+        Y = proc.compute_nufft(t, y0, nf)
+        psd = _smoothed_periodogram((np.abs(Y) ** 2).astype(proc.real_type), 5)
+        w = np.ones(nf)
+        want = np.zeros_like(got)
+        for i, p in enumerate(periods):
+            for k, e in enumerate(epochs):
+                tm = proc._generate_template(t, p, e, dur, 1.0)
+                tm -= tm.mean()
+                T = proc.compute_nufft(t, tm, nf)
+                want[i, 0, k] = proc._compute_matched_filter_snr(
+                    Y, T, psd, w, 1e-12)
+        rel = np.abs(got - want).max() / np.abs(want).max()
+        # measured (A40): 3.7e-6 float32, 4e-8 float64
+        assert rel < (1e-6 if use_double else 1e-4), rel
+
     @mark_cuda_test
     def test_sequential_nonzero_mean_basis(self):
         """Defect 21 (lrt-sequential-intercept): a basis column with a 1%
