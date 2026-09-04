@@ -1097,3 +1097,53 @@ class TestRunGridValidation(object):
         assert_allclose(p_none, p_ones, rtol=1e-6, atol=1e-6)
         assert_allclose(p_none, p_const, rtol=1e-6, atol=1e-6)
         assert np.max(np.abs(p_none - ref)) < 1e-4
+
+
+class TestPreallocate(object):
+    """``preallocate`` left ``memory.stream = None`` (the null stream),
+    so ``finish()`` -- which synchronizes ``self.streams`` only -- did
+    not wait for the asynchronous result copy and ``run()`` after
+    ``preallocate()`` returned stale powers (29 of 30 reads on an A40
+    with the 7-smooth grids; the audit saw 14/30)."""
+
+    @staticmethod
+    def _lc(N, seed):
+        r = np.random.RandomState(seed)
+        t = np.sort(r.uniform(0, 100.0, N))
+        y = 0.3 * np.sin(2 * np.pi * t / 1.7) + 0.05 * r.randn(N)
+        return t, y, 0.05 * np.ones(N)
+
+    def test_run_after_preallocate_matches_fresh_runs(self):
+        f = 0.001 * (50 + np.arange(3000))
+        B, C = self._lc(900, 2), self._lc(300, 5)
+        proc = LombScargleAsyncProcess()
+        fresh = {}
+        for name, d in (('B', B), ('C', C)):
+            fresh[name] = _run_gpu(proc, *d, f)
+
+        proc.preallocate(max_nobs=900, nlcs=1, freqs=f)
+        mem = proc.memory[0]
+        assert mem.stream is not None
+        assert any(mem.stream is s for s in proc.streams)
+
+        for k in range(10):
+            for name, d in (('B', B), ('C', C)):
+                r = proc.run([d], freqs=[f])
+                proc.finish()
+                p = np.asarray(r[0][1][:len(f)], dtype=np.float64)
+                assert_allclose(p, fresh[name], rtol=1e-5, atol=1e-6)
+
+    def test_user_streams_are_synchronized_by_finish(self):
+        import pycuda.driver as cuda
+        f = 0.001 * (50 + np.arange(3000))
+        B = self._lc(900, 2)
+        proc = LombScargleAsyncProcess()
+        ref = _run_gpu(proc, *B, f)
+        s = cuda.Stream()
+        proc.preallocate(max_nobs=900, nlcs=1, freqs=f, streams=[s])
+        assert any(s is s0 for s0 in proc.streams)
+        for k in range(5):
+            r = proc.run([B], freqs=[f])
+            proc.finish()
+            assert_allclose(np.asarray(r[0][1][:len(f)], dtype=np.float64),
+                            ref, rtol=1e-5, atol=1e-6)
