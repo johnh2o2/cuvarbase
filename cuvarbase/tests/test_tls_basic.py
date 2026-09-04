@@ -759,3 +759,67 @@ class TestTLSStreamParity:
                                       stream=cuda.Stream())
         np.testing.assert_allclose(r_stream['chi2'], r_default['chi2'],
                                    rtol=1e-3)
+
+
+# ---------------------------------------------------------------------
+# 1.0 correctness fixes (Sep 2026 audit): CPU-runnable regression tests
+# ---------------------------------------------------------------------
+
+import warnings as _w
+import inspect as _inspect
+
+
+class TestDefaultDurationWindow:
+    """Defect 2 (tls-duration-window, audit id 9): tls_search_gpu /
+    tls_search without qmin/qmax used a constant q window [0.005, 0.15]
+    at every period while the default Ofir grid runs to span/2; beyond
+    P ~ 60 d (Sun-like) no trial duration was physical and a P = 365 d
+    transit on a 1400-d baseline came back at 182.5 d with half the
+    depth. The default window is now the Keplerian one that
+    tls_search_batch/tls_transit always used; the constant window is an
+    opt-in that warns."""
+
+    def test_keplerian_window_equals_q_transit_window(self):
+        periods = np.array([0.5, 1.0, 10.0, 100.0, 365.0, 700.0])
+        for R, M, Rp in ((1.0, 1.0, 1.0), (0.3, 0.3, 2.0), (1.5, 1.2, 1.0)):
+            qmin, qmax = tls_grids.duration_window(
+                periods, R_star=R, M_star=M, R_planet=Rp)
+            q = tls_grids.q_transit(periods, R, M, Rp)
+            np.testing.assert_allclose(qmin, 0.5 * q, rtol=1e-12)
+            np.testing.assert_allclose(qmax, 2.0 * q, rtol=1e-12)
+            # physical at every period, inside the kernels' (0, 1) bounds
+            assert np.all(qmin < q) and np.all(q < qmax)
+            assert np.all(qmin > 0) and np.all(qmax < 1)
+
+    def test_window_factors_honoured(self):
+        periods = np.array([3.0, 30.0])
+        qmin, qmax = tls_grids.duration_window(periods, qmin_fac=0.25,
+                                               qmax_fac=4.0)
+        q = tls_grids.q_transit(periods)
+        np.testing.assert_allclose(qmin, 0.25 * q)
+        np.testing.assert_allclose(qmax, 4.0 * q)
+
+    def test_fixed_window_crossover_near_60d(self):
+        # the documented crossover: q_kep(Sun, 1 R_earth) drops below the
+        # old constant qmin = 0.005 between P = 50 and 70 d
+        assert tls_grids.q_transit(50.0) > tls_grids.FIXED_QMIN
+        assert tls_grids.q_transit(70.0) < tls_grids.FIXED_QMIN
+        assert tls_grids.q_transit(365.0) < 0.5 * tls_grids.FIXED_QMIN
+
+    def test_fixed_window_warns_when_unphysical(self):
+        periods = np.array([1.0, 10.0, 120.0, 365.0])
+        with pytest.warns(UserWarning, match="excludes the Keplerian"):
+            qmin, qmax = tls_grids.duration_window(periods, window='fixed')
+        assert np.all(qmin == tls_grids.FIXED_QMIN)
+        assert np.all(qmax == tls_grids.FIXED_QMAX)
+
+    def test_fixed_window_silent_when_physical(self):
+        periods = np.array([1.0, 3.0, 10.0, 30.0])
+        with _w.catch_warnings():
+            _w.simplefilter("error")
+            qmin, qmax = tls_grids.duration_window(periods, window='fixed')
+        assert np.all(qmin == 0.005) and np.all(qmax == 0.15)
+
+    def test_unknown_window_rejected(self):
+        with pytest.raises(ValueError, match="window"):
+            tls_grids.duration_window(np.array([1.0]), window='boxy')
