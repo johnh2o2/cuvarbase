@@ -26,6 +26,47 @@ import resource
 import warnings
 
 
+# Every kernel the CE module compiles, in the (sorted) order in which
+# ``ConditionalEntropyAsyncProcess.function_tuple`` is unpacked by
+# :func:`conditional_entropy` / :func:`conditional_entropy_fast`.
+_CE_KERNELS = ('ce_classical_fast', 'ce_classical_faster', 'constdpdm_ce',
+               'histogram_data_count', 'histogram_data_weighted',
+               'log_prob', 'standard_ce', 'weighted_ce')
+
+
+def _needs_compile(prepared_functions):
+    """True unless every CE kernel has already been compiled and prepared.
+
+    (The previous gate looked for a key ``'ce_wt'`` that no compile ever
+    produced, so the module was rebuilt with nvcc on every call.)
+    """
+    if not prepared_functions:
+        return True
+    return not all(name in prepared_functions for name in _CE_KERNELS)
+
+
+def _is_single_freq_grid(freqs):
+    """True if ``freqs`` is one 1-D grid (to be shared by every lightcurve)
+    rather than a sequence of per-lightcurve grids.
+
+    Accepts any 1-D numeric array or list (float32, float64, integers,
+    Python floats); previously only Python/np.float64 scalars were
+    recognized, so a float32 grid was mistaken for a list of grids.
+    """
+    if isinstance(freqs, np.ndarray):
+        return freqs.ndim == 1
+    if len(freqs) == 0:
+        return True
+    return isinstance(freqs[0], (float, int, np.floating, np.integer))
+
+
+def _freq_grids(freqs, nlcs):
+    """Expand ``freqs`` into a list of ``nlcs`` per-lightcurve grids."""
+    if _is_single_freq_grid(freqs):
+        return [freqs] * nlcs
+    return list(freqs)
+
+
 def conditional_entropy(memory, functions, block_size=256,
                         transfer_to_host=True,
                         transfer_to_device=True,
@@ -37,6 +78,12 @@ def conditional_entropy(memory, functions, block_size=256,
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
+
+    # The histogram kernels accumulate into ``bins_g``: it must start from
+    # zero on EVERY call, not only when ``run(set_data=True)`` zeroed it
+    # (``run(memory=..., set_data=False)`` used to accumulate counts
+    # across calls).
+    memory.bins_g.fill(memory.bins_g.dtype.type(0), stream=memory.stream)
 
     if memory.weighted:
         args = (grid, block, memory.stream)
@@ -315,6 +362,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self._check_options(kw, use_fast=self.use_fast)
         return kw
 
+    def _ensure_compiled(self, **kwargs):
+        """Compile and prepare the kernels once per process object."""
+        if _needs_compile(getattr(self, 'prepared_functions', None)):
+            self._compile_and_prepare_functions(**kwargs)
+
     def _compile_and_prepare_functions(self, **kwargs):
 
         cpp_defs = dict(NPHASE=self.phase_bins,
@@ -351,11 +403,13 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                                  np.uint32, np.uint32, np.uint32,
                                  np.uint32, np.uint32, np.uint32]
         )
+        if tuple(sorted(self.dtypes.keys())) != _CE_KERNELS:
+            raise RuntimeError("CE kernel table does not match _CE_KERNELS")
         for fname, dtype in self.dtypes.items():
             func = self.module.get_function(fname)
             self.prepared_functions[fname] = func.prepare(dtype)
         self.function_tuple = tuple(self.prepared_functions[fname]
-                                    for fname in sorted(self.dtypes.keys()))
+                                    for fname in _CE_KERNELS)
 
     def memory_requirement(self, n0, nf, **kwargs):
         """
@@ -462,9 +516,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         frqs = freqs
         if frqs is None:
             frqs = [self.autofrequency(t, **kwargs) for (t, y, dy) in data]
-
-        elif isinstance(freqs[0], float):
-            frqs = [freqs] * len(data)
+        else:
+            frqs = _freq_grids(freqs, len(data))
 
         for i, ((t, y, dy), f) in enumerate(zip(data, frqs)):
             mem = self.allocate_for_single_lc(t, y, dy=dy, freqs=f,
@@ -573,10 +626,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         """
         # compile module if not compiled already
-        if not hasattr(self, 'prepared_functions') or \
-            not all([func in self.prepared_functions for func in
-                     ['ce_wt']]):
-            self._compile_and_prepare_functions(**kwargs)
+        self._ensure_compiled(**kwargs)
 
         # Prepare data
         data = normalize_light_curves(data)
@@ -585,9 +635,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         frqs = freqs
         if frqs is None:
             frqs = [self.autofrequency(d[0], **kwargs) for d in data]
-
-        elif isinstance(frqs[0], float):
-            frqs = [frqs] * len(data)
+        else:
+            frqs = _freq_grids(freqs, len(data))
 
         if len(frqs) != len(data):
             raise ValueError(
@@ -660,10 +709,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         """
 
         # compile module if not compiled already
-        if not hasattr(self, 'prepared_functions') or \
-            not all([func in self.prepared_functions for func in
-                     ['ce_wt']]):
-            self._compile_and_prepare_functions(**kwargs)
+        self._ensure_compiled(**kwargs)
 
         if max_memory is None:
             free, total = cuda.mem_get_info()
@@ -673,9 +719,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         frqs = freqs
         if frqs is None:
             frqs = [self.autofrequency(d[0], **kwargs) for d in data]
-
-        elif isinstance(frqs[0], float):
-            frqs = [frqs] * len(data)
+        else:
+            frqs = _freq_grids(freqs, len(data))
 
         if len(frqs) != len(data):
             raise ValueError(
