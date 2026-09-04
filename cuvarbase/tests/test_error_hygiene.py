@@ -4,6 +4,7 @@ Error-handling hygiene: input validation must not be assert-based
 typed (ValueError/RuntimeError/NotImplementedError), not bare
 Exception.
 """
+import ast
 import os
 import re
 import subprocess
@@ -41,6 +42,62 @@ def test_no_bare_exception_raises():
             if 'raise Exception' in line:
                 offenders.append("%s:%d" % (os.path.relpath(path), i))
     assert not offenders, offenders
+
+
+def _docstring_nodes(tree):
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                 ast.AsyncFunctionDef)):
+            continue
+        body = getattr(node, 'body', None)
+        if not body:
+            continue
+        first = body[0]
+        if (isinstance(first, ast.Expr)
+                and isinstance(first.value, ast.Constant)
+                and isinstance(first.value.value, str)):
+            yield node, first.value
+
+
+def test_docstrings_with_backslashes_are_raw():
+    # A non-raw docstring eats its LaTeX: "\right)" becomes a carriage
+    # return, "\times" a tab, and the rendered __doc__ / Sphinx math
+    # block is corrupt. Any docstring carrying an un-doubled backslash
+    # must be a raw string.
+    offenders = []
+    for path in _runtime_sources():
+        with open(path, encoding='utf-8') as f:
+            src = f.read()
+        tree = ast.parse(src)
+        for node, const in _docstring_nodes(tree):
+            seg = ast.get_source_segment(src, const)
+            if seg is None or '\\' not in seg:
+                continue
+            m = re.match(r"^(?P<prefix>[rRbBuUfF]*)"
+                         r"(?P<q>\"\"\"|'''|\"|')", seg)
+            if m is None or 'r' in m.group('prefix').lower():
+                continue
+            quote = m.group('q')
+            literal = seg[len(m.group(0)):-len(quote)]
+            # "\\\\" (an escaped backslash) and a trailing "\\" line
+            # continuation are deliberate; anything else is an escape
+            # sequence eating the text.
+            bare = re.sub(r'\\[\\\n]', '', literal)
+            if '\\' in bare:
+                offenders.append(
+                    "%s:%d (%s)" % (os.path.relpath(path, _PKG_DIR),
+                                    const.lineno,
+                                    getattr(node, 'name', '<module>')))
+    assert not offenders, offenders
+
+
+def test_nfft_memory_math_block_is_intact():
+    # defect 12's documentation half: the NFFTMemory epoch/phase
+    # convention is a ".. math::" block, so the docstring must be raw.
+    from ..memory.nfft_memory import NFFTMemory
+    doc = NFFTMemory.__doc__
+    assert '\r' not in doc
+    assert r'\exp\left(2\pi i f_k (t_j - \mathrm{epoch})\right)' in doc
 
 
 def test_check_k0_raises_value_error():
