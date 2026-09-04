@@ -381,8 +381,54 @@ class TestSep2026Defects:
     """Regression tests derived from the Sep-2026 algorithm audit
     (analysis/audit-sep2026/ALGORITHM_AUDIT.md section 2)."""
 
+    @staticmethod
+    def _bjd_data():
+        """The verifier's BJD data model (repro/local/vfy-lrt-bjd): 600
+        points over 60 d, a 1% box transit at P = 5.3 d, two small
+        systematics that the basis detectors get as V."""
+        rng = np.random.RandomState(1)
+        N, T = 600, 60.0
+        t = np.sort(rng.uniform(0, T, N))
+        P0, dur, depth, sig, e0 = 5.3, 0.22, 0.01, 0.003, 1.2
+        y = 1.0 + box_transit(t, P0, e0, dur, depth) + sig * rng.randn(N)
+        V = np.stack([np.sin(2 * np.pi * t / T), (t - T / 2) / T], 1)
+        y = y + 0.002 * V[:, 0] + 0.003 * V[:, 1]
+        periods = np.array([4.1, 4.7, 5.3, 5.9, 6.5])
+        durations = np.array([0.22])
+        epochs = np.linspace(0, P0, 24, endpoint=False)
+        return t, y, V, periods, durations, epochs
+
     # (parametrized GPU tests carry no @mark_cuda_test, as in test_bls.py:
     # the conftest stub turns the first GPU touch into a skip on CPU)
+    @pytest.mark.parametrize('detector', ['matched', 'marginal',
+                                          'sequential'])
+    def test_bjd_invariance(self, detector):
+        """Defect 5 (lrt-bjd-float32): times must be epoch-subtracted in
+        float64 before the float32 cast. With BJD-scale input the three
+        detectors returned a different statistic (corr 0.47-0.51, argmax
+        moved, max 7.4 -> 13.9); with the fix the shifted run matches
+        to float32 NFFT noise (audit: rel <= 4e-4 at sigma = 2; measured
+        3e-6 at sigma = 4) with the same argmax, and the transit is seen
+        at the true period."""
+        t, y, V, periods, durations, epochs = self._bjd_data()
+        kw = {}
+        if detector == 'marginal':
+            kw = dict(systematics_basis=V, coeff_prior_cov=np.eye(2) * 1e-4)
+        elif detector == 'sequential':
+            kw = dict(systematics_basis=V)
+        proc = NUFFTLRTAsyncProcess()
+        base = proc.run(t, y, periods, durations, epochs=epochs,
+                        detector=detector, **kw)
+        shifted = proc.run(t + BJD_OFFSET, y, periods, durations,
+                           epochs=epochs + BJD_OFFSET, detector=detector,
+                           **kw)
+        rel = np.abs(shifted - base).max() / np.abs(base).max()
+        assert rel < 1e-4
+        assert np.argmax(shifted) == np.argmax(base)
+        # the transit is seen (measured max 11.7-12.3) at the true period
+        assert base.max() > 5.0
+        assert np.unravel_index(np.argmax(base), base.shape)[0] == 2
+
     @pytest.mark.parametrize('use_double', [False, True])
     def test_full_band_nfft_matches_exact_dft(self, use_double):
         """Defect 24 (lrt-upper-half-band): with the old sigma = 2 the

@@ -13,18 +13,46 @@ non-uniform (gappy / multi-season) sampling directly over the full
 observational baseline. The per-template matched-filter combination
 (SNR = sum_k Y_k T_k* w_k / P_s(k) / sqrt(sum_k |T_k|^2 w_k / P_s(k)))
 runs on the host -- it is an O(nf) reduction, negligible next to the NFFT.
+
+Conventions
+-----------
+* **Times.** :meth:`NUFFTLRTAsyncProcess.run` subtracts
+  ``floor(min(t))`` in float64 (:func:`cuvarbase.utils.subtract_epoch`)
+  before anything is cast to the device precision, so absolute BJD-scale
+  timestamps are safe (float32 spacing at 2.457e6 is 0.25 d, wider than
+  a transit). ``epochs`` passed in and the best epochs returned are in
+  the caller's original time scale.
+* **PSD.** ``psd[k]`` is the expected squared modulus of the noise's
+  *unnormalized* adjoint NFFT at mode ``k``:
+  ``P(k) = E |sum_j s_j exp(2 pi i f_k t_j)|^2`` with
+  ``f_k = k / (max(t) - min(t))``, ``k = 0..nf-1`` (one-sided, all nf
+  modes are physical positive-frequency coefficients). White noise of
+  variance ``sigma^2`` per point has ``P(k) = n sigma^2`` at every k.
+  ``psd=np.ones(nf)`` therefore gives a statistic in *data units*, not
+  an SNR.
+* **The statistic is not N(0, 1).** Under irregular sampling the NFFT
+  modes are not orthogonal, so the frequency-diagonal whitened
+  correlation is over-dispersed even with the TRUE noise PSD (null
+  standard deviation 1.8-2.7 for ground-based sampling at ``nf = 2n``,
+  growing with ``nf``). Detection thresholds must be calibrated
+  empirically per (sampling, ``nf``, PSD estimator) configuration, e.g.
+  from the null-percentile of signal-free or scrambled light curves as
+  ``scripts/nufft_lrt_validation.py`` does. Raising ``nf`` inflates the
+  raw value without adding information.
+* ``dy`` is not used by any detector (a ``UserWarning`` is emitted if it
+  is passed); the noise model is the PSD.
 """
 import warnings
 
 import numpy as np
 
 warnings.warn(
-    "cuvarbase.nufft_lrt is EXPERIMENTAL and not yet validated against a "
-    "reference transit search; use with care. The NFFT transforms now run "
-    "on the GPU over the full baseline (the earlier CPU-rfft / median(dt)*nf "
-    "grid-truncation issues are fixed), but the matched-filter combination "
-    "is still computed on the host and the method has not had a full "
-    "injection-recovery validation.",
+    "cuvarbase.nufft_lrt is EXPERIMENTAL. The Sep-2026 correctness fixes "
+    "(float64 epoch subtraction, automatic epoch grid for epochs=None, "
+    "Detector A PSD from the cotrended residual, centred sequential "
+    "cotrend, full-band NFFT accuracy) are awaiting injection-recovery "
+    "re-validation; the statistic is not N(0, 1) and thresholds must be "
+    "calibrated empirically (see docs/NUFFT_LRT_README.md).",
     UserWarning)
 
 import pycuda.driver as cuda  # noqa: E402
@@ -33,7 +61,7 @@ from pycuda.compiler import SourceModule
 
 from .base import GPUAsyncProcess, ensure_context
 from .cunfft import NFFTAsyncProcess
-from .utils import find_kernel, _module_reader
+from .utils import find_kernel, _module_reader, subtract_epoch
 
 
 def _whitened_inner(A, B, psd, weights):
@@ -317,12 +345,13 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             
     def compute_nufft(self, t, y, nf, **kwargs):
         """
-        Compute NUFFT of data.
+        Compute the adjoint NUFFT of data on the GPU.
         
         Parameters
         ----------
         t : array-like
-            Time values
+            Time values (any origin; ``floor(min(t))`` is subtracted in
+            float64 before the cast to the device precision)
         y : array-like
             Observation values
         nf : int
@@ -332,8 +361,18 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             
         Returns
         -------
-        nufft_result : np.ndarray
-            NUFFT of the data
+        nufft_result : np.ndarray, complex
+            ``ghat[k] = sum_j y_j exp(2 pi i f_k (t_j - t_ref))`` at the
+            modes ``f_k = k / (max(t) - min(t))``, ``k = 0..nf-1``,
+            with ``t_ref = floor(min(t))``. The transform's own time
+            reference is a common per-mode phase that cancels in every
+            ``Re sum A B* / P`` inner product of the detectors. Every
+            one of the nf modes is accurate to the Gaussian-window
+            bound with the default ``sigma = 4`` (~4e-4 relative in
+            float32, ~1e-6 in float64 against the exact adjoint DFT
+            over the FULL band); with ``sigma = 2`` the upper half band
+            ``k >= nf/2`` is aliased at O(1) -- it does not "cancel"
+            between data and template.
         """
         # GPU adjoint NFFT of the (non-uniform) samples. Unlike a uniform-
         # grid RFFT, the adjoint NFFT takes the raw times directly and
@@ -354,34 +393,43 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # (~4e-4 relative in float32, ~1e-6 in float64 against the exact
         # adjoint DFT over the full band; with sigma = 2 the modes
         # k >= nf/2 were aliased at O(1), in double precision too).
-        t = np.asarray(t, dtype=self.real_type)
-        y = np.asarray(y, dtype=self.real_type)
         if len(t) < 2:
             return np.zeros(nf, dtype=self.complex_type)
-
-        ghat = self.nufft_proc.run([(t, y, int(nf))], **kwargs)[0]
-        return np.asarray(ghat, dtype=self.complex_type)
+        y = np.ascontiguousarray(y, dtype=self.real_type)
+        # float64 epoch subtraction BEFORE the cast: float32 spacing at
+        # BJD ~ 2.457e6 is 0.25 d (wider than a transit), so gridding
+        # absolute times in float32 returned a different transform.
+        t64, _ = subtract_epoch(np.asarray(t, dtype=np.float64))
+        t32 = np.ascontiguousarray(t64, dtype=self.real_type)
+        ghat = self.nufft_proc.run([(t32, y, int(nf))], **kwargs)[0]
+        return np.array(ghat, dtype=self.complex_type)
         
     def run(self, t, y, periods, durations=None, epochs=None,
             depth=1.0, nf=None, estimate_psd=True, psd=None,
             smooth_window=5, eps_floor=1e-12,
             detector='matched', systematics_basis=None,
-            coeff_prior_mean=None, coeff_prior_cov=None, **kwargs):
+            coeff_prior_mean=None, coeff_prior_cov=None, dy=None,
+            **kwargs):
         """
         Run NUFFT LRT for transit detection.
 
         Parameters
         ----------
         t : array-like
-            Time values (observation times)
+            Observation times, any origin (absolute BJD is fine):
+            ``floor(min(t))`` is subtracted in float64 before any cast
+            to the device precision.
         y : array-like
             Observation values (lightcurve)
         periods : array-like
-            Trial periods to test
+            Trial periods to test (same units as ``t``)
         durations : array-like, optional
             Trial transit durations. If None, uses 0.1 * periods
         epochs : array-like, optional
-            Trial epochs. If None, uses 0.0 for all
+            Trial epochs (transit mid-times) in the caller's time scale.
+            If None, a single template with its transit mid-time at
+            ``floor(min(t))`` is evaluated per (period, duration) cell
+            and the output has no epoch axis.
         depth : float, optional (default: 1.0)
             Transit depth for template (not critical for normalized matched filter)
         nf : int, optional
@@ -389,7 +437,10 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         estimate_psd : bool, optional (default: True)
             Estimate power spectrum from data. If False, must provide psd
         psd : array-like, optional
-            Pre-computed power spectrum. Required if estimate_psd=False
+            Pre-computed power spectrum of length ``nf`` in the
+            convention of the module docstring (``E|S_k|^2`` of the
+            noise's unnormalized adjoint NFFT; white noise: ``n sigma^2``).
+            Required if ``estimate_psd=False``.
         smooth_window : int, optional (default: 5)
             Window size for smoothing power spectrum estimate
         eps_floor : float, optional (default: 1e-12)
@@ -423,18 +474,43 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             Prior covariance of the coefficients (required for
             ``detector='marginal'``; estimate it from population fits
             as in the papers).
+        dy : array-like, optional
+            Not used by any detector (the noise model is the PSD); a
+            ``UserWarning`` is emitted if it is passed.
         **kwargs : dict
-            Additional parameters
+            Additional parameters passed to the NFFT.
 
         Returns
         -------
         snr : np.ndarray
-            SNR values, shape (len(periods), len(durations), len(epochs))
+            The statistic (see the module docstring: a whitened
+            correlation, not N(0, 1)) of shape ``(len(periods),
+            len(durations), len(epochs))`` when ``epochs`` is given and
+            ``(len(periods), len(durations))`` when it is None.
         """
-        # Validate inputs
-        t = np.asarray(t, dtype=self.real_type)
-        y = np.asarray(y, dtype=self.real_type)
-        periods = np.atleast_1d(np.asarray(periods, dtype=self.real_type))
+        # ---- validate and epoch-subtract (float64) before ANY cast
+        t = np.asarray(t, dtype=np.float64).ravel()
+        y = np.asarray(y, dtype=np.float64).ravel()
+        if t.shape != y.shape:
+            raise ValueError("t and y must have the same length (got %d "
+                             "and %d)" % (len(t), len(y)))
+        if len(t) < 3:
+            raise ValueError("need at least 3 observations (got %d)"
+                             % len(t))
+        if not (np.all(np.isfinite(t)) and np.all(np.isfinite(y))):
+            raise ValueError("t and y must be finite")
+        if dy is not None:
+            warnings.warn("NUFFTLRTAsyncProcess.run: dy is not used by any "
+                          "detector (the noise model is the PSD); it is "
+                          "ignored", UserWarning, stacklevel=2)
+        t, t0 = subtract_epoch(t)
+        n = len(t)
+
+        periods = np.atleast_1d(np.asarray(periods, dtype=np.float64))
+        if periods.ndim != 1 or len(periods) == 0 or np.any(periods <= 0) \
+                or not np.all(np.isfinite(periods)):
+            raise ValueError("periods must be a non-empty 1-D array of "
+                             "positive finite values")
 
         if detector not in ('matched', 'marginal', 'sequential'):
             raise ValueError("detector must be 'matched', 'marginal' or "
@@ -446,49 +522,67 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
                                  % (detector,))
             V = np.atleast_2d(np.asarray(systematics_basis,
                                          dtype=np.float64))
-            if V.shape[0] != len(t):
+            if V.shape[0] != n:
                 V = V.T
-            if V.shape[0] != len(t):
+            if V.shape[0] != n:
                 raise ValueError("systematics_basis must be (n, K) with "
                                  "n = len(t)")
+            if not np.all(np.isfinite(V)):
+                raise ValueError("systematics_basis must be finite")
         if detector == 'marginal' and coeff_prior_cov is None:
             raise ValueError("detector='marginal' requires "
                              "coeff_prior_cov (estimate it from "
                              "population fits, as in Taaki et al. 2020)")
 
-        if detector == 'sequential':
-            y = _sequential_detrend(t, y, V).astype(self.real_type)
-        elif detector == 'marginal':
-            mu = (np.zeros(V.shape[1]) if coeff_prior_mean is None
-                  else np.asarray(coeff_prior_mean, dtype=np.float64))
-            y = (np.asarray(y, dtype=np.float64) - V @ mu).astype(
-                self.real_type)
-        
         # Durations: default to 10% of period if not provided
         if durations is None:
             durations = 0.1 * periods
-        durations = np.atleast_1d(np.asarray(durations, dtype=self.real_type))
-        
-        # Epochs: if None, treat as single-epoch search (no epoch axis in output)
+        durations = np.atleast_1d(np.asarray(durations, dtype=np.float64))
+        if durations.ndim != 1 or len(durations) == 0 \
+                or np.any(durations <= 0) \
+                or not np.all(np.isfinite(durations)):
+            raise ValueError("durations must be a non-empty 1-D array of "
+                             "positive finite values")
+
+        # Epochs: None -> single template at the (epoch-subtracted) time
+        # origin, no epoch axis; explicit -> shifted into the
+        # epoch-subtracted frame (epoch axis in the output).
         return_epoch_axis = epochs is not None
         if epochs is None:
-            epochs_arr = np.array([0.0], dtype=self.real_type)
+            epochs_arr = np.array([0.0])
         else:
-            epochs_arr = np.atleast_1d(np.asarray(epochs, dtype=self.real_type))
+            epochs_arr = np.atleast_1d(np.asarray(epochs, dtype=np.float64))
+            if epochs_arr.ndim != 1 or len(epochs_arr) == 0 \
+                    or not np.all(np.isfinite(epochs_arr)):
+                raise ValueError("epochs must be a non-empty 1-D finite "
+                                 "array (or None)")
+            epochs_arr = epochs_arr - t0
         
         if nf is None:
-            nf = 2 * len(t)
+            nf = 2 * n
+        nf = int(nf)
+        if nf < 1:
+            raise ValueError("nf must be a positive integer")
 
         # NOTE: the matched-filter combination runs on the host (an O(nf)
         # reduction, negligible next to the per-template NFFT), so the
         # nufft_lrt.cu kernels are not compiled here. The only GPU work is
         # the adjoint NFFT inside compute_nufft (compiled by nufft_proc).
-        # A future pass may wire a batched matched-filter kernel.
 
-
-        # Demean data
-        y_mean = np.mean(y)
-        y_demeaned = y - y_mean
+        # ---- detector-specific data vector (float64 host algebra)
+        if detector == 'sequential':
+            y_work = _sequential_detrend(t, y, V)
+        elif detector == 'marginal':
+            K = V.shape[1]
+            mu = (np.zeros(K) if coeff_prior_mean is None
+                  else np.asarray(coeff_prior_mean, dtype=np.float64).ravel())
+            if mu.shape != (K,):
+                raise ValueError("coeff_prior_mean must have length K = %d"
+                                 % K)
+            y_work = y - V @ mu
+        else:
+            y_work = y
+        y_demeaned = y_work - np.mean(y_work)
         
         # Compute NUFFT of lightcurve
         Y_nufft = self.compute_nufft(t, y_demeaned, nf, **kwargs)
@@ -517,8 +611,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # per template the marginalization is K-dimensional algebra.
         V_ks = None
         if detector == 'marginal':
-            V_ks = [self.compute_nufft(t, (V[:, j] - V[:, j].mean())
-                                       .astype(self.real_type), nf,
+            V_ks = [self.compute_nufft(t, V[:, j] - V[:, j].mean(), nf,
                                        **kwargs)
                     for j in range(V.shape[1])]
 
@@ -529,30 +622,29 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
                                            eps_floor)
             return self._compute_matched_filter_snr(
                 Y_nufft, T_nufft, psd, weights, eps_floor)
+
+        def _template_statistic(period, epoch, duration):
+            template = self._generate_template(t, period, epoch, duration,
+                                               depth)
+            template = template - np.mean(template)
+            T_nufft = self.compute_nufft(t, template, nf, **kwargs)
+            return _statistic(T_nufft)
         
-        # Prepare results array
+        # ---- template loop
         if return_epoch_axis:
-            snr_results = np.zeros((len(periods), len(durations), len(epochs_arr)))
+            snr_results = np.zeros((len(periods), len(durations),
+                                    len(epochs_arr)))
         else:
             snr_results = np.zeros((len(periods), len(durations)))
-        
-        # Loop over periods, durations, and epochs
         for i, period in enumerate(periods):
-            # If epochs were requested to span [0, P], allow callers to pass epochs in [0, P]
-            # Tests already pass absolute epochs in [0, period], so use epochs_arr directly
             for j, duration in enumerate(durations):
                 if return_epoch_axis:
                     for k, epoch in enumerate(epochs_arr):
-                        template = self._generate_template(t, period, epoch, duration, depth)
-                        template = template - np.mean(template)
-                        T_nufft = self.compute_nufft(t, template, nf, **kwargs)
-                        snr_results[i, j, k] = _statistic(T_nufft)
+                        snr_results[i, j, k] = _template_statistic(
+                            period, epoch, duration)
                 else:
-                    template = self._generate_template(t, period, 0.0, duration, depth)
-                    template = template - np.mean(template)
-                    T_nufft = self.compute_nufft(t, template, nf, **kwargs)
-                    snr_results[i, j] = _statistic(T_nufft)
-        
+                    snr_results[i, j] = _template_statistic(
+                        period, epochs_arr[0], duration)
         return snr_results
         
     def _generate_template(self, t, period, epoch, duration, depth):
@@ -566,7 +658,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         period : float
             Orbital period
         epoch : float
-            Transit epoch
+            Transit mid-time, in the same frame as ``t``
         duration : float
             Transit duration
         depth : float
@@ -575,8 +667,9 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         Returns
         -------
         template : np.ndarray
-            Transit template
+            Transit template (``-depth`` in transit, 0 elsewhere)
         """
+        t = np.asarray(t, dtype=np.float64)
         # Phase fold
         phase = np.fmod(t - epoch, period) / period
         phase[phase < 0] += 1.0
