@@ -62,7 +62,10 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy,
 		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
 		unsigned int offset = i_freq * (NMAG * NPHASE);
 
+		// bin index of the datum itself; Y == 1 (the brightest point)
+		// would otherwise give NMAG, one past the last bin
 		int m0 = (int) (Y * NMAG);
+		if (m0 >= NMAG) m0 = NMAG - 1;
 
 		for(int m = 0; m < NMAG; m++){
 			FLT z = (((FLT) m) / NMAG - Y);
@@ -91,6 +94,10 @@ __global__ void histogram_data_count(FLT *t, unsigned int *y,
 	if (i_freq < nfreq){
 		unsigned int offset = i_freq * (NMAG * NPHASE);
 		unsigned int m0 = y[j_data];
+		// defensive: setdata clamps the bin index, but an index of NMAG
+		// would spill into the next phase bin / next frequency / past
+		// the end of `bin`
+		if (m0 >= NMAG) m0 = NMAG - 1;
 		int n0 = phase_ind(freqs[i_freq] * t[j_data]);
 
 		for (int n = (int) n0; n >= (((int) n0) - PHASE_OVERLAP); n--){
@@ -176,6 +183,7 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 		// make 2d histogram
 		for(i = threadIdx.x; i < ndata; i += blockDim.x){
 			m0 = (int) (y[i]);
+			if (m0 >= (int) nmag) m0 = ((int) nmag) - 1;
 			n0 = ((int) floor(nphase * mod1(t[i] * f0))) % nphase;
 
 			for (n = n0; n >= (((int) n0) - ((int) phase_overlap)); n--){
@@ -301,7 +309,8 @@ __global__ void ce_classical_faster(const FLT * __restrict__ t,
 
 		// make 2d histogram
 		for(i = threadIdx.x; i < ndata; i += blockDim.x){
-			m0 = (int) (y[i]);
+			m0 = (int) (y_sh[i]);
+			if (m0 >= (int) nmag) m0 = ((int) nmag) - 1;
 			n0 = ((int) floor(nphase * mod1(t_sh[i] * f0))) % nphase;
 
 			for (n = n0; n >= (((int) n0) - ((int) phase_overlap)); n--){

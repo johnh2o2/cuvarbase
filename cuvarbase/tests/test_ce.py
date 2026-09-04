@@ -1,8 +1,11 @@
 import pytest
 from pycuda.tools import mark_cuda_test
+import pycuda.gpuarray as gpuarray
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 from ..ce import ConditionalEntropyAsyncProcess
+from ..memory import ConditionalEntropyMemory
+from ..utils import normalize_light_curves
 lsrtol = 1E-2
 lsatol = 1E-5
 seed = 100
@@ -30,6 +33,81 @@ def assert_similar(pdg0, pdg, top=5):
     diff = np.absolute(p - p0)
 
     assert(all(diff < lsrtol * 0.5 * (p + p0) + lsatol))
+
+
+# ---------------------------------------------------------------------------
+# Independent CPU references (float64 sums, cuvarbase's bin conventions)
+# ---------------------------------------------------------------------------
+
+def _prep(t, y, dtype):
+    """Emulate normalize_light_curves + ConditionalEntropyMemory.setdata."""
+    t = np.asarray(t, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    t = (t - t.mean()).astype(dtype)
+    y = (y - y.mean()).astype(dtype)
+    yscale = y.max() - y.min()
+    y0 = y.min()
+    return t, ((y - y0) / yscale).astype(dtype), yscale
+
+
+def _phase_bins(t, f, nphase, dtype):
+    ft = (t * dtype(f)).astype(dtype)
+    ph = ft - np.floor(ft)
+    return (np.floor(ph.astype(np.float64) * nphase).astype(int)) % nphase
+
+
+def cpu_ce(t, y, freqs, nphase, nmag, phase_overlap=0, mag_overlap=0,
+           dtype=np.float32):
+    """Graham et al. (2013) conditional entropy with cuvarbase's bin
+    definitions (uniform magnitude bins over [min, max], the brightest
+    point in the top bin), overlap handling and its density offset
+    ``log(dm)``; histogram counts are exact integers and the entropy sum
+    runs in float64."""
+    t, y01, _ = _prep(t, y, dtype)
+    m0 = np.minimum(np.floor(y01 * dtype(nmag)).astype(int), nmag - 1)
+    dm0 = (mag_overlap + 1.0) / nmag
+    mm = np.arange(nmag)
+    dm = np.where(mm + mag_overlap + 1 > nmag,
+                  (nmag - mm) * dm0 / (1.0 + mag_overlap), dm0)
+    out = np.empty(len(freqs))
+    for k, f in enumerate(freqs):
+        n0 = _phase_bins(t, f, nphase, dtype)
+        H = np.zeros((nphase, nmag))
+        for dn in range(phase_overlap + 1):
+            for dmm in range(mag_overlap + 1):
+                m = m0 - dmm
+                ok = m >= 0
+                np.add.at(H, ((n0[ok] - dn) % nphase, m[ok]), 1)
+        Nphi = H.sum(axis=1, keepdims=True)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            term = np.where(H > 0,
+                            H * np.log(dm[None, :] * Nphi
+                                       / np.where(H > 0, H, 1)), 0.0)
+        out[k] = term.sum() / H.sum()
+    return out
+
+
+def run_ce(proc, t, y, dy, freqs, **kw):
+    r = proc.run([(t, y, dy)], freqs=freqs, **kw)
+    proc.finish()
+    return np.copy(r[0][1])
+
+
+def run_ce_with_memory(proc, t, y, dy, freqs, **kw):
+    """Run and also return the memory object (to inspect ``bins_g``)."""
+    mems = proc.allocate(normalize_light_curves([(t, y, dy)]),
+                         freqs=[freqs], **kw)
+    mems[0].transfer_freqs_to_gpu()
+    r = proc.run([(t, y, dy)], memory=mems, freqs=[freqs], **kw)
+    proc.finish()
+    return np.copy(r[0][1]), mems[0]
+
+
+def lightcurve(ndata, seed, baseline=30., f0=1.3, noise=0.1, amp=0.3):
+    r = np.random.RandomState(seed)
+    t = np.sort(r.uniform(0, baseline, ndata))
+    y = amp * np.sin(2 * np.pi * f0 * t) + noise * r.randn(ndata)
+    return t, y, noise * np.ones(ndata)
 
 
 class TestCE(object):
@@ -390,4 +468,118 @@ class TestCE(object):
         # print best_freq, freq, abs(best_freq - freq) / freq
         assert(not any(np.isnan(p_slow)))
         assert(not any(np.isnan(p_fast)))
-        assert_allclose(p_slow, p_fast, atol=2e-2 * max(np.absolute(p_slow)))
+        # Both kernels histogram the same integer bins; the only
+        # difference is float summation order (the old 2e-2 * max
+        # tolerance hid the brightest-point mis-binning of defect 9).
+        assert_allclose(p_slow, p_fast, rtol=0,
+                        atol=(1e-10 if use_double else 1e-5))
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the Sep-2026 audit defects
+# ---------------------------------------------------------------------------
+
+class TestCEBrightestPoint(object):
+    """Defect 9 (ce-brightest-bin): the brightest point (normalized
+    magnitude exactly 1.0) got bin index ``mag_bins`` and spilled into the
+    next phase bin / next frequency / past the end of ``bins_g``."""
+
+    @pytest.mark.parametrize('phase_overlap,mag_overlap',
+                             [(0, 0), (1, 0), (0, 1), (1, 1)])
+    def test_histogram_totals_exact(self, phase_overlap, mag_overlap):
+        N = 100
+        t, y, dy = lightcurve(N, seed=3)
+        freqs = np.linspace(0.3, 1.2, 50)
+        proc = ConditionalEntropyAsyncProcess(phase_overlap=phase_overlap,
+                                              mag_overlap=mag_overlap)
+        _, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        assert mem.y[:N].max() == proc.mag_bins - 1
+        bins = mem.bins_g.get().reshape(len(freqs), proc.phase_bins,
+                                        proc.mag_bins)
+        totals = bins.sum(axis=(1, 2))
+        # every point is counted (phase_overlap + 1) times in each of its
+        # (mag_overlap + 1) magnitude bins, except that overlapping bins
+        # below bin 0 do not exist; the total is the same at EVERY
+        # frequency (it used to be N - 1 .. N + 1 from the spilled point)
+        m0 = mem.y[:N].astype(int)
+        expected = (phase_overlap + 1) * np.minimum(m0 + 1,
+                                                    mag_overlap + 1).sum()
+        if mag_overlap == 0:
+            assert expected == N * (phase_overlap + 1)
+        assert_array_equal(totals, np.full(len(freqs), expected))
+
+    def test_no_write_past_bins(self):
+        """The brightest point in the LAST phase bin of the LAST frequency
+        used to be written one element past ``bins_g``."""
+        N = 100
+        t, y, dy = lightcurve(N, seed=3)
+        imax = np.argmax(y)
+        tt = np.float32(t - t.mean())
+
+        def phase_bin(f):
+            return _phase_bins(tt[imax:imax + 1], f, 10, np.float32)[0]
+
+        cands = [f for f in np.linspace(0.3, 1.3, 4000) if phase_bin(f) == 9]
+        freqs = np.concatenate([np.linspace(0.5, 0.9, 63), [cands[0]]])
+        proc = ConditionalEntropyAsyncProcess()
+        mems = proc.allocate([(t, y, dy)], freqs=[freqs])
+        mem = mems[0]
+        nb = mem.nbins
+        guard = np.uint32(0xDEAD)
+        big = gpuarray.zeros(nb + 8, dtype=np.uint32)
+        big.fill(guard)
+        mem.bins_g = big[:nb]
+        proc.run([(t, y, dy)], memory=mems, freqs=[freqs])
+        proc.finish()
+        full = big.get()
+        assert_array_equal(full[nb:], np.full(8, guard))
+        totals = full[:nb].reshape(len(freqs), -1).sum(axis=1)
+        assert_array_equal(totals, np.full(len(freqs), N))
+
+    @pytest.mark.parametrize('ndata', [5, 60])
+    @pytest.mark.parametrize('use_double', [False, True])
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_matches_cpu_reference(self, ndata, use_double, use_fast):
+        t, y, dy = lightcurve(ndata, seed=1)
+        freqs = np.linspace(0.05, 3.0, 200)
+        proc = ConditionalEntropyAsyncProcess(use_double=use_double,
+                                              use_fast=use_fast)
+        p = run_ce(proc, t, y, dy, freqs)
+        dtype = np.float64 if use_double else np.float32
+        ref = cpu_ce(t, y, freqs, 10, 5, dtype=dtype)
+        assert np.all(np.isfinite(p))
+        atol = 1e-10 if use_double else 2e-6
+        assert_allclose(p, ref, rtol=0, atol=atol)
+        # (at N = 5 the CE takes few distinct values, so the argmin can
+        # legitimately land on a tied minimum: compare the values)
+        assert abs(ref[np.argmin(p)] - ref.min()) <= atol
+
+    @pytest.mark.parametrize('phase_overlap,mag_overlap', [(1, 1), (2, 1)])
+    def test_matches_cpu_reference_overlap(self, phase_overlap, mag_overlap):
+        t, y, dy = lightcurve(60, seed=1)
+        freqs = np.linspace(0.05, 3.0, 200)
+        proc = ConditionalEntropyAsyncProcess(phase_overlap=phase_overlap,
+                                              mag_overlap=mag_overlap,
+                                              phase_bins=8, mag_bins=6)
+        p = run_ce(proc, t, y, dy, freqs)
+        ref = cpu_ce(t, y, freqs, 8, 6, phase_overlap, mag_overlap)
+        assert_allclose(p, ref, rtol=0, atol=2e-6)
+
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_frequency_grid_order_invariance(self, use_fast):
+        """The standard kernel's output depended on the ORDER of the grid
+        because the spilled count landed in the next frequency's bin."""
+        t, y, dy = lightcurve(500, seed=1)
+        freqs = np.linspace(0.05, 3.0, 200)
+        proc = ConditionalEntropyAsyncProcess(use_fast=use_fast)
+        fwd = run_ce(proc, t, y, dy, freqs)
+        rev = run_ce(proc, t, y, dy, freqs[::-1].copy())[::-1]
+        assert_array_equal(fwd, rev)
+
+    def test_mag_bin_fracs_sum_to_one(self):
+        t, y, dy = lightcurve(100, seed=3)
+        mem = ConditionalEntropyMemory(phase_bins=10, mag_bins=5,
+                                       compute_log_prob=True)
+        mem.setdata(t - t.mean(), y - y.mean())
+        assert mem.y.max() == 4
+        assert_allclose(mem.mag_bin_fracs.sum(), 1.0, rtol=0, atol=1e-6)
