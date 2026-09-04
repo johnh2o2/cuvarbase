@@ -11,6 +11,8 @@ References
 - Hippke & Heller (2019), "Transit Least Squares", A&A 623, A39
 """
 
+import warnings
+
 import numpy as np
 
 
@@ -353,6 +355,81 @@ def duration_grid_keplerian(periods, R_star=1.0, M_star=1.0, R_planet=1.0,
     durations = list(dur_2d.astype(np.float32))
 
     return durations, duration_counts, q_values
+
+
+# The pre-1.0 constant duration window used by tls_search_gpu/tls_search
+# when no qmin/qmax were given (and hard-coded in the legacy 'standard'
+# kernel). It is unphysical beyond P ~ 60 d for a Sun-like star (18.5 d
+# for R = M = 0.3) and is now an explicit opt-in.
+FIXED_QMIN = 0.005
+FIXED_QMAX = 0.15
+
+
+def duration_window(periods, R_star=1.0, M_star=1.0, R_planet=1.0,
+                    qmin_fac=0.5, qmax_fac=2.0, window='keplerian'):
+    """
+    Per-period fractional transit-duration bounds for a TLS search.
+
+    This is the default duration window of every TLS entry point
+    (``tls_search_gpu``, ``tls_search``, ``tls_transit``,
+    ``tls_search_batch``) when no explicit ``qmin``/``qmax`` arrays are
+    given.
+
+    Parameters
+    ----------
+    periods : array_like
+        Trial periods (days)
+    R_star, M_star : float
+        Stellar radius/mass in solar units
+    R_planet : float
+        Fiducial planet radius (Earth radii) of the Keplerian duration
+    qmin_fac, qmax_fac : float
+        Window factors around the Keplerian duration
+    window : {'keplerian', 'fixed'}
+        - 'keplerian' (default): ``[qmin_fac, qmax_fac] * q_transit(P,
+          R_star, M_star, R_planet)`` at every period -- the transit
+          duration of a circular edge-on orbit scaled by the window
+          factors, so the window follows P^(-2/3) and stays physical
+          out to any period.
+        - 'fixed': the pre-1.0 constant window ``[0.005, 0.15]`` at
+          every period, kept as an opt-in for reproducing old results.
+          A UserWarning is raised when the Keplerian duration falls
+          outside it at any trial period: beyond P ~ 60 d (Sun-like,
+          1 R_earth) every trial duration is then unphysical and a
+          transit is fit at the wrong period/depth (measured: P = 365 d
+          on a 1400-d light curve came back at 182.5 d with half the
+          depth).
+
+    Returns
+    -------
+    qmin, qmax : ndarray
+        Fractional duration bounds (float64) aligned with ``periods``.
+    """
+    periods = np.asarray(periods, dtype=np.float64)
+    if window == 'keplerian':
+        q = q_transit(periods, R_star=R_star, M_star=M_star,
+                      R_planet=R_planet)
+        return q * qmin_fac, q * qmax_fac
+    if window == 'fixed':
+        q = q_transit(periods, R_star=R_star, M_star=M_star,
+                      R_planet=R_planet)
+        outside = (q < FIXED_QMIN) | (q > FIXED_QMAX)
+        if np.any(outside):
+            p_out = periods[outside]
+            warnings.warn(
+                "duration window 'fixed' [%g, %g] excludes the Keplerian "
+                "transit duration (R_star=%g, M_star=%g, R_planet=%g "
+                "R_earth) at %d of %d trial periods (P = %.3g .. %.3g d); "
+                "transits there are fit with an unphysical duration "
+                "(period aliases, biased depth). Use the default "
+                "'keplerian' window."
+                % (FIXED_QMIN, FIXED_QMAX, R_star, M_star, R_planet,
+                   int(outside.sum()), periods.size, p_out.min(),
+                   p_out.max()), UserWarning, stacklevel=2)
+        return (np.full(periods.shape, FIXED_QMIN),
+                np.full(periods.shape, FIXED_QMAX))
+    raise ValueError("window must be 'keplerian' or 'fixed' (got %r)"
+                     % (window,))
 
 
 def t0_grid(period, duration, n_transits=None, oversampling=5):
