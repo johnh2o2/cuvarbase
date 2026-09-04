@@ -115,7 +115,9 @@ Binning details
   retains essentially all of its mass. ``widen_mag_range=True`` pads the
   normalized range by ``max_phi`` median uncertainties on each side.
 * ``balanced_magbins=True`` uses ``mag_bins`` bins holding the same
-  number of points each. Bin edges lie at the midpoints between adjacent
+  number of points each, to within one (each group holds
+  :math:`\lfloor N/\mathrm{mag\_bins}\rfloor` or one more point).
+  Bin edges lie at the midpoints between adjacent
   sorted groups, so the widths tile :math:`[0, 1]`; a width is floored at
   :math:`10^{-6}` of the range so quantized magnitudes (bins made of a
   single repeated value) cannot make the entropy :math:`-\infty`.

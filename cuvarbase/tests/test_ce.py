@@ -1,3 +1,5 @@
+import types
+
 import pytest
 from pycuda.tools import mark_cuda_test
 import pycuda.gpuarray as gpuarray
@@ -129,6 +131,20 @@ def run_ce_with_memory(proc, t, y, dy, freqs, **kw):
     r = proc.run([(t, y, dy)], memory=mems, freqs=[freqs], **kw)
     proc.finish()
     return np.copy(r[0][1]), mems[0]
+
+
+def balance_magbins_cpu(mag_bins, y):
+    """``ConditionalEntropyMemory.balance_magbins`` without a CUDA context.
+
+    The method is pure numpy; only ``mag_bins``, ``real_type`` and the
+    ``balanced_min_width`` class attribute are used, so it can be checked
+    on a machine without a GPU (the constructor would retain the primary
+    context).
+    """
+    stub = types.SimpleNamespace(
+        mag_bins=mag_bins, real_type=np.float32,
+        balanced_min_width=ConditionalEntropyMemory.balanced_min_width)
+    return ConditionalEntropyMemory.balance_magbins(stub, y)
 
 
 def lightcurve(ndata, seed, baseline=30., f0=1.3, noise=0.1, amp=0.3):
@@ -866,6 +882,55 @@ class TestCEBalanced(object):
         assert np.all(mem.mag_bwf > 0)
         assert_allclose(mem.mag_bwf.sum(), 1.0, rtol=0, atol=1e-5)
         assert abs(freqs[np.argmin(p)] - 1.3) < 0.02
+
+    @pytest.mark.parametrize('mag_bins', [2, 3, 5, 7, 11, 20])
+    def test_balanced_bin_bounds_cover_every_point(self, mag_bins):
+        """Defect 18 (2nd round): the group boundaries were
+        ``int(i * len(y) / mag_bins)``, and for 471 of the 37,810
+        ``(mag_bins, N)`` combinations with ``mag_bins`` in 2..20 and
+        ``N`` up to 2000 (e.g. ``(7, 61)``) the float product fell short
+        of ``len(y)``, so the brightest point(s) were never assigned and
+        kept ``ybins = 0`` -- the brightest star of the lightcurve was put
+        in the FAINTEST magnitude bin.  CPU-only (pure numpy)."""
+        r = np.random.RandomState(7)
+        for n in range(mag_bins, 4 * mag_bins + 260):
+            y = r.rand(n)
+            ybins, bwf = balance_magbins_cpu(mag_bins, y)
+            ybins = ybins.astype(int)
+            counts = np.bincount(ybins, minlength=mag_bins)
+            # every point is assigned, and to a group of the right size
+            assert counts.sum() == n
+            assert counts.min() == n // mag_bins
+            assert counts.max() == -(-n // mag_bins)
+            # bins increase monotonically with magnitude
+            assert np.all(np.diff(ybins[np.argsort(y, kind='stable')]) >= 0)
+            assert ybins[np.argmax(y)] == mag_bins - 1
+            assert ybins[np.argmin(y)] == 0
+            # widths still tile the magnitude range
+            assert len(bwf) == mag_bins
+            assert np.all(bwf > 0)
+            assert abs(float(bwf.astype(np.float64).sum()) - 1.0) < 1e-4
+
+    def test_balanced_brightest_point_on_gpu_ragged_n(self):
+        """End-to-end version of the above: ``mag_bins=7``, ``N=61`` was
+        one of the affected combinations (the brightest point landed in
+        bin 0, giving ``bincount = [9 9 9 8 9 9 8]``)."""
+        N, mag_bins = 61, 7
+        t, y, dy = lightcurve(N, seed=11)
+        freqs = np.linspace(0.5, 2.5, 200)
+        proc = ConditionalEntropyAsyncProcess(mag_bins=mag_bins,
+                                              balanced_magbins=True)
+        p, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        ybins = mem.y[:mem.n0].astype(int)
+        counts = np.bincount(ybins, minlength=mag_bins)
+        assert counts.sum() == N
+        expected = np.full(mag_bins, N // mag_bins)
+        expected[:N % mag_bins] += 1
+        assert_array_equal(np.sort(counts), np.sort(expected))
+        assert ybins[np.argmax(y)] == mag_bins - 1
+        assert np.all(np.isfinite(p))
+        assert_allclose(mem.mag_bwf.astype(np.float64).sum(), 1.0,
+                        rtol=0, atol=1e-5)
 
 
 class TestCEPreallocate(object):

@@ -311,13 +311,16 @@ class ConditionalEntropyMemory:
                 "balanced_magbins requires at least mag_bins=%d "
                 "observations; got %d" % (self.mag_bins, len(y)))
 
-        di = len(y) / self.mag_bins
+        # integer group boundaries: bounds[-1] == len(y) exactly, so every
+        # sorted point belongs to a group (``int(i * (len(y) / mag_bins))``
+        # could fall one short of len(y) through float rounding and leave
+        # the brightest point(s) in bin 0)
+        bounds = (np.arange(self.mag_bins + 1) * len(y)) // self.mag_bins
         edges = np.zeros(self.mag_bins + 1, dtype=np.float64)
         edges[0] = np.min(y)
         edges[-1] = np.max(y)
         for i in range(self.mag_bins):
-            imin = max([0, int(i * di)])
-            imax = min([len(y), int((i + 1) * di)])
+            imin, imax = int(bounds[i]), int(bounds[i + 1])
 
             inds = yinds[imin:imax]
             ybins[inds] = i
