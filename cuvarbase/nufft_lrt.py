@@ -94,13 +94,25 @@ def _sequential_detrend(t, y, basis):
     """The papers' "standard" baseline: ordinary least-squares cotrend
     against the systematics basis (time domain, unwhitened -- as a
     pipeline would), returning the residual for the stationary matched
-    filter."""
+    filter.
+
+    The fit includes an intercept: the basis columns and ``y`` are
+    centred before the least-squares solve and the centred basis is
+    subtracted, so the residual keeps the mean of ``y`` (removed later
+    by the demean in :meth:`NUFFTLRTAsyncProcess.run`) and a basis
+    column with a non-zero mean cannot absorb the mean flux. Without the
+    intercept a column with mean ``m_v`` and std ``s_v`` biases its
+    coefficient by ``ybar m_v / (m_v^2 + s_v^2)`` and leaves a
+    residual systematic of amplitude ``ybar m_v / s_v`` (a 1% column
+    mean on relative flux left 10x the noise; audit Sep 2026).
+    """
     V = np.asarray(basis, dtype=np.float64)
     if V.ndim == 1:
         V = V[:, None]
-    coeff, *_ = np.linalg.lstsq(V, np.asarray(y, dtype=np.float64),
-                                rcond=None)
-    return y - V @ coeff
+    y = np.asarray(y, dtype=np.float64)
+    Vc = V - V.mean(axis=0)
+    coeff, *_ = np.linalg.lstsq(Vc, y - y.mean(), rcond=None)
+    return y - Vc @ coeff
 
 
 def _smoothed_periodogram(power, window):
@@ -393,7 +405,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
               domain). Requires ``systematics_basis`` and
               ``coeff_prior_cov``.
             * ``'sequential'`` -- the papers' "standard" baseline:
-              ordinary least-squares cotrend against
+              ordinary least-squares cotrend (with intercept) against
               ``systematics_basis`` in the time domain, then the
               stationary matched filter on the residual.
 
@@ -404,7 +416,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         systematics_basis : array-like (n, K), optional
             K systematics basis vectors sampled at the observation
             times (e.g. instrument cotrending vectors, or PCA modes of
-            a lightcurve population).
+            a lightcurve population). Columns need not be zero-mean.
         coeff_prior_mean : array-like (K,), optional
             Prior mean of the systematics coefficients (default: zeros).
         coeff_prior_cov : array-like (K, K), optional

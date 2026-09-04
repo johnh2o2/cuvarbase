@@ -418,6 +418,38 @@ class TestSep2026Defects:
         rel_hi = np.abs(np.abs(Gy[hi]) - np.abs(Ey[hi])).max() / np.abs(Ey).max()
         assert rel_hi < tol, rel_hi
 
+    @mark_cuda_test
+    def test_sequential_nonzero_mean_basis(self):
+        """Defect 21 (lrt-sequential-intercept): a basis column with a 1%
+        mean on relative flux dropped the sequential detector's SNR at
+        the true period from ~25 to ~5 (no intercept in the OLS); the
+        centred fit is insensitive to the column mean."""
+        rng = np.random.RandomState(7)
+        n, T = 2000, 90.0
+        t = np.sort(rng.rand(n) * T)
+        P, dur, depth, e0, sig = 3.3, 0.15, 0.006, 1.1, 0.003
+        V0 = np.stack([np.sin(2 * np.pi * t / 30.), np.cos(2 * np.pi * t / 17.)],
+                      axis=1)
+        V0 = (V0 - V0.mean(axis=0)) / V0.std(axis=0)
+        c = np.array([0.004, -0.004])
+        noise = sig * rng.randn(n)
+        transit = box_transit(t, P, e0, dur, depth)
+        periods = np.array([P, 2.9, 3.1, 3.5, 3.7, 4.1])
+        epochs = np.arange(0, P, dur / 2)
+        proc = NUFFTLRTAsyncProcess()
+        got = {}
+        for mean_off in (0.0, 1e-2):
+            V = V0 + mean_off
+            y = 1.0 + transit + V @ c + noise
+            s = proc.run(t, y, periods, np.array([dur]), epochs=epochs,
+                         detector='sequential', systematics_basis=V)
+            got[mean_off] = s.max(axis=(1, 2))
+        for mean_off, m in got.items():
+            assert int(np.argmax(m)) == 0, mean_off
+            assert m[0] > 2.0 * m[1:].max(), mean_off
+        # the column mean must not change the statistic (measured 4e-9)
+        assert_allclose(got[1e-2], got[0.0], rtol=5e-3)
+
 
 @pytest.mark.skipif(not NUFFT_LRT_AVAILABLE,
                     reason="NUFFT LRT not available")
