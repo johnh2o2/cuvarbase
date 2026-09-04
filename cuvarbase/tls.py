@@ -44,28 +44,120 @@ _SHARED_MEM_LIMIT = 48 * 1024
 TLS_CHI2_SENTINEL = np.float32(1e30)
 
 
+_NO_SOLUTION_MSG = (
+    "TLS kernel returned no valid solution for any of the %d trial "
+    "periods (a flat or noiseless light curve gives zero depth at every "
+    "trial, which the kernels reject)")
+
+
 def _mask_failed_periods(chi2_vals):
     """Return a boolean mask of trial periods with a valid solution.
 
     Failed periods keep the kernel's 1e30 chi2 initializer; left
-    unmasked they corrupt the best-fit argmin and collapse the SDE/FAP
-    statistics. Warns when any period failed; raises RuntimeError if
-    every period failed.
+    unmasked they corrupt the best-fit argmin and collapse the SDE
+    statistics. Warns when any period failed. When EVERY period failed
+    (e.g. a flat/noiseless light curve) the mask is all-False and a
+    warning says so; the search wrappers then return a null result
+    (SDE = 0, NaN best-fit parameters) instead of raising, like the
+    reference ``transitleastsquares`` package.
     """
     chi2_vals = np.asarray(chi2_vals)
     valid = np.isfinite(chi2_vals) & (chi2_vals < 0.1 * TLS_CHI2_SENTINEL)
     n_failed = int(chi2_vals.size - valid.sum())
     if n_failed == chi2_vals.size:
-        raise RuntimeError(
-            "TLS kernel returned no valid solution for any of the %d "
-            "trial periods" % chi2_vals.size)
-    if n_failed:
+        warnings.warn(_NO_SOLUTION_MSG % chi2_vals.size
+                      + "; returning a null result (SDE = 0)")
+    elif n_failed:
         warnings.warn(
             "%d of %d trial periods returned no valid TLS solution "
             "(chi2 sentinel); they are excluded from the best-fit "
-            "search and the SDE/FAP statistics and appear as NaN in "
+            "search and the SDE statistics and appear as NaN in "
             "the returned arrays" % (n_failed, chi2_vals.size))
     return valid
+
+
+def _null_result(nperiods, chi2_0, message, periods=None, arrays=False):
+    """Result dict for a light curve with no valid trial period: SDE = 0,
+    NaN best-fit parameters, and the failure message under 'error'."""
+    res = {
+        'period': np.nan,
+        'period_uncertainty': np.nan,
+        't0_phase': np.nan,
+        'T0': np.nan,
+        'duration': np.nan,
+        'depth': 0.0,
+        'chi2_min': float(chi2_0),
+        'SDE': 0.0,
+        'SDE_raw': 0.0,
+        'SNR': 0.0,
+        'n_transits': 0,
+        'n_failed_periods': int(nperiods),
+        'error': message,
+    }
+    if arrays:
+        def _nan():
+            return np.full(nperiods, np.nan)
+        res.update({
+            'periods': periods,
+            'chi2': _nan(),
+            'best_t0_per_period': _nan(),
+            'best_duration_per_period': _nan(),
+            'best_depth_per_period': _nan(),
+            'valid_periods': np.zeros(nperiods, dtype=bool),
+            'power': _nan(),
+            'SR': _nan(),
+        })
+    return res
+
+
+def _validate_periods(periods):
+    """Common checks on a trial-period grid (any order)."""
+    periods = np.asarray(periods)
+    if periods.ndim != 1:
+        raise ValueError("periods must be a 1-d array")
+    if periods.size == 0:
+        raise ValueError("periods must be non-empty")
+    if not np.all(np.isfinite(periods)) or np.any(periods <= 0):
+        raise ValueError("periods must be finite and > 0")
+    return periods
+
+
+def _sort_period_grid(periods):
+    """Return (periods_ascending, order): the SDE running-median detrend
+    and the period-uncertainty neighbour walk assume period-ordered
+    neighbours, so user grids are sorted on entry. ``order`` is None
+    when the grid is already ascending, else the argsort that maps
+    the caller's order to ascending (see :func:`_to_caller_order`)."""
+    periods = np.asarray(periods)
+    if periods.size > 1 and np.any(np.diff(periods) < 0):
+        order = np.argsort(periods, kind='stable')
+        return periods[order], order
+    return periods, None
+
+
+def _to_caller_order(values, order):
+    """Scatter a per-period array from ascending order back to the
+    caller's grid order (identity when ``order`` is None)."""
+    if order is None:
+        return values
+    out = np.empty_like(values)
+    out[order] = values
+    return out
+
+
+def _validate_q_window(qmin, qmax):
+    if np.any(qmin <= 0) or np.any(qmax < qmin) or np.any(qmax >= 1):
+        raise ValueError(
+            "need 0 < qmin <= qmax < 1 at every period (the transit "
+            "duration must be shorter than the period; the binned scan "
+            "would double-count phase bins for q >= 1)")
+
+
+def _first_transit_at_or_after(t_mid, period, tmin):
+    """Shift a mid-transit time by whole periods into [tmin, tmin +
+    period): the 'T0' convention of every TLS result (same as the
+    reference package's ``T0``)."""
+    return tmin + ((t_mid - tmin) % period)
 
 
 def _choose_block_size(ndata):
@@ -150,9 +242,10 @@ def compile_tls(block_size=_default_block_size, t0_oversample=3.0):
         to narrow transits) at a roughly linear cost in kernel time.
         This compiles the kernel's ``T0_OVERSAMPLE`` ``#define`` and
         mirrors :func:`cuvarbase.tls_grids.t0_grid_size`'s ``oversample``.
-        The reference ``transitleastsquares`` package steps t0 about 33x
-        finer than a duration; the default of 3 trades fidelity for
-        speed.
+        The reference ``transitleastsquares`` package steps t0 about
+        100x finer than a duration (every cadence for dense data); the
+        default of 3 trades fidelity for speed -- see
+        :func:`tls_search_gpu` for the measured cost.
 
     Returns
     -------
@@ -167,8 +260,12 @@ def compile_tls(block_size=_default_block_size, t0_oversample=3.0):
     The shared-memory layout caps datasets at ~3,500 points; see
     tls_search_gpu, which raises ValueError above the budget.
 
-    The 'keplerian' kernel variant accepts per-period qmin/qmax arrays
-    to focus the duration search on physically plausible values.
+    The 'keplerian' kernel accepts per-period qmin/qmax arrays and is
+    the one every legacy-path search launches since 1.0 (the default
+    duration window is Keplerian, and the fixed opt-in window is passed
+    as constant arrays). The 'standard' kernel hard-codes the pre-1.0
+    constant window [0.005, 0.15] and is retained only for API
+    compatibility of this dict; no wrapper launches it.
     """
     # Compiling a kernel needs an active CUDA context (lazily created).
     ensure_context()
@@ -211,7 +308,14 @@ class TLSMemory:
     Attributes
     ----------
     t, y, dy : ndarray
-        Pinned CPU arrays for time, flux, uncertainties
+        Pinned CPU arrays for time, flux, uncertainties. ``t`` holds
+        the times MINUS ``epoch`` (see below), cast to float32 after
+        the subtraction so that BJD-scale inputs keep their phase
+        precision.
+    epoch : float
+        ``floor(min(t))`` of the last ``setdata`` call (0.0 before any
+        data is set); the legacy kernel folds relative to it, so its
+        per-period ``best_t0`` phases are relative to ``epoch``.
     t_g, y_g, dy_g : gpuarray
         GPU arrays for data
     periods_g, chi2_g : gpuarray
@@ -231,6 +335,8 @@ class TLSMemory:
         # Pinned (page-locked) host buffers by default for async overlap;
         # graceful fallback to page-aligned if pinning fails.
         self.pinned = kwargs.get('pinned', True)
+        # floor(min(t)) subtracted from the times in setdata
+        self.epoch = 0.0
 
         # CPU pinned memory for fast transfers
         self.t = None
@@ -324,8 +430,14 @@ class TLSMemory:
         """
         ndata = len(t)
 
-        # Copy to pinned memory
-        self.t[:ndata] = np.asarray(t).astype(self.rtype)
+        # Subtract the epoch floor(min t) in float64 BEFORE the float32
+        # cast: folding raw BJD-scale float32 times loses the phase
+        # entirely (float32 resolves 0.25 d at 2.45e6), and the fold
+        # origin must be the same floor(min t) the fast path uses so
+        # that 't0_phase' means the same thing on both paths.
+        t64 = np.asarray(t, dtype=np.float64)
+        self.epoch = float(np.floor(t64.min())) if ndata else 0.0
+        self.t[:ndata] = (t64 - self.epoch).astype(self.rtype)
         self.y[:ndata] = np.asarray(y).astype(self.rtype)
         self.dy[:ndata] = np.asarray(dy).astype(self.rtype)
 
@@ -372,6 +484,23 @@ class TLSMemory:
                 self.qmin_g.set_async(self.qmin[:nperiods], stream=self.stream)
             if has_qmax:
                 self.qmax_g.set_async(self.qmax[:nperiods], stream=self.stream)
+
+    def set_duration_bounds(self, qmin, qmax):
+        """Stage and transfer per-period duration bounds only (used when
+        the caller manages the data transfer itself with
+        ``transfer_to_device=False``)."""
+        nperiods = len(qmin)
+        self.qmin[:nperiods] = np.asarray(qmin).astype(self.rtype)
+        self.qmax[:nperiods] = np.asarray(qmax).astype(self.rtype)
+        if self.qmin_g is None or len(self.qmin_g) < nperiods:
+            self.qmin_g = gpuarray.zeros(nperiods, dtype=self.rtype)
+            self.qmax_g = gpuarray.zeros(nperiods, dtype=self.rtype)
+        if self.stream is None:
+            self.qmin_g.set(self.qmin[:nperiods])
+            self.qmax_g.set(self.qmax[:nperiods])
+        else:
+            self.qmin_g.set_async(self.qmin[:nperiods], stream=self.stream)
+            self.qmax_g.set_async(self.qmax[:nperiods], stream=self.stream)
 
     def transfer_from_gpu(self, nperiods):
         """Transfer results from GPU to CPU."""
@@ -431,6 +560,8 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
                    transfer_to_device=True, transfer_to_host=True,
                    use_fast=True, refine_top_k=50,
                    refine_oversample=33.0, nbins=None,
+                   R_planet=1.0, qmin_fac=0.5, qmax_fac=2.0,
+                   duration_window='keplerian', sde_kernel_size=None,
                    **kwargs):
     """
     Run Transit Least Squares search on GPU.
@@ -439,31 +570,35 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     ----------
     t : array_like
         Observation times (days). Absolute BJD-scale times are safe on
-        the default fast path (the epoch is subtracted in float64); the
-        legacy path (``use_fast=False``) folds float32 times directly
-        and silently loses phase precision at BJD magnitudes.
+        both paths: the epoch ``floor(min(t))`` is subtracted in float64
+        before any float32 cast (the fast path then folds with a
+        float-float pair; the legacy path folds the shifted float32
+        times, so its phase precision degrades with the baseline, about
+        1e-4 d at 1400 d).
     y : array_like
         Fluxes, normalized so the out-of-transit baseline is ~1.0. The
-        transit model is ``1 - depth * T``; no TLS path rescales the
-        input, so unnormalized flux (e.g. raw counts) gives meaningless
-        depths.
+        transit model is ``1 - depth * T`` with a FIXED baseline of 1:
+        no TLS path rescales the input or fits a free out-of-transit
+        level (see Notes), so unnormalized flux (e.g. raw counts) gives
+        meaningless depths.
     dy : array_like
         Flux uncertainties
     periods : array_like, optional
-        Custom period grid. If None, generated automatically.
+        Custom period grid (any order; sorted internally, and every
+        per-period output array is returned in the caller's order). If
+        None, generated automatically (Ofir 2014 grid).
     durations : array_like, optional
         Unused; accepted for backward compatibility only (a warning is
-        raised if passed). Trial durations are derived from qmin/qmax
-        in Keplerian mode, or the fixed standard grid otherwise.
-    qmin : array_like, optional
-        Minimum fractional duration per period (for Keplerian search).
-        If provided, enables Keplerian mode.
-    qmax : array_like, optional
-        Maximum fractional duration per period (for Keplerian search).
-        If provided, enables Keplerian mode.
+        raised if passed). Trial durations are derived from the
+        per-period duration window (see ``qmin``/``qmax`` and
+        ``duration_window``).
+    qmin, qmax : array_like, optional
+        Explicit per-period fractional duration bounds (aligned with
+        ``periods``; give both or neither). When omitted the window is
+        built by :func:`cuvarbase.tls_grids.duration_window` from the
+        stellar parameters (see ``duration_window``).
     n_durations : int, optional
-        Number of duration samples per period (default: 15).
-        Only used in Keplerian mode.
+        Number of log-spaced trial durations per period (default: 15).
     R_star : float, optional
         Stellar radius in solar radii (default: 1.0)
     M_star : float, optional
@@ -489,19 +624,31 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         The on-device epoch stride is ``duration_phase / t0_oversample``;
         larger values resolve the transit time more finely (and recover
         narrower transits) at a roughly linear increase in kernel time.
-        The reference ``transitleastsquares`` steps ~33x finer than a
-        duration; the default of 3 favors speed. Distinct values compile
-        and cache distinct kernels. See
-        :func:`cuvarbase.tls_grids.t0_grid_size` for the resulting grid
-        size.
+        The reference ``transitleastsquares`` steps ~100x finer (every
+        cadence for dense data). Measured cost of the default 3: the
+        SDE of a P = 7.3 d, q = 0.021 transit varies by 17% (19.8-23.4)
+        with the injected epoch relative to the coarse grid (6.5% at
+        33); for a narrow transit (M dwarf, 3.4 cadences of 30 min)
+        SDE 29.1 at 3 vs 32.9 at 10 and 32.7 at 33 (-11%). Raise it to
+        10 (matches 33 within 1% in those runs) for sensitivity-critical
+        searches. Distinct values compile and cache distinct kernels.
+        See :func:`cuvarbase.tls_grids.t0_grid_size` for the resulting
+        grid size.
     kernel : PyCUDA function, optional
-        Pre-compiled kernel
+        Pre-compiled kernel (legacy path). Must be the ``'keplerian'``
+        kernel of :func:`compile_tls` (per-period duration bounds);
+        the ``'standard'`` kernel has a different signature and is no
+        longer launched by any wrapper.
     memory : TLSMemory, optional
-        Pre-allocated memory object
+        Pre-allocated memory object (legacy path)
     stream : cuda.Stream, optional
-        CUDA stream for async execution
+        CUDA stream for async execution (legacy path)
     transfer_to_device : bool, optional
-        Transfer data to GPU (default: True)
+        Transfer data to GPU (default: True). With False the caller must
+        have staged ``t``, ``y``, ``dy`` and an ASCENDING ``periods``
+        grid through ``memory.setdata`` (which epoch-subtracts the
+        times); a non-ascending grid raises ValueError. The per-period
+        duration bounds are uploaded here regardless.
     transfer_to_host : bool, optional
         Transfer results to CPU (default: True)
     use_fast : bool, optional (default: True)
@@ -520,22 +667,79 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         Fast path only: phase-bin override (power of two). By default
         the period grid is banded into per-band bin counts
         automatically.
+    R_planet : float, optional
+        Fiducial planet radius (Earth radii) of the Keplerian duration
+        window (default: 1.0)
+    qmin_fac, qmax_fac : float, optional
+        Keplerian duration window factors: search ``[qmin_fac,
+        qmax_fac] * q_kep(P)`` at each period (default 0.5, 2.0)
+    duration_window : {'keplerian', 'fixed'}, optional
+        Duration window used when ``qmin``/``qmax`` are omitted.
+        'keplerian' (default) derives per-period bounds from
+        ``R_star``/``M_star``/``R_planet`` (the same window
+        :func:`tls_transit` and :func:`tls_search_batch` use). 'fixed'
+        is the pre-1.0 constant window [0.005, 0.15] at every period,
+        kept as an opt-in that warns when the Keplerian duration falls
+        outside it: beyond P ~ 60 d (Sun-like) no trial duration is
+        physical there and a transit is returned at an alias period
+        with a biased depth (measured: P = 365 d on a 1400-d baseline
+        came back at 182.5 d with half the depth).
+    sde_kernel_size : int, optional
+        Running-median window of the SDE detrend (see
+        :func:`cuvarbase.tls_stats.signal_detection_efficiency`).
 
     Returns
     -------
     results : dict
         Dictionary with keys:
-        - 'periods': Trial periods
-        - 'chi2': Chi-squared values
-        - 'best_t0': Best mid-transit times
-        - 'best_duration': Best durations
-        - 'best_depth': Best depths
-        - 'SDE': Signal Detection Efficiency (if computed)
+
+        - 'periods': trial periods (the caller's grid and order)
+        - 'chi2': chi-squared per trial period (NaN where no valid
+          solution)
+        - 'best_t0_per_period', 'best_duration_per_period',
+          'best_depth_per_period', 'valid_periods', 'n_failed_periods'
+        - 'period', 'period_uncertainty': best-fit period (days)
+        - 'T0': absolute mid-transit time (days, same scale as ``t``)
+          of the first transit at or after ``min(t)``, i.e.
+          ``min(t) <= T0 < min(t) + period`` -- the convention of the
+          reference package. Fold with ``((t - T0) / period) % 1`` to
+          put the transit at phase 0.
+        - 't0_phase': the same epoch as a fold phase in [0, 1) relative
+          to ``floor(min(t))``: ``T0 = floor(min(t)) + t0_phase *
+          period`` shifted by whole periods into the range above.
+        - 'duration' (days), 'depth' (fractional), 'chi2_min'
+        - 'SDE', 'SDE_raw': signal detection efficiency of the
+          per-period spectrum, ``SR = chi2_min / chi2`` (the reference
+          definition; see :mod:`cuvarbase.tls_stats`)
+        - 'SNR': ``sqrt(chi2_0 - chi2_min)``, the delta-chi-squared
+          significance of the best fit over the constant model
+        - 'power', 'SR': detrended / raw signal-residue spectra
+        - 'n_transits', 'R_star', 'M_star'
+
+        There is NO 'FAP' key: the pre-1.0 value was an uncalibrated
+        function of the SDE (23% of pure-noise light curves got
+        FAP < 0.01). Use ``tls_search_batch(fap_null_draws=N)`` for an
+        empirical, per-configuration false-alarm probability.
+
+        A light curve with no valid solution at any trial period (flat
+        or noiseless flux) returns SDE = 0, NaN best-fit parameters and
+        the message under 'error' (with a warning) instead of raising.
 
     Notes
     -----
-    This is the main GPU TLS function. For the first implementation,
-    it provides a basic version that will be optimized in Phase 2.
+    The default fast path binds the data once per period into phase
+    bins and refines the best candidates exactly; the legacy path
+    (``use_fast=False``) is the original per-point kernel, capped at
+    ~3,500 points by its shared-memory layout.
+
+    No free baseline term. The model is ``1 - depth * T(phase)`` with
+    the out-of-transit level fixed at exactly 1 (shared with the
+    reference package). A flux-normalization offset of a fraction of
+    the per-point scatter changes the SDE materially and asymmetrically
+    (measured, P = 7.3 d, sigma = 1e-3: +5e-4 raised the SDE from 21.5
+    to 29.3 with the depth 20% low; -5e-4 halved it to 10.1; -1e-3 gave
+    the wrong period). Normalize to a median (not mean) out-of-transit
+    level of 1 to ~0.1 sigma per point before searching.
     """
     # Validate stellar parameters
     tls_grids.validate_stellar_parameters(R_star, M_star)
@@ -547,8 +751,8 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         warnings.warn(
             "tls_search_gpu: the `durations` parameter has never been "
             "used by any TLS path and is ignored; trial durations are "
-            "derived from qmin/qmax (Keplerian mode) or the fixed "
-            "standard grid")
+            "derived from the per-period duration window (qmin/qmax, "
+            "or the Keplerian window built from R_star/M_star)")
 
     # Generate period grid if not provided
     if periods is None:
@@ -561,11 +765,28 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
 
     # The fast path keeps t in float64 for epoch subtraction; only the
     # legacy path (below) downcasts inputs to float32 up front.
-    periods = np.asarray(periods, dtype=np.float32)
+    periods = np.asarray(_validate_periods(periods), dtype=np.float32)
     nperiods = len(periods)
 
-    # Determine if using Keplerian mode
-    use_keplerian = (qmin is not None and qmax is not None)
+    # ---- Per-period duration window (caller's grid order) ----
+    if (qmin is None) != (qmax is None):
+        raise ValueError("provide both qmin and qmax, or neither")
+    if qmin is not None:
+        if duration_window != 'keplerian':
+            raise ValueError("duration_window applies only when qmin/qmax "
+                             "are not given")
+        qmin_arr = np.asarray(qmin, dtype=np.float64)
+        qmax_arr = np.asarray(qmax, dtype=np.float64)
+        if len(qmin_arr) != nperiods or len(qmax_arr) != nperiods:
+            raise ValueError(
+                "qmin and qmax must have same length as periods "
+                "(%d)" % nperiods)
+    else:
+        qmin_arr, qmax_arr = tls_grids.duration_window(
+            periods.astype(np.float64), R_star=R_star, M_star=M_star,
+            R_planet=R_planet, qmin_fac=qmin_fac, qmax_fac=qmax_fac,
+            window=duration_window)
+    _validate_q_window(qmin_arr, qmax_arr)
 
     # Fast path: phase-binned batch engine with exact top-K refinement.
     # Falls through to the legacy per-point kernel when the caller uses
@@ -581,44 +802,19 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
             "falling back to the legacy per-point kernel (which caps "
             "ndata at ~3,500 points)")
     if use_fast and fast_gate:
-        if use_keplerian:
-            qmin_arr = np.asarray(qmin, dtype=np.float64)
-            qmax_arr = np.asarray(qmax, dtype=np.float64)
-            if len(qmin_arr) != nperiods or len(qmax_arr) != nperiods:
-                raise ValueError(
-                    "qmin and qmax must have same length as periods "
-                    "(%d)" % nperiods)
-            n_durations_eff = n_durations
-        else:
-            # match the legacy standard kernel exactly: fixed duration
-            # range AND its hard-coded 15 durations (the legacy kernel
-            # ignores n_durations outside Keplerian mode)
-            qmin_arr = np.full(nperiods, 0.005)
-            qmax_arr = np.full(nperiods, 0.15)
-            if n_durations != 15:
-                warnings.warn(
-                    "n_durations is only honored in Keplerian mode "
-                    "(qmin/qmax provided); the standard TLS duration "
-                    "grid is fixed at 15 log-spaced durations")
-            n_durations_eff = 15
-
-        batch_results = tls_search_batch(
+        r = tls_search_batch(
             [(t, y, dy)],
             periods=periods, qmin=qmin_arr, qmax=qmax_arr,
-            n_durations=n_durations_eff, t0_oversample=t0_oversample,
+            n_durations=n_durations, t0_oversample=t0_oversample,
             refine_top_k=refine_top_k,
             refine_oversample=refine_oversample,
             block_size=block_size, nbins=nbins,
             limb_dark=limb_dark, u=u,
             R_star=R_star, M_star=M_star,
-            return_arrays=True,
-            _warn_failed=True)
-        r = batch_results[0]
-        if 'error' in r:
-            raise RuntimeError(r['error'])
+            return_arrays=True, sde_kernel_size=sde_kernel_size,
+            _warn_failed=True)[0]
 
-        # legacy result dict ('T0' is the transit phase, as before)
-        return {
+        results = {
             'periods': periods,
             'chi2': r['chi2'],
             'best_t0_per_period': r['best_t0_per_period'],
@@ -628,29 +824,50 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
             'n_failed_periods': r['n_failed_periods'],
             'period': r['period'],
             'period_uncertainty': r['period_uncertainty'],
-            'T0': r['t0_phase'],
+            'T0': r['T0'],
+            't0_phase': r['t0_phase'],
             'duration': r['duration'],
             'depth': r['depth'],
             'chi2_min': r['chi2_min'],
             'SDE': r['SDE'],
             'SDE_raw': r['SDE_raw'],
             'SNR': r['SNR'],
-            'FAP': r['FAP'],
             'power': r['power'],
             'SR': r['SR'],
             'n_transits': r['n_transits'],
             'R_star': R_star,
             'M_star': M_star,
         }
+        if 'error' in r:
+            results['error'] = r['error']
+        return results
 
     # ---- Legacy per-point kernel path ----
 
-    # Convert to numpy arrays
-    t = np.asarray(t, dtype=np.float32)
-    y = np.asarray(y, dtype=np.float32)
-    dy = np.asarray(dy, dtype=np.float32)
+    # float64 copies for the epoch, span and chi2_0; the kernel inputs
+    # are cast to float32 by TLSMemory.setdata (after epoch subtraction)
+    t64 = np.asarray(t, dtype=np.float64)
+    y64 = np.asarray(y, dtype=np.float64)
+    dy64 = np.asarray(dy, dtype=np.float64)
+    ndata = len(t64)
+    if len(y64) != ndata or len(dy64) != ndata:
+        raise ValueError("t, y, dy lengths differ (%d, %d, %d)"
+                         % (ndata, len(y64), len(dy64)))
 
-    ndata = len(t)
+    # Ascending trial grid for the statistics; the duration window is
+    # aligned with the caller's order, so reorder it the same way.
+    periods_sorted, order = _sort_period_grid(periods)
+    if order is not None:
+        if memory is not None and not transfer_to_device:
+            raise ValueError(
+                "transfer_to_device=False requires an ascending period "
+                "grid: the periods staged on the device through "
+                "memory.setdata must match the sorted grid the "
+                "statistics assume")
+        qmin_arr = qmin_arr[order]
+        qmax_arr = qmax_arr[order]
+    qmin32 = np.ascontiguousarray(qmin_arr, dtype=np.float32)
+    qmax32 = np.ascontiguousarray(qmax_arr, dtype=np.float32)
 
     # Choose block size
     if block_size is None:
@@ -675,26 +892,25 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
                                         _SHARED_MEM_LIMIT, max_ndata,
                                         n_template, block_size))
 
-    # Get or compile kernels
+    # Get or compile kernels. Every legacy search runs the 'keplerian'
+    # kernel (per-period duration bounds); the 'standard' kernel with
+    # its hard-coded [0.005, 0.15] window is no longer launched.
     if kernel is None:
         kernels = _get_cached_kernels(block_size, t0_oversample=t0_oversample)
-        kernel = kernels['keplerian'] if use_keplerian else kernels['standard']
+        kernel = kernels['keplerian']
 
-    # Allocate or use existing memory
+    # Allocate or use existing memory (setdata epoch-subtracts t)
     if memory is None:
-        memory = TLSMemory.fromdata(t, y, dy, periods=periods,
-                                    stream=stream,
-                                    transfer=transfer_to_device)
+        memory = TLSMemory(ndata, nperiods, stream=stream)
+        memory.setdata(t64, y64, dy64, periods=periods_sorted,
+                       qmin=qmin32, qmax=qmax32,
+                       transfer=transfer_to_device)
     elif transfer_to_device:
-        memory.setdata(t, y, dy, periods=periods, transfer=True)
-
-    # Set qmin/qmax if using Keplerian mode
-    if use_keplerian:
-        qmin = np.asarray(qmin, dtype=np.float32)
-        qmax = np.asarray(qmax, dtype=np.float32)
-        if len(qmin) != nperiods or len(qmax) != nperiods:
-            raise ValueError(f"qmin and qmax must have same length as periods ({nperiods})")
-        memory.setdata(t, y, dy, periods=periods, qmin=qmin, qmax=qmax, transfer=transfer_to_device)
+        memory.setdata(t64, y64, dy64, periods=periods_sorted,
+                       qmin=qmin32, qmax=qmax32, transfer=True)
+    else:
+        # the caller staged t/y/dy/periods; the duration bounds are ours
+        memory.set_duration_bounds(qmin32, qmax32)
 
     # Generate and transfer transit template (n_template and
     # shared_mem_size were computed with the guard above)
@@ -708,28 +924,15 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     grid = (nperiods, 1, 1)
     block = (block_size, 1, 1)
 
-    if use_keplerian:
-        # Keplerian kernel with qmin/qmax arrays and template
-        kernel_args = [
-            memory.t_g, memory.y_g, memory.dy_g,
-            memory.periods_g, memory.qmin_g, memory.qmax_g,
-            memory.template_g,
-            np.int32(ndata), np.int32(nperiods), np.int32(n_durations),
-            np.int32(n_template),
-            memory.chi2_g, memory.best_t0_g,
-            memory.best_duration_g, memory.best_depth_g,
-        ]
-    else:
-        # Standard kernel with fixed duration range and template
-        kernel_args = [
-            memory.t_g, memory.y_g, memory.dy_g,
-            memory.periods_g,
-            memory.template_g,
-            np.int32(ndata), np.int32(nperiods),
-            np.int32(n_template),
-            memory.chi2_g, memory.best_t0_g,
-            memory.best_duration_g, memory.best_depth_g,
-        ]
+    kernel_args = [
+        memory.t_g, memory.y_g, memory.dy_g,
+        memory.periods_g, memory.qmin_g, memory.qmax_g,
+        memory.template_g,
+        np.int32(ndata), np.int32(nperiods), np.int32(n_durations),
+        np.int32(n_template),
+        memory.chi2_g, memory.best_t0_g,
+        memory.best_duration_g, memory.best_depth_g,
+    ]
 
     kernel_kwargs = dict(block=block, grid=grid, shared=shared_mem_size)
     if stream is not None:
@@ -748,56 +951,81 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         best_duration_vals = memory.best_duration[:nperiods].copy()
         best_depth_vals = memory.best_depth[:nperiods].copy()
 
+        # constant-model chi2 (float64) for the SNR; the kernel uses the
+        # same sigma^2 + 1e-10 regularizer
+        chi2_0 = float(np.sum((1.0 - y64) ** 2 / (dy64 ** 2 + 1e-10)))
+        tmin = float(t64.min())
+        epoch = getattr(memory, 'epoch', None)
+        if epoch is None:
+            epoch = float(np.floor(tmin))
+
         # Mask failed periods (1e30 sentinel) before any statistics:
-        # unmasked they collapse SDE to ~0 and drive FAP to 1
+        # unmasked they collapse SDE to ~0
         valid = _mask_failed_periods(chi2_vals)
+        if not valid.any():
+            results = _null_result(nperiods, chi2_0,
+                                   _NO_SOLUTION_MSG % nperiods,
+                                   periods=periods, arrays=True)
+            results.update({'R_star': R_star, 'M_star': M_star})
+            return results
         chi2_valid = chi2_vals[valid]
-        periods_valid = periods[valid]
+        periods_valid = periods_sorted[valid]
 
         # Find best period among the valid ones
         best_valid_idx = int(np.argmin(chi2_valid))
         best_idx = int(np.flatnonzero(valid)[best_valid_idx])
-        best_period = periods[best_idx]
-        best_chi2 = chi2_vals[best_idx]
-        best_t0 = best_t0_vals[best_idx]
-        best_duration = best_duration_vals[best_idx]
-        best_depth = best_depth_vals[best_idx]
+        best_period = float(periods_sorted[best_idx])
+        best_chi2 = float(chi2_vals[best_idx])
+        best_t0 = float(best_t0_vals[best_idx])
+        best_duration = float(best_duration_vals[best_idx])
+        best_depth = float(best_depth_vals[best_idx])
 
         # Estimate number of transits
-        T_span = np.max(t) - np.min(t)
+        T_span = float(t64.max() - tmin)
         n_transits = int(T_span / best_period)
 
         # Compute statistics on the valid periods only
         stats = tls_stats.compute_all_statistics(
             chi2_valid, periods_valid, best_valid_idx,
-            best_depth, best_duration, n_transits
-        )
+            best_depth, best_duration, n_transits,
+            kernel_size=sde_kernel_size,
+            chi2_null=chi2_0, chi2_best=best_chi2)
 
         # Period uncertainty
         period_uncertainty = tls_stats.compute_period_uncertainty(
             periods_valid, chi2_valid, best_valid_idx
         )
 
-        # Failed periods appear as NaN in the returned spectra
+        # Absolute mid-transit time: the kernel's phase is relative to
+        # the epoch floor(min t); report the first transit >= min(t)
+        T0 = _first_transit_at_or_after(epoch + best_t0 * best_period,
+                                        best_period, tmin)
+
+        # Failed periods appear as NaN in the returned spectra; every
+        # per-period array goes back to the caller's grid order
         def _expand(values):
             full = np.full(nperiods, np.nan)
             full[valid] = values
-            return full
+            return _to_caller_order(full, order)
 
         results = {
             # Raw outputs (NaN at failed periods)
             'periods': periods,
-            'chi2': np.where(valid, chi2_vals, np.nan),
-            'best_t0_per_period': best_t0_vals,
-            'best_duration_per_period': best_duration_vals,
-            'best_depth_per_period': best_depth_vals,
-            'valid_periods': valid,
+            'chi2': _to_caller_order(np.where(valid, chi2_vals, np.nan),
+                                     order),
+            'best_t0_per_period': _to_caller_order(best_t0_vals, order),
+            'best_duration_per_period': _to_caller_order(
+                best_duration_vals, order),
+            'best_depth_per_period': _to_caller_order(best_depth_vals,
+                                                      order),
+            'valid_periods': _to_caller_order(valid, order),
             'n_failed_periods': int(nperiods - valid.sum()),
 
             # Best-fit parameters
             'period': best_period,
             'period_uncertainty': period_uncertainty,
-            'T0': best_t0,
+            'T0': T0,
+            't0_phase': best_t0,
             'duration': best_duration,
             'depth': best_depth,
             'chi2_min': best_chi2,
@@ -807,7 +1035,6 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
             'SDE': stats['SDE'],
             'SDE_raw': stats['SDE_raw'],
             'SNR': stats['SNR'],
-            'FAP': stats['FAP'],
             'power': _expand(stats['power']),
             'SR': _expand(stats['SR']),
 
@@ -863,8 +1090,12 @@ def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
     Transit Least Squares search with Keplerian duration constraints.
 
     This is the TLS analog of BLS's eebls_transit() function. It uses stellar
-    parameters to focus the duration search on physically plausible values,
-    providing ~7-8× efficiency improvement over fixed duration ranges.
+    parameters to focus the duration search on physically plausible values.
+    Since 1.0 :func:`tls_search_gpu` builds the same Keplerian window by
+    default, so this wrapper is equivalent to ``tls_search_gpu(t, y, dy,
+    R_star=..., M_star=..., R_planet=..., qmin_fac=..., qmax_fac=...)``
+    and is kept for its explicit name and the explicit qmin/qmax it
+    passes.
 
     Parameters
     ----------
@@ -903,7 +1134,9 @@ def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
     results : dict
         Search results with keys:
         - 'period': Best-fit period
-        - 'T0': Best mid-transit time
+        - 'T0': absolute mid-transit time (days, same scale as ``t``)
+          of the first transit at or after min(t); 't0_phase' is the
+          fold phase relative to floor(min(t))
         - 'duration': Best transit duration
         - 'depth': Best transit depth
         - 'SDE': Signal Detection Efficiency
@@ -924,7 +1157,9 @@ def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
     - Scales with stellar density (M_star, R_star)
 
     This is much more efficient than searching a fixed fractional duration
-    range (0.5%-15%) at all periods.
+    range (0.5%-15%) at all periods -- and, unlike that fixed window,
+    stays physical at long periods (the fixed window excludes the
+    Keplerian duration beyond P ~ 60 d for a Sun-like star).
 
     Examples
     --------
@@ -1179,6 +1414,7 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
                      block_size=None, nbins=None,
                      limb_dark='quadratic', u=[0.4804, 0.1867],
                      return_arrays=False, sde_kernel_size=None,
+                     fap_null_draws=0, fap_seed=None,
                      _warn_failed=False):
     """
     Survey-scale Transit Least Squares search over a batch of
@@ -1202,9 +1438,12 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
     R_planet : float
         Fiducial planet radius (Earth radii) for the duration window.
     periods, qmin, qmax : array_like, optional
-        Explicit trial grid: periods (days) and per-period fractional
-        duration bounds. Auto-generated (Ofir 2014 grid + Keplerian
-        durations) when omitted.
+        Explicit trial grid: periods (days, any order -- sorted
+        internally, per-period output arrays come back in the caller's
+        order) and per-period fractional duration bounds aligned with
+        ``periods``. Auto-generated (Ofir 2014 grid + Keplerian
+        durations from :func:`cuvarbase.tls_grids.duration_window`)
+        when omitted.
     period_min, period_max : float, optional
         Period search range for the auto grid.
     n_transits_min, oversampling_factor : optional
@@ -1237,24 +1476,53 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
         derived spectra for each lightcurve (adds D2H transfer time).
     sde_kernel_size : int, optional
         Median-detrend window for the SDE statistic (see tls_stats).
+    fap_null_draws : int, optional (default: 0)
+        Opt-in empirical false-alarm probability. For each lightcurve,
+        ``fap_null_draws`` null realizations are built by randomly
+        permuting the (y, dy) pairs over the observation times (a
+        white-noise null that keeps the sampling, the point count and
+        the noise distribution but destroys any coherent signal and
+        any red noise), searched on the identical trial grid and
+        settings (coarse scan only; the SDE never uses the
+        refinement), and the result gets ``'FAP' = (1 + n_exceed) /
+        (fap_null_draws + 1)`` where ``n_exceed`` counts null SDEs
+        >= the observed SDE, plus the null SDEs under ``'SDE_null'``.
+        Cost: ``fap_null_draws`` extra searches per lightcurve
+        (measured 400 pure-noise searches of 2880 points x 6157
+        periods in 1.6 s on an A40). The smallest resolvable FAP is
+        ``1 / (fap_null_draws + 1)``. No 'FAP' key is returned
+        otherwise: the pre-1.0 value was an uncalibrated function of
+        the SDE.
+    fap_seed : int or None, optional
+        Seed of the ``numpy.random.RandomState`` used for the null
+        permutations (None: fresh entropy).
 
     Returns
     -------
     results : list of dict
         One dict per lightcurve:
-        'period', 'period_uncertainty', 't0_phase', 'T0' (absolute
-        mid-transit time near the epoch), 'duration', 'depth',
-        'chi2_min', 'SDE', 'SDE_raw', 'SNR', 'FAP', 'n_transits',
-        'n_failed_periods'; plus the per-period arrays when
-        ``return_arrays`` is set. A lightcurve whose every trial period
-        failed gets {'error': message} instead.
+        'period', 'period_uncertainty', 't0_phase' (fold phase of the
+        mid-transit relative to floor(min t)), 'T0' (absolute
+        mid-transit time of the first transit at or after min(t), so
+        ``min(t) <= T0 < min(t) + period``; fold with
+        ``((t - T0) / period) % 1``), 'duration', 'depth', 'chi2_min',
+        'SDE', 'SDE_raw' (``SR = chi2_min / chi2`` statistic, see
+        :mod:`cuvarbase.tls_stats`), 'SNR' (``sqrt(chi2_0 -
+        chi2_min)``), 'n_transits', 'n_failed_periods'; plus the
+        per-period arrays (in the caller's period order) when
+        ``return_arrays`` is set, and 'FAP'/'SDE_null' when
+        ``fap_null_draws`` > 0.
+
+        A lightcurve with no valid solution at any trial period (flat
+        or noiseless flux) gets the same keys with SDE = 0, NaN best-fit
+        parameters and the message under 'error' (a warning is raised).
 
         The best-fit parameters (including 'chi2_min') come from the
         exact refinement pass, so 'chi2_min' is generally slightly
         below the minimum of the returned coarse 'chi2' spectrum; the
-        SDE/FAP statistics are computed from the uniform coarse
-        spectrum only, keeping the detection statistic's scale
-        consistent across periods.
+        SDE statistics are computed from the uniform coarse spectrum
+        only, keeping the detection statistic's scale consistent
+        across periods.
     """
     tls_grids.validate_stellar_parameters(R_star, M_star)
     tls_models.validate_limb_darkening_coeffs(u, limb_dark)
@@ -1281,31 +1549,31 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
             oversampling_factor=oversampling_factor,
             period_min=period_min, period_max=period_max,
             n_transits_min=n_transits_min)
-    periods = np.asarray(periods, dtype=np.float32)
-    nperiods = len(periods)
-    if nperiods == 0:
-        raise ValueError("periods must be non-empty")
+    periods_in = np.asarray(_validate_periods(periods), dtype=np.float32)
+    nperiods = len(periods_in)
 
     if (qmin is None) != (qmax is None):
         raise ValueError("provide both qmin and qmax, or neither")
     if qmin is None:
         # only the q bounds are needed here; skip building the
         # (nperiods x n_durations) duration table
-        q_values = tls_grids.q_transit(periods.astype(np.float64),
-                                       R_star=R_star, M_star=M_star,
-                                       R_planet=R_planet)
-        qmin = q_values * qmin_fac
-        qmax = q_values * qmax_fac
+        qmin, qmax = tls_grids.duration_window(
+            periods_in.astype(np.float64), R_star=R_star, M_star=M_star,
+            R_planet=R_planet, qmin_fac=qmin_fac, qmax_fac=qmax_fac)
     qmin = np.ascontiguousarray(qmin, dtype=np.float32)
     qmax = np.ascontiguousarray(qmax, dtype=np.float32)
     if len(qmin) != nperiods or len(qmax) != nperiods:
         raise ValueError("qmin and qmax must have same length as periods "
                          "(%d)" % nperiods)
-    if np.any(qmin <= 0) or np.any(qmax < qmin) or np.any(qmax >= 1):
-        raise ValueError(
-            "need 0 < qmin <= qmax < 1 at every period (the transit "
-            "duration must be shorter than the period; the binned scan "
-            "would double-count phase bins for q >= 1)")
+    _validate_q_window(qmin, qmax)
+
+    # The statistics (running-median detrend, period uncertainty)
+    # assume an ascending grid: sort here, scatter outputs back to
+    # the caller's order at the end.
+    periods, order = _sort_period_grid(periods_in)
+    if order is not None:
+        qmin = np.ascontiguousarray(qmin[order])
+        qmax = np.ascontiguousarray(qmax[order])
 
     # ---- Kernel configuration: band the grid by required bin count.
     # The trial-scan cost is proportional to NBINS, while the bin count
@@ -1403,6 +1671,8 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
     t_hi_c, t_lo_c, a_c, b_c, offs, lens, chi2_0, epochs, spans = \
         _preprocess_batch(lightcurves)
     n_lc = len(lightcurves)
+    tmins = np.array([np.min(np.asarray(lc[0], dtype=np.float64))
+                      for lc in lightcurves], dtype=np.float64)
 
     # ---- Static GPU arrays ----
     periods_g = gpuarray.to_gpu(periods)
@@ -1536,14 +1806,17 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
             valid = srow > 0.0
             n_failed = int(nperiods - valid.sum())
             if n_failed == nperiods:
-                return lc_idx, {
-                    'error': "TLS kernel returned no valid solution for "
-                             "any of the %d trial periods" % nperiods}
+                msg = _NO_SOLUTION_MSG % nperiods
+                warnings.warn("lightcurve %d: %s; returning a null "
+                              "result (SDE = 0)" % (lc_idx, msg))
+                return lc_idx, _null_result(
+                    nperiods, chi2_0[lc_idx], msg, periods=periods_in,
+                    arrays=return_arrays)
             if n_failed and _warn_failed:
                 warnings.warn(
                     "%d of %d trial periods returned no valid TLS "
                     "solution (chi2 sentinel); they are excluded from "
-                    "the best-fit search and the SDE/FAP statistics and "
+                    "the best-fit search and the SDE statistics and "
                     "appear as NaN in the returned arrays"
                     % (n_failed, nperiods))
 
@@ -1554,7 +1827,7 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
 
             # Best-fit parameters come from the exact refinement pass
             # when available; the coarse spectrum (row) is what feeds
-            # the SDE/FAP statistics either way.
+            # the SDE statistics either way.
             slot = int(np.argmax(rscore_h[j])) if K else 0
             if K and rscore_h[j, slot] > 0.0:
                 best_idx = int(cand[j, slot])
@@ -1578,22 +1851,29 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
             stats = tls_stats.compute_all_statistics(
                 chi2_valid, periods_valid, best_valid_idx,
                 best_depth, best_duration, n_transits,
-                kernel_size=sde_kernel_size)
+                kernel_size=sde_kernel_size,
+                chi2_null=float(chi2_0[lc_idx]), chi2_best=chi2_min)
             period_uncertainty = tls_stats.compute_period_uncertainty(
                 periods_valid, chi2_valid, best_valid_idx)
+
+            # Absolute mid-transit time: the kernel phase is relative
+            # to the epoch floor(min t); report the first transit at
+            # or after the first observation
+            T0 = _first_transit_at_or_after(
+                epochs[lc_idx] + best_t0 * best_period, best_period,
+                tmins[lc_idx])
 
             res = {
                 'period': best_period,
                 'period_uncertainty': period_uncertainty,
                 't0_phase': best_t0,
-                'T0': epochs[lc_idx] + best_t0 * best_period,
+                'T0': float(T0),
                 'duration': best_duration,
                 'depth': best_depth,
                 'chi2_min': chi2_min,
                 'SDE': stats['SDE'],
                 'SDE_raw': stats['SDE_raw'],
                 'SNR': stats['SNR'],
-                'FAP': stats['FAP'],
                 'n_transits': n_transits,
                 'n_failed_periods': n_failed,
             }
@@ -1601,14 +1881,18 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
                 def _expand(values):
                     full = np.full(nperiods, np.nan)
                     full[valid] = values
-                    return full
+                    return _to_caller_order(full, order)
                 res.update({
-                    'periods': periods,
-                    'chi2': np.where(valid, row, np.nan),
-                    'best_t0_per_period': t0_h[j].copy(),
-                    'best_duration_per_period': dur_h[j].copy(),
-                    'best_depth_per_period': depth_h[j].copy(),
-                    'valid_periods': valid,
+                    'periods': periods_in,
+                    'chi2': _to_caller_order(
+                        np.where(valid, row, np.nan), order),
+                    'best_t0_per_period': _to_caller_order(
+                        t0_h[j].copy(), order),
+                    'best_duration_per_period': _to_caller_order(
+                        dur_h[j].copy(), order),
+                    'best_depth_per_period': _to_caller_order(
+                        depth_h[j].copy(), order),
+                    'valid_periods': _to_caller_order(valid, order),
                     'power': _expand(stats['power']),
                     'SR': _expand(stats['SR']),
                 })
@@ -1627,4 +1911,55 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
                 lc_idx, res = _finish_lc(j)
                 results[lc_idx] = res
 
+    if fap_null_draws:
+        _attach_null_fap(
+            results, lightcurves, int(fap_null_draws), fap_seed,
+            dict(periods=periods, qmin=qmin, qmax=qmax,
+                 n_durations=n_durations, t0_oversample=t0_oversample,
+                 refine_top_k=0, block_size=block_size, nbins=nbins,
+                 limb_dark=limb_dark, u=u, R_star=R_star, M_star=M_star,
+                 sde_kernel_size=sde_kernel_size))
+
     return results
+
+
+def _attach_null_fap(results, lightcurves, n_draws, seed, search_kwargs):
+    """Empirical FAP by flux permutation (see tls_search_batch,
+    ``fap_null_draws``): each lightcurve's (y, dy) pairs are permuted
+    over its times ``n_draws`` times, searched with the identical trial
+    grid and settings, and the exceedance of the observed SDE is
+    recorded under 'FAP' (add-one estimator) with the null SDEs under
+    'SDE_null'."""
+    if n_draws < 1:
+        raise ValueError("fap_null_draws must be >= 1 (got %d)" % n_draws)
+    rng = np.random.RandomState(seed)
+    n_lc = len(lightcurves)
+    lens = [len(lc[0]) for lc in lightcurves]
+    i0 = 0
+    while i0 < n_lc:
+        # group lightcurves so one null batch stays within the
+        # per-launch point budget of the search
+        i1 = i0 + 1
+        pts = lens[i0] * n_draws
+        while (i1 < n_lc
+               and pts + lens[i1] * n_draws <= _TLS_FAST_MAX_POINTS):
+            pts += lens[i1] * n_draws
+            i1 += 1
+        null_lcs = []
+        for i in range(i0, i1):
+            t, y, dy = lightcurves[i]
+            y = np.asarray(y)
+            dy = np.asarray(dy)
+            for _ in range(n_draws):
+                perm = rng.permutation(len(y))
+                null_lcs.append((t, y[perm], dy[perm]))
+        null_res = tls_search_batch(null_lcs, **search_kwargs)
+        for k, i in enumerate(range(i0, i1)):
+            sde_null = np.array(
+                [r['SDE'] for r in null_res[k * n_draws:(k + 1) * n_draws]],
+                dtype=np.float64)
+            res = results[i]
+            n_exceed = int(np.sum(sde_null >= res['SDE']))
+            res['FAP'] = (n_exceed + 1.0) / (n_draws + 1.0)
+            res['SDE_null'] = sde_null
+        i0 = i1
