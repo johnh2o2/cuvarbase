@@ -88,9 +88,12 @@ def nfft_adjoint_async(memory, functions,
     # only the transform's own scalars can be checked here. A
     # non-finite minimum_frequency poisons every mode's phase factor
     # and a non-positive samples_per_peak collapses the grid.
-    if not np.isfinite(minimum_frequency) or minimum_frequency < 0:
+    # ``minimum_frequency`` may be negative: the adjoint transform is
+    # defined over modes -nf/2 .. nf/2 and the tests exercise
+    # ``minimum_frequency = -nf // 2``.
+    if not np.isfinite(minimum_frequency):
         raise ValueError("nfft_adjoint_async: minimum_frequency must be "
-                         "finite and >= 0; got %r" % (minimum_frequency,))
+                         "finite; got %r" % (minimum_frequency,))
     if not (np.isfinite(samples_per_peak) and samples_per_peak > 0):
         raise ValueError("nfft_adjoint_async: samples_per_peak must be "
                          "finite and > 0; got %r" % (samples_per_peak,))

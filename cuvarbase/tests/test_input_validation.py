@@ -654,9 +654,11 @@ class TestNFFTGuards(object):
 
     def test_adjoint_scalar_guards(self):
         """``nfft_adjoint_async`` gets its light curve through
-        ``memory``; its own scalars are still checked."""
+        ``memory``; its own scalars are still checked. A NEGATIVE
+        ``minimum_frequency`` is legal -- the adjoint transform runs
+        over modes -nf/2 .. nf/2 -- so only finiteness is required."""
         from ..cunfft import nfft_adjoint_async
-        for bad in (np.nan, np.inf, -1.0):
+        for bad in (np.nan, np.inf, -np.inf):
             with pytest.raises(ValueError, match='minimum_frequency'):
                 nfft_adjoint_async(None, None, minimum_frequency=bad)
         for bad in (np.nan, 0.0, -2.0):
