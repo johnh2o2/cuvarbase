@@ -155,7 +155,8 @@ Numerical notes
   ``float32``. There is no double-precision option. The resulting phase
   error is of order :math:`\epsilon_\phi \approx 3 \times 10^{-8}\,
   T f_{\max}` cycles for a baseline :math:`T` (the largest :math:`|t|`
-  after centering is :math:`T/2`, and float32 resolves :math:`t f` to
+  after centering is of order :math:`T/2` (up to :math:`T` for very
+  uneven sampling), and float32 resolves :math:`t f` to
   about :math:`2^{-24}` relative) and has to stay small compared with the
   bin width :math:`1/\mathrm{nbins}` (or ``dphi``). As a rule of thumb
   keep :math:`T f_{\max}\, \mathrm{nbins} \lesssim 10^{5}` (phase error
