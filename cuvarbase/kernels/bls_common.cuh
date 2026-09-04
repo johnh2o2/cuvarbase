@@ -293,17 +293,26 @@ __global__ void full_bls_no_sol_fused(
 // Note: this thread heavily utilizes global atomic operations, and could
 //       likely be improved by 1-2 orders of magnitude for large Ndata (10^4)
 //       if shared memory atomics were utilized.
+//
+// The thread index and the ndata * nfreq bound are 64-bit: the host
+// launches exactly ceil(ndata * nfreq / blockDim) blocks, and with a
+// 32-bit product (ndata = 66K points x a 66K-frequency batch is 4.4e9
+// > 2^32) the bound wrapped, so most threads exited and the rest
+// binned the wrong (data, frequency) pair -- silent zeros/garbage on
+// the default eebls_transit path for TESS 2-min / Kepler short-cadence
+// light curves (Sep 2026 audit, defect 1). The host additionally caps
+// freq_batch_size at (2^31 - 1) // ndata.
 __global__ void bin_and_phase_fold_bst_multifreq(
 	                    float *t, float *yw, float *w,
 						float *yw_bin, float *w_bin, float *freqs,
 						unsigned int ndata, unsigned int nfreq, unsigned int nbins0, unsigned int nbinsf,
 						unsigned int freq_offset, unsigned int noverlap, float dlogq,
 						unsigned int nbins_tot){
-	unsigned int i = get_id();
+	size_t i = ((size_t) blockIdx.x) * blockDim.x + threadIdx.x;
 
-	if (i < ndata * nfreq){
-		unsigned int i_data = i % ndata;
-		unsigned int i_freq = i / ndata;
+	if (i < ((size_t) ndata) * nfreq){
+		unsigned int i_data = (unsigned int) (i % ndata);
+		unsigned int i_freq = (unsigned int) (i / ndata);
 
 		unsigned int offset = i_freq * nbins_tot * noverlap;
 
@@ -335,7 +344,8 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 	}
 }
 
-// needs ndata * nfreq threads
+// needs ndata * nfreq threads (64-bit index and bound, see
+// bin_and_phase_fold_bst_multifreq)
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)
 __global__ void bin_and_phase_fold_custom(
 	                    float *t, float *yw, float *w,
@@ -344,11 +354,11 @@ __global__ void bin_and_phase_fold_custom(
 						double epoch,
 						unsigned int nq, unsigned int nphi, unsigned int ndata,
 						unsigned int nfreq, unsigned int freq_offset){
-	unsigned int i = get_id();
+	size_t i = ((size_t) blockIdx.x) * blockDim.x + threadIdx.x;
 
-	if (i < ndata * nfreq){
-		unsigned int i_data = i % ndata;
-		unsigned int i_freq = i / ndata;
+	if (i < ((size_t) ndata) * nfreq){
+		unsigned int i_data = (unsigned int) (i % ndata);
+		unsigned int i_freq = (unsigned int) (i / ndata);
 
 		unsigned int offset = i_freq * nq * nphi;
 

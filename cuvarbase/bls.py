@@ -11,6 +11,7 @@ it, the optimal frequency-grid spacing for a transit search [O2014]_.
 .. [K2002] `Kovacs et al. 2002, A&A 391, 369 <https://adsabs.harvard.edu/abs/2002A%26A...391..369K>`_
 
 """
+import functools
 import threading
 import warnings
 from collections import OrderedDict
@@ -1219,11 +1220,13 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
     block_size = kwargs.get('block_size', _default_block_size)
     ndata = len(t)
+    nfreq = len(freqs)
 
-    # read max_memory as total free memory available from driver
+    # default budget: half of the free device memory, bounded below by
+    # what the grid needs (see _DEFAULT_MEMORY_FRACTION)
     if max_memory is None:
         free, total = cuda.mem_get_info()
-        max_memory = int(0.9 * free)
+        max_memory = int(_DEFAULT_MEMORY_FRACTION * free)
 
     if freq_batch_size is None:
         # compute memory
@@ -1235,23 +1238,25 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         nq = len(q_values)
         nphi = len(phi_values)
 
-        # q_values and phi_values
-        mem0 += nq + nphi
+        # q_values (float32) and phi_values (float64)
+        mem0 += nq * real_type_size + nphi * 2 * real_type_size
 
         # freqs + bls + best_phi + best_q + best_sol (int32)
-        mem0 += len(freqs) * 5 * real_type_size
+        mem0 += nfreq * 5 * real_type_size
 
         # yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32)
         mem_per_f = 4 * nstreams * nq * nphi * real_type_size
 
         freq_batch_size = int(float(max_memory - mem0) / (mem_per_f))
 
-        if freq_batch_size == 0:
+        if freq_batch_size <= 0:
             raise RuntimeError("Not enough memory (freq_batch_size = 0)")
 
-    nbtot = len(q_values) * len(phi_values) * freq_batch_size
+    # cap at len(freqs) and at (2^31 - 1) // ndata (fold launch geometry;
+    # see _cap_freq_batch_size)
+    freq_batch_size = _cap_freq_batch_size(freq_batch_size, ndata, nfreq)
 
-    grid_size = int(np.ceil(float(nbtot) / block_size))
+    nbtot = len(q_values) * len(phi_values) * freq_batch_size
 
     # move data to GPU
     w = np.power(dy, -2)
@@ -1266,20 +1271,26 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float64))
 
+    nbatches = int(np.ceil(float(nfreq) / freq_batch_size))
+
+    # One scratch set per stream, but never more streams than batches
+    # (a single-batch grid does not need nstreams x 4 zero-filled
+    # buffers).
+    nsets = max(1, min(int(nstreams), nbatches))
     yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs, streams \
         = [], [], [], [], []
-    for i in range(nstreams):
+    for i in range(nsets):
         streams.append(cuda.Stream())
         yw_g_bins.append(gpuarray.zeros(nbtot, dtype=np.float32))
         w_g_bins.append(gpuarray.zeros(nbtot, dtype=np.float32))
         bls_tmp_gs.append(gpuarray.zeros(nbtot, dtype=np.float32))
         bls_tmp_sol_gs.append(gpuarray.zeros(nbtot, dtype=np.uint32))
 
-    bls_g = gpuarray.zeros(len(freqs), dtype=np.float32)
-    bls_sol_g = gpuarray.zeros(len(freqs), dtype=np.uint32)
+    bls_g = gpuarray.zeros(nfreq, dtype=np.float32)
+    bls_sol_g = gpuarray.zeros(nfreq, dtype=np.uint32)
 
-    bls_best_phi = gpuarray.zeros(len(freqs), dtype=np.float32)
-    bls_best_q = gpuarray.zeros(len(freqs), dtype=np.float32)
+    bls_best_phi = gpuarray.zeros(nfreq, dtype=np.float32)
+    bls_best_q = gpuarray.zeros(nfreq, dtype=np.float32)
 
     q_values_g = gpuarray.to_gpu(np.asarray(q_values).astype(np.float32))
     # phi values stay float64: the kernel re-references them to the
@@ -1289,11 +1300,6 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
     block = (block_size, 1, 1)
 
-    grid = (grid_size, 1)
-
-    nbatches = int(np.ceil(float(len(freqs)) / freq_batch_size))
-
-    bls = np.zeros(len(freqs))
     bin_func = functions['bin_and_phase_fold_custom']
     bls_func = functions['binned_bls_bst']
     max_func = functions['reduction_max']
@@ -1301,10 +1307,10 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
     for batch in range(nbatches):
         imin = freq_batch_size * batch
-        imax = min([len(freqs), freq_batch_size * (batch + 1)])
+        imax = min([nfreq, freq_batch_size * (batch + 1)])
 
         nf = imax - imin
-        j = batch % nstreams
+        j = batch % nsets
         yw_g_bin = yw_g_bins[j]
         w_g_bin = w_g_bins[j]
         bls_tmp_g = bls_tmp_gs[j]
@@ -1387,6 +1393,114 @@ def count_tot_nbins(nbins0, nbinsf, dlogq):
     return ntot
 
 
+@functools.lru_cache(maxsize=65536)
+def _count_tot_nbins_cached(nbins0, nbinsf, dlogq):
+    """``count_tot_nbins`` memoized on its (small) set of distinct
+    arguments: the batch table below evaluates it once per batch (or
+    once per frequency on the per-frequency path), and Keplerian grids
+    have only a few hundred distinct ``(nbins0, nbinsf)`` pairs."""
+    return count_tot_nbins(int(nbins0), int(nbinsf), float(dlogq))
+
+
+# Fraction of the free device memory that eebls_gpu / eebls_gpu_custom
+# budget by default. The allocation is further bounded by what the
+# frequency grid actually needs (freq_batch_size is capped at
+# len(freqs)), so small grids allocate only a few MB; large grids
+# leave half the device to other processes instead of taking ~90% of
+# it for a transient zero-filled scratch buffer (Sep 2026 audit,
+# finding 135 / plan item BLS-2).
+_DEFAULT_MEMORY_FRACTION = 0.5
+
+# Largest ndata * (frequencies per batch) product one fold launch may
+# cover: bin_and_phase_fold_bst_multifreq / bin_and_phase_fold_custom
+# run one thread per (observation, frequency) pair and the grid size
+# must stay a sane 32-bit block count. The kernels index in 64 bits, so
+# this cap is a launch-geometry bound, not a correctness requirement.
+_MAX_FOLD_THREADS = 2 ** 31 - 1
+
+
+def _cap_freq_batch_size(freq_batch_size, ndata, nfreq):
+    """Bound a (user-supplied or auto-sized) ``freq_batch_size``.
+
+    The batch never exceeds the frequency grid (a 300-frequency grid
+    used to allocate scratch space for the ~100K-frequency batch the
+    memory budget allowed) and ``ndata * freq_batch_size`` never
+    exceeds ``_MAX_FOLD_THREADS`` (the fold kernels used to be launched
+    with a 32-bit ``ndata * nfreq`` bound that wrapped at 2^32 --
+    defect 1 of the Sep 2026 audit). Always >= 1.
+    """
+    cap = max(1, _MAX_FOLD_THREADS // max(1, int(ndata)))
+    return int(max(1, min(int(freq_batch_size), cap, int(nfreq))))
+
+
+def _q_bounds_to_nbins(qmins, qmaxes):
+    """Per-frequency bin counts for the binned (eebls_gpu) kernels:
+    ``nbins0 = floor(1/qmax)`` (coarsest) and ``nbinsf = ceil(1/qmin)``
+    (finest), as int64 arrays. The bounds must already have passed
+    ``_validate_q_bounds``; the binned kernels additionally need
+    ``qmin > 0`` (a finite finest bin count) and ``qmax <= 1``
+    (``nbins0 >= 1``; ``nbins0 = 0`` divides by zero on the device)."""
+    qmins = np.asarray(qmins, dtype=np.float64)
+    qmaxes = np.asarray(qmaxes, dtype=np.float64)
+    if np.any(qmins <= 0):
+        raise ValueError("qmin must be > 0 for the binned BLS kernels "
+                         "(the finest phase bin is 1/qmin wide); got "
+                         "min(qmin) = %g" % float(np.min(qmins)))
+    if np.any(qmaxes > 1):
+        raise ValueError("qmax must be <= 1; got max(qmax) = %g"
+                         % float(np.max(qmaxes)))
+    nbins0 = np.floor(1. / qmaxes).astype(np.int64)
+    nbinsf = np.ceil(1. / qmins).astype(np.int64)
+    return nbins0, nbinsf
+
+
+def _max_nbins_tot(nbins0, nbinsf, dlogq):
+    """Upper bound on the number of (phase bin, q level) cells any
+    frequency batch can need.
+
+    ``count_tot_nbins(nb0, nbf, dlogq)`` is non-decreasing in ``nbf``
+    (a larger finest count only adds levels) but NOT monotone in
+    ``nb0``: at ``nbf = 359`` and ``dlogq = 0.2`` it is 1875, 1939 and
+    1704 for ``nb0`` = 28, 29, 30. The old sizing used the value at the
+    grid-wide ``(min nb0, max nbf)``, which a batch starting at a
+    larger ``nb0`` could exceed (the 44 MB overrun of the audit's
+    70,000-point ``fmin=0.02, fmax=0.5`` case). The maximum over the
+    distinct ``nb0`` values at the largest ``nbf`` bounds every
+    batch-wide collapse and every per-frequency count.
+    """
+    nbf_max = int(np.max(nbinsf))
+    return max(_count_tot_nbins_cached(int(nb0), nbf_max, dlogq)
+               for nb0 in np.unique(np.asarray(nbins0)))
+
+
+def _bls_batch_table(nbins0, nbinsf, freq_batch_size, dlogq):
+    """Batch table for :func:`eebls_gpu`, built BEFORE the device
+    scratch buffers are allocated so they can be sized from the actual
+    maximum over batches.
+
+    Returns a list of ``(imin, imax, nbins0_b, nbinsf_b, nbins_tot_b)``
+    per batch of ``freq_batch_size`` frequencies: the batch's search
+    range collapses to the coarsest ``nbins0`` and finest ``nbinsf``
+    among its frequencies, and ``nbins_tot_b = count_tot_nbins(nbins0_b,
+    nbinsf_b, dlogq)`` is the number of (phase bin, q level) cells per
+    frequency and phase-offset pass the kernels write.
+    """
+    nbins0 = np.asarray(nbins0)
+    nbinsf = np.asarray(nbinsf)
+    nfreq = len(nbins0)
+    freq_batch_size = int(freq_batch_size)
+    if freq_batch_size < 1:
+        raise ValueError("freq_batch_size must be >= 1")
+    table = []
+    for imin in range(0, nfreq, freq_batch_size):
+        imax = min(nfreq, imin + freq_batch_size)
+        nb0 = int(np.min(nbins0[imin:imax]))
+        nbf = int(np.max(nbinsf[imin:imax]))
+        table.append((imin, imax, nb0, nbf,
+                      _count_tot_nbins_cached(nb0, nbf, dlogq)))
+    return table
+
+
 def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
               ignore_negative_delta_sols=False,
               nstreams=5, noverlap=3, dlogq=0.2, max_memory=None,
@@ -1436,12 +1550,17 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     dlogq: float, optional, (default: 0.5)
         logarithmic spacing of :math:`q` values, where :math:`d\log q = dq / q`
     freq_batch_size: int, optional (default: None)
-        Number of frequencies to compute in a single batch; determines
-        this automatically based on ``max_memory``
+        Number of frequencies to compute in a single batch; determined
+        automatically from ``max_memory`` when ``None``. Whether given
+        or automatic, it is capped at ``len(freqs)`` and at
+        ``(2**31 - 1) // len(t)`` (one fold thread per (observation,
+        frequency) pair per launch).
     max_memory: float, optional (default: None)
-        Maximum memory to use in bytes. Will ignore this if
-        ``freq_batch_size`` is specified, and will use the total free memory
-        as returned by ``pycuda.driver.mem_get_info`` if this is ``None``.
+        Memory budget in bytes for the device scratch buffers (four
+        arrays per stream, sized by the frequency batch). Ignored if
+        ``freq_batch_size`` is specified. ``None`` budgets half of the
+        free memory reported by ``pycuda.driver.mem_get_info``; the
+        allocation never exceeds what ``len(freqs)`` frequencies need.
     functions: tuple of CUDA functions
         returned by ``compile_bls``
     convention: str, optional (default: 'chi2ratio')
@@ -1459,56 +1578,63 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
     """
 
-    def locext(ext, arr, imin=None, imax=None):
-        if isinstance(arr, float) or isinstance(arr, int):
-            return arr
-        return ext(arr[slice(imin, imax)])
-
     _validate_convention(convention)
+
+    block_size = kwargs.get('block_size', _default_block_size)
+    ndata = len(t)
+    nfreq = len(freqs)
+
+    # Per-frequency bin counts (scalar bounds broadcast). Validated
+    # before any device work (including the kernel compile): qmin >
+    # qmax used to surface as a ZeroDivisionError from count_tot_nbins,
+    # qmax > 1 as a device divide-by-zero.
+    qmins = _broadcast_q_bound(qmin, nfreq, 1e-2, 'qmin')
+    qmaxes = _broadcast_q_bound(qmax, nfreq, 0.5, 'qmax')
+    _validate_q_bounds(qmins, qmaxes)
+    nbins0_f, nbinsf_f = _q_bounds_to_nbins(qmins, qmaxes)
 
     functions = functions if functions is not None \
         else compile_bls(**kwargs)
 
     if max_memory is None:
         free, total = cuda.mem_get_info()
-        max_memory = int(0.9 * free)
+        max_memory = int(_DEFAULT_MEMORY_FRACTION * free)
 
-    # smallest and largest number of bins
-    nbins0_max = 1
-    nbinsf_max = 1
-    block_size = kwargs.get('block_size', _default_block_size)
-
-    max_q_vals = locext(max, qmax)
-    min_q_vals = locext(min, qmin)
-
-    nbins0_max = int(np.floor(1./max_q_vals))
-    nbinsf_max = int(np.ceil(1./min_q_vals))
-
-    ndata = len(t)
-
-    nbins_tot_max = count_tot_nbins(nbins0_max, nbinsf_max, dlogq)
+    real_type_size = np.float32(1).nbytes
 
     if freq_batch_size is None:
-        # compute memory
-        real_type_size = np.float32(1).nbytes
-
         # data
         mem0 = ndata * 3 * real_type_size
 
         # freqs + bls + best_phi + best_q + best_sol (int32)
-        mem0 += len(freqs) * 5 * real_type_size
+        mem0 += nfreq * 5 * real_type_size
 
-        # yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32)
-        mem_per_f = 4 * nstreams * nbins_tot_max * noverlap * real_type_size
+        # yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32), sized
+        # by an upper bound on the per-batch cell count (see
+        # _max_nbins_tot: the grid-wide collapse is not one)
+        nbins_tot_bound = _max_nbins_tot(nbins0_f, nbinsf_f, dlogq)
+        mem_per_f = 4 * nstreams * nbins_tot_bound * noverlap * real_type_size
 
         freq_batch_size = int(float(max_memory - mem0) / (mem_per_f))
 
-        if freq_batch_size == 0:
+        if freq_batch_size <= 0:
             raise RuntimeError("Not enough memory (freq_batch_size = 0)")
 
-    gs = freq_batch_size * nbins_tot_max * noverlap
+    # Cap user-supplied and automatic batch sizes alike: at len(freqs)
+    # (allocate only what the grid needs) and at (2^31 - 1) // ndata.
+    freq_batch_size = _cap_freq_batch_size(freq_batch_size, ndata, nfreq)
 
-    grid_size = int(np.ceil(float(gs) / block_size))
+    # The batch table is built BEFORE allocating so the scratch buffers
+    # are sized from the actual maximum over batches. The old code
+    # sized them from count_tot_nbins(grid-wide min nbins0, grid-wide
+    # max nbinsf), which is not an upper bound (non-monotone in
+    # nbins0) -- a batch could need more cells than were allocated and
+    # the fold kernel's atomics ran off the end of the buffer (illegal
+    # memory access on the default eebls_transit path; audit defect 1).
+    batches = _bls_batch_table(nbins0_f, nbinsf_f, freq_batch_size, dlogq)
+    nbatches = len(batches)
+    gs = max((imax - imin) * nbins_tot for
+             (imin, imax, _, _, nbins_tot) in batches) * noverlap
 
     # move data to GPU
     w = np.power(dy, -2)
@@ -1523,55 +1649,50 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
 
+    # One scratch set per stream, but never more streams than batches
+    # (a 3-batch grid does not need 5 x 4 zero-filled buffers).
+    nsets = max(1, min(int(nstreams), nbatches))
     yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs, streams \
         = [], [], [], [], []
-    for i in range(nstreams):
+    for i in range(nsets):
         streams.append(cuda.Stream())
         yw_g_bins.append(gpuarray.zeros(gs, dtype=np.float32))
         w_g_bins.append(gpuarray.zeros(gs, dtype=np.float32))
         bls_tmp_gs.append(gpuarray.zeros(gs, dtype=np.float32))
         bls_tmp_sol_gs.append(gpuarray.zeros(gs, dtype=np.int32))
 
-    bls_g = gpuarray.zeros(len(freqs), dtype=np.float32)
-    bls_sol_g = gpuarray.zeros(len(freqs), dtype=np.int32)
+    bls_g = gpuarray.zeros(nfreq, dtype=np.float32)
+    bls_sol_g = gpuarray.zeros(nfreq, dtype=np.int32)
 
-    bls_best_phi = gpuarray.zeros(len(freqs), dtype=np.float32)
-    bls_best_q = gpuarray.zeros(len(freqs), dtype=np.float32)
+    bls_best_phi = gpuarray.zeros(nfreq, dtype=np.float32)
+    bls_best_q = gpuarray.zeros(nfreq, dtype=np.float32)
 
     block = (block_size, 1, 1)
 
-    grid = (grid_size, 1)
-
-    nbatches = int(np.ceil(float(len(freqs)) / freq_batch_size))
-
-    bls = np.zeros(len(freqs))
     bin_func = functions['bin_and_phase_fold_bst_multifreq']
     bls_func = functions['binned_bls_bst']
     max_func = functions['reduction_max']
     store_func = functions['store_best_sols']
 
-    for batch in range(nbatches):
-
-        imin = freq_batch_size * batch
-        imax = min([len(freqs), freq_batch_size * (batch + 1)])
-
-        minq = locext(min, qmin, imin, imax)
-        maxq = locext(max, qmax, imin, imax)
-
-        nbins0 = int(np.floor(1./maxq))
-        nbinsf = int(np.ceil(1./minq))
-
-        nbins_tot = count_tot_nbins(nbins0, nbinsf, dlogq)
+    for batch, (imin, imax, nbins0, nbinsf, nbins_tot) in enumerate(batches):
 
         nf = imax - imin
-        j = batch % nstreams
+        all_bins = nf * nbins_tot * noverlap
+        if all_bins > gs:
+            # cannot happen with the table-derived gs above; guard the
+            # device against ever overrunning its buffers again
+            raise ValueError(
+                "eebls_gpu: batch %d needs %d bin cells but only %d were "
+                "allocated (nbins0=%d, nbinsf=%d, noverlap=%d)"
+                % (batch, all_bins, gs, nbins0, nbinsf, noverlap))
+
+        j = batch % nsets
         yw_g_bin = yw_g_bins[j]
         w_g_bin = w_g_bins[j]
         bls_tmp_g = bls_tmp_gs[j]
         bls_tmp_sol_g = bls_tmp_sol_gs[j]
 
         stream = streams[j]
-        # stream.synchronize()
 
         yw_g_bin.fill(np.float32(0), stream=stream)
         w_g_bin.fill(np.float32(0), stream=stream)
@@ -1585,11 +1706,9 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args += (yw_g_bin.ptr, w_g_bin.ptr, freqs_g.ptr)
         args += (np.int32(ndata), np.int32(nf))
         args += (np.int32(nbins0), np.int32(nbinsf))
-        args += (np.int32(freq_batch_size * batch), np.int32(noverlap))
+        args += (np.int32(imin), np.int32(noverlap))
         args += (np.float32(dlogq), np.int32(nbins_tot))
         bin_func.prepared_async_call(*args)
-
-        all_bins = nf * nbins_tot * noverlap
 
         bls_grid = (int(np.ceil(float(all_bins) / block_size)), 1)
         args = (bls_grid, block, stream)
@@ -1600,7 +1719,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
         args = (max_func, bls_tmp_g, bls_tmp_sol_g)
         args += (nf, nbins_tot * noverlap, stream, bls_g, bls_sol_g)
-        args += (batch * freq_batch_size, block_size)
+        args += (imin, block_size)
         _reduction_max(*args)
 
         store_grid = (int(np.ceil(float(nf) / block_size)), 1)
@@ -1608,7 +1727,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args += (bls_sol_g.ptr, bls_best_phi.ptr, bls_best_q.ptr)
         args += (np.uint32(nbins0), np.uint32(nbinsf), np.uint32(noverlap))
         args += (np.float32(dlogq), np.uint32(nf))
-        args += (np.uint32(batch * freq_batch_size),)
+        args += (np.uint32(imin),)
         store_func.prepared_async_call(*args)
 
     best_q = bls_best_q.get()
