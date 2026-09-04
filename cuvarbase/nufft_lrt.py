@@ -70,6 +70,70 @@ def _whitened_inner(A, B, psd, weights):
     return float(np.real(np.sum(A * np.conj(B) * weights / psd)))
 
 
+def _prior_response_matrix(G, prior_cov):
+    """Return ``M = (Cov_c^{-1} + G)^{-1}`` for the Detector A Woodbury
+    term without ever inverting the prior covariance:
+
+        (C^{-1} + G)^{-1} = C (I + G C)^{-1}
+
+    (push-through identity), so a zero prior variance along a mode
+    correctly gives the "prior pinned to its mean" limit (no
+    marginalization along that mode). A ``pinv`` of the prior would turn
+    that same zero into an *improper flat* prior -- the opposite limit.
+    ``I + G C`` has eigenvalues >= 1 for positive semidefinite ``G`` and
+    ``C``, so the solve is always well posed.
+
+    Raises ``ValueError`` if ``prior_cov`` is not a symmetric positive
+    semidefinite ``(K, K)`` matrix.
+    """
+    G = np.asarray(G, dtype=np.float64)
+    K = G.shape[0]
+    C = np.atleast_2d(np.asarray(prior_cov, dtype=np.float64))
+    if C.shape != (K, K):
+        raise ValueError("coeff_prior_cov must be (K, K) with K = %d "
+                         "basis vectors (got shape %r)" % (K, C.shape))
+    if not np.all(np.isfinite(C)):
+        raise ValueError("coeff_prior_cov must be finite")
+    scale = max(float(np.max(np.abs(C))), 1.0)
+    if not np.allclose(C, C.T, rtol=1e-8, atol=1e-12 * scale):
+        raise ValueError("coeff_prior_cov must be symmetric")
+    ev = np.linalg.eigvalsh(C)
+    if ev.min() < -1e-10 * scale:
+        raise ValueError("coeff_prior_cov must be positive semidefinite "
+                         "(smallest eigenvalue %g)" % ev.min())
+    A = np.eye(K) + G @ C
+    M = np.linalg.solve(A.T, C.T).T          # C A^{-1}
+    return 0.5 * (M + M.T)
+
+
+def _marginal_precompute(Y, V_ks, psd, weights, prior_cov):
+    """Template-independent part of Detector A (hoisted out of the
+    template loop). Returns ``(Vw, M, w_y)`` with ``Vw = V_k w / P``
+    (K, nf), ``M`` the (K, K) response matrix of
+    :func:`_prior_response_matrix` and ``w_y[j] = <v_j, Y>_W``."""
+    K = len(V_ks)
+    Vk = np.asarray(V_ks).reshape(K, -1)
+    wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd, np.float64)
+    Vw = Vk * wp
+    G = np.real(Vw @ np.conj(Vk).T)
+    G = 0.5 * (G + G.T)
+    M = _prior_response_matrix(G, prior_cov)
+    w_y = np.real(Vw @ np.conj(np.asarray(Y)))
+    return Vw, M, w_y
+
+
+def _marginal_evaluate(Yw, wp, T, Vw, M, w_y, eps_floor=1e-12):
+    """Per-template part of Detector A: ``Yw = Y w / P`` and ``wp = w / P``
+    are precomputed; ``T`` is the template transform."""
+    T = np.asarray(T)
+    w_t = np.real(Vw @ np.conj(T))
+    num = float(np.real(np.sum(Yw * np.conj(T)))) - float(w_y @ M @ w_t)
+    den = float(np.sum((np.abs(T) ** 2) * wp)) - float(w_t @ M @ w_t)
+    if den <= eps_floor:
+        return 0.0
+    return float(num / np.sqrt(den))
+
+
 def _marginal_statistic(Y, T, V_ks, psd, weights, prior_cov,
                         eps_floor=1e-12):
     """Taaki et al. (2020) Detector A (marginalized joint detector) in
@@ -88,34 +152,23 @@ def _marginal_statistic(Y, T, V_ks, psd, weights, prior_cov,
     the transform). The K basis transforms V_ks are computed once per
     lightcurve; per template this adds only K-dimensional algebra.
 
+    ``(Cov_c^{-1} + G)^{-1}`` is formed as ``Cov_c (I + G Cov_c)^{-1}``
+    (see :func:`_prior_response_matrix`), so singular priors are handled
+    in the correct limit and non-PSD priors raise ``ValueError``.
+
     Parameters: Y, T = NFFTs of the (mean-subtracted) data and template;
     V_ks = list/array of K basis NFFTs; prior_cov = Cov_c (K x K).
     Returns the marginalized SNR (float).
     """
     K = len(V_ks)
+    wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd, np.float64)
+    Y = np.asarray(Y)
     if K == 0:
-        num = _whitened_inner(Y, T, psd, weights)
-        den = _whitened_inner(T, T, psd, weights)
+        num = float(np.real(np.sum(Y * np.conj(T) * wp)))
+        den = float(np.sum((np.abs(T) ** 2) * wp))
         return num / np.sqrt(den) if den > 0 else 0.0
-
-    G = np.empty((K, K))
-    for i in range(K):
-        for j in range(i, K):
-            G[i, j] = G[j, i] = _whitened_inner(V_ks[i], V_ks[j],
-                                                psd, weights)
-    prior_cov = np.atleast_2d(np.asarray(prior_cov, dtype=np.float64))
-    M = np.linalg.pinv(np.linalg.pinv(prior_cov) + G)
-
-    w_y = np.array([_whitened_inner(V_ks[j], Y, psd, weights)
-                    for j in range(K)])
-    w_t = np.array([_whitened_inner(V_ks[j], T, psd, weights)
-                    for j in range(K)])
-
-    num = _whitened_inner(Y, T, psd, weights) - w_y @ M @ w_t
-    den = _whitened_inner(T, T, psd, weights) - w_t @ M @ w_t
-    if den <= eps_floor:
-        return 0.0
-    return float(num / np.sqrt(den))
+    Vw, M, w_y = _marginal_precompute(Y, V_ks, psd, weights, prior_cov)
+    return _marginal_evaluate(Y * wp, wp, T, Vw, M, w_y, eps_floor)
 
 
 def _sequential_detrend(t, y, basis):
@@ -159,6 +212,18 @@ def _smoothed_periodogram(power, window):
     num = np.convolve(power, kernel, mode='same')
     den = np.convolve(np.ones_like(power), kernel, mode='same')
     return (num / den).astype(power.dtype, copy=False)
+
+
+def _floor_psd(psd, eps_floor, real_type):
+    """Floor a PSD at ``eps_floor`` times its positive median (once, for
+    every detector path). This caps any single bin's whitening weight at
+    ``1/eps_floor`` times the typical weight: a zero bin in a user PSD
+    otherwise gives a statistic of ~1e6 (matched) or nan (marginal)."""
+    psd = np.asarray(psd, dtype=real_type)
+    pos = psd[psd > 0]
+    median_ps = np.median(pos) if pos.size else real_type(1.0)
+    return np.maximum(psd, real_type(eps_floor) * real_type(median_ps)
+                      ).astype(real_type, copy=False)
 
 
 def epoch_grid(period, duration, oversample=2.0, min_epochs=8,
@@ -428,7 +493,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         
     def run(self, t, y, periods, durations=None, epochs=None,
             depth=1.0, nf=None, estimate_psd=True, psd=None,
-            smooth_window=5, eps_floor=1e-12,
+            smooth_window=5, eps_floor=1e-3,
             detector='matched', systematics_basis=None,
             coeff_prior_mean=None, coeff_prior_cov=None, dy=None,
             epoch_oversample=2.0, min_epochs=8, max_epochs=96,
@@ -476,11 +541,14 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             Pre-computed power spectrum of length ``nf`` in the
             convention of the module docstring (``E|S_k|^2`` of the
             noise's unnormalized adjoint NFFT; white noise: ``n sigma^2``).
-            Required if ``estimate_psd=False``.
+            Required if ``estimate_psd=False``. Floored at
+            ``eps_floor * median`` like the estimate.
         smooth_window : int, optional (default: 5)
             Window size for smoothing power spectrum estimate
-        eps_floor : float, optional (default: 1e-12)
-            Floor for power spectrum to avoid division by zero
+        eps_floor : float, optional (default: 1e-3)
+            The PSD (estimated or supplied) is floored at ``eps_floor``
+            times its positive median once, for every detector, capping
+            any bin's whitening weight at ``1/eps_floor`` of typical.
         detector : str, optional (default: 'matched')
             Which detector of Taaki, Kamalabadi & Kemball (2020) to run:
 
@@ -509,7 +577,9 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         coeff_prior_cov : array-like (K, K), optional
             Prior covariance of the coefficients (required for
             ``detector='marginal'``; estimate it from population fits
-            as in the papers).
+            as in the papers). Must be symmetric positive semidefinite;
+            a zero variance pins that mode to its prior mean (drop the
+            mode from the basis if that is not intended).
         dy : array-like, optional
             Not used by any detector (the noise model is the PSD); a
             ``UserWarning`` is emitted if it is passed.
@@ -645,9 +715,10 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # Compute NUFFT of lightcurve
         Y_nufft = self.compute_nufft(t, y_demeaned, nf, **kwargs)
         
-        # Estimate or use provided power spectrum. The adjoint NFFT returns
-        # a physical Fourier coefficient at every one of the nf modes (no
-        # rfft-style zero-padded upper half), so the PSD spans all nf bins.
+        # ---- power spectrum: estimated or supplied, floored ONCE here.
+        # The adjoint NFFT returns a physical Fourier coefficient at every
+        # one of the nf modes (no rfft-style zero-padded upper half), so
+        # the PSD spans all nf bins.
         if estimate_psd:
             if resid is not None:
                 src = self.compute_nufft(t, resid, nf, **kwargs)
@@ -656,34 +727,44 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             psd = (np.abs(src) ** 2).astype(self.real_type, copy=False)
             if smooth_window and smooth_window > 1:
                 psd = _smoothed_periodogram(psd, smooth_window)
-            # Floor to avoid division issues
-            median_ps = np.median(psd[psd > 0]) if np.any(psd > 0) else self.real_type(1.0)
-            psd = np.maximum(psd, self.real_type(eps_floor) * self.real_type(median_ps)).astype(self.real_type, copy=False)
         else:
             if psd is None:
                 raise ValueError("Must provide psd if estimate_psd=False")
-            psd = np.asarray(psd, dtype=self.real_type)
+            psd = np.asarray(psd, dtype=np.float64).ravel()
+            if len(psd) != nf:
+                raise ValueError("psd must have length nf = %d (got %d); "
+                                 "see the module docstring for the PSD "
+                                 "convention" % (nf, len(psd)))
+            if not np.all(np.isfinite(psd)) or np.any(psd < 0):
+                raise ValueError("psd must be finite and non-negative")
+        psd = _floor_psd(psd, eps_floor, self.real_type)
 
         # Every NFFT mode is a physical positive-frequency coefficient, so
         # all bins are weighted equally (the old rfft one-sided 1/2/1
         # weighting was tied to the now-removed uniform-grid RFFT packing).
         weights = np.ones(nf, dtype=self.real_type)
+        wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd,
+                                                                np.float64)
+        Yw = np.asarray(Y_nufft) * wp
 
-        # Detector A: transform the (demeaned) systematics basis once;
-        # per template the marginalization is K-dimensional algebra.
-        V_ks = None
+        # Detector A: transform the (demeaned) systematics basis once and
+        # hoist the template-independent algebra (G, M, w_y) out of the
+        # template loop; per template only K inner products remain.
         if detector == 'marginal':
             V_ks = [self.compute_nufft(t, V[:, j] - V[:, j].mean(), nf,
                                        **kwargs)
                     for j in range(V.shape[1])]
+            Vw, M, w_y = _marginal_precompute(Y_nufft, V_ks, psd, weights,
+                                              coeff_prior_cov)
 
-        def _statistic(T_nufft):
-            if detector == 'marginal':
-                return _marginal_statistic(Y_nufft, T_nufft, V_ks, psd,
-                                           weights, coeff_prior_cov,
-                                           eps_floor)
-            return self._compute_matched_filter_snr(
-                Y_nufft, T_nufft, psd, weights, eps_floor)
+            def _statistic(T_nufft):
+                return _marginal_evaluate(Yw, wp, T_nufft, Vw, M, w_y)
+        else:
+            def _statistic(T_nufft):
+                T_nufft = np.asarray(T_nufft)
+                num = float(np.real(np.sum(Yw * np.conj(T_nufft))))
+                den = float(np.sum((np.abs(T_nufft) ** 2) * wp))
+                return num / np.sqrt(den) if den > 0 else 0.0
 
         def _template_statistic(period, epoch, duration):
             template = self._generate_template(t, period, epoch, duration,
@@ -783,7 +864,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         weights = np.asarray(weights, dtype=self.real_type)
         
         # Apply floor to power spectrum
-        P_s = np.maximum(P_s, eps_floor * np.median(P_s[P_s > 0]))
+        P_s = _floor_psd(P_s, eps_floor, self.real_type)
         
         # Compute numerator: sum(Y * conj(T) * weights / P_s)
         numerator = np.real(np.sum((Y * np.conj(T)) * weights / P_s))
