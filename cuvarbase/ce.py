@@ -257,8 +257,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     use_double: bool, optional (default: False)
         Use double precision on the GPU.
     balanced_magbins: bool, optional (default: False)
-        Use magnitude bins that each hold the same number of points
-        (edges at the midpoints between adjacent sorted groups; see
+        Use magnitude bins that each hold the same number of points to
+        within one (edges at the midpoints between adjacent sorted
+        groups; see
         :meth:`cuvarbase.memory.ConditionalEntropyMemory.balance_magbins`)
         instead of uniform bins. Incompatible with ``weighted``,
         ``use_fast``, ``compute_log_prob`` and ``mag_overlap > 0``.
