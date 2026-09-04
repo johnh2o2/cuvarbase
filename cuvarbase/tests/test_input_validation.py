@@ -652,6 +652,17 @@ class TestNFFTGuards(object):
             with pytest.raises(ValueError, match='nf'):
                 NFFTAsyncProcess().run([(t, y, bad)])
 
+    def test_adjoint_scalar_guards(self):
+        """``nfft_adjoint_async`` gets its light curve through
+        ``memory``; its own scalars are still checked."""
+        from ..cunfft import nfft_adjoint_async
+        for bad in (np.nan, np.inf, -1.0):
+            with pytest.raises(ValueError, match='minimum_frequency'):
+                nfft_adjoint_async(None, None, minimum_frequency=bad)
+        for bad in (np.nan, 0.0, -2.0):
+            with pytest.raises(ValueError, match='samples_per_peak'):
+                nfft_adjoint_async(None, None, samples_per_peak=bad)
+
 
 # -------------------------------------------------------- on a device
 #
