@@ -298,8 +298,10 @@ class TestNUFFTLRT:
     @mark_cuda_test
     def test_marginal_detector_ignores_shared_systematic(self):
         """Detector A (marginalized joint detector): a strong
-        basis-aligned trend must not derail the period search, while
-        the plain matched filter's ranking degrades."""
+        basis-aligned trend must not derail the period search, and the
+        detector must rank the true period more sharply than the plain
+        matched filter on the same data (the contrast this test always
+        promised; release finding 105)."""
         proc = NUFFTLRTAsyncProcess()
 
         true_period, true_duration, depth = 2.5, 0.25, 0.5
@@ -318,9 +320,20 @@ class TestNUFFTLRT:
                             epochs=epochs,
                             detector='marginal', systematics_basis=V,
                             coeff_prior_cov=np.array([[100.0]]))[:, 0, 0]
+        snr_matched = proc.run(self.t, y, periods, durations=durations,
+                               epochs=epochs)[:, 0, 0]
         step = periods[1] - periods[0]
+        i_true = int(np.argmin(np.abs(periods - true_period)))
         best = periods[int(np.argmax(snr_marg))]
         assert np.abs(best - true_period) <= 2 * step + 1e-9
+
+        def contrast(s):
+            # peak height at the true period over the off-peak spread
+            off = np.delete(s, i_true)
+            return (s[i_true] - np.median(off)) / (np.std(off) + 1e-12)
+
+        # measured: marginal 2.5, matched -0.45
+        assert contrast(snr_marg) > contrast(snr_matched)
 
     @mark_cuda_test
     def test_sequential_detector_runs_and_detects(self):
@@ -483,6 +496,45 @@ class TestSep2026Defects:
             # the best epoch lies on the documented grid
             grid = epoch_grid(P, dur) + np.floor(t.min())
             assert np.min(np.abs(grid - best_epoch[ip, 0])) < 1e-9
+
+    @mark_cuda_test
+    def test_marginal_psd_from_residual_matches_sequential(self):
+        """Defect 22 (lrt-detectorA-defeated): with ``estimate_psd=True``
+        the marginal detector's PSD came from ``y - V mu``, which still
+        holds the realized systematics (median inflation ~36x across the
+        band), whitening the transit away: SNR at the true template 2.5
+        vs 8.3 for the sequential baseline (harness data model, depth
+        0.008, base tree). With the PSD from the basis-projected
+        residual the two agree (audit: 8.89 vs 8.89; measured 10.3 vs
+        10.2)."""
+        rng = np.random.RandomState(11)
+        t = ground_times(rng)
+        n = len(t)
+        nf = 2 * n
+        sigma_w = 3e-3
+        sigma_r, tau = sigma_w, 0.8
+        amps = np.array([6.0, 3.0, 6.0]) * sigma_w
+        M, V, mu_c, cov_c = population_basis(rng, t, 90.0, sigma_w, sigma_r,
+                                             tau, amps)
+        proc = NUFFTLRTAsyncProcess()
+        P, dur, ep = 5.3, 0.22, 1.0
+        kw = dict(durations=np.array([dur]), epochs=np.array([ep]), nf=nf)
+        marg, seq = [], []
+        for r in range(4):
+            noise = sigma_w * rng.randn(n) + ou_noise(rng, t, sigma_r, tau)
+            y = 1.0 + noise + M @ (rng.randn(3) * amps) \
+                + box_transit(t, P, ep, dur, 0.008)
+            marg.append(float(proc.run(
+                t, y, np.array([P]), detector='marginal',
+                systematics_basis=V, coeff_prior_mean=mu_c,
+                coeff_prior_cov=cov_c, **kw).max()))
+            seq.append(float(proc.run(
+                t, y, np.array([P]), detector='sequential',
+                systematics_basis=V, **kw).max()))
+        marg, seq = np.mean(marg), np.mean(seq)
+        assert seq > 5.0
+        assert marg > 0.8 * seq                      # was 0.26-0.29
+        assert marg < 1.25 * seq
 
     @pytest.mark.parametrize('use_double', [False, True])
     def test_full_band_nfft_matches_exact_dft(self, use_double):
