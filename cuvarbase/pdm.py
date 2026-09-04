@@ -314,6 +314,19 @@ class PDMAsyncProcess(GPUAsyncProcess):
             asynchronously: call :meth:`finish` before reading them
             (or use :meth:`batched_run_const_nfreq` / :meth:`large_run`,
             which synchronize for you).
+
+        Notes
+        -----
+        The returned power is the weighted sum-of-squares ratio
+        ``1 - sum(w * (y - model)**2) / sum(w * (y - ybar)**2)`` with
+        ``w`` normalized to sum to one and ``model`` the folded-lightcurve
+        model of the chosen ``kind`` at each observation's phase. It has
+        **no degrees-of-freedom correction**, so it is not Stellingwerf's
+        ``1 - Theta``: for pure noise its expectation is
+        ``(M - 1) / (N - 1)`` (``M`` occupied bins, ``N`` observations;
+        ~0.4 for 20 points in 10 bins) rather than 0, and values are only
+        comparable between runs with the same ``nbins`` / ``dphi`` and
+        ``N``. See ``docs/source/pdm.rst``.
         """
 
         if kind in ['binless_tophat', 'binless_gauss',

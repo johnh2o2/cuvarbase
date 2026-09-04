@@ -184,10 +184,12 @@ class TestCpuFunctionsDoNotMutateInputs(object):
 # Regression tests from the Sep-2026 algorithm audit (finding ids 110, 111, 113)
 # ---------------------------------------------------------------------------
 
-def _ref_binned_step_float32(t, y, w, freqs, nbins):
-    """float64 ``1 - SS_within / SS_total`` for ``kind='binned_step'`` with
-    the phase fold emulated in float32 exactly as ``pdm.cu`` does it
-    (``PHASE(t, f) = t*f - floorf(t*f)``, ``bin = int(phase*nbins) % nbins``).
+def _ref_binned_step(t, y, w, freqs, nbins, fold_dtype=np.float32):
+    """The documented statistic ``1 - SS_within / SS_total`` (float64
+    accumulation, weights normalized, no degrees-of-freedom factor) for
+    ``kind='binned_step'``, with the phase fold done in ``fold_dtype``.
+    ``np.float32`` emulates ``pdm.cu`` exactly (``PHASE(t, f) = t*f -
+    floorf(t*f)``, ``bin = int(phase*nbins) % nbins``).
 
     Returns ``(power, n_occupied_bins)`` per frequency.
     """
@@ -196,8 +198,8 @@ def _ref_binned_step_float32(t, y, w, freqs, nbins):
     w = w / np.sum(w)
     ybar = np.dot(w, y)
     ss_tot = np.dot(w, (y - ybar) ** 2)
-    t32 = t.astype(np.float32)
-    f32 = np.asarray(freqs).astype(np.float32)
+    t32 = t.astype(fold_dtype)
+    f32 = np.asarray(freqs).astype(fold_dtype)
     power = np.empty(len(f32))
     n_occ = np.empty(len(f32), dtype=int)
     for i, f in enumerate(f32):
@@ -256,7 +258,7 @@ def test_binned_step_phase_exactly_one_no_oob_read():
         y = 12 + rand.randn(len(t))
         step = run('binned_step', t, y, err)
         fast = run('binned_step_fast', t, y, err)
-        ref, _ = _ref_binned_step_float32(t, y, weights(err), freqs, 10)
+        ref, _ = _ref_binned_step(t, y, weights(err), freqs, 10)
         assert np.all(np.isfinite(step))
         worst_vs_fast = max(worst_vs_fast, np.max(np.abs(step - fast)))
         worst_vs_ref = max(worst_vs_ref, np.max(np.abs(step - ref)))
@@ -304,3 +306,75 @@ def test_deprecated_format_normalizes_weights():
                 legacy = np.copy(run([(t, y, w, freqs)], kind)[0])
             assert np.ptp(modern) > 0.5          # a real periodogram
             assert_allclose(legacy, modern, atol=1e-6, rtol=0)
+
+
+def test_pdm2_cpu_is_ss_ratio_without_dof_correction():
+    """Audit id 110: the statistic is ``1 - SS_within / SS_total`` with
+    normalized weights and *no* ``(N - M) / (N - 1)`` degrees-of-freedom
+    factor -- it is not Stellingwerf's ``1 - Theta``.
+    """
+    rand = np.random.RandomState(110)
+    n, nbins = 50, 10
+    t = np.sort(30 * rand.rand(n))
+    y = rand.randn(n)
+    w = weights(0.1 * (0.5 + rand.rand(n)))
+    freqs = np.linspace(0.1, 5.0, 40)
+
+    p = np.asarray(pdm2_cpu(t, y, w, freqs, nbins=nbins, linterp=False))
+    ref, n_occ = _ref_binned_step(t, y, w, freqs, nbins, fold_dtype=np.float64)
+    assert_allclose(p, ref, atol=1e-12, rtol=0)
+
+    # the dof-corrected statistic is a different function of the data
+    one_minus_theta = 1 - (n - 1) / (n - n_occ) * (1 - ref)
+    assert np.max(np.abs(one_minus_theta - p)) > 0.05
+
+
+def test_pdm2_cpu_noise_floor_is_M_minus_1_over_N_minus_1():
+    """Audit id 110: for pure Gaussian noise with uniform weights
+    ``SS_between / SS_total ~ Beta((M - 1)/2, (N - M)/2)``, so the returned
+    power has expectation ``(M - 1) / (N - 1)`` with ``M`` the number of
+    occupied bins -- about 0.4 at N = 20 in 10 bins, not ~0 as the
+    dof-corrected ``1 - Theta`` would give.
+    """
+    rand = np.random.RandomState(110)
+    n, nbins = 20, 10
+    p_all, expect_all = [], []
+    for _ in range(100):
+        t = np.sort(30 * rand.rand(n))
+        y = rand.randn(n)
+        w = np.ones(n) / n
+        freqs = 0.05 + 5.0 * rand.rand(30)
+        p_all.extend(pdm2_cpu(t, y, w, freqs, nbins=nbins, linterp=False))
+        _, n_occ = _ref_binned_step(t, y, w, freqs, nbins, fold_dtype=np.float64)
+        expect_all.extend((n_occ - 1) / (n - 1))
+    assert abs(np.mean(p_all) - np.mean(expect_all)) < 0.02   # measured 0.002
+    assert np.mean(p_all) > 0.3
+
+
+@mark_cuda_test
+def test_gpu_binned_step_statistic_and_noise_floor():
+    """Audit id 110 on the device: ``kind='binned_step'`` returns exactly
+    the float32-fold ``1 - SS_within / SS_total`` (no dof correction), so
+    pure noise sits at ``(M - 1) / (N - 1)`` (0.40 at N = 20 on the A40),
+    not near zero.
+    """
+    proc = PDMAsyncProcess()
+    freqs = np.linspace(0.05, 5.0, 500)
+    for n in (20, 200):
+        p_means, expect_means = [], []
+        for seed in range(4):
+            rand = np.random.RandomState(1000 * n + seed)
+            t = np.sort(30 * rand.rand(n))
+            y = rand.randn(n)
+            err = np.ones(n)
+            res = proc.run([(t, y, err)], freqs=freqs, kind='binned_step',
+                           nbins=10)
+            proc.finish()
+            p = np.copy(res[0][1])
+            ref, n_occ = _ref_binned_step(t, y, weights(err), freqs, 10)
+            assert_allclose(p, ref, atol=5e-6, rtol=0)   # measured 2e-7..2e-6
+            p_means.append(p.mean())
+            expect_means.append(np.mean((n_occ - 1) / (n - 1)))
+        assert abs(np.mean(p_means) - np.mean(expect_means)) < 0.03
+        if n == 20:
+            assert np.mean(p_means) > 0.3
