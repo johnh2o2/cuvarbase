@@ -424,6 +424,152 @@ class TestLombScargleAccuracy(object):
         assert np.max(np.abs(syw[:nf] - syw_exact)) < tol
 
 
+class TestLombScargleNarrowBands(object):
+    """Frequency grids that do not start near zero (defect 4,
+    ``nfft-k0-size`` / ``ls-grid-near-zero``, Sep 2026).
+
+    The NFFT grids were sized ``sigma * nf`` while the ``lomb`` kernel
+    reads modes ``k0 .. k0 + nf - 1`` (and ``2 k0 .. 2 (k0 + nf - 1)``
+    from the w-spectrum), so the top mode sat at fraction
+    ``(k0 + nf) / (sigma nf)`` of the grid and crossed the Gaussian
+    window's alias-free limit at ``k0 = nf``: any band with
+    ``fmin >= ~fmax / 2`` -- ``run(minimum_frequency=20,
+    maximum_frequency=30)``, say -- returned powers of 1e4..1e36 with a
+    wrong best frequency, through every public entry point. Grids are
+    now sized from the top mode; measured on an A40 after the fix the
+    bands below agree with astropy to <= 8.7e-4 (float32) and <= 1.4e-7
+    (double), the ordinary m = 8 truncation level.
+    """
+
+    T = 365.0
+
+    # (fmin, fmax) with k0 / nf = 1.2, 2, 4
+    bands = [(1.2, 2.2), (2.0, 3.0), (4.0, 5.0)]
+
+    def _case(self, fmin, fmax):
+        f0 = fmin + 0.9 * (fmax - fmin)     # signal near the top of the band
+        t, y, dy = _realistic_lc(N=300, T=self.T, f0=f0, seed=3)
+        freqs = _uniform_grid(fmin, fmax, self.T)
+        ref = LombScargle(t, y, dy).power(freqs)
+        return t, y, dy, freqs, ref
+
+    @pytest.mark.parametrize("band", bands)
+    @pytest.mark.parametrize("use_double,tol", [(False, 1e-3),
+                                                (True, 1e-6)])
+    def test_band_vs_astropy(self, band, use_double, tol):
+        from ..lombscargle import get_k0
+        t, y, dy, freqs, ref = self._case(*band)
+        k0, nf = get_k0(freqs), len(freqs)
+        assert k0 >= 1.1 * nf      # this really is a narrow band
+
+        proc = LombScargleAsyncProcess(use_double=use_double)
+        p = _run_gpu(proc, t, y, dy, freqs)
+
+        assert np.max(np.abs(p - ref)) < tol
+        assert np.argmax(p) == np.argmax(ref)
+
+    def test_run_with_minimum_maximum_frequency(self):
+        # documented kwargs path -> autofrequency grid, k0/nf = 2
+        t, y, dy, _, _ = self._case(20.0, 30.0)
+        proc = LombScargleAsyncProcess()
+        r = proc.run([(t, y, dy)], minimum_frequency=20.0,
+                     maximum_frequency=30.0)
+        proc.finish()
+        freqs, p = r[0]
+        p = np.asarray(p[:len(freqs)], dtype=np.float64)
+        ref = LombScargle(t, y, dy).power(freqs)
+        assert np.max(np.abs(p - ref)) < 2e-3
+        assert np.argmax(p) == np.argmax(ref)
+
+    def test_lomb_scargle_simple_on_band(self):
+        from ..lombscargle import lomb_scargle_simple
+        t, y, dy, freqs, ref = self._case(20.0, 30.0)
+        f, p = lomb_scargle_simple(t, y, dy, freqs=freqs)
+        p = np.asarray(p[:len(freqs)], dtype=np.float64)
+        assert np.max(np.abs(p - ref)) < 2e-3
+        assert np.argmax(p) == np.argmax(ref)
+
+    def test_batched_best_freq_on_band(self):
+        t, y, dy, freqs, ref = self._case(20.0, 30.0)
+        proc = LombScargleAsyncProcess()
+        best_freqs, _ = proc.batched_run_const_nfreq(
+            [(t, y, dy)], freqs=freqs, only_return_best_freqs=True)
+        assert best_freqs[0] == pytest.approx(freqs[np.argmax(ref)])
+
+    def test_small_grid_far_from_zero(self):
+        # nf = 8 at k0 = 50 used to return the -1 sentinel everywhere
+        t, y, dy, _, _ = self._case(20.0, 30.0)
+        df = 1.0 / (5 * self.T)
+        freqs = df * (50 + np.arange(8))
+        ref = LombScargle(t, y, dy).power(freqs)
+        proc = LombScargleAsyncProcess()
+        p = _run_gpu(proc, t, y, dy, freqs)
+        assert np.all(p >= 0)
+        assert np.max(np.abs(p - ref)) < 1e-3
+
+    def test_sigma_below_3_raises(self):
+        # sigma = 2 leaves the top of every band aliased even with the
+        # grids sized from the top mode
+        t, y, dy, freqs, _ = self._case(2.0, 3.0)
+        proc = LombScargleAsyncProcess(sigma=2)
+        with pytest.raises(ValueError, match="sigma"):
+            proc.run([(t, y, dy)], freqs=freqs)
+
+
+class TestNFFTGridChecks(object):
+    """CPU tests of the grid-sizing helper and the hard check that
+    ``lomb_scargle_async`` applies before touching the NFFT memories."""
+
+    def test_nfft_grid_sizes_cover_top_mode(self):
+        from ..memory.lombscargle_memory import nfft_grid_sizes
+        from ..memory.nfft_memory import next_fast_len
+        for H in (1, 2, 3):
+            for k0, nf in [(1, 100), (50, 8), (1000, 500), (36038, 18020)]:
+                for sigma in (3, 4, 5):
+                    nf_yw, n_yw, nf_w, n_w = nfft_grid_sizes(
+                        nf, k0, nharmonics=H, sigma=sigma)
+                    # every spectrum entry the kernels read exists
+                    assert (H - 1) * k0 + H * (nf - 1) < nf_yw
+                    assert (2 * H - 1) * k0 + 2 * H * (nf - 1) < nf_w
+                    # grids sized from the top mode, 7-smooth
+                    assert n_yw >= sigma * (k0 + nf_yw)
+                    assert n_w >= sigma * (k0 + nf_w)
+                    assert next_fast_len(n_yw) == n_yw
+                    assert next_fast_len(n_w) == n_w
+
+    def _fake_memory(self, nf_yw, n_yw, nf_w, n_w, sigma=4):
+        import types
+        mk = lambda nf, n: types.SimpleNamespace(nf=nf, n=n, sigma=sigma,
+                                                 ghat_g=np.zeros(n))
+        return types.SimpleNamespace(nfft_mem_yw=mk(nf_yw, n_yw),
+                                     nfft_mem_w=mk(nf_w, n_w))
+
+    def test_check_passes_for_correctly_sized_grids(self):
+        from ..lombscargle import _check_nfft_grids
+        from ..memory.lombscargle_memory import nfft_grid_sizes
+        nf, k0, H = 500, 1000, 2
+        mem = self._fake_memory(*nfft_grid_sizes(nf, k0, H, 4))
+        _check_nfft_grids(mem, nf, k0, H)
+
+    def test_check_rejects_old_sizing(self):
+        # the pre-1.0 allocation: sigma * count, k0 shaved off
+        from ..lombscargle import _check_nfft_grids
+        nf, k0, sigma = 500, 1000, 4
+        fft_size = nf + k0
+        mem = self._fake_memory(fft_size - k0, sigma * (fft_size - k0),
+                                2 * fft_size - k0,
+                                sigma * (2 * fft_size - k0))
+        with pytest.raises(ValueError, match="too short"):
+            _check_nfft_grids(mem, nf, k0, 1)
+
+    def test_check_rejects_memory_for_smaller_grid(self):
+        from ..lombscargle import _check_nfft_grids
+        from ..memory.lombscargle_memory import nfft_grid_sizes
+        mem = self._fake_memory(*nfft_grid_sizes(100, 10, 1, 4))
+        with pytest.raises(ValueError, match="different frequency grid"):
+            _check_nfft_grids(mem, 200, 10, 1)
+
+
 class TestLombScargleSimpleWeights(object):
     """Regression tests for lomb_scargle_simple's weight handling.
 
