@@ -177,7 +177,7 @@ class ConditionalEntropyMemory:
                 "ConditionalEntropyMemory: requirement "
                 "`nf is not None` not satisfied")
         self.freqs_g = gpuarray.zeros(nf, dtype=self.real_type)
-        if self.ce_g is None:
+        if self.ce_g is None or self.ce_g.size != nf:
             self.ce_g = gpuarray.zeros(nf, dtype=self.real_type)
 
     def allocate(self, **kwargs):

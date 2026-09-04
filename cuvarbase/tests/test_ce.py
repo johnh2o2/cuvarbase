@@ -853,3 +853,68 @@ class TestCEBalanced(object):
         assert np.all(mem.mag_bwf > 0)
         assert_allclose(mem.mag_bwf.sum(), 1.0, rtol=0, atol=1e-5)
         assert abs(freqs[np.argmin(p)] - 1.3) < 0.02
+
+
+class TestCEPreallocate(object):
+    """Defect 19 (ce-preallocate): ``preallocate()`` never uploaded the
+    frequency grid (every frequency evaluated at f = 0) and left
+    ``memory.stream = None`` (results read before the copy landed)."""
+
+    @staticmethod
+    def _lc(N, seed):
+        r = np.random.RandomState(seed)
+        t = np.sort(r.uniform(0, 100, N))
+        y = 0.3 * np.sin(2 * np.pi * t / 1.7) + 0.05 * r.randn(N)
+        return t, y, 0.05 * np.ones(N)
+
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_preallocate_then_run(self, use_fast):
+        F = np.linspace(0.05, 5.0, 4000)
+        B = self._lc(900, 2)
+        C = self._lc(300, 5)
+        proc = ConditionalEntropyAsyncProcess(use_fast=use_fast)
+        fB = run_ce(proc, *B, F)
+        fC = run_ce(proc, *C, F)
+        assert fB.std() > 0 and fC.std() > 0
+
+        proc.preallocate(max_nobs=900, freqs=F, nlcs=1)
+        mem = proc.memory[0]
+        assert mem.stream is proc.streams[0]
+        assert_allclose(mem.freqs_g.get(), F.astype(np.float32),
+                        rtol=0, atol=0)
+        for k in range(3):
+            for lc, ref in ((B, fB), (C, fC)):
+                r = proc.run([lc], freqs=[F])
+                proc.finish()
+                assert_array_equal(np.copy(r[0][1]), ref)
+
+    def test_preallocate_batch(self):
+        F = np.linspace(0.05, 5.0, 2000)
+        lcs = [self._lc(n, s) for n, s in ((900, 2), (300, 5), (600, 7))]
+        proc = ConditionalEntropyAsyncProcess()
+        refs = [run_ce(proc, *lc, F) for lc in lcs]
+        proc.preallocate(max_nobs=900, freqs=F, nlcs=3)
+        assert len(proc.memory) == 3
+        assert len(set(id(m.stream) for m in proc.memory)) == 3
+        r = proc.run(lcs, freqs=F)
+        proc.finish()
+        for (f, p), ref in zip(r, refs):
+            assert_array_equal(np.copy(p), ref)
+        with pytest.raises(ValueError):
+            proc.run(lcs + [lcs[0]], freqs=F)
+
+    def test_run_reuploads_changed_freqs(self):
+        F1 = np.linspace(0.05, 5.0, 2000)
+        F2 = np.linspace(0.5, 2.5, 2000)
+        F3 = np.linspace(0.5, 2.5, 1000)
+        lc = self._lc(500, 2)
+        proc = ConditionalEntropyAsyncProcess()
+        ref2 = run_ce(proc, *lc, F2)
+        proc.preallocate(max_nobs=500, freqs=F1, nlcs=1)
+        r = proc.run([lc], freqs=F2)
+        proc.finish()
+        assert_array_equal(np.copy(r[0][1]), ref2)
+        assert_allclose(proc.memory[0].freqs_g.get(), F2.astype(np.float32),
+                        rtol=0, atol=0)
+        with pytest.raises(ValueError):
+            proc.run([lc], freqs=F3)
