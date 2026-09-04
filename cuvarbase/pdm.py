@@ -277,7 +277,9 @@ class PDMAsyncProcess(GPUAsyncProcess):
             * ``t``: observation times
             * ``y``: observations
             * ``err``: observation uncertainties
-            Alternatively, [(t, y, w, freqs), ...] for backward compatibility.
+            Alternatively, [(t, y, w, freqs), ...] for backward compatibility
+            (deprecated). ``w`` are observation weights of any scale (they
+            are normalized to sum to one internally).
         gpu_data: list, optional
             list of GPU arrays from ``allocate``
         pow_cpus: list, optional
@@ -297,7 +299,12 @@ class PDMAsyncProcess(GPUAsyncProcess):
         nbins: int, optional (default: 10)
             Number of bins for binned PDM.
         dphi: float, optional (default: 0.05)
-            Phase width for binless PDM.
+            Kernel width of the binless kinds, in units of phase (cycles):
+            the **half-width** of the tophat window for
+            ``binless_tophat[_fast]`` (points with phase distance
+            ``< dphi`` enter the local mean) and the **standard deviation**
+            of the Gaussian weight for ``binless_gauss[_fast]``. Ignored by
+            the binned kinds.
         **pdm_kwargs:
             Extra arguments passed to ``autofrequency`` (when ``freqs``
             is not given) and to ``pdm_async`` (e.g. ``block_size``,
@@ -312,6 +319,19 @@ class PDMAsyncProcess(GPUAsyncProcess):
             asynchronously: call :meth:`finish` before reading them
             (or use :meth:`batched_run_const_nfreq` / :meth:`large_run`,
             which synchronize for you).
+
+        Notes
+        -----
+        The returned power is the weighted sum-of-squares ratio
+        ``1 - sum(w * (y - model)**2) / sum(w * (y - ybar)**2)`` with
+        ``w`` normalized to sum to one and ``model`` the folded-lightcurve
+        model of the chosen ``kind`` at each observation's phase. It has
+        **no degrees-of-freedom correction**, so it is not Stellingwerf's
+        ``1 - Theta``: for pure noise its expectation is
+        ``(M - 1) / (N - 1)`` (``M`` occupied bins, ``N`` observations;
+        ~0.4 for 20 points in 10 bins) rather than 0, and values are only
+        comparable between runs with the same ``nbins`` / ``dphi`` and
+        ``N``. See ``docs/source/pdm.rst``.
         """
 
         if kind in ['binless_tophat', 'binless_gauss',
@@ -345,6 +365,12 @@ class PDMAsyncProcess(GPUAsyncProcess):
         # Prepare data and determine frequencies
         if is_deprecated:
             norm_data = normalize_light_curves(data)
+            # The host-side weighted mean/variance and the kernels assume
+            # sum(w) == 1; the statistic is invariant to the scale of w,
+            # so normalize whatever the caller supplied (raw 1/err^2 or
+            # all-ones weights used to give a flat spectrum of 1.0).
+            norm_data = [(t, y, np.asarray(w, dtype=np.float64) / np.sum(w), f)
+                         for (t, y, w, f) in norm_data]
             frqs = [d[3] for d in data]
         else:
             frqs = freqs
