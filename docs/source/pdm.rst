@@ -22,6 +22,15 @@ observations and :math:`M` the number of occupied bins.
 :math:`\Theta \approx 1` for noise and :math:`\Theta \ll 1` near the true
 frequency.
 
+.. note::
+
+   **Input validation.** Since 1.0 every entry point rejects
+   non-finite ``t``/``y``/``dy``, ``dy <= 0``, mismatched array
+   lengths, too-short light curves and non-finite or non-positive
+   frequency grids with a ``ValueError`` raised on the host, before
+   any GPU work. See :ref:`Input validation <input-validation>` for
+   the full rules and the pre-1.0 behaviour they replace.
+
 The statistic ``cuvarbase`` computes
 ------------------------------------
 

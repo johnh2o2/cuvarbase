@@ -661,9 +661,11 @@ class TestLombScargleSimpleWeights(object):
 
     def test_lomb_scargle_simple_passes_raw_dy(self, monkeypatch):
         from .. import lombscargle as ls
-        dy = np.array([0.1, 0.2, 0.4])
-        t = np.array([0.0, 1.0, 2.0])
-        y = np.array([1.0, 2.0, 3.0])
+        # >= _LS_MIN_NDATA points: lomb_scargle_simple validates the
+        # light curve before forwarding it (Sep 2026 audit, defect 23)
+        dy = np.array([0.1, 0.2, 0.4, 0.3, 0.15])
+        t = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
+        y = np.array([1.0, 2.0, 3.0, 2.5, 1.5])
         captured = {}
 
         def fake_run(self, data, **kwargs):
@@ -1043,6 +1045,47 @@ class TestCheckK0(object):
             check_k0(f)
             if k0 is not None:
                 assert get_k0(f) == k0
+
+    def test_float32_survey_grid_fractional_first_mode_raises(self):
+        # The freqs[0] term of the tolerance must use the rounding of
+        # freqs[0] itself (eps * |f[0]|), not eps * max|f|: with the
+        # latter a float32 survey-scale grid (10 yr baseline, 5 samples
+        # per peak, nf ~ 9e5) accepted a first mode fractional by up to
+        # ~0.43 df, and the kernels then evaluated a band shifted off
+        # the user's labels (0.52 relative power error at 0.1 df).
+        from ..lombscargle import check_k0
+        df = 1.0 / (5 * 3650.0)
+        f64 = df * (1 + np.arange(912500))
+        for offset in (0.02, 0.05, 0.1, 0.3, 0.5):
+            for dtype in (np.float32, np.float64):
+                grid = (f64 + offset * df).astype(dtype)
+                with pytest.raises(ValueError,
+                                   match="not an integer multiple"):
+                    check_k0(grid)
+
+    def test_survey_scale_grids_of_two_million_points_pass(self):
+        # ... and the tightened bound must not reject any grid a user
+        # would actually build, in either precision.
+        from ..lombscargle import check_k0, get_k0
+        from ..utils import autofrequency
+        nf = 2000000
+        rng = np.random.RandomState(7)
+        t = np.sort(rng.uniform(0, 3650.0, 4000))
+        auto = autofrequency(t, maximum_frequency=120.0)
+        assert len(auto) > nf
+        grids = [('autofrequency', auto, None)]
+        for df, k0 in ((1.0 / (5 * 3650.0), 1),
+                       (1.0 / (5 * 365.0), 100)):
+            f0, f1 = df * k0, df * (k0 + nf - 1)
+            grids += [('arange*df', df * (k0 + np.arange(nf)), k0),
+                      ('arange', np.arange(k0, k0 + nf) * df, k0),
+                      ('linspace', np.linspace(f0, f1, nf), k0)]
+        for name, grid, k0 in grids:
+            for dtype in (np.float64, np.float32):
+                g = grid.astype(dtype)
+                check_k0(g)                      # must not raise
+                if k0 is not None:
+                    assert get_k0(g) == k0, name
 
     def test_float32_grid_that_is_really_nonuniform_raises(self):
         from ..lombscargle import check_k0

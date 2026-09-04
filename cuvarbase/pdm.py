@@ -9,6 +9,51 @@ from pycuda.compiler import SourceModule
 from .core import GPUAsyncProcess
 from .memory._host import host_array
 from .utils import weights, find_kernel, dphase, normalize_light_curves, autofrequency
+from .utils import check_lightcurve, check_freqs
+
+
+# Minimum number of observations the PDM entry points accept. The
+# statistic is 1 - sum(w (y - model)^2) / sum(w (y - ybar)^2); the
+# denominator is identically zero for a single point, and the whole
+# spectrum came back NaN with no warning.
+_PDM_MIN_NDATA = 2
+
+
+def _check_pdm_data(data, freqs, where, is_deprecated):
+    """Validate a PDM batch before any GPU work.
+
+    Two input formats: the current ``(t, y, err)`` (validated with
+    :func:`cuvarbase.utils.check_lightcurve`) and the deprecated
+    ``(t, y, w, freqs)``, whose third column is a weight rather than an
+    uncertainty -- it must still be finite and strictly positive, and
+    its own frequency grid is validated per light curve. A NaN sample,
+    ``dy = 0`` or a negative weight used to give an all-NaN spectrum
+    with no warning at all (Sep 2026 audit, defect 23).
+    """
+    for i, lc in enumerate(data):
+        name = '%s lightcurve %d' % (where, i)
+        if is_deprecated:
+            t, y, w, frqs = lc
+            check_lightcurve(t, y, min_n=_PDM_MIN_NDATA, name=name)
+            w = np.asarray(w)
+            if w.shape != np.asarray(t).shape:
+                raise ValueError("%s: t and w must have the same length; "
+                                 "got %d and %d"
+                                 % (name, len(t), w.size))
+            if not np.all(np.isfinite(w)) or not np.all(w > 0):
+                raise ValueError(
+                    "%s: w must be finite and > 0 (weights of any scale; "
+                    "they are normalized to sum to one internally)" % name)
+            check_freqs(frqs, name=name)
+        else:
+            check_lightcurve(lc[0], lc[1], lc[2] if len(lc) > 2 else None,
+                             min_n=_PDM_MIN_NDATA, name=name)
+    if not is_deprecated and freqs is not None:
+        # ``freqs`` is either one shared grid or one per light curve
+        # (the same test run() makes)
+        grids = freqs if len(freqs) and np.ndim(freqs[0]) else [freqs]
+        for frq in grids:
+            check_freqs(frq, name=where)
 
 
 def var_tophat(t, y, w, freq, dphi):
@@ -359,6 +404,8 @@ class PDMAsyncProcess(GPUAsyncProcess):
                           "passed to ``autofrequency``.",
                           DeprecationWarning, stacklevel=2)
 
+        _check_pdm_data(data, freqs, 'PDMAsyncProcess.run', is_deprecated)
+
         if function not in self.prepared_functions:
             self._compile_and_prepare_functions(nbins=nbins)
 
@@ -465,6 +512,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
                              "run() format is not supported here")
         if len(data) == 0:
             return []
+        _check_pdm_data(data, freqs, 'batched_run_const_nfreq', False)
         if freqs is None:
             dmax = max(data, key=lambda d: np.max(d[0]) - np.min(d[0]))
             freqs = autofrequency(dmax[0], **kwargs)
@@ -490,6 +538,7 @@ class PDMAsyncProcess(GPUAsyncProcess):
         """
         if len(data) == 0:
             return []
+        _check_pdm_data(data, freqs, 'large_run', False)
         if freqs is None:
             dmax = max(data, key=lambda d: np.max(d[0]) - np.min(d[0]))
             freqs = autofrequency(dmax[0], **kwargs)

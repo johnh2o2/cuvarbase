@@ -265,6 +265,52 @@ to ``floor(min(t))`` (observation times are epoch-subtracted internally to
 preserve float32 precision).
 
 
+.. _input-validation:
+
+Input validation
+----------------
+
+Every public entry point in cuvarbase -- BLS, TLS, Lomb-Scargle,
+conditional entropy, PDM, the NFFT and NUFFT-LRT -- validates its
+light curve and its trial grid on the host before any GPU work
+(kernel compilation included) and raises ``ValueError`` when
+
+* ``t``, ``y`` or ``dy`` contains a NaN or an infinity,
+* any ``dy`` is zero or negative (uncertainties become
+  inverse-variance weights ``dy**-2``),
+* ``t``, ``y`` and ``dy`` do not all have the same length,
+* the light curve has fewer points than the method needs (four for
+  Lomb-Scargle, three for NUFFT-LRT, two elsewhere),
+* the frequency grid is empty or contains a non-finite or
+  non-positive frequency,
+* the transit-duration bounds are not ``0 < qmin <= qmax <= 1`` (the
+  binned kernels) or not finite (all paths).
+
+The error message names the array, the number of offending entries and
+the first few of their indices::
+
+    >>> eebls_gpu_fast(t, y, dy, freqs)
+    ValueError: eebls_gpu_fast: t contains 1 non-finite value(s)
+    (NaN or inf) out of 600; first at index/indices 137. Remove or
+    interpolate the bad samples before searching.
+
+Before 1.0 these inputs were accepted silently and produced a finite
+but wrong periodogram, an all-NaN spectrum, or a kernel crash that
+left the process's CUDA context unusable. Because the checks run on
+the host, a rejected call is *safe*: the context is untouched and the
+next call in the same process succeeds. Nothing changes for valid
+finite input.
+
+Filter your data before searching::
+
+    m = np.isfinite(t) & np.isfinite(y) & np.isfinite(dy) & (dy > 0)
+    freqs, power, sols = eebls_transit(t[m], y[m], dy[m])
+
+The two helpers are public and can be reused in your own pipeline:
+:func:`cuvarbase.utils.check_lightcurve` and
+:func:`cuvarbase.utils.check_freqs`.
+
+
 Data hygiene: near-zero uncertainties
 -------------------------------------
 
@@ -314,6 +360,54 @@ weights from above) before running BLS:
 ``cuvarbase`` does not apply such a floor automatically — reported
 uncertainties are taken at face value — so this check belongs in your
 pre-processing.
+
+
+Precision and reproducibility
+-----------------------------
+
+**The phase fold is float32.** Every GPU BLS kernel folds with
+``mod1(t * f)`` in single precision, so the phase grid it can resolve is
+quantized at :math:`\mathrm{ulp}(T f_\mathrm{max})`, where :math:`T` is
+the baseline after epoch subtraction (:math:`1.95\times10^{-3}` cycles
+at :math:`T f = 23{,}019`; 5000 points then take only 1977 distinct
+phases). For the box edges to land where they should, the narrowest
+phase step the search actually uses,
+
+.. math::
+
+    \frac{q_\mathrm{min}}{n_\mathrm{overlap}} \quad\text{(in cycles)},
+
+must stay well above that ulp. When it does not, the transit's power
+leaks across bin edges: measured against a float64 replica, ``q =
+0.01`` boxes recover 0.968 / 0.924 / 0.901 of the exact power at
+:math:`T f = 7000` / 18,250 / 58,400 (worst case 0.846), i.e. a 3-15 %
+loss, and a 10-year baseline searched to 20 c/d loses 22 % (a 1-year
+baseline at the same frequency loses 6 %). Keplerian ``q0`` boxes --
+what :func:`~cuvarbase.bls.eebls_transit` searches by default -- are
+much wider and are not affected. If you need ``q ~ 0.01`` at
+:math:`T f_\mathrm{max} \gtrsim 7000`, split the baseline into shorter
+segments or restrict ``fmax``; the periodogram peak is still found, but
+its height (and the depth inferred from it) is biased low.
+
+**Binned results depend on the time origin.** Times are epoch-subtracted
+with ``floor(min(t))``, so the *fractional* part of ``min(t)`` shifts
+where the phase-bin edges fall relative to the data. Binned BLS powers
+move by up to ~10 % with that fraction (11 / 9 / 7.6 % at
+``noverlap = 1 / 4 / 8``), occasionally moving the ``eebls_transit``
+argmax. This is discretization, not precision loss -- ``t + 2457000.5``
+and ``t + 0.5`` agree to 1e-8 -- but it means a periodogram is only
+reproducible for a fixed time origin. Sparse BLS, which uses no bins,
+is invariant to 5e-4.
+
+**Run-to-run reproducibility.** The fast shared-memory kernels
+(:func:`~cuvarbase.bls.eebls_gpu_fast`,
+:func:`~cuvarbase.bls.eebls_gpu_fast_optimized`) and the batch kernels
+accumulate through float32 atomics, whose summation order is not fixed,
+so two identical calls differ by ~1e-8 to 1e-7 in power. Compare
+periodograms with a tolerance at that level, not with
+``array_equal``. Sparse BLS (:func:`~cuvarbase.bls.sparse_bls_gpu`) and
+the conditional-entropy and PDM kernels use no such accumulation and are
+bitwise reproducible.
 
 
 References

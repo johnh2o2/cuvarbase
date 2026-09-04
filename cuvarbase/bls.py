@@ -22,13 +22,23 @@ from pycuda.compiler import SourceModule
 
 from .core import ensure_context
 from .utils import (find_kernel, _module_reader, subtract_epoch,
-                    conflict_scatter_perm)
+                    conflict_scatter_perm, check_lightcurve, check_freqs)
 from .memory.bls_memory import BLSBatchMemory
 from .memory._host import host_array
 
 import numpy as np
 
 _default_block_size = 256
+
+# Minimum number of observations any BLS path accepts. Every BLS
+# statistic is normalized by the weighted variance of y, which is
+# identically zero for a single point (the periodogram came back as
+# 0/0 = NaN); two points is the smallest input for which the null
+# model is defined. The Keplerian entry points need more than this --
+# ``fmin_transit`` needs ``min_obs_per_transit`` (default 5) or the
+# duty cycle q = min_obs_per_transit / N exceeds 1 and the grid comes
+# back all-NaN -- and raise from there.
+_BLS_MIN_NDATA = 2
 _all_function_names = ['full_bls_no_sol',
                        'full_bls_no_sol_optimized',
                        'full_bls_no_sol_fused',
@@ -257,6 +267,21 @@ def fmin_transit(t, rho=1., min_obs_per_transit=5, **kwargs):
     over the baseline ``T``), the latter being the long-period limit of
     Ofir (2014), Sect. 3.1 [O2014]_.
     """
+    t = np.asarray(t)
+    if t.size == 0 or not np.all(np.isfinite(t)):
+        raise ValueError("fmin_transit: t must be a non-empty array of "
+                         "finite observation times")
+    if t.size < int(min_obs_per_transit):
+        # q = min_obs_per_transit / N > 1 below this, and
+        # freq_transit(q) = fmax0 * sin(pi q)**1.5 is NaN for q > 1:
+        # transit_autofreq used to return freqs = [nan], q = [nan],
+        # which reached the kernels as a NaN uint32 bin count and
+        # crashed the device (Sep 2026 audit, defect 23).
+        raise ValueError(
+            "fmin_transit: %d observations cannot hold %d samples in a "
+            "single transit (the Keplerian duty cycle would exceed 1); "
+            "pass an explicit fmin/freqs, or lower "
+            "min_obs_per_transit" % (t.size, int(min_obs_per_transit)))
     qmin = float(min_obs_per_transit) / len(t)
 
     fmin1 = freq_transit(qmin, rho=rho)
@@ -363,6 +388,11 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     """
     if qmax_fac is None:
         qmax_fac = 1./qmin_fac
+
+    t = np.asarray(t)
+    if t.size == 0 or not np.all(np.isfinite(t)):
+        raise ValueError("transit_autofreq: t must be a non-empty array "
+                         "of finite observation times")
 
     if fmin is None:
         fmin = fmin_transit(t, rho=rho, **kwargs)
@@ -578,6 +608,12 @@ class BLSMemory:
                 freqs=None, nf=None, transfer=True,
                 **kwargs):
 
+        # The weights below are dy**-2 and the periodogram is divided
+        # by the weighted variance of y: a non-finite sample or
+        # dy = 0 used to travel to the device unnoticed.
+        check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA,
+                         name='BLSMemory.setdata')
+
         if freqs is not None:
             self.freqs = np.asarray(freqs).astype(self.rtype)
             self.nbins0, self.nbinsf = _fast_path_nbins(self.freqs,
@@ -669,13 +705,45 @@ class BLSMemory:
 def _fast_path_nbins(freqs32, qmin, qmax):
     """Per-frequency bin counts of the fast (shared-memory) kernels:
     ``nbinsf = floor(1/qmin)`` fine bins and ``nbins0 = floor(1/qmax)``
-    (box widths ``m / nbinsf`` for ``m`` up to ``ceil(nbinsf /
-    nbins0)``), exactly as :meth:`BLSMemory.setdata` uploads them.
+    (box widths ``m / nbinsf`` for ``m`` up to and including
+    ``floor(nbinsf / nbins0)`` -- see :func:`_fast_box_widths`),
+    exactly as :meth:`BLSMemory.setdata` uploads them.
     ``freqs32`` is the float32 frequency array (only its length and
-    dtype matter); ``qmin``/``qmax`` scalar or per-frequency."""
+    dtype matter); ``qmin``/``qmax`` scalar or per-frequency.
+
+    The bounds are validated here because this is where they become
+    ``uint32``: ``(1 / np.array([nan, 0.01, 5, inf])).astype(uint32)``
+    is ``[0, 100, 0, 0]``, and a zero bin count makes the kernels
+    divide by zero and ``atomicAdd`` outside the histogram -- an
+    illegal memory access that kills the process's CUDA context (Sep
+    2026 audit, defect 23).
+
+    The division is deliberately left in the input dtype: float32 and
+    float64 truncate to different bin counts for some bounds (e.g.
+    ``qmin = 1/7`` gives 6 in float32 and 7 in float64), so promoting
+    it here would change every existing periodogram.
+    """
+    _validate_fast_q_bounds(len(freqs32), qmin, qmax)
     nbinsf = (np.ones_like(freqs32) / qmin).astype(np.uint32)
     nbins0 = (np.ones_like(freqs32) / qmax).astype(np.uint32)
     return nbins0, nbinsf
+
+
+def _validate_fast_q_bounds(nfreqs, qmin, qmax):
+    """Validate transit-duration bounds for the binned (fast) kernels.
+
+    ``_validate_q_bounds`` (finite, qmin >= 0, qmax > 0, qmin <= qmax)
+    plus the two conditions the *binned* kernels add: ``qmin > 0`` and
+    ``qmax <= 1`` (see :func:`_check_q_bounds_for_bins`). ``None``
+    bounds fall through to the caller's default so this never changes
+    which exception an unsupported call raises.
+    """
+    if qmin is None or qmax is None:
+        return
+    qmins = _broadcast_q_bound(qmin, nfreqs, 1e-2, 'qmin')
+    qmaxes = _broadcast_q_bound(qmax, nfreqs, 0.5, 'qmax')
+    _validate_q_bounds(qmins, qmaxes)
+    _check_q_bounds_for_bins(qmins, qmaxes)
 
 
 def _validate_noverlap(noverlap):
@@ -699,6 +767,15 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
     """Shared implementation behind :func:`eebls_gpu_fast` and
     :func:`eebls_gpu_fast_optimized`; see their docstrings for the
     parameter descriptions."""
+    # Validate before ANY device work (kernel compile included): a NaN
+    # in t used to give a finite periodogram with a wrong argmax, and a
+    # NaN or out-of-range q bound crashed the kernel and killed the
+    # process's CUDA context (Sep 2026 audit, defect 23).
+    _name = ('eebls_gpu_fast_optimized' if use_optimized
+             else 'eebls_gpu_fast')
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA, name=_name)
+    check_freqs(freqs, name=_name)
+    _validate_fast_q_bounds(len(freqs), qmin, qmax)
     _validate_noverlap(noverlap)
     _validate_convention(convention)
     if convention != 'chi2ratio' and not transfer_to_host:
@@ -1027,6 +1104,17 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         BLS periodogram, normalized to
         :math:`1 - \\chi_2(\\omega) / \\chi_2(constant)`
 
+    Notes
+    -----
+    The phase fold is float32, so it resolves ``ulp(T * max(freqs))``:
+    keep ``qmin / noverlap`` well above it or narrow boxes lose power
+    (``q = 0.01`` boxes recover 3-15 % less than the exact float64 box
+    at ``T * f > 7000``, 22 % less over a 10-year baseline at 20 c/d),
+    and binned power moves by up to ~10 % with the fractional part of
+    ``min(t)``. Because the kernels accumulate through float32 atomics,
+    two identical calls differ by ~1e-8 to 1e-7. See "Precision and
+    reproducibility" in the BLS documentation.
+
     """
     return _eebls_gpu_fast_impl(
         t, y, dy, freqs, 'full_bls_no_sol',
@@ -1235,6 +1323,13 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     eebls_gpu_fast : Standard implementation with fixed block size
     eebls_gpu_fast_optimized : Optimized implementation
     """
+    # Validated here as well as in the shared implementation: this
+    # wrapper compiles a kernel (GPU work) before it delegates.
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA,
+                     name='eebls_gpu_fast_adaptive')
+    check_freqs(freqs, name='eebls_gpu_fast_adaptive')
+    _validate_fast_q_bounds(len(freqs), qmin, qmax)
+
     ndata = len(t)
 
     # Choose optimal block size
@@ -1333,6 +1428,9 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     # otherwise only raise at the return statement, after the whole
     # multi-stream grid search has run.
     _validate_convention(convention)
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA,
+                     name='eebls_gpu_custom')
+    check_freqs(freqs, name='eebls_gpu_custom')
 
     functions = functions if functions is not None \
         else compile_bls(**kwargs)
@@ -1561,13 +1659,7 @@ def _q_bounds_to_nbins(qmins, qmaxes):
     (``nbins0 >= 1``; ``nbins0 = 0`` divides by zero on the device)."""
     qmins = np.asarray(qmins, dtype=np.float64)
     qmaxes = np.asarray(qmaxes, dtype=np.float64)
-    if np.any(qmins <= 0):
-        raise ValueError("qmin must be > 0 for the binned BLS kernels "
-                         "(the finest phase bin is 1/qmin wide); got "
-                         "min(qmin) = %g" % float(np.min(qmins)))
-    if np.any(qmaxes > 1):
-        raise ValueError("qmax must be <= 1; got max(qmax) = %g"
-                         % float(np.max(qmaxes)))
+    _check_q_bounds_for_bins(qmins, qmaxes)
     nbins0 = np.floor(1. / qmaxes).astype(np.int64)
     nbinsf = np.ceil(1. / qmins).astype(np.int64)
     return nbins0, nbinsf
@@ -1715,6 +1807,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     """
 
     _validate_convention(convention)
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA, name='eebls_gpu')
+    check_freqs(freqs, name='eebls_gpu')
 
     block_size = kwargs.get('block_size', _default_block_size)
     ndata = len(t)
@@ -1916,6 +2010,12 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     bls: float
         BLS power for this set of parameters
     """
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA, name='single_bls')
+    if not (np.isfinite(freq) and np.isfinite(q) and np.isfinite(phi0)):
+        raise ValueError("single_bls: freq, q and phi0 must be finite; "
+                         "got freq=%r, q=%r, phi0=%r" % (freq, q, phi0))
+    if freq <= 0:
+        raise ValueError("single_bls: freq must be > 0; got %r" % (freq,))
 
     # Epoch-subtract before the float32 cast
     t, epoch = subtract_epoch(t)
@@ -2104,6 +2204,27 @@ def _validate_q_bounds(qmins, qmaxes):
                          % int(np.sum(qmins > qmaxes)))
 
 
+def _check_q_bounds_for_bins(qmins, qmaxes):
+    """The two extra conditions the *binned* BLS kernels impose on top
+    of :func:`_validate_q_bounds`.
+
+    ``qmin > 0``: the finest phase bin is ``1/qmin`` wide, so ``qmin =
+    0`` asks for infinitely many bins (and casts to a bin count of 0).
+    ``qmax <= 1``: the coarsest bin count is ``1/qmax``, and ``nbins0 =
+    0`` divides by zero inside the kernel and lets its ``atomicAdd``
+    run outside the shared-memory histogram.
+    """
+    qmins = np.asarray(qmins, dtype=np.float64)
+    qmaxes = np.asarray(qmaxes, dtype=np.float64)
+    if np.any(qmins <= 0):
+        raise ValueError("qmin must be > 0 for the binned BLS kernels "
+                         "(the finest phase bin is 1/qmin wide); got "
+                         "min(qmin) = %g" % float(np.min(qmins)))
+    if np.any(qmaxes > 1):
+        raise ValueError("qmax must be <= 1; got max(qmax) = %g"
+                         % float(np.max(qmaxes)))
+
+
 def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
                    ignore_negative_delta_sols=False,
                    convention='chi2ratio'):
@@ -2147,6 +2268,8 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
         Best (q, phi0) solution at each frequency
     """
     _validate_convention(convention)
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA, name='sparse_bls_cpu')
+    check_freqs(freqs, name='sparse_bls_cpu')
 
     # Original flux kept for convert_bls_power's chi2_0
     y_orig, dy_orig = y, dy
@@ -2403,6 +2526,8 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
         Best (q, phi0) solution at each frequency
     """
     _validate_convention(convention)
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA, name='sparse_bls_gpu')
+    check_freqs(freqs, name='sparse_bls_gpu')
 
     # Original flux kept for convert_bls_power's chi2_0
     y_orig, dy_orig = y, dy
@@ -2754,7 +2879,9 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         fast-kernel defaults ``dlogq=0.3``, ``noverlap=2`` apply),
         `compile_bls`, `fmax_transit`, `fmin_transit`, and
         `transit_autofreq`. The :func:`eebls_gpu`-only kwargs
-        ``nstreams`` and ``max_memory`` are ignored. On the sparse
+        ``nstreams`` and ``max_memory`` are ignored (with a
+        ``UserWarning``; use :func:`eebls_transit_gpu` or
+        :func:`eebls_gpu` if you need them). On the sparse
         path, only the kwargs that `sparse_bls_gpu` accepts
         (``block_size``, ``max_ndata``, ``stream``, ``kernel``,
         ``convention``) are forwarded to it. A ``convention=`` kwarg
@@ -2789,6 +2916,18 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         or ``use_optimized=True``.
 
     """
+    # Validate before anything else -- including the Keplerian grid
+    # builder, which turns a NaN timestamp into a NaN frequency grid
+    # and (with use_fast=True) a device crash that kills the CUDA
+    # context (Sep 2026 audit, defect 23). The Keplerian grid needs
+    # min_obs_per_transit (default 5) points; fmin_transit raises for
+    # shorter light curves, so only the universal floor is applied
+    # here (an explicit ``freqs=`` grid does not need the extra
+    # points).
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA, name='eebls_transit')
+    if freqs is not None:
+        check_freqs(freqs, name='eebls_transit')
+
     ndata = len(t)
     _reject_use_simple(kwargs, 'eebls_transit')
 
@@ -2844,7 +2983,14 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     # window -- Sep 2026 audit defect 7); the best (q, phi) is recovered
     # at the top n_solutions peaks afterwards.
     for key in ('nstreams', 'max_memory'):   # eebls_gpu-only
-        kwargs.pop(key, None)
+        if kwargs.pop(key, None) is not None:
+            warnings.warn(
+                "eebls_transit ignores %s: the default path runs "
+                "eebls_gpu_fast, which uses one stream and sizes its "
+                "own shared-memory batches. Call eebls_transit_gpu "
+                "(Keplerian bounds, solution at every frequency) or "
+                "eebls_gpu directly if you need %s." % (key, key),
+                UserWarning, stacklevel=2)
     dlogq = kwargs.setdefault('dlogq', 0.3)
     noverlap = kwargs.setdefault('noverlap', 2)
     dphi = kwargs.get('dphi', 0.0)
@@ -3049,10 +3195,25 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
     the single-LC paths); see
     ``analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md``.
     """
+    _validate_convention(convention)
+    # Validate every light curve, the shared grid and the q bounds
+    # before any device work: one NaN sample used to give a finite
+    # periodogram with a wrong argmax, and a NaN or out-of-range q
+    # bound crashed the kernel and killed the process's CUDA context
+    # (Sep 2026 audit, defect 23).
+    check_freqs(freqs, name='eebls_gpu_batch')
+    for i, lc in enumerate(lightcurves):
+        if len(lc) != 3:
+            raise ValueError("eebls_gpu_batch: lightcurve %d must be a "
+                             "(t, y, dy) tuple; got %d elements"
+                             % (i, len(lc)))
+        check_lightcurve(lc[0], lc[1], lc[2], min_n=_BLS_MIN_NDATA,
+                         name='eebls_gpu_batch lightcurve %d' % i)
+    _validate_fast_q_bounds(len(freqs), qmin, qmax)
+
     freqs = np.asarray(freqs).astype(np.float32)
     nfreq = len(freqs)
     n_total = len(lightcurves)
-    _validate_convention(convention)
     # noverlap=0 used to launch nothing and return the untouched (zero,
     # or stale on memory reuse) periodogram (Sep 2026 audit, id 75)
     _validate_noverlap(noverlap)
@@ -3401,6 +3562,11 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         The return is always a 3-tuple, matching :func:`eebls_transit`.
 
     """
+    # See eebls_transit: validate before the Keplerian grid builder.
+    check_lightcurve(t, y, dy, min_n=_BLS_MIN_NDATA,
+                     name='eebls_transit_gpu')
+    if freqs is not None:
+        check_freqs(freqs, name='eebls_transit_gpu')
 
     if freqs is None:
         if qvals is not None:
