@@ -195,15 +195,18 @@ _function_signatures = {
                                   np.uint32, np.uint32],
     'reduction_max': [np.intp, np.intp, np.uint32, np.uint32, np.uint32,
                       np.intp, np.intp, np.uint32, np.uint32],
-    'store_best_sols': [np.intp, np.intp, np.intp, np.uint32,
-                        np.uint32, np.uint32, np.float32, np.uint32,
-                        np.uint32],
+    # (argmaxes, best_phi, best_q, nbins0_arr, nbinsf_arr, noverlap,
+    #  dlogq, nfreq, freq_offset): per-frequency bin-count arrays
+    'store_best_sols': [np.intp, np.intp, np.intp, np.intp, np.intp,
+                        np.uint32, np.float32, np.uint32, np.uint32],
     'store_best_sols_custom': [np.intp, np.intp, np.intp,
                                np.intp, np.intp, np.uint32,
                                np.uint32, np.uint32, np.uint32],
+    # (t, yw, w, yw_bin, w_bin, freqs, nbins0_arr, nbinsf_arr, ndata,
+    #  nfreq, freq_offset, noverlap, dlogq, nbins_tot)
     'bin_and_phase_fold_bst_multifreq':
         [np.intp, np.intp, np.intp, np.intp,
-         np.intp, np.intp, np.uint32, np.uint32,
+         np.intp, np.intp, np.intp, np.intp,
          np.uint32, np.uint32, np.uint32, np.uint32,
          np.float32, np.uint32],
     'binned_bls_bst': [np.intp, np.intp, np.intp, np.uint32, np.uint32]
@@ -577,8 +580,8 @@ class BLSMemory:
 
         if freqs is not None:
             self.freqs = np.asarray(freqs).astype(self.rtype)
-            self.nbinsf = (np.ones_like(self.freqs)/qmin).astype(np.uint32)
-            self.nbins0 = (np.ones_like(self.freqs)/qmax).astype(np.uint32)
+            self.nbins0, self.nbinsf = _fast_path_nbins(self.freqs,
+                                                        qmin, qmax)
 
         # Epoch-subtract in float64 before the float32 cast: absolute
         # timestamps (e.g. BJD) would otherwise destroy the phase fold.
@@ -644,6 +647,18 @@ class BLSMemory:
         return c.setdata(t, y, dy, qmin=qmin, qmax=qmax,
                          freqs=freqs, nf=nf, transfer=transfer,
                          **kwargs)
+
+
+def _fast_path_nbins(freqs32, qmin, qmax):
+    """Per-frequency bin counts of the fast (shared-memory) kernels:
+    ``nbinsf = floor(1/qmin)`` fine bins and ``nbins0 = floor(1/qmax)``
+    (box widths ``m / nbinsf`` for ``m`` up to ``ceil(nbinsf /
+    nbins0)``), exactly as :meth:`BLSMemory.setdata` uploads them.
+    ``freqs32`` is the float32 frequency array (only its length and
+    dtype matter); ``qmin``/``qmax`` scalar or per-frequency."""
+    nbinsf = (np.ones_like(freqs32) / qmin).astype(np.uint32)
+    nbins0 = (np.ones_like(freqs32) / qmax).astype(np.uint32)
+    return nbins0, nbinsf
 
 
 def _validate_noverlap(noverlap):
@@ -1454,23 +1469,33 @@ def _q_bounds_to_nbins(qmins, qmaxes):
     return nbins0, nbinsf
 
 
-def _max_nbins_tot(nbins0, nbinsf, dlogq):
-    """Upper bound on the number of (phase bin, q level) cells any
-    frequency batch can need.
+def _per_freq_nbins_tot(nbins0, nbinsf, dlogq):
+    """``count_tot_nbins(nbins0[i], nbinsf[i], dlogq)`` for every
+    frequency, evaluated once per distinct ``(nbins0, nbinsf)`` pair (a
+    Keplerian grid of 10^5 frequencies has only a few hundred)."""
+    nbins0 = np.asarray(nbins0, dtype=np.int64)
+    nbinsf = np.asarray(nbinsf, dtype=np.int64)
+    pairs = np.stack([nbins0, nbinsf], axis=1)
+    uniq, inv = np.unique(pairs, axis=0, return_inverse=True)
+    counts = np.array([_count_tot_nbins_cached(int(a), int(b), dlogq)
+                       for a, b in uniq], dtype=np.int64)
+    return counts[np.asarray(inv).ravel()]
 
-    ``count_tot_nbins(nb0, nbf, dlogq)`` is non-decreasing in ``nbf``
-    (a larger finest count only adds levels) but NOT monotone in
-    ``nb0``: at ``nbf = 359`` and ``dlogq = 0.2`` it is 1875, 1939 and
-    1704 for ``nb0`` = 28, 29, 30. The old sizing used the value at the
-    grid-wide ``(min nb0, max nbf)``, which a batch starting at a
-    larger ``nb0`` could exceed (the 44 MB overrun of the audit's
-    70,000-point ``fmin=0.02, fmax=0.5`` case). The maximum over the
-    distinct ``nb0`` values at the largest ``nbf`` bounds every
-    batch-wide collapse and every per-frequency count.
+
+def _max_nbins_tot(nbins0, nbinsf, dlogq):
+    """Largest number of (phase bin, q level) cells any single frequency
+    needs -- the bound used to budget memory before batching.
+
+    Note ``count_tot_nbins(nb0, nbf, dlogq)`` is non-decreasing in
+    ``nbf`` but NOT monotone in ``nb0``: at ``nbf = 359`` and
+    ``dlogq = 0.2`` it is 1875, 1939 and 1704 for ``nb0`` = 28, 29, 30.
+    The pre-1.0 sizing used the value at the grid-wide ``(min nb0, max
+    nbf)`` collapse, which a batch starting at a larger ``nb0`` could
+    exceed (the 44 MB overrun of the audit's 70,000-point ``fmin=0.02,
+    fmax=0.5`` case). The kernels now work per frequency, so the exact
+    per-frequency maximum is the bound.
     """
-    nbf_max = int(np.max(nbinsf))
-    return max(_count_tot_nbins_cached(int(nb0), nbf_max, dlogq)
-               for nb0 in np.unique(np.asarray(nbins0)))
+    return int(np.max(_per_freq_nbins_tot(nbins0, nbinsf, dlogq)))
 
 
 def _bls_batch_table(nbins0, nbinsf, freq_batch_size, dlogq):
@@ -1478,26 +1503,23 @@ def _bls_batch_table(nbins0, nbinsf, freq_batch_size, dlogq):
     scratch buffers are allocated so they can be sized from the actual
     maximum over batches.
 
-    Returns a list of ``(imin, imax, nbins0_b, nbinsf_b, nbins_tot_b)``
-    per batch of ``freq_batch_size`` frequencies: the batch's search
-    range collapses to the coarsest ``nbins0`` and finest ``nbinsf``
-    among its frequencies, and ``nbins_tot_b = count_tot_nbins(nbins0_b,
-    nbinsf_b, dlogq)`` is the number of (phase bin, q level) cells per
-    frequency and phase-offset pass the kernels write.
+    Returns a list of ``(imin, imax, nbins_tot_b)`` per batch of
+    ``freq_batch_size`` frequencies, where ``nbins_tot_b`` is the
+    batch's row stride: the largest per-frequency
+    ``count_tot_nbins(nbins0[i], nbinsf[i], dlogq)`` among its
+    frequencies (each frequency writes only its own cells; the rest of
+    its row stays zero). Batch boundaries never change which boxes a
+    frequency searches.
     """
-    nbins0 = np.asarray(nbins0)
-    nbinsf = np.asarray(nbinsf)
-    nfreq = len(nbins0)
+    nbins_tot_f = _per_freq_nbins_tot(nbins0, nbinsf, dlogq)
+    nfreq = len(nbins_tot_f)
     freq_batch_size = int(freq_batch_size)
     if freq_batch_size < 1:
         raise ValueError("freq_batch_size must be >= 1")
     table = []
     for imin in range(0, nfreq, freq_batch_size):
         imax = min(nfreq, imin + freq_batch_size)
-        nb0 = int(np.min(nbins0[imin:imax]))
-        nbf = int(np.max(nbinsf[imin:imax]))
-        table.append((imin, imax, nb0, nbf,
-                      _count_tot_nbins_cached(nb0, nbf, dlogq)))
+        table.append((imin, imax, int(np.max(nbins_tot_f[imin:imax]))))
     return table
 
 
@@ -1538,17 +1560,27 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     freqs: array_like, float
         Frequencies
     qmin: float or array_like
-        Minimum q value(s) to test for each frequency
+        Minimum q value(s) to test for each frequency. A scalar applies
+        to every frequency; an array (same length as ``freqs``) gives a
+        per-frequency bound. The finest phase bin at frequency ``i`` is
+        ``1 / ceil(1 / qmin[i])``.
     qmax: float or array_like
-        Maximum q value(s) to test for each frequency
+        Maximum q value(s) to test for each frequency (scalar or
+        per-frequency array). The coarsest bin is
+        ``1 / floor(1 / qmax[i])``. Per-frequency bounds are honoured
+        exactly per frequency (each frequency searches only its own
+        q levels), so results do not depend on ``freq_batch_size`` or on
+        the free device memory.
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     nstreams: int, optional (default: 5)
         Number of CUDA streams to utilize.
     noverlap: int, optional (default: 3)
-        Number of overlapping q bins to use
-    dlogq: float, optional, (default: 0.5)
-        logarithmic spacing of :math:`q` values, where :math:`d\log q = dq / q`
+        Phase-offset oversampling: each q level is evaluated on
+        ``noverlap`` phase-bin grids shifted by ``1/noverlap`` of a bin
+        (``phi = q * (j + s / noverlap)``), not extra q levels.
+    dlogq: float, optional, (default: 0.2)
+        logarithmic spacing of :math:`q` values, where :math:`d\\log q = dq / q`
     freq_batch_size: int, optional (default: None)
         Number of frequencies to compute in a single batch; determined
         automatically from ``max_memory`` when ``None``. Whether given
@@ -1610,8 +1642,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         mem0 += nfreq * 5 * real_type_size
 
         # yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32), sized
-        # by an upper bound on the per-batch cell count (see
-        # _max_nbins_tot: the grid-wide collapse is not one)
+        # by the largest per-frequency cell count (the batch stride can
+        # never exceed it; see _max_nbins_tot)
         nbins_tot_bound = _max_nbins_tot(nbins0_f, nbinsf_f, dlogq)
         mem_per_f = 4 * nstreams * nbins_tot_bound * noverlap * real_type_size
 
@@ -1634,7 +1666,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     batches = _bls_batch_table(nbins0_f, nbinsf_f, freq_batch_size, dlogq)
     nbatches = len(batches)
     gs = max((imax - imin) * nbins_tot for
-             (imin, imax, _, _, nbins_tot) in batches) * noverlap
+             (imin, imax, nbins_tot) in batches) * noverlap
 
     # move data to GPU
     w = np.power(dy, -2)
@@ -1648,6 +1680,15 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     yw_g = gpuarray.to_gpu(yw.astype(np.float32))
     w_g = gpuarray.to_gpu(np.array(w).astype(np.float32))
     freqs_g = gpuarray.to_gpu(np.array(freqs).astype(np.float32))
+
+    # Per-frequency bin counts, read by the fold and store kernels at
+    # index (i_freq + freq_offset): every frequency searches exactly its
+    # own q levels. Before 1.0 the kernels took one scalar pair per
+    # launch, so array bounds collapsed to the batch-wide (min nbins0,
+    # max nbinsf) window and the result depended on freq_batch_size /
+    # free memory (Sep 2026 audit defect 7).
+    nbins0_g = gpuarray.to_gpu(nbins0_f.astype(np.uint32))
+    nbinsf_g = gpuarray.to_gpu(nbinsf_f.astype(np.uint32))
 
     # One scratch set per stream, but never more streams than batches
     # (a 3-batch grid does not need 5 x 4 zero-filled buffers).
@@ -1674,7 +1715,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     max_func = functions['reduction_max']
     store_func = functions['store_best_sols']
 
-    for batch, (imin, imax, nbins0, nbinsf, nbins_tot) in enumerate(batches):
+    for batch, (imin, imax, nbins_tot) in enumerate(batches):
 
         nf = imax - imin
         all_bins = nf * nbins_tot * noverlap
@@ -1683,8 +1724,8 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
             # device against ever overrunning its buffers again
             raise ValueError(
                 "eebls_gpu: batch %d needs %d bin cells but only %d were "
-                "allocated (nbins0=%d, nbinsf=%d, noverlap=%d)"
-                % (batch, all_bins, gs, nbins0, nbinsf, noverlap))
+                "allocated (nbins_tot=%d, noverlap=%d)"
+                % (batch, all_bins, gs, nbins_tot, noverlap))
 
         j = batch % nsets
         yw_g_bin = yw_g_bins[j]
@@ -1704,10 +1745,10 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         args = (bin_grid, block, stream)
         args += (t_g.ptr, yw_g.ptr, w_g.ptr)
         args += (yw_g_bin.ptr, w_g_bin.ptr, freqs_g.ptr)
-        args += (np.int32(ndata), np.int32(nf))
-        args += (np.int32(nbins0), np.int32(nbinsf))
-        args += (np.int32(imin), np.int32(noverlap))
-        args += (np.float32(dlogq), np.int32(nbins_tot))
+        args += (nbins0_g.ptr, nbinsf_g.ptr)
+        args += (np.uint32(ndata), np.uint32(nf))
+        args += (np.uint32(imin), np.uint32(noverlap))
+        args += (np.float32(dlogq), np.uint32(nbins_tot))
         bin_func.prepared_async_call(*args)
 
         bls_grid = (int(np.ceil(float(all_bins) / block_size)), 1)
@@ -1725,7 +1766,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         store_grid = (int(np.ceil(float(nf) / block_size)), 1)
         args = (store_grid, block, stream)
         args += (bls_sol_g.ptr, bls_best_phi.ptr, bls_best_q.ptr)
-        args += (np.uint32(nbins0), np.uint32(nbinsf), np.uint32(noverlap))
+        args += (nbins0_g.ptr, nbinsf_g.ptr, np.uint32(noverlap))
         args += (np.float32(dlogq), np.uint32(nf))
         args += (np.uint32(imin),)
         store_func.prepared_async_call(*args)
@@ -2284,6 +2325,128 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             solutions)
 
 
+def _fast_bls_box_scan(t32, yw32, w32, freq, nbins0, nbinsf, dlogq,
+                       noverlap, dphi=0.0,
+                       ignore_negative_delta_sols=False):
+    """CPU replica of the box grid the fast kernels
+    (``full_bls_no_sol`` / ``_optimized`` / ``_fused``) search at ONE
+    frequency: fold in float32, histogram into ``nbinsf`` phase bins on
+    ``noverlap`` grids shifted by ``1/noverlap`` of a bin (plus the base
+    offset ``dphi``), and scan every box of ``m`` bins for ``m = 1,
+    1 + dnbins(1), ...`` below ``ceil(nbinsf / nbins0)``.
+
+    ``t32`` are the epoch-subtracted float32 times, ``yw32 = w * (y -
+    ybar)`` and ``w32`` the normalized weights, all as
+    :meth:`BLSMemory.setdata` uploads them (order is irrelevant).
+
+    Returns ``(value, q, phi0)`` with ``value = YW^2 / (W (1 - W))``
+    (divide by ``YY`` for the 'chi2ratio' power), ``q = m / nbinsf`` and
+    the box start phase ``phi0 = (n + dphi_pass) / nbinsf`` (mod 1)
+    relative to the epoch of ``t32``; ``(0, 0, 0)`` when no box passes
+    the weight guards.
+    """
+    nbf = int(nbinsf)
+    nb0 = max(1, int(nbins0))
+    max_bin_width = -(-nbf // nb0)      # divrndup(nbf, nb0)
+    # q levels, exactly as the kernels iterate them
+    ms = []
+    m = 1
+    while m < max_bin_width:
+        ms.append(m)
+        m += dnbins(m, dlogq)
+
+    phi = np.asarray(t32, dtype=np.float32) * np.float32(freq)
+    phi = phi - np.floor(phi)
+    w64 = np.asarray(w32, dtype=np.float64)
+    yw64 = np.asarray(yw32, dtype=np.float64)
+    n = np.arange(nbf)
+
+    best_val, best_q, best_phi = 0.0, 0.0, 0.0
+    for s_pass in range(int(noverlap)):
+        dphi_pass = np.float32(float(dphi) + float(s_pass) / noverlap)
+        b = np.floor(np.float32(nbf) * phi - dphi_pass)
+        b = b.astype(np.int64) % nbf
+        hw = np.bincount(b, weights=w64, minlength=nbf)
+        hyw = np.bincount(b, weights=yw64, minlength=nbf)
+        # circular prefix sums: box (n, m) = bins n .. n + m - 1 mod nbf
+        cw = np.concatenate(([0.0], np.cumsum(np.concatenate([hw, hw]))))
+        cyw = np.concatenate(([0.0],
+                              np.cumsum(np.concatenate([hyw, hyw]))))
+        for m in ms:
+            W = cw[n + m] - cw[n]
+            YW = cyw[n + m] - cyw[n]
+            # same guards as bls_value in bls_common.cuh
+            ok = (W > 1e-10) & (W < 1.0 - 1e-4)
+            if ignore_negative_delta_sols:
+                ok &= (YW <= 0)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                val = np.where(ok, YW * YW / (W * (1.0 - W)), 0.0)
+            k = int(np.argmax(val))
+            if val[k] > best_val:
+                best_val = float(val[k])
+                best_q = m / float(nbf)
+                best_phi = ((n[k] + float(dphi_pass)) / float(nbf)) % 1.0
+    return best_val, best_q, best_phi
+
+
+def _fast_bls_solutions(t, y, dy, freqs, powers, qmin, qmax, n_solutions,
+                        dlogq=0.3, noverlap=2, dphi=0.0,
+                        ignore_negative_delta_sols=False):
+    """Best-fit ``(q, phi)`` at the ``n_solutions`` highest-power
+    frequencies of a fast-kernel periodogram (``eebls_gpu_fast`` and
+    friends do not track solutions).
+
+    Each selected frequency's box grid is re-scanned on the CPU with
+    :func:`_fast_bls_box_scan` -- the same q levels, phase-bin grids
+    and float32 fold the kernel used -- so the returned ``(q, phi)`` is
+    the box that produced ``powers[k]`` (up to float32 accumulation
+    order). ``phi`` is the transit start phase in the ORIGINAL input
+    timescale (the convention of :func:`eebls_gpu` /
+    :func:`single_bls`).
+
+    Returns a list of length ``len(freqs)``: ``(q, phi)`` tuples at the
+    selected frequencies (skipping those with zero power) and ``None``
+    elsewhere.
+    """
+    nfreq = len(freqs)
+    sols = [None] * nfreq
+    n_sel = int(min(max(0, int(n_solutions)), nfreq))
+    if n_sel == 0:
+        return sols
+
+    powers = np.asarray(powers, dtype=np.float64)
+    order = np.argsort(-powers, kind='stable')[:n_sel]
+
+    t64, epoch = subtract_epoch(np.asarray(t, dtype=np.float64))
+    y64 = np.asarray(y, dtype=np.float64)
+    w = np.power(np.asarray(dy, dtype=np.float64), -2)
+    w /= np.sum(w)
+    ybar = float(np.einsum('i,i->', w, y64))
+    t32 = t64.astype(np.float32)
+    w32 = w.astype(np.float32)
+    yw32 = ((y64 - ybar) * w).astype(np.float32)
+
+    freqs64 = np.asarray(freqs, dtype=np.float64)
+    freqs32 = freqs64.astype(np.float32)
+    qmins = _broadcast_q_bound(qmin, nfreq, 1e-2, 'qmin')
+    qmaxes = _broadcast_q_bound(qmax, nfreq, 0.5, 'qmax')
+    nbins0, nbinsf = _fast_path_nbins(freqs32, qmins, qmaxes)
+
+    for k in order:
+        k = int(k)
+        if not powers[k] > 0:
+            continue
+        val, q, phi = _fast_bls_box_scan(
+            t32, yw32, w32, freqs32[k], nbins0[k], nbinsf[k], dlogq,
+            noverlap, dphi=dphi,
+            ignore_negative_delta_sols=ignore_negative_delta_sols)
+        if val <= 0:
+            continue
+        # back to the original timescale (float64 frequency, as eebls_gpu)
+        sols[k] = (float(q), float((phi + epoch * freqs64[k]) % 1.0))
+    return sols
+
+
 def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                   qmin_fac=0.5, qmax_fac=2.0, fmin=None,
                   fmax=None, freqs=None, qvals=None,
@@ -2291,14 +2454,21 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                   use_sparse=None, sparse_threshold=500,
                   use_gpu=True,
                   ignore_negative_delta_sols=False,
+                  n_solutions=10,
                   **kwargs):
     """
-    Compute BLS for timeseries, automatically selecting between GPU and
-    CPU implementations based on dataset size.
+    Keplerian BLS transit search, automatically selecting the
+    implementation from the dataset size.
 
-    For small datasets (ndata < sparse_threshold), uses the sparse BLS
-    algorithm (Panahi & Zucker 2021) which avoids binning and grid searching.
-    For larger datasets, uses the standard GPU-accelerated BLS.
+    For small datasets (``ndata < sparse_threshold``) the sparse BLS
+    algorithm (Panahi & Zucker 2021) tests every pair of observations
+    as transit boundaries (no binning; chosen for its detection
+    properties on sparse data, not for speed). For larger datasets the
+    periodogram is computed by the fast shared-memory GPU kernel
+    (:func:`eebls_gpu_fast`, fused phase-oversampling) and the best-fit
+    ``(q, phi)`` is recovered at the ``n_solutions`` highest peaks.
+    Both paths honour the same per-frequency Keplerian duration bounds
+    ``[qmin_fac, qmax_fac] * q_transit(f)``.
 
     Parameters
     ----------
@@ -2329,9 +2499,14 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     qvals: array_like, optional (default: None)
         Overrides the keplerian q values
     use_fast: bool, optional (default: False)
-        Use fast GPU implementation (if not using sparse or optimized)
+        Periodogram only: skip the ``(q, phi)`` recovery pass and return
+        ``solutions=None``. The periodogram itself is the same
+        :func:`eebls_gpu_fast` result the default path returns (kept
+        for backward compatibility; before 1.0 the default path ran the
+        slower binned :func:`eebls_gpu` search).
     use_optimized: bool, optional (default: False)
-        Use optimized GPU implementation (if not using sparse).
+        Use the optimized GPU kernel (:func:`eebls_gpu_fast_optimized`;
+        periodogram only, ``solutions=None``).
 
         Unless an explicit ``block_size`` is passed (which is always
         respected), this automatically selects a block size based on
@@ -2356,25 +2531,39 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         If False, uses CPU for sparse BLS. The use_gpu parameter only affects sparse BLS; standard BLS always uses GPU.
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore inverted dips
+    n_solutions: int, optional (default: 10)
+        Standard (non-sparse) path: number of highest-power frequencies
+        at which the best-fit ``(q, phi)`` is recovered (a CPU re-scan
+        of the kernel's box grid at those frequencies; see
+        :func:`_fast_bls_solutions`). The remaining entries of
+        ``solutions`` are ``None``. ``0`` returns a list of ``None``.
+        For a solution at every frequency use :func:`eebls_transit_gpu`
+        or :func:`eebls_gpu` (the full binned search; much slower).
     **kwargs:
-        passed to `eebls_gpu`, `eebls_gpu_fast`, `compile_bls`,
-        `fmax_transit`, `fmin_transit`, and `transit_autofreq`. On the
-        sparse path, only the kwargs that `sparse_bls_gpu` accepts
+        passed to `eebls_gpu_fast` (``dlogq``, ``noverlap``, ``dphi``,
+        ``freq_batch_size``, ``functions``, ``block_size``, ...; the
+        fast-kernel defaults ``dlogq=0.3``, ``noverlap=2`` apply),
+        `compile_bls`, `fmax_transit`, `fmin_transit`, and
+        `transit_autofreq`. The :func:`eebls_gpu`-only kwargs
+        ``nstreams`` and ``max_memory`` are ignored. On the sparse
+        path, only the kwargs that `sparse_bls_gpu` accepts
         (``block_size``, ``max_ndata``, ``stream``, ``kernel``,
-        ``use_simple``, ``convention``) are forwarded to it. A
-        ``convention=`` kwarg ('chi2ratio', 'snr' or 'loglik'; see
+        ``convention``) are forwarded to it. A ``convention=`` kwarg
+        ('chi2ratio', 'snr' or 'loglik'; see
         :func:`convert_bls_power`) selects the power-spectrum
         convention on every path.
 
         .. note::
 
-            The sparse-BLS path (default for ``ndata <
-            sparse_threshold``) honors the same per-frequency Keplerian
-            ``qmin_fac``/``qmax_fac`` duration bounds as the standard
-            path, so results are comparable across the
-            ``sparse_threshold`` boundary. ``use_fast`` only selects
-            between the standard (non-sparse) implementations; pass
-            ``use_sparse=False`` to force a standard grid search.
+            Both paths honour the per-frequency Keplerian
+            ``qmin_fac``/``qmax_fac`` duration bounds exactly per
+            frequency (the pre-1.0 standard path collapsed them to one
+            batch-wide window, so its results depended on
+            ``freq_batch_size`` and on the free device memory), so
+            results are comparable across the ``sparse_threshold``
+            boundary up to the two algorithms' different candidate
+            sets (binned box grid vs observation pairs). Pass
+            ``use_sparse=False`` to force the standard path.
 
     Returns
     -------
@@ -2382,12 +2571,13 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         Frequencies where BLS is evaluated
     bls: array_like, float
         BLS periodogram, normalized to :math:`1 - \\chi^2(f) / \\chi^2_0`
-    solutions: list of ``(q, phi)`` tuples
-        Best ``(q, phi)`` solution at each frequency
-
-        .. note::
-
-            Only returned when ``use_fast=False``.
+    solutions: list of ``(q, phi)`` tuples, or None
+        Best ``(q, phi)`` solution per frequency; ``phi`` is the transit
+        start phase in the original input timescale. Sparse path: a
+        solution at every frequency. Standard path: solutions at the
+        ``n_solutions`` highest peaks (always including the argmax),
+        ``None`` elsewhere. ``None`` altogether when ``use_fast=True``
+        or ``use_optimized=True``.
 
     """
     ndata = len(t)
@@ -2422,7 +2612,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
             # (rho, samples_per_peak, dlogq, ...) belong to the frequency
             # grid helpers or standard-BLS layers above.
             sparse_keys = ('block_size', 'max_ndata', 'stream', 'kernel',
-                           'use_simple', 'convention')
+                           'convention')
             sparse_kwargs = {k: v for k, v in kwargs.items()
                              if k in sparse_keys}
             powers, sols = sparse_bls_gpu(t, y, dy, freqs,
@@ -2437,7 +2627,17 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                 convention=kwargs.get('convention', 'chi2ratio'))
         return freqs, powers, sols
 
-    # Use GPU BLS for larger datasets
+    # Standard (binned) GPU path for larger datasets: the periodogram
+    # comes from the fast shared-memory kernel, which honours the
+    # per-frequency Keplerian bounds (before 1.0 this path ran
+    # eebls_gpu, whose kernels collapsed array bounds to one batch-wide
+    # window -- Sep 2026 audit defect 7); the best (q, phi) is recovered
+    # at the top n_solutions peaks afterwards.
+    for key in ('nstreams', 'max_memory'):   # eebls_gpu-only
+        kwargs.pop(key, None)
+    dlogq = kwargs.setdefault('dlogq', 0.3)
+    noverlap = kwargs.setdefault('noverlap', 2)
+    dphi = kwargs.get('dphi', 0.0)
 
     if use_optimized:
         # Choose a block size from ndata unless the caller asked for a
@@ -2459,17 +2659,18 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                                           functions=functions,
                                           **kwargs)
         return freqs, powers, None
-    elif use_fast:
-        powers = eebls_gpu_fast(t, y, dy, freqs,
-                                qmin=qmins, qmax=qmaxes,
-                                ignore_negative_delta_sols=ignore_negative_delta_sols,
-                                **kwargs)
+
+    powers = eebls_gpu_fast(t, y, dy, freqs,
+                            qmin=qmins, qmax=qmaxes,
+                            ignore_negative_delta_sols=ignore_negative_delta_sols,
+                            **kwargs)
+    if use_fast:
         return freqs, powers, None
 
-    powers, sols = eebls_gpu(t, y, dy, freqs,
-                             qmin=qmins, qmax=qmaxes,
-                             ignore_negative_delta_sols=ignore_negative_delta_sols,
-                             **kwargs)
+    sols = _fast_bls_solutions(
+        t, y, dy, freqs, powers, qmins, qmaxes, n_solutions,
+        dlogq=dlogq, noverlap=noverlap, dphi=dphi,
+        ignore_negative_delta_sols=ignore_negative_delta_sols)
     return freqs, powers, sols
 
 
