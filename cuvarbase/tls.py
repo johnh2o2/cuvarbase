@@ -14,6 +14,7 @@ import os
 import sys
 import threading
 import warnings
+import operator
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -145,12 +146,23 @@ def _to_caller_order(values, order):
     return out
 
 
-def _validate_q_window(qmin, qmax):
-    if np.any(qmin <= 0) or np.any(qmax < qmin) or np.any(qmax >= 1):
-        raise ValueError(
-            "need 0 < qmin <= qmax < 1 at every period (the transit "
-            "duration must be shorter than the period; the binned scan "
-            "would double-count phase bins for q >= 1)")
+def _validate_q_window(qmin, qmax, periods=None):
+    bad = (np.asarray(qmin) <= 0) | (np.asarray(qmax) < np.asarray(qmin)) \
+        | (np.asarray(qmax) >= 1)
+    if not np.any(bad):
+        return
+    where = ""
+    if periods is not None and np.ndim(bad) and np.any(bad):
+        pbad = np.asarray(periods, dtype=float)[np.asarray(bad)]
+        where = (" at P = %.4g .. %.4g d" % (pbad.min(), pbad.max()))
+    raise ValueError(
+        "need 0 < qmin <= qmax < 1 at every period%s (the transit "
+        "duration must be shorter than the period; the binned scan "
+        "would double-count phase bins for q >= 1). The Keplerian "
+        "duration window reaches q >= 1 at sub-Roche periods: shrink "
+        "qmax_fac, pass explicit qmin/qmax, raise the shortest trial "
+        "period, or opt into the constant window with "
+        "duration_window='fixed'." % where)
 
 
 def _first_transit_at_or_after(t_mid, period, tmin):
@@ -786,7 +798,7 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
             periods.astype(np.float64), R_star=R_star, M_star=M_star,
             R_planet=R_planet, qmin_fac=qmin_fac, qmax_fac=qmax_fac,
             window=duration_window)
-    _validate_q_window(qmin_arr, qmax_arr)
+    _validate_q_window(qmin_arr, qmax_arr, periods=periods)
 
     # Fast path: phase-binned batch engine with exact top-K refinement.
     # Falls through to the legacy per-point kernel when the caller uses
@@ -1565,7 +1577,7 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
     if len(qmin) != nperiods or len(qmax) != nperiods:
         raise ValueError("qmin and qmax must have same length as periods "
                          "(%d)" % nperiods)
-    _validate_q_window(qmin, qmax)
+    _validate_q_window(qmin, qmax, periods=periods_in)
 
     # The statistics (running-median detrend, period uncertainty)
     # assume an ascending grid: sort here, scatter outputs back to
@@ -1912,8 +1924,14 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
                 results[lc_idx] = res
 
     if fap_null_draws:
+        try:
+            n_null_draws = operator.index(fap_null_draws)
+        except TypeError:
+            raise ValueError(
+                "fap_null_draws must be an integer >= 1 (got %r)"
+                % (fap_null_draws,))
         _attach_null_fap(
-            results, lightcurves, int(fap_null_draws), fap_seed,
+            results, lightcurves, n_null_draws, fap_seed,
             dict(periods=periods, qmin=qmin, qmax=qmax,
                  n_durations=n_durations, t0_oversample=t0_oversample,
                  refine_top_k=0, block_size=block_size, nbins=nbins,
@@ -1931,7 +1949,8 @@ def _attach_null_fap(results, lightcurves, n_draws, seed, search_kwargs):
     recorded under 'FAP' (add-one estimator) with the null SDEs under
     'SDE_null'."""
     if n_draws < 1:
-        raise ValueError("fap_null_draws must be >= 1 (got %d)" % n_draws)
+        raise ValueError(
+            "fap_null_draws must be an integer >= 1 (got %r)" % (n_draws,))
     rng = np.random.RandomState(seed)
     n_lc = len(lightcurves)
     lens = [len(lc[0]) for lc in lightcurves]
