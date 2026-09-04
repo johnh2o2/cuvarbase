@@ -73,9 +73,11 @@ class TestNarrowTransitRecovery:
         # duration window ([0.018, 0.073] at 3 d; 8.55 with the retired
         # fixed window, 6.55 / 8.00 under the pre-1.0 SR definition on
         # the same spectra). The null on this 400-period grid is
-        # 4.2 +/- 0.6 (max 5.7 over 40 noise light curves), so > 6 is
-        # still a clear detection; the old threshold of 7 was set on
-        # the wider-window spectrum.
+        # 4.2 +/- 0.9, with a tail to ~6.7 in 60 draws, so > 6 is a
+        # deterministic regression guard on this seeded light curve,
+        # NOT a detection threshold for this grid (a bootstrap of the
+        # golden light curve itself gives FAP 0.010, null max 6.34).
+        # The old threshold of 7 was set on the wider-window spectrum.
         assert results['SDE'] > 6
 
 
