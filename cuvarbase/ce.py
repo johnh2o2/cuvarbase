@@ -231,11 +231,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     ----------
     phase_bins: int, optional (default: 10)
         Number of phase bins to use.
-    mag_bins: int, optional (default: 10)
+    mag_bins: int, optional (default: 5)
         Number of mag bins to use.
     max_phi: float, optional (default: 3.)
-        For weighted CE; skips contibutions to bins that are more than
-        ``max_phi`` sigma away.
+        For weighted CE; a magnitude bin only receives probability mass
+        from a datum if some part of the bin lies within ``max_phi``
+        sigma of it (the datum's own bin always does).
     weighted: bool, optional (default: False)
         If true, uses the weighted version of the CE periodogram. Slower, but
         accounts for data uncertainties.
@@ -246,12 +247,42 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     mag_overlap: int, optional (default: 0)
         If > 0, the mag bins are overlapped with each other
     use_fast: bool, optional (default: False)
-        Use a somewhat experimental function to speed up
-        computations. This is perfect for large Nfreqs and nobs <~ 2000.
-        If True, use :func:`run` and not :func:`large_run` and set
-        ``nstreams = 1``.
+        Use the shared-memory kernels (one thread block per trial
+        frequency, histogram kept in shared memory). Results match the
+        standard kernels to floating-point precision; they are not
+        generally faster on current GPUs. Incompatible with
+        ``weighted=True`` and ``balanced_magbins=True``. Works with
+        ``run``, ``large_run`` and the batched entry points, in single
+        or double precision.
+    use_double: bool, optional (default: False)
+        Use double precision on the GPU.
+    balanced_magbins: bool, optional (default: False)
+        Use magnitude bins that each hold the same number of points
+        (edges at the midpoints between adjacent sorted groups; see
+        :meth:`cuvarbase.memory.ConditionalEntropyMemory.balance_magbins`)
+        instead of uniform bins. Incompatible with ``weighted``,
+        ``use_fast``, ``compute_log_prob`` and ``mag_overlap > 0``.
+    widen_mag_range: bool, optional (default: False)
+        Weighted CE only: widen the normalized magnitude range by
+        ``max_phi`` times the median uncertainty on each side, so that
+        the probability mass of the faintest/brightest points is not
+        truncated by the range edges.
     compute_log_prob: bool, optional (default: False)
-        Instead of computing CE, compute and return the log-probability periodogram.
+        Instead of the conditional entropy, return the Poisson
+        log-likelihood of the phase-folded histogram under the
+        phase-independent null model (``sum_{phi, m} [N log Nexp - Nexp
+        - lgamma(N + 1)]`` with ``Nexp = N_phi * p(m)``). Like the CE it
+        is *minimized* at the true frequency. Incompatible with
+        ``weighted`` and ``balanced_magbins``.
+
+    Notes
+    -----
+    The returned periodogram is Graham et al. (2013)'s conditional
+    entropy ``H(m|phi)`` plus the constant ``log((mag_overlap + 1) /
+    mag_bins)`` (the magnitude bin width, i.e. entropy of a density
+    rather than of bin probabilities). The offset is the same at every
+    frequency, so the location of the minimum is unaffected; subtract it
+    if you need the entropy in Graham's normalization.
 
     Example
     -------
@@ -495,10 +526,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``t``: Observation times
             * ``y``: Observations
             * ``dy``: Observation uncertainties
-        freqs: list, optional
-            Either a list of floats (same frequencies for all data),
-            or a list of length ``n=len(data)``, with element ``i`` of the
-            list being a list of frequencies for the ``i``-th lightcurve.
+        freqs: array_like, optional
+            Either a single 1-D array of frequencies (same grid for all
+            lightcurves), or a list of length ``n=len(data)`` with
+            element ``i`` being the frequency grid for the ``i``-th
+            lightcurve.
         **kwargs
 
         Returns
@@ -531,6 +563,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                     nlcs=1, streams=None, **kwargs):
         """
         Preallocate memory for future runs.
+
+        The frequency grid is uploaded to the GPU here, and each memory
+        object is bound to one of the process streams (or to
+        ``streams[i]`` if given), so that :meth:`finish` synchronizes
+        the result transfers of later :meth:`run` calls.
 
         Parameters
         ----------
@@ -607,8 +644,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``t``: observation times
             * ``y``: observations
             * ``dy``: observation uncertainties
-        freqs: optional, list of ``np.ndarray`` frequencies
-            List of custom frequencies. If not specified, calls
+        freqs: optional, array_like
+            A single 1-D frequency grid (shared by all lightcurves) or a
+            list of per-lightcurve grids. If not specified, calls
             ``autofrequency`` with default arguments
         memory: optional, list of ``ConditionalEntropyMemory`` objects
             List of memory objects, length of list must be ``>= len(data)``
@@ -691,8 +729,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``t``: observation times
             * ``y``: observations
             * ``dy``: observation uncertainties
-        freqs: optional, list of ``np.ndarray`` frequencies
-            List of custom frequencies. If not specified, calls
+        freqs: optional, array_like
+            A single 1-D frequency grid (shared by all lightcurves) or a
+            list of per-lightcurve grids. If not specified, calls
             ``autofrequency`` with default arguments
         max_memory: float, optional (default: None)
             Maximum memory per batch in bytes. If ``None``, it
