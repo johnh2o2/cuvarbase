@@ -640,8 +640,11 @@ class TestSep2026Defects:
                 want[i, 0, k] = proc._compute_matched_filter_snr(
                     Y, T, psd, w, 1e-12)
         rel = np.abs(got - want).max() / np.abs(want).max()
-        # measured (A40): 3.7e-6 float32, 4e-8 float64
-        assert rel < (1e-6 if use_double else 1e-4), rel
+        # measured (A40, bit-reproducible over 3 repeats): 3.64e-6
+        # float32, 4.10e-8 float64 -- the residual is the different
+        # NFFT truncation radius m (the reused memory is sized from an
+        # L1 bound over all vectors, the per-call path from each y)
+        assert rel < (1e-6 if use_double else 3e-5), rel
 
     @mark_cuda_test
     def test_sequential_nonzero_mean_basis(self):

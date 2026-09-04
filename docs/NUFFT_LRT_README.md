@@ -159,6 +159,13 @@ fundamental, which is why box searches exist.)
   alike.
 - **`dy` is not used** by any detector (a `UserWarning` is emitted if it
   is passed); the noise model is the PSD.
+- **Detector A's prior is effectively wider than you specify.** The Gram
+  matrix `G_ij = <v_i, v_j>_W` is accumulated over the `nf` (default
+  `2n`) non-orthogonal NFFT modes, which overcounts the corresponding
+  time-domain inner products by ~2.2–2.4× for the samplings measured in
+  the Sep-2026 audit, so `coeff_prior_cov` behaves as though it were
+  about that much wider. The effect on the statistic is small, but
+  calibrate the prior and the detection threshold on the same footing.
 - **Frequency resolution**: the default `nf = 2·len(t)` gives a
   maximum template frequency `nf / T_span`. Resolving a transit of
   duration `d` wants `nf ≳ a few × T_span / d` — but see the first
