@@ -265,6 +265,50 @@ to ``floor(min(t))`` (observation times are epoch-subtracted internally to
 preserve float32 precision).
 
 
+Input validation
+----------------
+
+Every public entry point in cuvarbase -- BLS, TLS, Lomb-Scargle,
+conditional entropy, PDM, the NFFT and NUFFT-LRT -- validates its
+light curve and its trial grid on the host before any GPU work
+(kernel compilation included) and raises ``ValueError`` when
+
+* ``t``, ``y`` or ``dy`` contains a NaN or an infinity,
+* any ``dy`` is zero or negative (uncertainties become
+  inverse-variance weights ``dy**-2``),
+* ``t``, ``y`` and ``dy`` do not all have the same length,
+* the light curve has fewer points than the method needs (four for
+  Lomb-Scargle, three for NUFFT-LRT, two elsewhere),
+* the frequency grid is empty or contains a non-finite or
+  non-positive frequency,
+* the transit-duration bounds are not ``0 < qmin <= qmax <= 1`` (the
+  binned kernels) or not finite (all paths).
+
+The error message names the array, the number of offending entries and
+the first few of their indices::
+
+    >>> eebls_gpu_fast(t, y, dy, freqs)
+    ValueError: eebls_gpu_fast: t contains 1 non-finite value(s)
+    (NaN or inf) out of 600; first at index/indices 137. Remove or
+    interpolate the bad samples before searching.
+
+Before 1.0 these inputs were accepted silently and produced a finite
+but wrong periodogram, an all-NaN spectrum, or a kernel crash that
+left the process's CUDA context unusable. Because the checks run on
+the host, a rejected call is *safe*: the context is untouched and the
+next call in the same process succeeds. Nothing changes for valid
+finite input.
+
+Filter your data before searching::
+
+    m = np.isfinite(t) & np.isfinite(y) & np.isfinite(dy) & (dy > 0)
+    freqs, power, sols = eebls_transit(t[m], y[m], dy[m])
+
+The two helpers are public and can be reused in your own pipeline:
+:func:`cuvarbase.utils.check_lightcurve` and
+:func:`cuvarbase.utils.check_freqs`.
+
+
 Data hygiene: near-zero uncertainties
 -------------------------------------
 

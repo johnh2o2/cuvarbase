@@ -661,9 +661,11 @@ class TestLombScargleSimpleWeights(object):
 
     def test_lomb_scargle_simple_passes_raw_dy(self, monkeypatch):
         from .. import lombscargle as ls
-        dy = np.array([0.1, 0.2, 0.4])
-        t = np.array([0.0, 1.0, 2.0])
-        y = np.array([1.0, 2.0, 3.0])
+        # >= _LS_MIN_NDATA points: lomb_scargle_simple validates the
+        # light curve before forwarding it (Sep 2026 audit, defect 23)
+        dy = np.array([0.1, 0.2, 0.4, 0.3, 0.15])
+        t = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
+        y = np.array([1.0, 2.0, 3.0, 2.5, 1.5])
         captured = {}
 
         def fake_run(self, data, **kwargs):

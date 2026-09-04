@@ -157,9 +157,16 @@ deviation of a Gaussian prior on the harmonic amplitudes (a ridge term
 ``1 / amplitude_prior**2``) and is applied on every path. ``dy=None``
 gives unit weights.
 
-**The -1 sentinel.** A power of exactly ``-1`` marks a non-finite or
-negative value at that frequency (non-finite ``y`` or ``dy``, ``dy = 0``,
-degenerate ``t``); it is not a periodogram value. Check the input.
+**The -1 sentinel.** A power of exactly ``-1`` is the kernels' marker
+for a non-finite or negative value at that frequency. **It should not
+occur.** Since 1.0 every entry point validates the light curve before
+any GPU work (:func:`cuvarbase.utils.check_lightcurve`), so the inputs
+that used to fill a whole periodogram with ``-1`` -- non-finite ``y``
+or ``dy``, ``dy = 0``, mismatched array lengths, fewer than four
+observations -- raise ``ValueError`` instead. The kernel branch is
+kept as a last-resort guard against a degenerate grid (e.g.
+all-identical ``t``); a ``-1`` in a returned periodogram is a bug
+report, not a valid power.
 
 **Precision.** The default float32 pipeline agrees with the exact
 float64 generalized Lomb-Scargle to about 1e-4 in power for

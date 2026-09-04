@@ -19,6 +19,7 @@ from pycuda.compiler import SourceModule
 
 from .core import GPUAsyncProcess, ensure_context
 from .utils import _module_reader, find_kernel, normalize_light_curves
+from .utils import check_lightcurve, check_freqs
 from .utils import autofrequency as utils_autofreq
 from .memory import ConditionalEntropyMemory
 
@@ -32,6 +33,30 @@ import warnings
 _CE_KERNELS = ('ce_classical_fast', 'ce_classical_faster', 'constdpdm_ce',
                'histogram_data_count', 'histogram_data_weighted',
                'log_prob', 'standard_ce', 'weighted_ce')
+
+
+# Minimum number of observations the conditional-entropy entry points
+# accept. CE rescales y to [0, 1] with (y - min) / (max - min), which
+# is 0/0 for a single point (the whole spectrum came back NaN).
+_CE_MIN_NDATA = 2
+
+
+def _check_ce_data(data, where):
+    """Validate a CE ``[(t, y, dy), ...]`` batch before any GPU work.
+
+    ``dy = 0`` or a NaN in ``y`` used to give a finite but wrong
+    spectrum (the NaN point was counted in magnitude bin 0; 3% relative
+    error with a different argmax), and a NaN in ``t`` moved the argmax
+    without any warning (Sep 2026 audit, defect 23).
+    """
+    for i, lc in enumerate(data):
+        if len(lc) < 2:
+            raise ValueError("%s: lightcurve %d must be a (t, y, dy) "
+                             "tuple; got %d elements"
+                             % (where, i, len(lc)))
+        dy = lc[2] if len(lc) > 2 else None
+        check_lightcurve(lc[0], lc[1], dy, min_n=_CE_MIN_NDATA,
+                         name='%s lightcurve %d' % (where, i))
 
 
 def _needs_compile(prepared_functions):
@@ -718,6 +743,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             reading them (the batched entry points synchronize for you)
 
         """
+        _check_ce_data(data, 'ConditionalEntropyAsyncProcess.run')
+        if freqs is not None:
+            for frq in _freq_grids(freqs, len(data)):
+                check_freqs(frq,
+                            name='ConditionalEntropyAsyncProcess.run')
+
         # compile module if not compiled already
         self._ensure_compiled(**kwargs)
 
@@ -739,6 +770,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             raise ValueError(
                 "number of frequency grids (%d) does not match number of "
             "lightcurves (%d)" % (len(frqs), len(data)))
+
+        for frq in frqs:
+            check_freqs(frq, name='ConditionalEntropyAsyncProcess.run')
 
         if not self.use_fast:
             for f, d in zip(frqs, data):
@@ -809,6 +843,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         """
 
+        _check_ce_data(data, 'ConditionalEntropyAsyncProcess.large_run')
+        if freqs is not None:
+            for frq in _freq_grids(freqs, len(data)):
+                check_freqs(
+                    frq, name='ConditionalEntropyAsyncProcess.large_run')
+
         # compile module if not compiled already
         self._ensure_compiled(**kwargs)
 
@@ -827,6 +867,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             raise ValueError(
                 "number of frequency grids (%d) does not match number of "
             "lightcurves (%d)" % (len(frqs), len(data)))
+
+        for frq in frqs:
+            check_freqs(frq,
+                        name='ConditionalEntropyAsyncProcess.large_run')
 
         cpers = []
         for d, f in zip(data, frqs):
@@ -889,6 +933,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             observations is not much larger than the typical number
             of observations.
         """
+
+        _check_ce_data(data, 'batched_run_const_nfreq')
+        if freqs is not None:
+            check_freqs(freqs, name='batched_run_const_nfreq')
 
         # create streams if needed
         bsize = min([len(data), batch_size])
