@@ -431,11 +431,15 @@ class TestCE(object):
             print(pct_out_of_bounds, delta_f * baseline)
             assert(top_freq_is_close and pct_out_of_bounds < 5e-2)
 
+    # (phase_bins, mag_bins) combinations with (mag_bins + 1) * phase_bins
+    # odd -- (5, 4), (7, 6), (3, 4) -- used to crash the double-precision
+    # fast kernels with 'misaligned address' (defect 17).
     @pytest.mark.parametrize('use_double', [True, False])
     @pytest.mark.parametrize('shmem_lc', [True, False])
     @pytest.mark.parametrize('freq_batch_size', [1, None])
     @pytest.mark.parametrize('phase_bins,phase_overlap,mag_bins,mag_overlap',
-                             [(10, 0, 5, 0), (10, 1, 5, 1)])
+                             [(10, 0, 5, 0), (10, 1, 5, 1), (5, 0, 4, 0),
+                              (7, 0, 6, 0), (3, 0, 4, 0)])
     @pytest.mark.parametrize('freq', [12.0])
     @pytest.mark.parametrize('t0', [0.0])
     #@pytest.mark.parametrize('balanced_magbins', [True, False])
@@ -689,3 +693,32 @@ class TestCEWeighted(object):
         assert np.all(np.isfinite(ce3))
         assert abs(freqs[np.argmin(ce3)] - 1.3) < 0.01
         assert abs(freqs[np.argmin(ce)] - 1.3) < 0.01
+
+
+class TestCEDoubleFast(object):
+    """Defect 17 (ce-double-fast-crash): shared-memory misalignment for
+    ``use_double=True, use_fast=True`` when (mag_bins + 1) * phase_bins is
+    odd, and a 4-byte shared-memory shortfall for odd ndata."""
+
+    @pytest.mark.parametrize('ndata', [200, 201])
+    @pytest.mark.parametrize('shmem_lc', [True, False])
+    @pytest.mark.parametrize('phase_bins,mag_bins',
+                             [(5, 4), (7, 6), (3, 4), (10, 5)])
+    def test_double_fast_matches_double_standard(self, phase_bins, mag_bins,
+                                                 shmem_lc, ndata):
+        r = np.random.RandomState(0)
+        t = np.sort(r.rand(ndata) * 20)
+        y = 12 + 0.3 * np.cos(2 * np.pi * t * 1.7) + 0.05 * r.randn(ndata)
+        dy = 0.05 * np.ones(ndata)
+        freqs = np.linspace(0.1, 3.0, 256)
+        ref = run_ce(ConditionalEntropyAsyncProcess(
+            phase_bins=phase_bins, mag_bins=mag_bins, use_double=True),
+            t, y, dy, freqs)
+        proc = ConditionalEntropyAsyncProcess(phase_bins=phase_bins,
+                                              mag_bins=mag_bins,
+                                              use_double=True, use_fast=True)
+        p = run_ce(proc, t, y, dy, freqs, shmem_lc=shmem_lc)
+        assert np.all(np.isfinite(p))
+        assert_allclose(p, ref, rtol=0, atol=1e-10)
+        cpu = cpu_ce(t, y, freqs, phase_bins, mag_bins, dtype=np.float64)
+        assert_allclose(p, cpu, rtol=0, atol=1e-10)

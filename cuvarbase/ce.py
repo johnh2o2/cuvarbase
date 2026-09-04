@@ -107,11 +107,19 @@ def conditional_entropy_fast(memory, functions, block_size=256,
 
     block = (block_size, 1, 1)
 
-    # Get the shared memory requirement
+    # Shared memory layout (must match ce_classical_fast/faster):
+    #   block_bin[nmag * nphase] (uint32) | block_bin_phi[nphase] (uint32)
+    #   | pad to sizeof(FLT) | Hc[nmag * nphase] (FLT)
+    #   | t_sh[ndata] (FLT) | y_sh[ndata] (uint32)      (faster only)
     r = memory.real_type(1).nbytes
     u = np.uint32(1).nbytes
     shmem = (r + u) * memory.phase_bins * memory.mag_bins
     shmem += u * memory.phase_bins
+    # The alignment pad sits between the uint32 histograms and Hc, so it
+    # has to be added BEFORE the (optional) lightcurve block: computing
+    # it after adding ``data_mem`` made it depend on the parity of ndata
+    # and under-allocated by 4 bytes for odd ndata in double precision.
+    shmem += (-shmem) % r
     data_mem = (r + u) * len(memory.t)
 
     func = fast_ce
@@ -126,9 +134,6 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     if data_in_shared_mem:
         shmem += data_mem
         func = faster_ce
-
-    # Make sure we have extra memory for alignment
-    shmem += shmem % r
 
     i_freq = 0
     while (i_freq < memory.nf):
