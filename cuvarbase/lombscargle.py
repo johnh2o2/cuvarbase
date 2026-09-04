@@ -29,19 +29,115 @@ except ImportError:
 
 
 
-def get_k0(freqs):
-    return max([1, int(round(freqs[0] / (freqs[1] - freqs[0])))])
+def _grid_spacing(freqs):
+    """``(f, df)``: the frequency grid as a 1-d float64 array and its
+    spacing estimated from the full span, ``(f[-1] - f[0]) / (nf - 1)``.
 
+    The full-span estimate is used everywhere (:func:`get_k0`,
+    :func:`check_k0`, the ``df`` handed to the kernels) because
+    ``f[1] - f[0]`` carries the rounding of two nearly equal numbers:
+    for ``freqs = df * (k0 + arange(nf))`` its relative error is
+    ``~k0 * eps``, which ``k0 * df`` then amplifies to ``k0**2 * eps``
+    (3e-5 modes at k0 = 365,000 in float64, and far worse for float32
+    grids).
 
-def check_k0(freqs, k0=None, rtol=1E-2, atol=1E-7):
-    k0 = k0 if k0 is not None else get_k0(freqs)
-    df = freqs[1] - freqs[0]
-    f0 = k0 * df
-    if not (abs(f0 - freqs[0]) < rtol * df + atol):
+    Raises ``ValueError`` for fewer than two frequencies or a
+    non-increasing / non-finite grid.
+    """
+    f = np.asarray(freqs, dtype=np.float64).ravel()
+    nf = len(f)
+    if nf < 2:
         raise ValueError(
-            "freqs[0]=%g is not k0 * df for integer k0 (df=%g): the GPU "
-            "Lomb-Scargle requires freqs = df * (k0 + arange(nf))"
-            % (freqs[0], df))
+            "at least two frequencies are needed (got %d): the GPU "
+            "Lomb-Scargle evaluates a uniform grid df * (k0 + arange(nf))"
+            % nf)
+    df = (f[-1] - f[0]) / (nf - 1)
+    if not (np.isfinite(df) and df > 0):
+        raise ValueError(
+            "freqs must be finite and strictly increasing (got freqs[0]=%r, "
+            "freqs[-1]=%r): the GPU Lomb-Scargle evaluates a uniform grid "
+            "df * (k0 + arange(nf)) with df > 0" % (f[0], f[-1]))
+    return f, df
+
+
+def get_k0(freqs):
+    """Index of the first mode, ``round(freqs[0] / df)`` (at least 1),
+    of a uniform grid ``freqs = df * (k0 + arange(nf))``."""
+    f, df = _grid_spacing(freqs)
+    return max([1, int(round(f[0] / df))])
+
+
+def check_k0(freqs, k0=None, rtol=1E-6, atol=0.):
+    """Validate that ``freqs`` is the uniform grid ``df * (k0 + arange(nf))``
+    the GPU kernels evaluate.
+
+    Every kernel (NFFT and direct sums) evaluates ``fmin + i * df``; the
+    user's array only labels the output. A grid that is not uniform --
+    two concatenated ``arange`` segments, a uniform grid with points
+    deleted, ``geomspace`` -- was silently evaluated on the implied
+    uniform grid and returned under the wrong labels before 1.0, when
+    only ``freqs[0:2]`` were inspected (defect 15,
+    ``ls-nonuniform-grid``). ``freqs[0]`` must also be an integer
+    multiple of ``df``: the NFFT can only produce integer modes (the
+    device rounds ``minimum_frequency`` to the nearest one).
+
+    Parameters
+    ----------
+    freqs : array_like
+        Candidate grid (any float dtype; compared in float64).
+    k0 : int, optional
+        Expected first mode; :func:`get_k0` of the grid if omitted.
+    rtol : float, optional (default: 1e-6)
+        Tolerance on every spacing and on ``freqs[0] - k0 * df``, as a
+        fraction of ``df``. A dtype-aware allowance for the rounding of
+        the grid's own construction (``4 eps(dtype) max|f|``, propagated
+        through the ``k0 * df`` product) is added, so float64
+        ``autofrequency``/``arange``-built grids of any size and float32
+        grids of moderate ``k0 + nf`` pass, while any deviation the
+        grid's precision can represent is rejected.
+    atol : float, optional (default: 0)
+        Absolute tolerance (frequency units) added to both tests.
+
+    Raises
+    ------
+    ValueError
+        Naming the first non-uniform spacing, or the fractional
+        ``freqs[0] / df``.
+    """
+    f, df = _grid_spacing(freqs)
+    nf = len(f)
+    k0 = get_k0(f) if k0 is None else int(k0)
+
+    dtype = np.asarray(freqs).dtype
+    eps = np.finfo(dtype).eps if np.issubdtype(dtype, np.floating) \
+        else np.finfo(np.float64).eps
+    round_tol = 4.0 * float(eps) * float(np.max(np.abs(f)))
+
+    # uniformity: every spacing against the median spacing (robust to a
+    # single gap, so the message names the gap and not the first point)
+    diffs = np.diff(f)
+    df_med = float(np.median(diffs))
+    bad = np.flatnonzero(np.abs(diffs - df_med)
+                         > rtol * df_med + round_tol + atol)
+    if len(bad):
+        i = int(bad[0])
+        raise ValueError(
+            "freqs is not uniformly spaced: freqs[%d] - freqs[%d] = %.10g "
+            "but the grid spacing is %.10g (%d of %d spacings deviate by "
+            "more than %g df). The GPU Lomb-Scargle evaluates exactly "
+            "freqs = df * (k0 + arange(nf)) and cannot use a non-uniform "
+            "grid; build one uniform grid per band instead"
+            % (i + 1, i, diffs[i], df_med, len(bad), nf, rtol))
+
+    # first mode: the k0 * df product amplifies the spacing's rounding
+    # (two endpoint roundings over nf - 1 spacings) by k0 / (nf - 1)
+    k0_tol = rtol * df + round_tol * (1.0 + float(k0) / (nf - 1)) + atol
+    if not (abs(f[0] - k0 * df) <= k0_tol):
+        raise ValueError(
+            "freqs[0]=%.10g is not an integer multiple of the grid spacing "
+            "df=%.10g (freqs[0] / df = %.8f, nearest integer k0 = %d): the "
+            "GPU Lomb-Scargle requires freqs = df * (k0 + arange(nf))"
+            % (f[0], df, f[0] / df, k0))
 
 
 def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
@@ -448,12 +544,17 @@ def lomb_scargle_async(memory, functions, freqs,
 
     (lomb, lomb_dirsum), nfft_funcs = functions
 
-    df = freqs[1] - freqs[0]
+    freqs, df = _grid_spacing(freqs)
+    nf = len(freqs)
     samples_per_peak = 1./((memory.tmax - memory.tmin) * df)
     if not (get_k0(freqs) == memory.k0):
         raise ValueError(
             "freqs does not match the grid this memory was set up for "
             "(k0 mismatch: %d != %d)" % (get_k0(freqs), memory.k0))
+    if nf > memory.nf:
+        raise ValueError(
+            "memory was allocated for nf=%d frequencies but %d were given"
+            % (memory.nf, nf))
 
     stream = memory.stream
 
@@ -828,23 +929,37 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             list of [(t, y, dy), ...] containing
             * ``t``: observation times
             * ``y``: observations
-            * ``dy``: observation uncertainties
+            * ``dy``: observation uncertainties, or ``None`` for unit
+              weights (an unweighted periodogram)
         freqs: optional, list of ``np.ndarray`` frequencies
-            List of custom frequencies. Right now, this has to be linearly
-            spaced with ``freqs[0] / (freqs[1] - freqs[0])`` being an integer.
+            List of custom frequency grids (one per lightcurve; a single
+            array is used for all). Each grid **must** be uniform,
+            ``freqs = df * (k0 + np.arange(nf))`` with integer ``k0 >= 1``
+            and ``nf >= 2`` -- the kernels evaluate exactly that grid and
+            the array only labels the output. Grids are validated with
+            :func:`check_k0` and a ``ValueError`` names the first
+            offending point (concatenated or thinned grids, ``geomspace``,
+            ``linspace`` whose start is not a multiple of its step).
+            Use one uniform grid per band instead. Default: ``autofrequency``.
         memory: optional, list of ``LombScargleMemory`` objects
             List of memory objects, length of list must be ``>= len(data)``
         use_fft: optional, bool (default: True)
-            Uses the NFFT, otherwise just does direct summations (which
-            are quite slow...)
+            Uses the NFFT, otherwise direct summations (O(N nf); slow).
+            ``nharmonics > 1`` is supported on both paths -- with
+            ``use_fft=False`` the multiharmonic sums run on the host.
         floating_mean: optional, bool (default: True)
             Add a floating mean to the model (see Zechmeister & Kurster 2009)
         window: optional, bool (default: False)
             If true, computes the window function for the data instead of
             Lomb-Scargle
-        amplitude_prior: optional, float (default: None)
-            If not None, sets the variance of a Gaussian prior on
-            the amplitude (sometimes useful for suppressing aliases)
+        amplitude_prior: optional, float or array_like (default: None)
+            If not None, the *standard deviation* of a zero-centred
+            Gaussian prior on the amplitude of every harmonic (or one
+            per harmonic); a ridge term ``1 / amplitude_prior**2`` is
+            added to the amplitude normal equations (see
+            :func:`add_regularization`; sometimes useful for suppressing
+            aliases). Honoured on every path, including
+            ``nharmonics > 1`` (silently ignored there before 1.0).
         **kwargs
 
         Returns
@@ -879,11 +994,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                 "number of frequency grids (%d) does not match number of "
             "lightcurves (%d)" % (len(frqs), len(data)))
 
-        dfs = [frq[1] - frq[0] for frq in frqs]
+        # the kernels evaluate df * (k0 + arange(nf)) and the user's
+        # array only labels the output: validate every grid (uniform
+        # spacing, integer first mode, >= 2 points) before any GPU work
+        for frq in frqs:
+            check_k0(frq)
         k0s = [get_k0(frq) for frq in frqs]
-
-        # make sure k0 * df is the minimum frequency
-        [check_k0(frq, k0=k0) for frq, k0 in zip(frqs, k0s)]
 
         if memory is None:
             memory = self.memory
