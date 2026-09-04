@@ -723,7 +723,7 @@ def test_cuda_context_survives_rejected_calls():
         lambda: eebls_gpu_batch([(t_nan, y, dy)], freqs, qmin=0.03,
                                 qmax=0.3),
     ]
-    for i, call in enumerate(bad_calls):
+    for call in bad_calls:
         with pytest.raises(ValueError):
             call()
 
@@ -745,8 +745,11 @@ def test_cuda_context_survives_rejected_calls():
 
 def test_valid_input_is_unaffected_by_the_validators():
     """The acceptance criterion of defect 23: no change for valid
-    input. A validated call must give exactly what the same call gives
-    when the data are staged through a pre-validated memory object."""
+    input. The validators must not perturb, copy or re-cast the data
+    they pass through, so repeated calls stay reproducible to the
+    kernels' float32 atomic-accumulation noise and float32 inputs are
+    still accepted (they used to reach the kernels untouched, and they
+    still do)."""
     t, y, dy = make_lc(ndata=300, baseline=20., seed=11)
     freqs = np.linspace(0.6, 1.6, 256)
     a = eebls_gpu_fast(t, y, dy, freqs, qmin=0.03, qmax=0.3, noverlap=1)

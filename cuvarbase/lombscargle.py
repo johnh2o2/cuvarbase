@@ -1152,7 +1152,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # array only labels the output: validate every grid (uniform
         # spacing, integer first mode, >= 2 points) before any GPU work
         for frq in frqs:
-            check_freqs(frq, name='LombScargleAsyncProcess.run')
+            if freqs is None:
+                # the autofrequency default did not go through the
+                # check at the top of this method
+                check_freqs(frq, name='LombScargleAsyncProcess.run')
             check_k0(frq)
         k0s = [get_k0(frq) for frq in frqs]
 
