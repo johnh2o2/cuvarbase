@@ -843,3 +843,145 @@ class TestCufinufftPlanCache(object):
         assert len(cb._plan_cache) == cb._PLAN_CACHE_MAX_SIZE
         cb.free_plan_cache()
         assert len(cb._plan_cache) == 0
+
+
+class TestCheckK0(object):
+    """``check_k0`` must reject every grid the kernels cannot evaluate
+    (defect 15, ``ls-nonuniform-grid``, Sep 2026): before 1.0 only
+    ``freqs[0:2]`` were inspected, so concatenated / thinned grids
+    passed and were silently evaluated on the implied uniform grid
+    (corr 0.009 with astropy at the user's labels). CPU-only."""
+
+    @staticmethod
+    def _grid(k0=50, nf=600, T=100.0, spp=5):
+        df = 1.0 / (spp * T)
+        return df * (k0 + np.arange(nf))
+
+    def test_concatenated_segments_raise_naming_the_junction(self):
+        from ..lombscargle import check_k0
+        fu = np.concatenate([np.arange(0.1, 1.0, 0.002),
+                             np.arange(1.0, 5.0, 0.01)])
+        with pytest.raises(ValueError,
+                           match=r"not uniformly spaced.*freqs\[451\] - "
+                                 r"freqs\[450\]"):
+            check_k0(fu)
+
+    def test_deleted_points_raise_naming_the_gap(self):
+        from ..lombscargle import check_k0
+        fdel = np.delete(self._grid(), np.arange(100, 120))
+        with pytest.raises(ValueError,
+                           match=r"freqs\[100\] - freqs\[99\]"):
+            check_k0(fdel)
+
+    def test_auditor_grid_uniform_for_two_points_raises(self):
+        from ..lombscargle import check_k0
+        f = self._grid()
+        fb = f.copy()
+        fb[2:] = f[2] + 3 * (f[2:] - f[2])
+        with pytest.raises(ValueError, match="not uniformly spaced"):
+            check_k0(fb)
+
+    def test_fractional_first_mode_raises(self):
+        from ..lombscargle import check_k0
+        # linspace(0.1, 10, 50001): df = 1.98e-4, freqs[0] / df = 505.05
+        with pytest.raises(ValueError, match="not an integer multiple"):
+            check_k0(np.linspace(0.1, 10.0, 50001))
+        f = self._grid()
+        df = f[1] - f[0]
+        with pytest.raises(ValueError, match="not an integer multiple"):
+            check_k0(f + 0.3 * df)
+        # 1e-3 of a mode used to pass the old 1 % tolerance
+        with pytest.raises(ValueError, match="not an integer multiple"):
+            check_k0(f + 1e-3 * df)
+
+    def test_descending_short_and_geomspace_raise(self):
+        from ..lombscargle import check_k0, get_k0
+        f = self._grid()
+        with pytest.raises(ValueError, match="strictly increasing"):
+            check_k0(f[::-1])
+        with pytest.raises(ValueError, match="at least two"):
+            check_k0(f[:1])
+        with pytest.raises(ValueError, match="at least two"):
+            get_k0(f[:1])
+        with pytest.raises(ValueError):
+            check_k0(np.geomspace(0.1, 10.0, 1000))
+
+    def test_valid_grids_pass(self):
+        from ..lombscargle import check_k0, get_k0
+        from ..utils import autofrequency
+        rng = np.random.RandomState(1)
+        t = np.sort(rng.uniform(0, 100.0, 600))
+        for f, k0 in [(autofrequency(t), 1),
+                      (autofrequency(t, minimum_frequency=2.0,
+                                     maximum_frequency=3.0), None),
+                      (np.linspace(0.1, 10.0, 991), 10),
+                      (self._grid(), 50),
+                      # float64 rounding at large k0 must not trip the
+                      # k0 test (k0**2 eps = 3e-5 modes with the naive
+                      # f[1] - f[0] spacing)
+                      ((1.0 / (5 * 3650.0)) * (365000 + np.arange(10)),
+                       365000),
+                      ((1.0 / (5 * 3650.0)) * (365000 + np.arange(1000)),
+                       365000),
+                      # float32 grids of moderate size
+                      (self._grid().astype(np.float32), 50),
+                      (self._grid(k0=1000, nf=10000).astype(np.float32),
+                       1000),
+                      (list(self._grid()), 50)]:
+            check_k0(f)
+            if k0 is not None:
+                assert get_k0(f) == k0
+
+    def test_float32_grid_that_is_really_nonuniform_raises(self):
+        from ..lombscargle import check_k0
+        f = self._grid(k0=50, nf=600).astype(np.float32)
+        f[300:] += np.float32(0.05 * (f[1] - f[0]))
+        with pytest.raises(ValueError, match="not uniformly spaced"):
+            check_k0(f)
+
+
+class TestRunGridValidation(object):
+    """The public entry points must reject non-uniform grids before any
+    GPU work and echo valid grids untouched."""
+
+    def _lc(self):
+        rng = np.random.RandomState(1)
+        N, T = 200, 100.0
+        t = np.sort(rng.uniform(0, T, N))
+        y = 1 + 0.01 * np.sin(2 * np.pi * t / 0.7) + 0.005 * rng.randn(N)
+        dy = 0.005 * np.ones(N)
+        return t, y, dy
+
+    def test_run_and_batched_reject_nonuniform_grid(self):
+        t, y, dy = self._lc()
+        fu = np.concatenate([np.arange(0.1, 1.0, 0.002),
+                             np.arange(1.0, 5.0, 0.01)])
+        proc = LombScargleAsyncProcess()
+        with pytest.raises(ValueError, match="not uniformly spaced"):
+            proc.run([(t, y, dy)], freqs=fu)
+        with pytest.raises(ValueError, match="not uniformly spaced"):
+            proc.run([(t, y, dy)], freqs=fu, use_fft=False)
+        with pytest.raises(ValueError, match="not uniformly spaced"):
+            proc.batched_run_const_nfreq([(t, y, dy)], freqs=fu)
+        with pytest.raises(ValueError, match="not uniformly spaced"):
+            proc.preallocate(max_nobs=len(t), freqs=fu)
+
+    def test_single_frequency_raises_clearly(self):
+        # nf = 1 used to die with IndexError (id 100)
+        t, y, dy = self._lc()
+        proc = LombScargleAsyncProcess()
+        with pytest.raises(ValueError, match="at least two"):
+            proc.run([(t, y, dy)], freqs=np.array([1.0]))
+
+    def test_dy_none_means_unit_weights(self):
+        # documented pass-through that raised TypeError before 1.0 (id 100)
+        t, y, dy = self._lc()
+        freqs = 0.001 * (50 + np.arange(3000))
+        proc = LombScargleAsyncProcess()
+        p_none = _run_gpu(proc, t, y, None, freqs)
+        p_ones = _run_gpu(proc, t, y, np.ones_like(t), freqs)
+        p_const = _run_gpu(proc, t, y, 0.3 * np.ones_like(t), freqs)
+        ref = LombScargle(t, y).power(freqs)
+        assert_allclose(p_none, p_ones, rtol=1e-6, atol=1e-6)
+        assert_allclose(p_none, p_const, rtol=1e-6, atol=1e-6)
+        assert np.max(np.abs(p_none - ref)) < 1e-4

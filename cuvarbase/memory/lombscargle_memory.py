@@ -334,6 +334,13 @@ class LombScargleMemory:
                     "LombScargleMemory: requirement "
                     "`'w' not in kwargs` not satisfied")
             w = weights(dy)
+        elif y is not None and 'w' not in kwargs:
+            # dy=None means unit weights (an unweighted periodogram, as
+            # run() documents). Never fall back to self.w here: on a
+            # reused (buffered) memory that would silently be the
+            # previous lightcurve's weights; before 1.0 it was None and
+            # raised TypeError.
+            w = np.full(len(y), 1.0 / len(y))
 
         if y is not None:
             if not ('yw' not in kwargs):
