@@ -38,10 +38,6 @@ __device__ float batch_bls_value(float ybar, float w, unsigned int ignore_neg){
     return ((ignore_neg == 1) & (ybar > 0.f)) ? 0.f : bls;
 }
 
-__device__ int batch_divrndup(int a, int b){
-    return (a % b > 0) ? a/b + 1 : a/b;
-}
-
 __device__ unsigned int batch_dnbins(unsigned int nbins, float dlogq){
     if (dlogq < 0.f)
         return 1;
@@ -111,7 +107,11 @@ __global__ void full_bls_batch_fused(
             f0 = freqs[i_freq + freq_offset];
             nb0 = nbins0[i_freq + freq_offset];
             nbf = nbinsf[i_freq + freq_offset];
-            max_bin_width = batch_divrndup(nbf, nb0);
+            // Widest box: floor(nbf / nb0) -- the largest m whose
+            // q = m/nbf satisfies q <= 1/nb0 (the discretized qmax).
+            // Kept identical to the single-LC fast kernels (Sep 2026
+            // audit, id 64).
+            max_bin_width = nbf / nb0;
             nfine = nbf * ((int) noverlap);
             ndata_lc = ndata_per_lc[lc_idx];
         }
@@ -142,7 +142,7 @@ __global__ void full_bls_batch_fused(
             thread_w = 0.f;
             unsigned int f_m0 = 0;
 
-            for (unsigned int m = 1; m < max_bin_width; m += batch_dnbins(m, dlogq)){
+            for (unsigned int m = 1; m <= max_bin_width; m += batch_dnbins(m, dlogq)){
                 unsigned int f_m = m * noverlap;
                 for (unsigned int u = f_m0; u < f_m; u++){
                     unsigned int idx = jj + u;
@@ -251,7 +251,11 @@ __global__ void full_bls_batch(
             f0 = freqs[i_freq + freq_offset];
             nb0 = nbins0[i_freq + freq_offset];
             nbf = nbinsf[i_freq + freq_offset];
-            max_bin_width = batch_divrndup(nbf, nb0);
+            // Widest box: floor(nbf / nb0) -- the largest m whose
+            // q = m/nbf satisfies q <= 1/nb0 (the discretized qmax).
+            // Kept identical to the single-LC fast kernels (Sep 2026
+            // audit, id 64).
+            max_bin_width = nbf / nb0;
             ndata_lc = ndata_per_lc[lc_idx];
         }
 
@@ -283,7 +287,7 @@ __global__ void full_bls_batch(
             thread_w = 0.f;
             unsigned int m0 = 0;
 
-            for (unsigned int m = 1; m < max_bin_width; m += batch_dnbins(m, dlogq)){
+            for (unsigned int m = 1; m <= max_bin_width; m += batch_dnbins(m, dlogq)){
                 for (s = m0; s < m; s++){
                     thread_yw += block_bins_yw[(n + s) % nbf];
                     thread_w += block_bins_w[(n + s) % nbf];

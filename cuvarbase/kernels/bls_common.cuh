@@ -97,10 +97,6 @@ __global__ void store_best_sols_custom(unsigned int *argmaxes, float *best_phi,
 	}
 }
 
-__device__ int divrndup(int a, int b){
-	return (a % b > 0) ? a/b + 1 : a/b;
-}
-
 // Per-frequency bin counts: nbins0 / nbinsf are read from the arrays
 // uploaded by eebls_gpu (index i + freq_offset), so every frequency
 // decodes its argmax against its OWN q window. They used to be scalar
@@ -221,7 +217,14 @@ __global__ void full_bls_no_sol_fused(
 			f0 = freqs[i_freq + freq_offset];
 			nb0 = nbins0[i_freq + freq_offset];
 			nbf = nbinsf[i_freq + freq_offset];
-			max_bin_width = divrndup(nbf, nb0);
+			// Widest box: floor(nbf / nb0), i.e. the largest m whose
+			// q = m/nbf still satisfies q <= 1/nb0 (= the discretized
+			// qmax).  This used to be divrndup(nbf, nb0) with a strict
+			// `m < max_bin_width` loop, which is the same bound whenever
+			// nb0 does not divide nbf but drops the qmax box itself when
+			// it does (Sep 2026 audit, id 64: qmin=0.025/qmax=0.1 tested
+			// only q <= 0.075).
+			max_bin_width = nbf / nb0;
 			nfine = nbf * ((int) noverlap);
 		}
 
@@ -257,7 +260,7 @@ __global__ void full_bls_no_sol_fused(
 			thread_w = 0.f;
 			unsigned int f_m0 = 0;
 
-			for (unsigned int m = 1; m < max_bin_width; m += dnbins(m, dlogq)){
+			for (unsigned int m = 1; m <= max_bin_width; m += dnbins(m, dlogq)){
 				unsigned int f_m = m * noverlap;
 				for (unsigned int u = f_m0; u < f_m; u++){
 					unsigned int idx = jj + u;

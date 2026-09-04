@@ -949,9 +949,34 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     freqs: array_like, float
         Frequencies
     qmin: float or array_like, optional (default: 1e-2)
-        minimum q values to search at each frequency
+        minimum q values to search at each frequency; scalar or one
+        value per frequency
     qmax: float or array_like (default: 0.5)
-        maximum q values to search at each frequency
+        maximum q values to search at each frequency; scalar or one
+        value per frequency.
+
+        .. note::
+
+            The shared-memory kernels do not search a continuum of
+            ``q``. Phase is binned into ``nbinsf = floor(1/qmin)``
+            bins and a box is ``m`` of those bins, so the searched
+            widths are ``q = m / nbinsf`` for ``m = 1, 1 + dnbins(1),
+            ...`` up to ``floor(nbinsf / floor(1/qmax))`` -- the
+            widest box with ``q <= 1/floor(1/qmax)``. The widest box
+            is included (before 1.0 the loop stopped one level short
+            and never tested ``qmax`` itself), but the geometric
+            ``dlogq`` step can still skip it: with the defaults
+            (``qmin=0.01``, ``qmax=0.5``, ``dlogq=0.3``) the widest
+            tested width is ``q = 0.48``. Box start phases step one
+            fine bin divided by ``noverlap``, so a box of ``m`` bins
+            can be misaligned by up to ``1 / (2 m noverlap)`` of its
+            width, which costs power: the Sep 2026 audit measured
+            49-90 % of the exact float64 box power for boxes at or
+            near ``qmin`` (``m`` of order 1). Raise ``noverlap``
+            (nearly free on the fused path) or lower ``qmin`` if you
+            need to compare fast-path power with an exact (e.g.
+            astropy) box fit at face value; :func:`eebls_gpu` uses a
+            finer q ladder.
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     noverlap: int, optional (default: 2)
@@ -1050,9 +1075,34 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     freqs: array_like, float
         Frequencies
     qmin: float or array_like, optional (default: 1e-2)
-        minimum q values to search at each frequency
+        minimum q values to search at each frequency; scalar or one
+        value per frequency
     qmax: float or array_like (default: 0.5)
-        maximum q values to search at each frequency
+        maximum q values to search at each frequency; scalar or one
+        value per frequency.
+
+        .. note::
+
+            The shared-memory kernels do not search a continuum of
+            ``q``. Phase is binned into ``nbinsf = floor(1/qmin)``
+            bins and a box is ``m`` of those bins, so the searched
+            widths are ``q = m / nbinsf`` for ``m = 1, 1 + dnbins(1),
+            ...`` up to ``floor(nbinsf / floor(1/qmax))`` -- the
+            widest box with ``q <= 1/floor(1/qmax)``. The widest box
+            is included (before 1.0 the loop stopped one level short
+            and never tested ``qmax`` itself), but the geometric
+            ``dlogq`` step can still skip it: with the defaults
+            (``qmin=0.01``, ``qmax=0.5``, ``dlogq=0.3``) the widest
+            tested width is ``q = 0.48``. Box start phases step one
+            fine bin divided by ``noverlap``, so a box of ``m`` bins
+            can be misaligned by up to ``1 / (2 m noverlap)`` of its
+            width, which costs power: the Sep 2026 audit measured
+            49-90 % of the exact float64 box power for boxes at or
+            near ``qmin`` (``m`` of order 1). Raise ``noverlap``
+            (nearly free on the fused path) or lower ``qmin`` if you
+            need to compare fast-path power with an exact (e.g.
+            astropy) box fit at face value; :func:`eebls_gpu` uses a
+            finer q ladder.
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta (i.e. an inverted dip)
     noverlap: int, optional (default: 2)
@@ -1140,9 +1190,34 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     freqs: array_like, float
         Frequencies
     qmin: float or array_like, optional (default: 1e-2)
-        minimum q values to search at each frequency
+        minimum q values to search at each frequency; scalar or one
+        value per frequency
     qmax: float or array_like (default: 0.5)
-        maximum q values to search at each frequency
+        maximum q values to search at each frequency; scalar or one
+        value per frequency.
+
+        .. note::
+
+            The shared-memory kernels do not search a continuum of
+            ``q``. Phase is binned into ``nbinsf = floor(1/qmin)``
+            bins and a box is ``m`` of those bins, so the searched
+            widths are ``q = m / nbinsf`` for ``m = 1, 1 + dnbins(1),
+            ...`` up to ``floor(nbinsf / floor(1/qmax))`` -- the
+            widest box with ``q <= 1/floor(1/qmax)``. The widest box
+            is included (before 1.0 the loop stopped one level short
+            and never tested ``qmax`` itself), but the geometric
+            ``dlogq`` step can still skip it: with the defaults
+            (``qmin=0.01``, ``qmax=0.5``, ``dlogq=0.3``) the widest
+            tested width is ``q = 0.48``. Box start phases step one
+            fine bin divided by ``noverlap``, so a box of ``m`` bins
+            can be misaligned by up to ``1 / (2 m noverlap)`` of its
+            width, which costs power: the Sep 2026 audit measured
+            49-90 % of the exact float64 box power for boxes at or
+            near ``qmin`` (``m`` of order 1). Raise ``noverlap``
+            (nearly free on the fused path) or lower ``qmin`` if you
+            need to compare fast-path power with an exact (e.g.
+            astropy) box fit at face value; :func:`eebls_gpu` uses a
+            finer q ladder.
     ignore_negative_delta_sols: bool
         Whether or not to ignore solutions with a negative delta
     use_optimized: bool, optional (default: True)
@@ -2436,6 +2511,34 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             solutions)
 
 
+def _fast_box_widths(nbinsf, nbins0, dlogq):
+    """Box widths, in fine phase bins, that the fast (shared-memory)
+    kernels iterate at one frequency: ``m = 1, 1 + dnbins(1, dlogq),
+    ...`` up to and including ``max_bin_width = nbinsf // nbins0``.
+
+    The searched durations are ``q = m / nbinsf``, so the widest one is
+    ``(nbinsf // nbins0) / nbinsf <= 1 / nbins0``, i.e. the discretized
+    ``qmax`` (``nbins0 = floor(1/qmax)``). Before 1.0 the kernels wrote
+    ``max_bin_width = divrndup(nbinsf, nbins0)`` and looped ``m <
+    max_bin_width``: the same set whenever ``nbins0`` does not divide
+    ``nbinsf``, but one level short when it does -- ``qmin=0.025,
+    qmax=0.1`` searched only ``q <= 0.075`` (Sep 2026 audit, id 64).
+
+    Note the geometric step can still overshoot the last level: with
+    ``qmin=0.01, qmax=0.5, dlogq=0.3`` the ladder is ``..., 37, 48``
+    and 62 > 50, so ``q = 0.48`` remains the widest box tested.
+    """
+    nbf = int(nbinsf)
+    nb0 = max(1, int(nbins0))
+    max_bin_width = nbf // nb0
+    widths = []
+    m = 1
+    while m <= max_bin_width:
+        widths.append(m)
+        m += dnbins(m, dlogq)
+    return widths
+
+
 def _fast_bls_box_scan(t32, yw32, w32, freq, nbins0, nbinsf, dlogq,
                        noverlap, dphi=0.0,
                        ignore_negative_delta_sols=False):
@@ -2444,7 +2547,8 @@ def _fast_bls_box_scan(t32, yw32, w32, freq, nbins0, nbinsf, dlogq,
     frequency: fold in float32, histogram into ``nbinsf`` phase bins on
     ``noverlap`` grids shifted by ``1/noverlap`` of a bin (plus the base
     offset ``dphi``), and scan every box of ``m`` bins for ``m = 1,
-    1 + dnbins(1), ...`` below ``ceil(nbinsf / nbins0)``.
+    1 + dnbins(1), ...`` up to and including ``nbinsf // nbins0`` (the
+    widest box with ``q = m / nbinsf <= 1 / nbins0``).
 
     ``t32`` are the epoch-subtracted float32 times, ``yw32 = w * (y -
     ybar)`` and ``w32`` the normalized weights, all as
@@ -2457,14 +2561,8 @@ def _fast_bls_box_scan(t32, yw32, w32, freq, nbins0, nbinsf, dlogq,
     the weight guards.
     """
     nbf = int(nbinsf)
-    nb0 = max(1, int(nbins0))
-    max_bin_width = -(-nbf // nb0)      # divrndup(nbf, nb0)
     # q levels, exactly as the kernels iterate them
-    ms = []
-    m = 1
-    while m < max_bin_width:
-        ms.append(m)
-        m += dnbins(m, dlogq)
+    ms = _fast_box_widths(nbf, nbins0, dlogq)
 
     phi = np.asarray(t32, dtype=np.float32) * np.float32(freq)
     phi = phi - np.floor(phi)
@@ -2898,7 +2996,9 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
         over ``noverlap`` kernel passes with the phase-bin grid shifted
         by ``1/noverlap`` of the finest bin between passes (same
         semantics as ``eebls_gpu_fast``). Runtime scales linearly;
-        ``noverlap=1`` gives a single unshifted pass.
+        ``noverlap=1`` gives a single unshifted pass. Must be a
+        positive integer (``noverlap=0`` used to return an all-zero
+        periodogram instead of raising).
     dlogq : float, optional (default: 0.3)
         Logarithmic spacing of q values.
     dphi : float, optional (default: 0.0)
@@ -2953,6 +3053,9 @@ def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
     nfreq = len(freqs)
     n_total = len(lightcurves)
     _validate_convention(convention)
+    # noverlap=0 used to launch nothing and return the untouched (zero,
+    # or stale on memory reuse) periodogram (Sep 2026 audit, id 75)
+    _validate_noverlap(noverlap)
 
     # Group LCs by similar ndata to minimize padding
     lc_indices = list(range(n_total))
