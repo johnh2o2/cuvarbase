@@ -12,7 +12,7 @@ from numpy.testing import assert_allclose
 from pycuda.tools import mark_cuda_test
 
 try:
-    from ..nufft_lrt import NUFFTLRTAsyncProcess
+    from ..nufft_lrt import NUFFTLRTAsyncProcess, epoch_grid
     from ..cunfft import NFFTAsyncProcess
     NUFFT_LRT_AVAILABLE = True
 except ImportError:
@@ -197,13 +197,16 @@ class TestNUFFTLRT:
         
     @mark_cuda_test
     def test_detection_of_known_transit(self):
-        """Test detection of a known transit signal"""
+        """Detection of a known transit at a NON-zero epoch with the
+        default ``epochs=None`` (automatic epoch grid). Before the
+        Sep-2026 fix ``epochs=None`` evaluated a single phase-0 template,
+        and this test passed only because it injected at epoch 0."""
         proc = NUFFTLRTAsyncProcess()
 
         # Generate transit signal
         true_period = 2.5
         true_duration = 0.2
-        true_epoch = 0.0
+        true_epoch = 0.7
         depth = 0.5
         noise_level = 0.1
 
@@ -217,16 +220,21 @@ class TestNUFFTLRT:
         periods = np.linspace(2.0, 3.0, 20)
         durations = np.array([true_duration])
 
-        snr = proc.run(self.t, y, periods, durations=durations)
+        snr, best_epoch = proc.run(self.t, y, periods, durations=durations)
 
         # Check output shape
         assert snr.shape == (len(periods), len(durations))
+        assert best_epoch.shape == snr.shape
 
-        # Peak within two grid steps of the true period
+        # Peak within two grid steps of the true period, best epoch
+        # within a transit duration of the truth (mod P)
         best_period_idx = np.argmax(snr[:, 0])
         best_period = periods[best_period_idx]
         step = periods[1] - periods[0]
         assert np.abs(best_period - true_period) <= 2 * step + 1e-9
+        d = np.abs(best_epoch[best_period_idx, 0] - true_epoch) % true_period
+        d = min(d, true_period - d)
+        assert d < true_duration
 
     @mark_cuda_test
     def test_white_noise_gives_low_snr(self):
@@ -239,10 +247,15 @@ class TestNUFFTLRT:
         periods = np.array([2.0, 3.0, 4.0])
         durations = np.array([0.2])
 
-        snr = proc.run(self.t, y, periods, durations=durations)
+        snr = proc.run(self.t, y, periods, durations=durations,
+                       epochs=np.array([0.0]))
 
-        # SNR should be relatively low for pure noise
+        # SNR should be relatively low for pure noise (single template)
         assert np.all(np.abs(snr) < 5.0)
+        # and bounded after the max over the automatic epoch grid
+        # (measured 3.6)
+        snr_max, _ = proc.run(self.t, y, periods, durations=durations)
+        assert np.all(snr_max < 8.0)
 
     @mark_cuda_test
     def test_custom_psd(self):
@@ -259,7 +272,7 @@ class TestNUFFTLRT:
         # Create custom PSD (flat spectrum)
         custom_psd = np.ones(nf)
 
-        snr = proc.run(
+        snr, best_epoch = proc.run(
             self.t, y, periods, durations=durations,
             nf=nf, estimate_psd=False, psd=custom_psd
         )
@@ -277,7 +290,7 @@ class TestNUFFTLRT:
         periods = np.array([2.0])
         durations = np.array([0.2])
 
-        snr = proc.run(self.t, y, periods, durations=durations)
+        snr, best_epoch = proc.run(self.t, y, periods, durations=durations)
 
         assert snr.shape == (1, 1)
         assert np.isfinite(snr[0, 0])
@@ -298,13 +311,15 @@ class TestNUFFTLRT:
 
         periods = np.linspace(2.0, 3.0, 20)
         durations = np.array([true_duration])
+        epochs = np.array([0.0])
         V = trend[:, None]
 
         snr_marg = proc.run(self.t, y, periods, durations=durations,
+                            epochs=epochs,
                             detector='marginal', systematics_basis=V,
-                            coeff_prior_cov=np.array([[100.0]]))
+                            coeff_prior_cov=np.array([[100.0]]))[:, 0, 0]
         step = periods[1] - periods[0]
-        best = periods[int(np.argmax(snr_marg[:, 0]))]
+        best = periods[int(np.argmax(snr_marg))]
         assert np.abs(best - true_period) <= 2 * step + 1e-9
 
     @mark_cuda_test
@@ -320,10 +335,11 @@ class TestNUFFTLRT:
         periods = np.linspace(2.0, 3.0, 20)
         snr = proc.run(self.t, y, periods,
                        durations=np.array([true_duration]),
+                       epochs=np.array([0.0]),
                        detector='sequential',
                        systematics_basis=trend[:, None])
-        assert snr.shape == (len(periods), 1)
-        best = periods[int(np.argmax(snr[:, 0]))]
+        assert snr.shape == (len(periods), 1, 1)
+        best = periods[int(np.argmax(snr[:, 0, 0]))]
         step = periods[1] - periods[0]
         assert np.abs(best - true_period) <= 2 * step + 1e-9
 
@@ -428,6 +444,45 @@ class TestSep2026Defects:
         # the transit is seen (measured max 11.7-12.3) at the true period
         assert base.max() > 5.0
         assert np.unravel_index(np.argmax(base), base.shape)[0] == 2
+        # the automatic epoch grid reports epochs in the caller's scale;
+        # it is anchored at floor(min t), so an INTEGER offset reproduces
+        # the same templates (as test_bls.py's integer bjd_offset)
+        off = np.floor(BJD_OFFSET)
+        s0, e0 = proc.run(t, y, periods[2:3], durations, detector=detector,
+                          **kw)
+        s1, e1 = proc.run(t + off, y, periods[2:3], durations,
+                          detector=detector, **kw)
+        assert_allclose(e1 - e0, off, atol=1e-6)
+        assert abs(s1[0, 0] - s0[0, 0]) < 1e-4 * abs(s0[0, 0])
+
+    @mark_cuda_test
+    def test_epochs_none_recovers_random_epoch(self):
+        """Defect 6 (lrt-epochs-none): the default ``epochs=None`` used
+        to evaluate one phase-0 template per (period, duration) and
+        recovered 0/12 transits injected at random epochs (0/6 on the
+        base tree with this data); it now scans an automatic epoch grid
+        and returns (max over epochs, best epoch)."""
+        rng = np.random.RandomState(7)
+        t = ground_times(rng)
+        P, dur, depth = 5.3, 0.22, 0.01
+        periods = _log_period_grid(P, n=16)
+        ip = int(np.argmin(np.abs(periods - P)))
+        proc = NUFFTLRTAsyncProcess()
+        for trial in range(2):
+            epoch = rng.uniform(0.2 * P, 0.9 * P)     # never phase 0
+            y = 1 + 3e-3 * rng.randn(len(t)) + box_transit(t, P, epoch,
+                                                            dur, depth)
+            snr, best_epoch = proc.run(t, y, periods,
+                                       durations=np.array([dur]))
+            assert snr.shape == (len(periods), 1)
+            assert int(np.argmax(snr[:, 0])) == ip
+            assert snr[ip, 0] > 8.0                # measured 21-23
+            d = np.abs(best_epoch[ip, 0] - epoch) % P
+            d = min(d, P - d)
+            assert d < 0.75 * dur                   # grid step P/n < dur/2
+            # the best epoch lies on the documented grid
+            grid = epoch_grid(P, dur) + np.floor(t.min())
+            assert np.min(np.abs(grid - best_epoch[ip, 0])) < 1e-9
 
     @pytest.mark.parametrize('use_double', [False, True])
     def test_full_band_nfft_matches_exact_dft(self, use_double):

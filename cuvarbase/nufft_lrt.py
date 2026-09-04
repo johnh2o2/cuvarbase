@@ -161,6 +161,20 @@ def _smoothed_periodogram(power, window):
     return (num / den).astype(power.dtype, copy=False)
 
 
+def epoch_grid(period, duration, oversample=2.0, min_epochs=8,
+               max_epochs=96):
+    """Epoch grid used by :meth:`NUFFTLRTAsyncProcess.run` when
+    ``epochs=None``: ``n = clip(ceil(oversample * period / duration),
+    min_epochs, max_epochs)`` epochs at ``arange(n) * period / n``
+    (relative to the epoch-subtracted time origin), so consecutive
+    templates are misaligned by at most ``duration / oversample`` until
+    the ``max_epochs`` cap is reached.
+    """
+    n = int(np.ceil(float(oversample) * float(period) / float(duration)))
+    n = int(min(max(n, int(min_epochs)), int(max_epochs)))
+    return np.arange(n, dtype=np.float64) * float(period) / n
+
+
 class NUFFTLRTMemory:
     """
     Memory management for NUFFT LRT computations.
@@ -266,16 +280,24 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     -------
     >>> import numpy as np
     >>> from cuvarbase.nufft_lrt import NUFFTLRTAsyncProcess
-    >>> 
-    >>> # Generate sample data
-    >>> t = np.sort(np.random.uniform(0, 10, 100))
-    >>> y = np.sin(2 * np.pi * t / 2.0) + 0.1 * np.random.randn(len(t))
-    >>> 
-    >>> # Run NUFFT LRT
+    >>>
+    >>> rng = np.random.RandomState(0)
+    >>> t = np.sort(rng.uniform(0, 60, 600))           # any time origin
+    >>> P, dur, t0 = 5.3, 0.22, 1.7                    # injected transit
+    >>> phase = ((t - t0) / P) % 1.0
+    >>> y = 1.0 - 0.01 * (np.minimum(phase, 1 - phase) < 0.5 * dur / P)
+    >>> y += 0.003 * rng.randn(len(t))
+    >>>
     >>> proc = NUFFTLRTAsyncProcess()
-    >>> periods = np.linspace(1.5, 3.0, 50)
-    >>> durations = np.linspace(0.1, 0.5, 10)
-    >>> snr = proc.run(t, y, periods, durations)
+    >>> # focused search around a candidate: the period step must keep
+    >>> # the box aligned over the baseline T, dP <~ dur * P / (2 T)
+    >>> periods = np.arange(4.8, 5.8, 0.22 * 4.8 / (2 * 60))
+    >>> durations = np.array([0.12, 0.25])
+    >>> # epochs=None scans an automatic epoch grid per (period,
+    >>> # duration) and returns the max over epochs plus the best epoch
+    >>> snr, best_epoch = proc.run(t, y, periods, durations=durations)
+    >>> i, j = np.unravel_index(np.argmax(snr), snr.shape)
+    >>> periods[i], durations[j], best_epoch[i, j]   # ~5.3, 0.25, ~1.7 (mod P)
     """
     
     def __init__(self, sigma=4.0, m=None, use_double=False,
@@ -409,6 +431,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             smooth_window=5, eps_floor=1e-12,
             detector='matched', systematics_basis=None,
             coeff_prior_mean=None, coeff_prior_cov=None, dy=None,
+            epoch_oversample=2.0, min_epochs=8, max_epochs=96,
             **kwargs):
         """
         Run NUFFT LRT for transit detection.
@@ -427,9 +450,14 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             Trial transit durations. If None, uses 0.1 * periods
         epochs : array-like, optional
             Trial epochs (transit mid-times) in the caller's time scale.
-            If None, a single template with its transit mid-time at
-            ``floor(min(t))`` is evaluated per (period, duration) cell
-            and the output has no epoch axis.
+            ``None`` (default) scans an automatic epoch grid per
+            (period, duration) cell -- see :func:`epoch_grid`:
+            ``clip(ceil(epoch_oversample * P / duration), min_epochs,
+            max_epochs)`` epochs spaced ``P / n`` apart -- and reduces
+            by the maximum over epochs. Cost: that many NFFTs per
+            (period, duration) cell (~2P/duration transforms at the
+            default oversampling). An explicit array is used as given
+            for every cell.
         depth : float, optional (default: 1.0)
             Transit depth for template (not critical for normalized matched filter)
         nf : int, optional
@@ -477,16 +505,32 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         dy : array-like, optional
             Not used by any detector (the noise model is the PSD); a
             ``UserWarning`` is emitted if it is passed.
+        epoch_oversample, min_epochs, max_epochs : float, int, int
+            Automatic epoch grid parameters (``epochs=None`` only):
+            ``n = clip(ceil(epoch_oversample * P / duration),
+            min_epochs, max_epochs)``. Defaults 2.0, 8, 96 (the
+            validation harness's). At long periods the cap makes the
+            epoch step ``P / max_epochs`` exceed the duration; raise
+            ``max_epochs`` if those periods matter.
         **kwargs : dict
             Additional parameters passed to the NFFT.
 
         Returns
         -------
-        snr : np.ndarray
-            The statistic (see the module docstring: a whitened
-            correlation, not N(0, 1)) of shape ``(len(periods),
-            len(durations), len(epochs))`` when ``epochs`` is given and
-            ``(len(periods), len(durations))`` when it is None.
+        ``epochs=None`` (default): a tuple ``(snr, best_epoch)`` of two
+        float64 arrays of shape ``(len(periods), len(durations))``;
+        ``snr[i, j]`` is the maximum of the statistic over the automatic
+        epoch grid of cell ``(periods[i], durations[j])`` and
+        ``best_epoch[i, j]`` the epoch (transit mid-time, in the
+        caller's time scale, within one period of ``floor(min(t))``)
+        that attains it.
+
+        ``epochs`` given: one float64 array of shape ``(len(periods),
+        len(durations), len(epochs))`` with the statistic at every
+        template.
+
+        In both cases the value is the whitened correlation of the
+        module docstring: not N(0, 1), calibrate thresholds empirically.
         """
         # ---- validate and epoch-subtract (float64) before ANY cast
         t = np.asarray(t, dtype=np.float64).ravel()
@@ -544,13 +588,11 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             raise ValueError("durations must be a non-empty 1-D array of "
                              "positive finite values")
 
-        # Epochs: None -> single template at the (epoch-subtracted) time
-        # origin, no epoch axis; explicit -> shifted into the
-        # epoch-subtracted frame (epoch axis in the output).
-        return_epoch_axis = epochs is not None
-        if epochs is None:
-            epochs_arr = np.array([0.0])
-        else:
+        # Epochs: None -> automatic per-cell grid (max over epochs, best
+        # epoch returned); explicit -> shifted into the epoch-subtracted
+        # frame and used for every cell (epoch axis in the output).
+        auto_epochs = epochs is None
+        if not auto_epochs:
             epochs_arr = np.atleast_1d(np.asarray(epochs, dtype=np.float64))
             if epochs_arr.ndim != 1 or len(epochs_arr) == 0 \
                     or not np.all(np.isfinite(epochs_arr)):
@@ -631,20 +673,27 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             return _statistic(T_nufft)
         
         # ---- template loop
-        if return_epoch_axis:
-            snr_results = np.zeros((len(periods), len(durations),
-                                    len(epochs_arr)))
-        else:
+        if auto_epochs:
             snr_results = np.zeros((len(periods), len(durations)))
+            best_epochs = np.zeros((len(periods), len(durations)))
+            for i, period in enumerate(periods):
+                for j, duration in enumerate(durations):
+                    grid = epoch_grid(period, duration, epoch_oversample,
+                                      min_epochs, max_epochs)
+                    vals = np.array([_template_statistic(period, e, duration)
+                                     for e in grid])
+                    k = int(np.argmax(vals))
+                    snr_results[i, j] = vals[k]
+                    best_epochs[i, j] = grid[k] + t0
+            return snr_results, best_epochs
+
+        snr_results = np.zeros((len(periods), len(durations),
+                                len(epochs_arr)))
         for i, period in enumerate(periods):
             for j, duration in enumerate(durations):
-                if return_epoch_axis:
-                    for k, epoch in enumerate(epochs_arr):
-                        snr_results[i, j, k] = _template_statistic(
-                            period, epoch, duration)
-                else:
-                    snr_results[i, j] = _template_statistic(
-                        period, epochs_arr[0], duration)
+                for k, epoch in enumerate(epochs_arr):
+                    snr_results[i, j, k] = _template_statistic(
+                        period, epoch, duration)
         return snr_results
         
     def _generate_template(self, t, period, epoch, duration, depth):

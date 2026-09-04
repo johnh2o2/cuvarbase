@@ -4,14 +4,16 @@
 the GPU NFFT approximates, at the same convention (modes k=0..nf-1,
 frequency k/(max(t)-min(t)); the transform's time reference is a common
 per-mode phase that cancels in every whitened inner product) -- so the
-host pipeline (epoch subtraction, PSD, weights, matched filter, return
-shapes, input validation) runs on CPU:
+host pipeline (epoch subtraction, PSD, weights, matched filter, epoch
+grid, return shapes, input validation) runs on CPU:
 
 * the matched filter is sensitive to data across the WHOLE baseline
   (perturbing a late, well-separated season changes the result -- the
   defect that got the module cut is gone),
-* the weights span all nf bins (the rfft one-sided packing is gone), and
-* absolute-time input is handled exactly (float64 epoch subtraction).
+* the weights span all nf bins (the rfft one-sided packing is gone),
+* absolute-time input is handled exactly (float64 epoch subtraction), and
+* ``epochs=None`` returns ``(snr, best_epoch)`` with epochs in the
+  caller's time scale.
 
 The GPU NFFT itself (and its accuracy vs this exact reference) is
 checked in ``test_nufft_lrt.py`` on a GPU.
@@ -65,10 +67,12 @@ def _two_season_lc(seed=0):
 def test_pipeline_runs_end_to_end(monkeypatch):
     proc = _mock_proc(monkeypatch)
     t, y, period = _two_season_lc()
-    periods = np.linspace(1.5, 4.0, 40)
+    periods = np.linspace(1.5, 4.0, 12)
     durations = np.array([0.15, 0.3])
-    snr = proc.run(t, y, periods, durations=durations)
+    snr, best_epoch = proc.run(t, y, periods, durations=durations,
+                               max_epochs=8)
     assert snr.shape == (len(periods), len(durations))
+    assert best_epoch.shape == snr.shape
     assert np.all(np.isfinite(snr))
 
 
@@ -79,8 +83,9 @@ def test_late_season_data_changes_result(monkeypatch):
     t, y, period = _two_season_lc()
     periods = np.linspace(1.5, 4.0, 40)
     durations = np.array([0.2])
+    epochs = np.array([0.0])
 
-    snr0 = proc.run(t, y, periods, durations=durations)
+    snr0 = proc.run(t, y, periods, durations=durations, epochs=epochs)
 
     # perturb ONLY the late (second) season
     y2 = y.copy()
@@ -89,7 +94,7 @@ def test_late_season_data_changes_result(monkeypatch):
     rng = np.random.RandomState(1)
     y2[late] += 0.5 * rng.randn(int(late.sum()))
 
-    snr1 = proc.run(t, y2, periods, durations=durations)
+    snr1 = proc.run(t, y2, periods, durations=durations, epochs=epochs)
 
     # the statistic must respond to the late-season change (it would be
     # identical if that data were truncated away)
@@ -103,16 +108,38 @@ def test_snr_responds_to_injected_transit(monkeypatch):
     proc = _mock_proc(monkeypatch)
     t, y, period = _two_season_lc()
     periods = np.linspace(1.5, 4.0, 60)
-    snr = proc.run(t, y, periods, durations=np.array([0.2]))[:, 0]
+    snr = proc.run(t, y, periods, durations=np.array([0.2]),
+                   epochs=np.array([0.0]))[:, 0, 0]
     assert np.ptp(snr) > 0                       # not constant
     i = int(np.argmin(np.abs(periods - period)))
     assert snr[i] >= np.median(snr)
 
 
-def test_absolute_time_input_is_exact(monkeypatch):
+def test_return_shapes_for_both_epoch_modes(monkeypatch):
+    proc = _mock_proc(monkeypatch)
+    t, y, period = _two_season_lc()
+    periods = np.array([2.0, period, 3.1])
+    durations = np.array([0.15, 0.3])
+    # explicit epochs: one 3-D array
+    epochs = np.linspace(0.0, 2.0, 5)
+    out = proc.run(t, y, periods, durations=durations, epochs=epochs)
+    assert isinstance(out, np.ndarray)
+    assert out.shape == (3, 2, 5)
+    # epochs=None: (snr, best_epoch), both (nP, nD); the best epoch lies
+    # on the automatic grid, inside [floor(min t), floor(min t) + P)
+    snr, best = proc.run(t, y, periods, durations=durations, max_epochs=16)
+    assert snr.shape == (3, 2) and best.shape == (3, 2)
+    for i, P in enumerate(periods):
+        assert np.all(best[i] >= np.floor(t.min()))
+        assert np.all(best[i] < np.floor(t.min()) + P)
+
+
+def test_absolute_time_input_is_exact_and_epochs_reported_absolute(
+        monkeypatch):
     # run() subtracts floor(min t) in float64 before anything else, so a
     # BJD-scale offset (with explicit epochs shifted identically) gives
-    # the same statistic.
+    # the same statistic, and the best epochs of the automatic grid come
+    # back in the caller's time scale.
     proc = _mock_proc(monkeypatch)
     t, y, period = _two_season_lc()
     periods = np.array([2.0, period, 3.1])
@@ -122,6 +149,17 @@ def test_absolute_time_input_is_exact(monkeypatch):
     shifted = proc.run(t + BJD_OFFSET, y, periods, durations=durations,
                        epochs=epochs + BJD_OFFSET)
     np.testing.assert_allclose(shifted, base, rtol=1e-6, atol=1e-9)
+
+    # The automatic epoch grid is anchored at floor(min t), so only an
+    # INTEGER offset reproduces the same templates exactly (a fractional
+    # offset shifts the grid by its fractional part -- like test_bls.py's
+    # integer bjd_offset); the best epochs come back in the caller's scale.
+    off = np.floor(BJD_OFFSET)
+    snr0, ep0 = proc.run(t, y, periods, durations=durations, max_epochs=12)
+    snr1, ep1 = proc.run(t + off, y, periods, durations=durations,
+                         max_epochs=12)
+    np.testing.assert_allclose(snr1, snr0, rtol=1e-6, atol=1e-9)
+    np.testing.assert_allclose(ep1 - ep0, off, atol=1e-6)
 
 
 def test_dy_is_ignored_with_a_warning(monkeypatch):
