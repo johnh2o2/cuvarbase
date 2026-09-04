@@ -570,6 +570,73 @@ class TestNFFTGridChecks(object):
             _check_nfft_grids(mem, 200, 10, 1)
 
 
+def _two_harmonic_lc(seed=7, N=250, T=80.0, f0=0.9):
+    """Strongly non-sinusoidal signal so that H = 1 and H = 2, 3 differ."""
+    rng = np.random.RandomState(seed)
+    t = np.sort(rng.rand(N)) * T
+    y = (10 + 0.4 * np.sin(2 * np.pi * f0 * t)
+         + 0.4 * np.sin(2 * np.pi * 2 * f0 * t + 1.0) + 0.05 * rng.randn(N))
+    dy = 0.05 * np.ones(N)
+    df = 1.0 / (5 * (t.max() - t.min()))
+    freqs = df * (5 + np.arange(600))
+    return t, y, dy, freqs
+
+
+def _mh_reference(t, y, dy, freqs, H, **kwargs):
+    from ..lombscargle import lomb_scargle_direct_sums
+    w = dy ** -2
+    w /= np.sum(w)
+    ybar = np.dot(w, y)
+    YY = np.dot(w, (y - ybar) ** 2)
+    return lomb_scargle_direct_sums(t, w * y, w, freqs, YY, nharms=H,
+                                    **kwargs)
+
+
+class TestMultiharmonicDirectSums(object):
+    """``nharmonics > 1`` with ``use_fft=False`` / ``python_dir_sums=True``
+    (defect 13, ``ls-nharmonics-nofft``, Sep 2026): both returned the
+    H = 1 periodogram (equal to the H = 1 reference to 1e-14) because
+    the direct-sum kernel forms only the H = 1 moments and the host
+    solve sat on the NFFT branch. They now run the float64 host
+    multiharmonic direct sums."""
+
+    @pytest.mark.parametrize("H", [2, 3])
+    @pytest.mark.parametrize("use_double,tol", [(False, 2e-3),
+                                                (True, 1e-10)])
+    @pytest.mark.parametrize("python_dir_sums", [False, True])
+    def test_matches_multiharmonic_reference(self, H, use_double, tol,
+                                             python_dir_sums):
+        t, y, dy, freqs = _two_harmonic_lc()
+        ref_H = _mh_reference(t, y, dy, freqs, H)
+        ref_1 = _mh_reference(t, y, dy, freqs, 1)
+        assert np.max(np.abs(ref_H - ref_1)) > 0.3     # the signal is not a sinusoid
+
+        proc = LombScargleAsyncProcess(use_double=use_double, nharmonics=H)
+        p = _run_gpu(proc, t, y, dy, freqs, use_fft=False,
+                     python_dir_sums=python_dir_sums)
+
+        assert np.max(np.abs(p - ref_H)) < tol
+        assert np.max(np.abs(p - ref_1)) > 0.3
+
+    def test_batched_const_nfreq_direct_sums(self):
+        t, y, dy, freqs = _two_harmonic_lc()
+        ref_2 = _mh_reference(t, y, dy, freqs, 2)
+        proc = LombScargleAsyncProcess(use_double=True, nharmonics=2)
+        (f, p), = proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs,
+                                               use_fft=False)
+        assert np.max(np.abs(np.asarray(p, dtype=np.float64) - ref_2)) < 1e-10
+
+    @pytest.mark.parametrize("kwargs", [dict(window=True),
+                                        dict(floating_mean=False)])
+    def test_non_floating_mean_raises_for_H_gt_1(self, kwargs):
+        t, y, dy, freqs = _two_harmonic_lc()
+        proc = LombScargleAsyncProcess(nharmonics=2)
+        with pytest.raises(ValueError, match="floating-mean"):
+            proc.run([(t, y, dy)], freqs=freqs, **kwargs)
+        with pytest.raises(ValueError, match="floating-mean"):
+            proc.run([(t, y, dy)], freqs=freqs, use_fft=False, **kwargs)
+
+
 class TestLombScargleSimpleWeights(object):
     """Regression tests for lomb_scargle_simple's weight handling.
 
@@ -843,6 +910,51 @@ class TestCufinufftPlanCache(object):
         assert len(cb._plan_cache) == cb._PLAN_CACHE_MAX_SIZE
         cb.free_plan_cache()
         assert len(cb._plan_cache) == 0
+
+
+class TestAmplitudePrior(object):
+    """``amplitude_prior`` on the multiharmonic NFFT path (defect 14,
+    ``ls-amplitude-prior``, Sep 2026): ``_mh_power_from_spectra`` was
+    called without ``reg_kwargs``, so H > 1 silently returned the
+    UNregularized power (0.9 away from the ridge reference on this
+    data). The prior is the standard deviation of a Gaussian prior on
+    the amplitudes, i.e. a ridge term 1 / s**2 (``add_regularization``).
+    Measured on an A40 after the fix: 1.1e-5 (float32) / 1.8e-8
+    (double) vs the float64 regularized direct sums."""
+
+    s = 0.3
+
+    @pytest.mark.parametrize("H", [2, 3])
+    @pytest.mark.parametrize("use_double,tol", [(False, 1e-4),
+                                                (True, 1e-7)])
+    def test_nfft_path_matches_regularized_reference(self, H, use_double,
+                                                     tol):
+        t, y, dy, freqs = _two_harmonic_lc()
+        ref_reg = _mh_reference(t, y, dy, freqs, H, amplitude_priors=self.s)
+        ref_unreg = _mh_reference(t, y, dy, freqs, H)
+        assert np.max(np.abs(ref_reg - ref_unreg)) > 0.5
+
+        proc = LombScargleAsyncProcess(use_double=use_double, nharmonics=H)
+        p = _run_gpu(proc, t, y, dy, freqs, amplitude_prior=self.s)
+
+        assert np.max(np.abs(p - ref_reg)) < tol
+        assert np.max(np.abs(p - ref_unreg)) > 0.5
+
+    def test_single_harmonic_kernel_path(self):
+        # H = 1 goes through reg_g in the lomb kernel (was already right)
+        t, y, dy, freqs = _two_harmonic_lc()
+        ref_reg = _mh_reference(t, y, dy, freqs, 1, amplitude_priors=self.s)
+        proc = LombScargleAsyncProcess(nharmonics=1)
+        p = _run_gpu(proc, t, y, dy, freqs, amplitude_prior=self.s)
+        assert np.max(np.abs(p - ref_reg)) < 1e-5
+
+    def test_direct_sums_path(self):
+        t, y, dy, freqs = _two_harmonic_lc()
+        ref_reg = _mh_reference(t, y, dy, freqs, 2, amplitude_priors=self.s)
+        proc = LombScargleAsyncProcess(use_double=True, nharmonics=2)
+        p = _run_gpu(proc, t, y, dy, freqs, amplitude_prior=self.s,
+                     use_fft=False)
+        assert np.max(np.abs(p - ref_reg)) < 1e-10
 
 
 class TestCheckK0(object):

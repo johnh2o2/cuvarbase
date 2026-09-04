@@ -524,6 +524,7 @@ def lomb_scargle_async(memory, functions, freqs,
         If False, uses direct sums.
     python_dir_sums: bool, optional (default: False)
         If True, performs direct sums with Python on the CPU
+        (``lomb_scargle_direct_sums``, float64, all harmonics; slow)
     transfer_to_device: bool, optional, (default: True)
         If the data is already on the gpu, set as False
     transfer_to_host: bool, optional, (default: True)
@@ -536,6 +537,19 @@ def lomb_scargle_async(memory, functions, freqs,
     -------
     lsp_c: ``np.array``
         The resulting periodgram (``memory.lsp_c``)
+
+    Notes
+    -----
+    ``memory.nharmonics > 1`` is honoured on every path. The NFFT path
+    reads the two spectra back and solves the small per-frequency
+    system on the host (:func:`_mh_power_from_spectra`); the direct-sum
+    kernel only forms the H = 1 moments, so ``use_fft=False`` with
+    ``nharmonics > 1`` (like ``python_dir_sums=True``) runs
+    :func:`lomb_scargle_direct_sums` on the host in float64 -- correct
+    but O(N nf H) on the CPU. Before 1.0 both silently returned the H = 1
+    periodogram (defect 13, ``ls-nharmonics-nofft``). Multiharmonic
+    power is always the floating-mean GLS: ``floating_mean=False`` and
+    ``window=True`` raise for ``nharmonics > 1``.
     """
     if use_cufinufft and not HAS_CUFINUFFT:
         raise ImportError(
@@ -556,6 +570,16 @@ def lomb_scargle_async(memory, functions, freqs,
             "memory was allocated for nf=%d frequencies but %d were given"
             % (memory.nf, nf))
 
+    nharm = int(getattr(memory, 'nharmonics', 1))
+    if nharm > 1 and memory.mode != 1:
+        raise ValueError(
+            "nharmonics=%d is only implemented for the floating-mean "
+            "generalized Lomb-Scargle (floating_mean=True, window=False)"
+            % nharm)
+    reg_kwargs = None
+    if getattr(memory, 'amplitude_prior', None) is not None:
+        reg_kwargs = dict(amplitude_priors=memory.amplitude_prior)
+
     stream = memory.stream
 
     block = (block_size, 1, 1)
@@ -565,12 +589,21 @@ def lomb_scargle_async(memory, functions, freqs,
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
-    # do direct summations with python on the CPU (for debugging)
-    if python_dir_sums:
-        t = memory.t_g.get()
-        yw = memory.yw_g.get()
-        w = memory.w_g.get()
-        return lomb_scargle_direct_sums(t, yw, w, freqs, memory.yy)
+    # Host direct sums (float64, any number of harmonics): requested
+    # explicitly (python_dir_sums), or use_fft=False with nharmonics > 1
+    # (the direct-sum kernel is H = 1 only).
+    if python_dir_sums or (not use_fft and nharm > 1):
+        if stream is not None:
+            stream.synchronize()
+        n0 = int(memory.n0)
+        t = memory.t_g.get()[:n0].astype(np.float64)
+        yw = memory.yw_g.get()[:n0].astype(np.float64)
+        w = memory.w_g.get()[:n0].astype(np.float64)
+        power = lomb_scargle_direct_sums(t, yw, w, freqs, memory.yy,
+                                         nharms=nharm,
+                                         **(reg_kwargs or {}))
+        memory.lsp_c[:nf] = power.astype(memory.real_type)
+        return memory.lsp_c
 
     # Use direct sums (on GPU)
     if not use_fft:
@@ -616,7 +649,6 @@ def lomb_scargle_async(memory, functions, freqs,
             nfft_adjoint_async(memory.nfft_mem_w, nfft_funcs,
                                **nfft_kwargs)
 
-    nharm = getattr(memory, 'nharmonics', 1)
     if nharm > 1:
         # Multiharmonic GLS: the GPU NFFT already produced the w-spectrum
         # (to 2H harmonics) and the w*(y-ybar)-spectrum (to H); read them
@@ -628,7 +660,8 @@ def lomb_scargle_async(memory, functions, freqs,
         sw = memory.nfft_mem_w.ghat_g.get()
         syw = memory.nfft_mem_yw.ghat_g.get()
         power = _mh_power_from_spectra(sw, syw, int(memory.k0), nharm,
-                                       int(memory.nf), memory.yy)
+                                       int(memory.nf), memory.yy,
+                                       reg_kwargs=reg_kwargs)
         memory.lsp_c[:memory.nf] = power.astype(memory.real_type)
         return memory.lsp_c
 
