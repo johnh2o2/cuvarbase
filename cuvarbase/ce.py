@@ -99,6 +99,12 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
         shmem_lim = dev.get_attribute(att)
 
+    if stream is None:
+        # launch on the memory's own stream so the data upload, the
+        # kernel and the result download are ordered and ``finish()``
+        # (which synchronizes the process streams) covers all of them
+        stream = memory.stream
+
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
@@ -482,7 +488,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         nlcs: int, optional (default: 1)
             Maximum batch size for ``run`` calls
         streams: list of ``pycuda.driver.Stream``
-            Length of list must be ``>= nlcs``
+            Length of list must be ``>= nlcs``; defaults to the process
+            streams (created as needed)
 
         Returns
         -------
@@ -496,15 +503,40 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         overrides.update(kwargs)
         kw = self._memory_kwargs(**overrides)
 
+        if streams is None:
+            if len(self.streams) < nlcs:
+                self._create_streams(nlcs - len(self.streams))
+            streams = self.streams
+        elif len(streams) < nlcs:
+            raise ValueError("preallocate: %d streams given for nlcs=%d"
+                             % (len(streams), nlcs))
+
         self.memory = []
         for i in range(nlcs):
-            stream = None if streams is None else streams[i]
-            kw.update(dict(stream=stream))
+            kw.update(dict(stream=streams[i]))
             mem = ConditionalEntropyMemory(**kw)
             mem.allocate(**kwargs)
+            mem.transfer_freqs_to_gpu()
             self.memory.append(mem)
 
         return self.memory
+
+    @staticmethod
+    def _sync_memory_freqs(mem, freqs):
+        """
+        Make sure the frequency grid held by (and uploaded to) ``mem``
+        is ``freqs``; re-upload when a ``run`` call passes a grid that
+        differs from the one the memory was allocated with.
+        """
+        f = np.asarray(freqs, dtype=mem.real_type)
+        if mem.nf is not None and len(f) != mem.nf:
+            raise ValueError(
+                "memory was allocated for %d frequencies but the call "
+                "passes %d; allocate (or preallocate) the memory for the "
+                "new grid" % (mem.nf, len(f)))
+        if mem.freqs is None or not np.array_equal(mem.freqs, f):
+            mem.freqs = f
+            mem.transfer_freqs_to_gpu()
 
     def run(self, data,
             memory=None,
@@ -576,10 +608,16 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                                    **kwargs)
             for mem in memory:
                 mem.transfer_freqs_to_gpu()
-        elif set_data:
+        else:
+            if len(memory) < len(data):
+                raise ValueError(
+                    "%d memory objects for %d lightcurves; preallocate "
+                    "with nlcs >= the batch size" % (len(memory), len(data)))
             for i, (t, y, dy) in enumerate(data):
-                memory[i].set_gpu_arrays_to_zero(**kwargs)
-                memory[i].setdata(t, y, dy=dy, **kwargs)
+                self._sync_memory_freqs(memory[i], frqs[i])
+                if set_data:
+                    memory[i].set_gpu_arrays_to_zero(**kwargs)
+                    memory[i].setdata(t, y, dy=dy, **kwargs)
 
         kw = dict(block_size=self.block_size,
                   shmem_lc=self.shmem_lc)
