@@ -328,6 +328,14 @@ extern "C" __global__ void tls_search_kernel_keplerian(
  * TLS search kernel (standard, fixed duration range)
  * Grid: (nperiods, 1, 1), Block: (BLOCK_SIZE, 1, 1)
  *
+ * RETAINED FOR API COMPATIBILITY ONLY (compile_tls()['standard']): no
+ * Python wrapper launches it since 1.0. Its hard-coded duration window
+ * [0.005, 0.15] is unphysical beyond P ~ 60 d for a Sun-like star
+ * (audit defect 2, tls-duration-window); every legacy-path search now
+ * runs tls_search_kernel_keplerian with per-period bounds (the
+ * Keplerian default, or the fixed window passed as constant arrays,
+ * which is bit-identical to this kernel's trial grid).
+ *
  * Shared memory layout:
  *   phases[ndata] | y_sh[ndata] | dy_sh[ndata] |
  *   template[n_template] | thread_chi2[blockDim] | thread_t0[blockDim] |

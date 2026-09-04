@@ -124,9 +124,10 @@ class TestScalability:
         r = tls.tls_search_batch([(t + 2457000.0, y, dy)],
                                  periods=periods)[0]
         assert abs(r['period'] - 4.56) / 4.56 < 0.01
-        # T0 reported near the (shifted) epoch
-        assert r['T0'] >= 2457000.0
-        assert r['T0'] <= 2457000.0 + 27.0 + r['period']
+        # T0 is the first mid-transit at or after the first observation
+        tmin = t.min() + 2457000.0
+        assert tmin <= r['T0'] < tmin + r['period']
+        assert 0.0 <= r['t0_phase'] < 1.0
 
     def test_chunking_many_small_lcs(self):
         """Force multiple chunks via the LC-count ceiling and check
@@ -257,6 +258,295 @@ class TestRefinementFallback:
             assert 'error' not in r
             assert np.isfinite(r['period']) and r['period'] > 0
             assert np.isfinite(r['duration']) and np.isfinite(r['depth'])
+
+
+# ---------------------------------------------------------------------
+# 1.0 correctness fixes (Sep 2026 audit), GPU regressions on all paths
+# ---------------------------------------------------------------------
+
+import warnings as _w
+
+
+def _call_expect_warning(fn, match):
+    """Run fn() and assert a UserWarning containing `match` was emitted.
+    (pytest.warns around a GPU call would report DID NOT WARN instead of
+    letting the conftest's GPUStubError skip through on CPU-only hosts.)"""
+    with _w.catch_warnings(record=True) as rec:
+        _w.simplefilter("always")
+        r = fn()
+    msgs = [str(x.message) for x in rec if issubclass(x.category, UserWarning)]
+    assert any(match in m for m in msgs), msgs
+    return r
+
+
+def _three_paths(t, y, dy, periods, **kw):
+    """(fast, legacy, batch) results for one light curve."""
+    from cuvarbase import tls
+    fast = tls.tls_search_gpu(t, y, dy, periods=periods, **kw)
+    legacy = tls.tls_search_gpu(t, y, dy, periods=periods, use_fast=False,
+                                **kw)
+    batch = tls.tls_search_batch([(t, y, dy)], periods=periods,
+                                 return_arrays=True)[0]
+    return {'fast': fast, 'legacy': legacy, 'batch': batch}
+
+
+def _box_lc(period, q, depth, t0, t_start, baseline=40.0, ndata=2000,
+            noise=2e-3, seed=3):
+    rng = np.random.RandomState(seed)
+    t = t_start + np.sort(rng.uniform(0, baseline, ndata))
+    y = 1.0 + rng.randn(ndata) * noise
+    rel = np.abs(((t - t0 + 0.5 * period) % period) - 0.5 * period)
+    in_tr = rel < 0.5 * q * period
+    y[in_tr] -= depth
+    return t, y, np.full(ndata, noise), in_tr
+
+
+class TestT0Semantics:
+    """Defect 11 (tls-T0, audit ids 11/145): 'T0' was a fold phase on
+    the fast path (relative to floor(min t)), a phase relative to t = 0
+    on the legacy path, and an absolute time that could precede the
+    first observation on the batch path. It is now the absolute time of
+    the first mid-transit at or after min(t) on every path, with the
+    phase under 't0_phase'."""
+
+    @pytest.mark.parametrize("t_start,frac", [(100.3, 0.37), (100.9, 0.8),
+                                              (2457000.3, 0.37)])
+    def test_T0_first_transit_after_min_t_on_all_paths(self, t_start, frac):
+        P, q, depth = 3.0, 0.03, 0.01
+        t0_true = t_start + frac * P
+        t, y, dy, in_tr = _box_lc(P, q, depth, t0_true, t_start)
+        periods = np.linspace(2.9, 3.1, 300)
+        res = _three_paths(t, y, dy, periods)
+        tmin = t.min()
+        dur_true = q * P
+        for name, r in res.items():
+            assert abs(r['period'] - P) / P < 0.01, name
+            # absolute time in [min(t), min(t) + P)
+            assert tmin <= r['T0'] < tmin + r['period'], (name, r['T0'])
+            assert 0.0 <= r['t0_phase'] < 1.0, name
+            # T0 and t0_phase describe the same epoch (relative to
+            # floor(min t)), up to whole periods
+            t_from_phase = np.floor(tmin) + r['t0_phase'] * r['period']
+            frac_diff = ((r['T0'] - t_from_phase) / r['period']) % 1.0
+            assert min(frac_diff, 1.0 - frac_diff) < 1e-4, name
+            # folding the data at T0 puts the injected transit at phase 0
+            # (legacy coarse t0 stride is q/3 -> up to 0.17 durations off)
+            nearest = np.min(np.abs(r['T0'] - (t0_true + P * np.arange(-2, 20))))
+            assert nearest < 0.4 * dur_true, (name, nearest)
+            ph = ((t - r['T0']) / r['period'] + 0.5) % 1.0 - 0.5
+            sel = np.abs(ph) < 0.4 * q
+            assert sel.sum() > 20, name
+            assert y[sel].mean() < 1.0 - 0.7 * depth, name
+            assert 'FAP' not in r, name
+
+    def test_paths_agree_on_T0(self):
+        P, q, depth = 3.0, 0.03, 0.01
+        t, y, dy, _ = _box_lc(P, q, depth, 100.9 + 0.8 * P, 100.9)
+        res = _three_paths(t, y, dy, np.linspace(2.9, 3.1, 300))
+        assert res['fast']['T0'] == pytest.approx(res['batch']['T0'], abs=1e-6)
+        assert res['fast']['T0'] == pytest.approx(res['legacy']['T0'],
+                                                  abs=0.4 * q * P)
+
+
+class TestUnsortedPeriodGrid:
+    """id 82: a descending (what transitleastsquares returns) or shuffled
+    user grid gave a negative period_uncertainty and a changed SDE."""
+
+    def test_descending_and_shuffled_match_ascending(self):
+        from cuvarbase import tls
+        periods = np.asarray(shared_grid(), dtype=np.float64)
+        lc = make_transit_lc(3.3, 0.03, 0.012, seed=1)
+        ref = tls.tls_search_gpu(*lc, periods=periods)
+        assert ref['period_uncertainty'] > 0
+        rng = np.random.RandomState(0)
+        for label, grid in (('descending', periods[::-1].copy()),
+                            ('shuffled', periods[rng.permutation(len(periods))])):
+            for path in ('fast', 'legacy'):
+                r = tls.tls_search_gpu(*lc, periods=grid,
+                                       use_fast=(path == 'fast'))
+                assert r['period'] == pytest.approx(ref['period'], rel=5e-3), (label, path)
+                assert r['period_uncertainty'] > 0, (label, path)
+                # per-period arrays come back in the caller's order
+                np.testing.assert_array_equal(r['periods'],
+                                              grid.astype(np.float32))
+                back = np.argsort(grid)
+                if path == 'fast':
+                    assert abs(r['SDE'] - ref['SDE']) < 0.05, label
+                    ok = np.isfinite(r['chi2'][back]) & np.isfinite(ref['chi2'])
+                    np.testing.assert_allclose(r['chi2'][back][ok],
+                                               ref['chi2'][ok], rtol=1e-4)
+                    np.testing.assert_array_equal(r['valid_periods'][back],
+                                                  ref['valid_periods'])
+            rb = tls.tls_search_batch([lc], periods=grid,
+                                      return_arrays=True)[0]
+            assert rb['period_uncertainty'] > 0
+            np.testing.assert_array_equal(rb['periods'], grid.astype(np.float32))
+            assert abs(rb['SDE'] - ref['SDE']) < 0.05
+
+
+class TestFlatLightCurve:
+    """id 89: a flat/noiseless light curve fails every trial period; the
+    reference returns SDE = 0 with a warning, cuvarbase used to raise."""
+
+    def test_sde_zero_on_all_paths(self):
+        from cuvarbase import tls
+        t = np.linspace(0, 30, 1000)
+        y = np.ones(1000)
+        dy = np.full(1000, 1e-3)
+        periods = np.linspace(2, 5, 200)
+        calls = {
+            'fast': lambda: tls.tls_search_gpu(t, y, dy, periods=periods),
+            'legacy': lambda: tls.tls_search_gpu(t, y, dy, periods=periods,
+                                                 use_fast=False),
+            'batch': lambda: tls.tls_search_batch([(t, y, dy)],
+                                                  periods=periods)[0],
+        }
+        for name, fn in calls.items():
+            r = _call_expect_warning(fn, "no valid solution")
+            assert r['SDE'] == 0.0 and r['SDE_raw'] == 0.0, name
+            assert np.isnan(r['period']) and np.isnan(r['T0']), name
+            assert r['n_failed_periods'] == 200, name
+            assert 'error' in r and 'FAP' not in r, name
+        # a flat light curve in a batch does not poison its neighbours
+        good = make_transit_lc(3.3, 0.03, 0.012, seed=1)
+        rs = _call_expect_warning(
+            lambda: tls.tls_search_batch([(t, y, dy), good],
+                                         periods=shared_grid()),
+            "no valid solution")
+        assert rs[0]['SDE'] == 0.0
+        assert abs(rs[1]['period'] - 3.3) / 3.3 < 0.01 and rs[1]['SDE'] > 5
+
+
+class TestFAPKey:
+    """Defect 10 (tls-fap): no result carries a FAP unless a null
+    bootstrap was requested; the bootstrap is uniform under the null."""
+
+    def test_no_fap_without_calibration(self):
+        lc = make_transit_lc(3.3, 0.03, 0.012, seed=1)
+        for r in _three_paths(*lc, periods=shared_grid()).values():
+            assert 'FAP' not in r and 'SDE_null' not in r
+
+    def test_null_bootstrap(self):
+        from cuvarbase import tls
+        periods = shared_grid()
+        rng = np.random.RandomState(3)
+        t = np.sort(rng.uniform(0, 27.0, 1500))
+        noise_lc = (t, 1.0 + 2e-3 * rng.randn(1500), np.full(1500, 2e-3))
+        sig_lc = make_transit_lc(3.3, 0.03, 0.012, seed=4)
+        r_noise, r_sig = tls.tls_search_batch(
+            [noise_lc, sig_lc], periods=periods, fap_null_draws=40,
+            fap_seed=7)
+        for r in (r_noise, r_sig):
+            assert 0 < r['FAP'] <= 1.0
+            assert r['SDE_null'].shape == (40,)
+            assert np.all(np.isfinite(r['SDE_null']))
+            # null SDEs sit in the expected range for this grid
+            assert 3 < r['SDE_null'].mean() < 10
+        # the signal beats every permutation: minimum resolvable FAP
+        assert r_sig['FAP'] == pytest.approx(1.0 / 41.0)
+        assert r_sig['SDE'] > r_sig['SDE_null'].max()
+        # the noise light curve is not significant
+        assert r_noise['FAP'] > 0.05
+        # the observed SDE is unchanged by the bootstrap
+        plain = tls.tls_search_batch([noise_lc, sig_lc], periods=periods)
+        assert plain[1]['SDE'] == pytest.approx(r_sig['SDE'], abs=1e-3)
+        # seeded -> reproducible null
+        again = tls.tls_search_batch([noise_lc], periods=periods,
+                                     fap_null_draws=40, fap_seed=7)[0]
+        np.testing.assert_allclose(again['SDE_null'], r_noise['SDE_null'],
+                                   atol=1e-2)
+
+    def test_bad_draw_count(self):
+        from cuvarbase import tls
+        lc = make_transit_lc(3.3, 0.03, 0.012, ndata=300)
+        with pytest.raises(ValueError, match="fap_null_draws"):
+            tls.tls_search_batch([lc], periods=shared_grid(),
+                                 fap_null_draws=-1)
+
+
+class TestSNRDefinition:
+    """id 85: SNR is sqrt(chi2_0 - chi2_min) with the float64
+    constant-model chi2_0 and the refined chi2_min (was max(chi2) over
+    the grid and the coarse chi2)."""
+
+    def test_snr_is_delta_chi2_over_constant_model(self):
+        t, y, dy = make_transit_lc(3.3, 0.03, 0.012, seed=6)
+        chi2_0 = np.sum((1.0 - y) ** 2 / (dy ** 2 + 1e-10))
+        res = _three_paths(t, y, dy, shared_grid())
+        for name, r in res.items():
+            assert r['SNR'] == pytest.approx(np.sqrt(chi2_0 - r['chi2_min']),
+                                             rel=1e-5), name
+            assert r['SNR'] > 10, name
+
+
+class TestDurationWindowDefault:
+    """Defect 2 on device: the default window of tls_search_gpu equals
+    the explicit Keplerian window (identical trial grid), 'fixed' is an
+    opt-in that warns, and the legacy path honours the same window."""
+
+    def test_default_equals_explicit_keplerian(self):
+        from cuvarbase import tls, tls_grids
+        lc = make_transit_lc(3.3, 0.03, 0.012, seed=1)
+        periods = np.asarray(shared_grid(), dtype=np.float64)
+        q = tls_grids.q_transit(periods)
+        r_def = tls.tls_search_gpu(*lc, periods=periods)
+        r_exp = tls.tls_search_gpu(*lc, periods=periods, qmin=0.5 * q,
+                                   qmax=2.0 * q)
+        ok = np.isfinite(r_def['chi2']) & np.isfinite(r_exp['chi2'])
+        np.testing.assert_allclose(r_def['chi2'][ok], r_exp['chi2'][ok],
+                                   rtol=1e-5)
+        assert r_def['period'] == pytest.approx(r_exp['period'], rel=1e-3)
+        # tls_transit builds its own Ofir grid from the data's span and
+        # the same Keplerian window; it must find the same transit
+        r_tr = tls.tls_transit(*lc, period_min=1.0, period_max=12.0)
+        assert r_tr['period'] == pytest.approx(3.3, rel=0.01)
+        assert r_tr['depth'] == pytest.approx(r_def['depth'], rel=0.1)
+
+    def test_fixed_window_optin_warns_and_default_does_not(self):
+        from cuvarbase import tls
+        rng = np.random.RandomState(9)
+        t = np.sort(rng.uniform(0, 700.0, 2000))
+        y = 1.0 + 1e-3 * rng.randn(2000)
+        dy = np.full(2000, 1e-3)
+        periods = np.linspace(100.0, 300.0, 50)
+        with _w.catch_warnings():
+            _w.simplefilter("error")
+            tls.tls_search_gpu(t, y, dy, periods=periods)
+            tls.tls_search_gpu(t, y, dy, periods=periods, use_fast=False)
+        for path in ('fast', 'legacy'):
+            r = _call_expect_warning(
+                lambda: tls.tls_search_gpu(t, y, dy, periods=periods,
+                                           duration_window='fixed',
+                                           use_fast=(path == 'fast')),
+                "excludes the Keplerian")
+            assert np.isfinite(r['SDE'])
+
+    def test_legacy_path_uses_keplerian_kernel(self, monkeypatch):
+        from cuvarbase import tls
+        seen = []
+        orig = tls._get_cached_kernels
+
+        def spy(*a, **k):
+            kern = dict(orig(*a, **k))
+            real = kern['keplerian']
+
+            def kep(*args, **kwargs):
+                seen.append('keplerian')
+                return real(*args, **kwargs)
+
+            def std(*args, **kwargs):
+                seen.append('standard')
+                return kern['standard'](*args, **kwargs)
+
+            kern['keplerian'] = kep
+            kern['standard'] = std
+            return kern
+
+        monkeypatch.setattr(tls, '_get_cached_kernels', spy)
+        lc = make_transit_lc(3.3, 0.03, 0.012, ndata=800, seed=2)
+        r = tls.tls_search_gpu(*lc, periods=shared_grid(), use_fast=False)
+        assert seen == ['keplerian']
+        assert abs(r['period'] - 3.3) / 3.3 < 0.02
 
 
 if __name__ == '__main__':
