@@ -72,7 +72,7 @@ Honesty notes: we claim **no** raw-kernel speedup — the kernel-only decomposit
 - **Survey-speed kernels (July 2026)**: fused-`noverlap` histograms, conflict-scatter staging of dense cadences, occupancy-aware frequency chunking, and host-path overhead fixes — end-to-end **2.0–12.7×** on realistic Keplerian survey grids, kernel-only 2.9–9.2× (the TESS-scale 12.7× includes curing a default-environment BLAS threadpool pathology in-library; 5.8× against an already-tuned baseline). Periodograms unchanged (parity correlation 1.0000000, identical peaks).
 
 ### Lomb–Scargle & NFFT
-- **Multiharmonic generalized Lomb–Scargle on GPU** (`nharmonics>1`), matching the direct-sums reference to machine precision for H=2,3.
+- **Multiharmonic generalized Lomb–Scargle on GPU** (`nharmonics>1`). The per-frequency solve runs on the host in float64; on device, after the Sep-2026 psi-table and grid-sizing fixes, the NFFT path agrees with the float64 `lomb_scargle_direct_sums` reference to 5.7e-7 in float32 and 7.4e-10 with `use_double=True` for H=2,3 (the host solve itself is exact to float64 roundoff).
 - **scikit-cuda dependency removed**: cuFFT is called through a minimal in-house ctypes binding at performance parity (±2%). This unblocks numpy ≥1.24 / 2.x environments.
 - **Optional cuFINUFFT backend** (`pip install cuvarbase[cufinufft]`, `use_cufinufft=True`) as a numerical cross-check; the built-in kernel remains default and faster.
 - **Rigorous NFFT accuracy control**: `autoset_m` now uses the L1-norm truncation bound, and a float32 π-literal bug that imposed a ~1e-3 error floor on *double-precision* NFFTs is fixed — float64 error now tracks theory down to ~1e-10.
