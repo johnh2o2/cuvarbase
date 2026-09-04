@@ -771,8 +771,13 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 "number of frequency grids (%d) does not match number of "
             "lightcurves (%d)" % (len(frqs), len(data)))
 
-        for frq in frqs:
-            check_freqs(frq, name='ConditionalEntropyAsyncProcess.run')
+        if freqs is None:
+            # grids that did not come through the check above: the
+            # autofrequency default, or the grid a preallocated memory
+            # was built with
+            for frq in frqs:
+                check_freqs(frq,
+                            name='ConditionalEntropyAsyncProcess.run')
 
         if not self.use_fast:
             for f, d in zip(frqs, data):
@@ -868,9 +873,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 "number of frequency grids (%d) does not match number of "
             "lightcurves (%d)" % (len(frqs), len(data)))
 
-        for frq in frqs:
-            check_freqs(frq,
-                        name='ConditionalEntropyAsyncProcess.large_run')
+        if freqs is None:
+            for frq in frqs:
+                check_freqs(
+                    frq, name='ConditionalEntropyAsyncProcess.large_run')
 
         cpers = []
         for d, f in zip(data, frqs):
