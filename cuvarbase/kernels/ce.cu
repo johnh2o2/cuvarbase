@@ -163,8 +163,12 @@ __global__ void ce_classical_fast(const FLT * __restrict__ t,
 	unsigned int * block_bin = (unsigned int *)sh;
 	unsigned int * block_bin_phi = (unsigned int *)&block_bin[nmag * nphase];
 
-	// align!
-	unsigned int r = ((nmag * nphase + nphase) * sizeof(unsigned int)) % sizeof(FLT);
+	// align Hc to sizeof(FLT): `r` is the number of PADDING ELEMENTS
+	// (unsigned ints) needed after block_bin_phi, i.e. the byte remainder
+	// divided by sizeof(unsigned int).  Using the byte remainder directly
+	// as an element offset (as before) misaligned Hc by 4 bytes whenever
+	// (nmag + 1) * nphase was odd in double precision.
+	unsigned int r = (((nmag * nphase + nphase) * sizeof(unsigned int)) % sizeof(FLT)) / sizeof(unsigned int);
 	FLT * Hc = (FLT *)&block_bin_phi[nphase + r];
 	__shared__ FLT f0;
 
@@ -280,8 +284,12 @@ __global__ void ce_classical_faster(const FLT * __restrict__ t,
 	unsigned int * block_bin = (unsigned int *)sh;
 	unsigned int * block_bin_phi = (unsigned int *)&block_bin[nmag * nphase];
 
-	// align!
-	unsigned int r = ((nmag * nphase + nphase) * sizeof(unsigned int)) % sizeof(FLT);
+	// align Hc to sizeof(FLT): `r` is the number of PADDING ELEMENTS
+	// (unsigned ints) needed after block_bin_phi, i.e. the byte remainder
+	// divided by sizeof(unsigned int).  Using the byte remainder directly
+	// as an element offset (as before) misaligned Hc by 4 bytes whenever
+	// (nmag + 1) * nphase was odd in double precision.
+	unsigned int r = (((nmag * nphase + nphase) * sizeof(unsigned int)) % sizeof(FLT)) / sizeof(unsigned int);
 	FLT * Hc = (FLT *)&block_bin_phi[nphase + r];
 	FLT * t_sh = (FLT *)&Hc[nmag * nphase];
 	unsigned int * y_sh = (unsigned int *)&t_sh[ndata];
