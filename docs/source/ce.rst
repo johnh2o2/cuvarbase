@@ -15,16 +15,26 @@ where :math:`p(m, \phi)` is the density of points that fall within the bin locat
 .. note::
 
 	**What the returned value is.** ``cuvarbase`` returns
-	:math:`H(m|\phi) + \log \Delta m`, where :math:`\Delta m =
-	(\mathrm{mag\_overlap} + 1) / \mathrm{mag\_bins}` is the magnitude bin
-	width in units of the (normalized) magnitude range -- i.e. the
-	entropy of the magnitude *density* rather than of the bin
-	probabilities (with ``balanced_magbins=True`` each bin uses its own
-	width). The offset is the same at every frequency (:math:`\log(1/5)
-	= -1.609` with the default ``mag_bins=5``), so the location of the
-	minimum is unaffected; subtract it to recover Graham et al.'s
-	normalization. Lower values mean more structure: the best frequency
-	is the **argmin** of the periodogram.
+	:math:`H(m|\phi) + \sum_m p(m) \log \Delta m_m`, where
+	:math:`\Delta m_m` is the width of magnitude bin :math:`m` in units of
+	the (normalized) magnitude range and :math:`p(m)` is the fraction of
+	the histogram mass in that bin -- i.e. the entropy of the magnitude
+	*density* rather than of the bin probabilities. With the default
+	``mag_overlap=0`` every bin has :math:`\Delta m_m = 1/\mathrm{mag\_bins}`
+	and the offset is :math:`\log(1/5) = -1.609` for the default
+	``mag_bins=5``. With ``mag_overlap > 0`` the unweighted kernels use
+	:math:`\Delta m_m = \min(\mathrm{mag\_overlap} + 1,\,
+	\mathrm{mag\_bins} - m) / \mathrm{mag\_bins}` (the top bins are
+	truncated at the brightest magnitude cell), whereas the weighted
+	kernel integrates every bin over the full window and uses the
+	constant :math:`(\mathrm{mag\_overlap} + 1) / \mathrm{mag\_bins}`, so
+	``weighted=True`` and ``weighted=False`` spectra then differ by a
+	constant. With ``balanced_magbins=True`` each bin uses its own width.
+	In every case the offset is the same at every frequency (the
+	per-magnitude-bin totals do not depend on the trial frequency), so
+	the location of the minimum is unaffected; subtract it to recover
+	Graham et al.'s normalization. Lower values mean more structure: the
+	best frequency is the **argmin** of the periodogram.
 
 	With ``compute_log_prob=True`` the returned quantity is instead the
 	Poisson log-likelihood of the phase-folded histogram under the
