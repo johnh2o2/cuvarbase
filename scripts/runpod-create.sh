@@ -22,7 +22,12 @@ if [ -z "${RUNPOD_API_KEY}" ]; then
     exit 1
 fi
 
-GPU_TYPE="${1:-NVIDIA RTX A4000}"
+# GPU types are tried in order until one deploys (RunPod stock comes and
+# goes; e.g. `runpod-create.sh "NVIDIA RTX A5000" "NVIDIA A40"`).
+GPU_TYPES=("$@")
+if [ ${#GPU_TYPES[@]} -eq 0 ]; then
+    GPU_TYPES=("NVIDIA RTX A4000")
+fi
 POD_NAME="cuvarbase-dev"
 IMAGE="runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04"
 VOLUME_GB=20
@@ -30,32 +35,45 @@ DISK_GB=20
 API_URL="https://api.runpod.io/graphql?api_key=${RUNPOD_API_KEY}"
 
 echo "Creating RunPod instance..."
-echo "  GPU: ${GPU_TYPE}"
 echo "  Image: ${IMAGE}"
 
-# Create pod
-RESPONSE=$(curl -s --request POST \
-    --header 'content-type: application/json' \
-    --url "${API_URL}" \
-    --data "{\"query\": \"mutation { podFindAndDeployOnDemand(input: { cloudType: ALL, gpuCount: 1, volumeInGb: ${VOLUME_GB}, containerDiskInGb: ${DISK_GB}, minVcpuCount: 2, minMemoryInGb: 15, gpuTypeId: \\\"${GPU_TYPE}\\\", name: \\\"${POD_NAME}\\\", imageName: \\\"${IMAGE}\\\", ports: \\\"22/tcp\\\", volumeMountPath: \\\"/workspace\\\" }) { id costPerHr } }\"}")
+POD_ID=""
+for GPU_TYPE in "${GPU_TYPES[@]}"; do
+    echo "  Trying GPU: ${GPU_TYPE}"
 
-# Extract pod ID
-POD_ID=$(echo "${RESPONSE}" | python3 -c "
+    # Create pod
+    RESPONSE=$(curl -s --request POST \
+        --header 'content-type: application/json' \
+        --url "${API_URL}" \
+        --data "{\"query\": \"mutation { podFindAndDeployOnDemand(input: { cloudType: ALL, gpuCount: 1, volumeInGb: ${VOLUME_GB}, containerDiskInGb: ${DISK_GB}, minVcpuCount: 2, minMemoryInGb: 15, gpuTypeId: \\\"${GPU_TYPE}\\\", name: \\\"${POD_NAME}\\\", imageName: \\\"${IMAGE}\\\", ports: \\\"22/tcp\\\", volumeMountPath: \\\"/workspace\\\" }) { id costPerHr } }\"}")
+
+    # Extract pod ID (the `|| true` keeps `set -e` from aborting silently
+    # on an API error; the error text is printed below instead)
+    POD_ID=$(echo "${RESPONSE}" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 if 'errors' in data:
-    print('ERROR: ' + data['errors'][0]['message'], file=sys.stderr)
-    sys.exit(1)
+    print('ERROR: ' + data['errors'][0]['message'])
+    sys.exit(0)
 pod = data['data']['podFindAndDeployOnDemand']
 print(pod['id'])
-" 2>&1)
+" 2>&1 || true)
 
-if [[ "${POD_ID}" == ERROR:* ]]; then
-    echo "${POD_ID}"
+    if [[ "${POD_ID}" == ERROR:* ]] || [ -z "${POD_ID}" ]; then
+        echo "    ${POD_ID:-ERROR: empty response}"
+        POD_ID=""
+        continue
+    fi
+    break
+done
+
+if [ -z "${POD_ID}" ]; then
     echo ""
-    echo "Full response: ${RESPONSE}"
+    echo "No pod could be created for any of: ${GPU_TYPES[*]}"
+    echo "Last response: ${RESPONSE}"
     exit 1
 fi
+echo "  GPU: ${GPU_TYPE}"
 
 COST=$(echo "${RESPONSE}" | python3 -c "
 import sys, json
