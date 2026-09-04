@@ -177,8 +177,35 @@ class TestDetectorAlgebra:
         V = np.stack([t - t.mean(), (t - t.mean()) ** 2], axis=1)
         y = 1.0 + 0.01 * rng.randn(n) + V @ np.array([0.3, -0.02])
         r = _sequential_detrend(t, y, V)
-        # residual orthogonal to the basis
-        np.testing.assert_allclose(V.T @ r, 0.0, atol=1e-8 * n)
+        # the fit has an intercept: the demeaned residual is orthogonal
+        # to the CENTRED basis (the second column has mean var(t) != 0),
+        # and the residual keeps the mean of y
+        Vc = V - V.mean(axis=0)
+        np.testing.assert_allclose(Vc.T @ (r - r.mean()), 0.0,
+                                   atol=1e-8 * n)
+        np.testing.assert_allclose(r.mean(), y.mean(), rtol=1e-10)
+
+    def test_sequential_detrend_nonzero_mean_column(self):
+        # audit Sep 2026 (lrt-sequential-intercept): OLS without an
+        # intercept on relative flux (mean 1) with a basis column of
+        # mean 0.01 and unit std absorbs the mean flux into the
+        # coefficient and leaves a residual systematic of amplitude
+        # ybar * m_v / s_v = 0.01 -- 10x this noise. With the intercept
+        # the residual is the noise (up to the O(sigma/sqrt n) fit error).
+        import numpy as np
+        from cuvarbase.nufft_lrt import _sequential_detrend
+
+        rng = np.random.RandomState(7)
+        n, sigma = 2000, 1e-3
+        t = np.sort(rng.rand(n)) * 90.0
+        v = np.sin(2 * np.pi * t / 30.0)
+        v = (v - v.mean()) / v.std() + 0.01          # mean 0.01, std 1
+        noise = sigma * rng.randn(n)
+        y = 1.0 + 0.004 * v + noise
+        r = _sequential_detrend(t, y, v[:, None])
+        leftover = (r - r.mean()) - (noise - noise.mean())
+        assert np.std(leftover) < 0.1 * sigma        # was ~10 sigma
+        assert np.std(r - r.mean()) < 1.2 * sigma
 
 
 class TestPsdSmoothing:
