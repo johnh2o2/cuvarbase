@@ -868,11 +868,40 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def preallocate(self, max_nobs, nlcs=1, nf=None, k0=None,
                     freqs=None, streams=None, **kwargs):
+        """Allocate ``nlcs`` reusable :class:`LombScargleMemory` objects
+        (stored in ``self.memory`` and used by :meth:`run` when no
+        ``memory`` is passed) for lightcurves of up to ``max_nobs``
+        points on the grid ``df * (k0 + arange(nf))``.
 
+        Parameters
+        ----------
+        max_nobs : int
+            Largest number of observations any later ``run`` will pass.
+        nlcs : int, optional (default: 1)
+            Number of memory objects (lightcurves per ``run`` call).
+        nf, k0 : int, optional
+            Grid size and first mode; alternatively give ``freqs``.
+        freqs : array_like, optional
+            The uniform grid (validated with :func:`check_k0`).
+        streams : list of ``pycuda.driver.Stream``, optional
+            One stream per memory object. Defaults to ``self.streams``
+            (created as needed) -- the streams :meth:`finish`
+            synchronizes. Before 1.0 the default was ``None`` (the null
+            stream), so ``finish()`` did not wait for the result copy
+            and ``run()`` after ``preallocate()`` returned stale
+            powers. Streams given here that are not already in
+            ``self.streams`` are appended to it so ``finish()`` covers
+            them.
+        **kwargs
+            Passed to :class:`LombScargleMemory`.
+        """
         if freqs is not None:
+            check_k0(freqs)
             k0 = get_k0(freqs)
             nf = len(freqs)
-        if nf is not None and k0 is None:
+        if nf is None:
+            raise ValueError("preallocate needs nf (with k0) or freqs")
+        if k0 is None:
             raise ValueError("k0 must be given when nf is specified "
                              "without freqs")
 
@@ -880,9 +909,22 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         sigma = self.nfft_proc.sigma
 
+        if streams is None:
+            if len(self.streams) < nlcs:
+                self._create_streams(nlcs - len(self.streams))
+            streams = self.streams[:nlcs]
+        else:
+            streams = list(streams)
+            if len(streams) < nlcs:
+                raise ValueError("preallocate: %d streams given for nlcs=%d"
+                                 % (len(streams), nlcs))
+            for s in streams:
+                if not any(s is s0 for s0 in self.streams):
+                    self.streams.append(s)
+
         self.memory = []
         for i in range(nlcs):
-            stream = None if streams is None else streams[i]
+            stream = streams[i]
             mem = LombScargleMemory(sigma, stream, m,
                                     k0=k0,
                                     buffered_transfer=True,
