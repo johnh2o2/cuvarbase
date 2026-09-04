@@ -326,6 +326,41 @@ class TestNFFT(object):
         err_max = np.max(np.absolute(direct_dft - gpu_nfft))
         assert err_max <= 100. * bound
 
+    def test_fast_grid_double_precision_floor(self):
+        # Regression test for floorf() on the double grid coordinate in
+        # fast_gaussian_grid (Sep 2026): a point whose scaled position
+        # ng*x - m lies within a float32 ulp below an integer K was
+        # floored to K after the float32 rounding, so its window was
+        # deposited one cell right of where precompute_psi (exact
+        # fraction) centred it. ng*t1 - m = 16 - 2^-30 here: floor is
+        # 15 in double, 16 after rounding to float32. t1 is exact in
+        # binary (ng is a power of two), so the case is deterministic.
+        nf, sigma, m = 32, 2, 4
+        ng = sigma * nf
+        K = 20
+        t1 = (K - 2.0 ** -30) / ng
+        t = np.array([0.0, t1, 1.0])
+        y = np.array([0.0, 1.0, 0.0])
+        b = get_b(sigma, m)
+
+        ref = np.zeros(ng)
+        u = int(np.floor(ng * t1 - m))
+        for k in range(2 * m + 1):
+            ref[(u + k) % ng] += np.exp(-((ng * t1 - (u + k)) ** 2) / b) \
+                / np.sqrt(np.pi * b)
+        assert u == K - m - 1
+
+        grid = simple_gpu_nfft(t, y, nf, sigma=sigma, m=m,
+                               use_double=True,
+                               just_return_gridded_data=True,
+                               fast_grid=True, minimum_frequency=0.,
+                               samples_per_peak=1)
+        grid = np.asarray(grid, dtype=np.float64)
+
+        nonzero = np.flatnonzero(grid)
+        assert nonzero.min() == u and nonzero.max() == u + 2 * m
+        assert np.max(np.abs(grid - ref)) < 1e-12
+
     def test_nfft_adjoint_async(self, f0=0., ndata=10,
                                 batch_size=3, use_double=False):
         datas = []

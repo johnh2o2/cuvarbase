@@ -147,8 +147,15 @@ __global__ void fast_gaussian_grid(
 		// observation
 		FLT yi = y[i];
 
-		// nearest gridpoint (rounding down)
-		int u = (int) floorf(ng * xval - m);
+		// nearest gridpoint (rounding down). Must be the FLT-typed
+		// floor(): under DOUBLE_PRECISION floorf() rounded the double
+		// coordinate to float32 first, so points within a float32 ulp
+		// below an integer were deposited one cell to the right of
+		// where precompute_psi (which uses the exact fraction) placed
+		// the window -- ~n0*ng/2^24 misplaced points, making
+		// use_double=True LESS accurate than float32 at survey scale
+		// (nfft-floorf-double, Sep 2026). For float, floor() is floorf().
+		int u = (int) floor(ng * xval - m);
 
 		// precomputed filter values
 		FLT Q  = q1[di];

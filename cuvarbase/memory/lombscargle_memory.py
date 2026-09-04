@@ -180,14 +180,19 @@ class LombScargleMemory:
                 "`self.nf is not None` not satisfied")
 
         if self.use_fft:
-            if self.nfft_mem_yw.precomp_psi:
-                self.nfft_mem_yw.allocate_precomp_psi(n0=n0)
-
-            # Only one precomp psi needed
-            self.nfft_mem_w.precomp_psi = False
-            self.nfft_mem_w.q1 = self.nfft_mem_yw.q1
-            self.nfft_mem_w.q2 = self.nfft_mem_yw.q2
-            self.nfft_mem_w.q3 = self.nfft_mem_yw.q3
+            # Each NFFT grid needs its OWN psi tables. ``precompute_psi``
+            # (cunfft.cu) stores frac(ng * x) for the grid length ng it
+            # was run with, and the w grid is ~2x the yw grid (2H vs H
+            # harmonics). Sharing the yw tables with the w grid, as this
+            # code did before 1.0, displaced every point's Gaussian on
+            # the w grid by frac(ng_yw x) - frac(ng_w x) cells and biased
+            # every default-path Lomb-Scargle power by 3e-3..2.4e-2
+            # (defect 3, nfft-psi-table). q3 is grid-independent but
+            # tiny (2m+1 entries), so each grid simply owns all three.
+            self.nfft_mem_w.precomp_psi = self.nfft_mem_yw.precomp_psi
+            for nfft_mem in (self.nfft_mem_yw, self.nfft_mem_w):
+                if nfft_mem.precomp_psi:
+                    nfft_mem.allocate_precomp_psi(n0=n0)
 
             fft_size = self.nharmonics * (self.nf + k0)
             self.nfft_mem_yw.allocate_grid(nf=fft_size - k0)

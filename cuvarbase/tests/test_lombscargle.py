@@ -10,8 +10,15 @@ from pycuda.tools import mark_cuda_test
 import pycuda.autoprimaryctx
 spp = 3
 nfac = 3
-lsrtol = 1E-2
-lsatol = 1E-2
+# Tolerances vs astropy / between GPU paths. Before the Sep-2026 NFFT
+# fixes (psi tables shared between differently-sized grids, grids sized
+# without k0) these had to be 1e-2 -- the default path carried a
+# 3e-3..2e-2 bias. The fixed float32 path is at ~3e-6 on the problems in
+# this file (measured on an A40; float32 ~2e-4 at survey-scale f*T, see
+# TestLombScargleAccuracy), so 1e-4 is a 30x margin here and would have
+# failed on the old code.
+lsrtol = 1E-4
+lsatol = 1E-4
 nfft_sigma = 5
 
 rand = np.random.RandomState(100)
@@ -297,6 +304,124 @@ class TestLombScargle(object):
 
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
+
+
+def _realistic_lc(N=300, T=365.0, f0=3.1, seed=1):
+    """Ground-based-like lightcurve: N points over T days, mag-scale
+    y, heteroscedastic dy, one sinusoid at f0 (cycles/day)."""
+    rng = np.random.RandomState(seed)
+    t = np.sort(rng.rand(N)) * T
+    dy = 0.1 * np.exp(0.5 * rng.randn(N))
+    y = 12.0 + 0.3 * np.cos(2 * np.pi * f0 * t - 0.3) + dy * rng.randn(N)
+    return t, y, dy
+
+
+def _uniform_grid(fmin, fmax, T, samples_per_peak=5):
+    """freqs = df * (k0 + arange(nf)) with df = 1 / (spp * T)."""
+    df = 1.0 / (samples_per_peak * T)
+    k0 = int(round(fmin / df))
+    nf = int(round((fmax - fmin) / df))
+    return df * (k0 + np.arange(nf))
+
+
+def _exact_dft(t, c, freqs, chunk=4000):
+    """sum_j c_j exp(2 pi i f t_j) in float64 (the adjoint NFFT's target)."""
+    out = np.empty(len(freqs), dtype=complex)
+    for a in range(0, len(freqs), chunk):
+        ph = 2 * np.pi * np.outer(freqs[a:a + chunk], t)
+        out[a:a + chunk] = (np.cos(ph) + 1j * np.sin(ph)) @ c
+    return out
+
+
+def _run_gpu(proc, t, y, dy, freqs, **kwargs):
+    r = proc.run([(t, y, dy)], freqs=freqs, **kwargs)
+    proc.finish()
+    return np.asarray(r[0][1][:len(freqs)], dtype=np.float64)
+
+
+class TestLombScargleAccuracy(object):
+    """Accuracy of the default (NFFT) path against astropy's float64
+    generalized Lomb-Scargle on realistic problem sizes.
+
+    Regression tests for the Sep-2026 NFFT defects: (a) the w-spectrum
+    grid reused the psi tables precomputed for the (2x smaller) yw grid,
+    displacing every point's window by a fraction of a cell -- 3e-3 to
+    2.4e-2 power bias on every default call, in float32 AND float64,
+    independent of m (defect 3, ``nfft-psi-table``); (b) ``floorf()`` on
+    the double-precision grid coordinate misplaced ~n0*ng/2^24 points by
+    one cell, making ``use_double=True`` *less* accurate than float32 on
+    dense grids (``nfft-floorf-double``). Measured on an A40 after the
+    fixes: float32 1.9e-4 / double 4.3e-8 on the k0=1 grid below (both
+    7.7e-3 before); double 2.0e-8 on the long-baseline grid (2.3e-3
+    before, float32 1.8e-3 -> 1.6e-4).
+    """
+
+    @pytest.mark.parametrize("use_double,tol", [(False, 6e-4),
+                                                (True, 1e-6)])
+    def test_default_grid_vs_astropy(self, use_double, tol):
+        t, y, dy = _realistic_lc()
+        freqs = _uniform_grid(1.0 / (5 * 365.0), 20.0, 365.0)
+        ref = LombScargle(t, y, dy).power(freqs)
+
+        proc = LombScargleAsyncProcess(use_double=use_double, sigma=4,
+                                       m=8, autoset_m=False)
+        p = _run_gpu(proc, t, y, dy, freqs)
+
+        assert np.max(np.abs(p - ref)) < tol
+        assert np.argmax(p) == np.argmax(ref)
+
+    @pytest.mark.parametrize("use_double,tol", [(False, 6e-4),
+                                                (True, 1e-6)])
+    def test_long_baseline_dense_grid_vs_astropy(self, use_double, tol):
+        # 1000 points over 3 yr, 109,499 frequencies: the double path
+        # hit the floorf() cell misplacement here (2.3e-3 before the
+        # fix, i.e. worse than float32).
+        t, y, dy = _realistic_lc(N=1000, T=1095.0, f0=2.7, seed=3)
+        freqs = _uniform_grid(1.0 / (5 * 1095.0), 20.0, 1095.0)
+        ref = LombScargle(t, y, dy).power(freqs, method='cython')
+
+        proc = LombScargleAsyncProcess(use_double=use_double, sigma=4,
+                                       m=8, autoset_m=False)
+        p = _run_gpu(proc, t, y, dy, freqs)
+
+        assert np.max(np.abs(p - ref)) < tol
+        assert np.argmax(p) == np.argmax(ref)
+
+    @pytest.mark.parametrize("use_double,tol", [(False, 5e-3),
+                                                (True, 1e-6)])
+    def test_device_spectra_match_exact_dft(self, use_double, tol):
+        # Read the two NFFT spectra straight off the device memory and
+        # compare with the exact float64 adjoint DFT. The w-spectrum
+        # (nfft_mem_w.ghat_g, modes k0 .. 2 nf + k0 - 1) was off by 0.15
+        # with the shared psi tables; the yw-spectrum was always fine.
+        from ..lombscargle import get_k0
+        from ..utils import normalize_light_curves
+
+        t, y, dy = _realistic_lc()
+        freqs = _uniform_grid(1.0 / (5 * 365.0), 20.0, 365.0)
+        nf, k0, df = len(freqs), get_k0(freqs), freqs[1] - freqs[0]
+
+        # run() centres t and y on the host; mirror that for the DFT
+        (tn, yn, dyn), = normalize_light_curves([(t, y, dy)])
+        w = dyn ** -2
+        w /= np.sum(w)
+        yw = w * (yn - np.dot(w, yn))
+
+        proc = LombScargleAsyncProcess(use_double=use_double, sigma=4,
+                                       m=8, autoset_m=False)
+        mem = proc.allocate([(tn, yn, dyn)], nfreqs=[nf], k0s=[k0])
+        _run_gpu(proc, t, y, dy, freqs, memory=mem)
+
+        sw = mem[0].nfft_mem_w.ghat_g.get()
+        syw = mem[0].nfft_mem_yw.ghat_g.get()
+        n_w = 2 * nf + k0
+        assert len(sw) >= n_w and len(syw) >= nf
+
+        sw_exact = _exact_dft(tn, w, (k0 + np.arange(n_w)) * df)
+        syw_exact = _exact_dft(tn, yw, (k0 + np.arange(nf)) * df)
+        # sum(w) == 1, so these are absolute errors on a unit scale
+        assert np.max(np.abs(sw[:n_w] - sw_exact)) < tol
+        assert np.max(np.abs(syw[:nf] - syw_exact)) < tol
 
 
 class TestLombScargleSimpleWeights(object):
