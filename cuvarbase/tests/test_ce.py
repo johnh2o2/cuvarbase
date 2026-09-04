@@ -92,14 +92,19 @@ def cpu_ce(t, y, freqs, nphase, nmag, phase_overlap=0, mag_overlap=0,
     return out
 
 
-def exact_weighted_hist(t, y, dy, freqs, nphase, nmag):
+def exact_weighted_hist(t, y, dy, freqs, nphase, nmag, mag_overlap=0):
     """Weighted-CE histogram with the EXACT Gaussian probability mass of
-    every point in every magnitude bin (no truncation)."""
+    every point in every magnitude bin (no truncation).
+
+    With ``mag_overlap > 0`` the weighted kernel widens every bin
+    upwards without clipping, so bin ``m`` spans
+    ``[m / nmag, (m + 1 + mag_overlap) / nmag]``.
+    """
     t, Y, yscale = _prep(t, y, np.float32)
     Y = Y.astype(np.float64)
     DY = (np.asarray(dy, dtype=np.float32) / yscale).astype(np.float64)
     m = np.arange(nmag)
-    P = (ndtr(((m + 1) / nmag - Y[:, None]) / DY[:, None])
+    P = (ndtr(((m + 1 + mag_overlap) / nmag - Y[:, None]) / DY[:, None])
          - ndtr((m / nmag - Y[:, None]) / DY[:, None]))
     H = np.zeros((len(freqs), nphase, nmag))
     for i, f in enumerate(freqs):
@@ -108,9 +113,11 @@ def exact_weighted_hist(t, y, dy, freqs, nphase, nmag):
     return H
 
 
-def weighted_ce_from_hist(H, nmag):
+def weighted_ce_from_hist(H, nmag, mag_overlap=0):
     Nphi = H.sum(axis=2, keepdims=True)
-    dm = 1.0 / nmag
+    # ``weighted_ce`` uses the constant window width for every bin
+    # (unlike the unweighted kernels, which truncate the top bins)
+    dm = (mag_overlap + 1.0) / nmag
     with np.errstate(divide='ignore', invalid='ignore'):
         term = np.where((H > 0) & (Nphi > 1e-10),
                         H * np.log(dm * Nphi / np.where(H > 0, H, 1)), 0)
@@ -671,7 +678,13 @@ class TestCEWeighted(object):
 
     @pytest.mark.parametrize('mag_bins', [5, 10])
     @pytest.mark.parametrize('noise', [0.05, 0.15])
-    def test_bins_and_ce_vs_ndtr_reference(self, mag_bins, noise):
+    @pytest.mark.parametrize('mag_overlap', [0, 1, 2])
+    def test_bins_and_ce_vs_ndtr_reference(self, mag_bins, noise,
+                                           mag_overlap):
+        # ``mag_overlap > 0`` is where the symmetric-truncation fix
+        # matters most (the audit measured a 0.21 nat change in the CE
+        # itself, 0.14 on the default lightcurve); the overlapping
+        # window makes bin m span [m, m + 1 + mag_overlap] / mag_bins.
         r = np.random.RandomState(3)
         N = 300
         t = np.sort(r.rand(N)) * 20.0
@@ -679,17 +692,21 @@ class TestCEWeighted(object):
              + noise * r.randn(N))
         dy = noise * np.ones(N)
         freqs = np.linspace(0.1, 3.0, 40)
-        He = exact_weighted_hist(t, y, dy, freqs, 10, mag_bins)
-        ce_exact = weighted_ce_from_hist(He, mag_bins)
+        He = exact_weighted_hist(t, y, dy, freqs, 10, mag_bins,
+                                 mag_overlap=mag_overlap)
+        ce_exact = weighted_ce_from_hist(He, mag_bins,
+                                         mag_overlap=mag_overlap)
 
         # default max_phi=3: only bins wholly beyond 3 sigma are skipped
         proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=mag_bins,
+                                              mag_overlap=mag_overlap,
                                               weighted=True, max_phi=3.0)
         ce, mem = run_ce_with_memory(proc, t, y, dy, freqs)
         bins = mem.bins_g.get().reshape(len(freqs), 10, mag_bins)
         assert np.all(np.isfinite(ce))
-        # audit-measured post-fix levels: bins 6e-3, CE 1.1e-3 (old: 1.5-4.2
-        # in the bins, 2e-2 .. 5e-2 in the CE)
+        # audit-measured post-fix levels: bins 6e-3 (mag_overlap 0) and
+        # 4.2e-3 (mag_overlap 1-2), CE 1.1e-3 (old: 1.5-4.2 in the bins,
+        # 2e-2 .. 5e-2 in the CE)
         assert_allclose(bins, He, rtol=0, atol=2e-2)
         assert_allclose(ce, ce_exact, rtol=0, atol=5e-3)
         # the per-frequency mass totals match the exact ones to the mass
@@ -700,6 +717,7 @@ class TestCEWeighted(object):
 
         # with a wide max_phi nothing is truncated: float32 normcdf level
         proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=mag_bins,
+                                              mag_overlap=mag_overlap,
                                               weighted=True, max_phi=50.0)
         ce, mem = run_ce_with_memory(proc, t, y, dy, freqs)
         bins = mem.bins_g.get().reshape(len(freqs), 10, mag_bins)
@@ -996,6 +1014,84 @@ class TestCEPreallocate(object):
                         rtol=0, atol=0)
         with pytest.raises(ValueError):
             proc.run([lc], freqs=F3)
+
+
+    def test_preallocate_then_large_run(self):
+        # large_run slices the grid into batches, so a preallocated
+        # self.memory (nf = the full grid) can never serve them: the
+        # combination raised "memory was allocated for N frequencies".
+        # large_run now allocates per batch and passes it explicitly.
+        F = np.linspace(0.05, 5.0, 3000)
+        lc = self._lc(400, 11)
+        proc = ConditionalEntropyAsyncProcess()
+        ref = proc.large_run([lc], freqs=F, max_memory=1e5)
+        proc.finish()
+        ref = np.copy(ref[0][1])
+        assert ref.std() > 0
+
+        proc.preallocate(max_nobs=400, freqs=F, nlcs=1)
+        r = proc.large_run([lc], freqs=F, max_memory=1e5)
+        proc.finish()
+        assert_array_equal(np.copy(r[0][1]), ref)
+        # the preallocated memory is untouched and still usable
+        assert_allclose(proc.memory[0].freqs_g.get(), F.astype(np.float32),
+                        rtol=0, atol=0)
+        r2 = proc.run([lc], freqs=F)
+        proc.finish()
+        assert np.all(np.isfinite(r2[0][1]))
+
+    def test_preallocate_then_run_without_freqs(self):
+        # run(freqs=None) used to build an autofrequency grid whose
+        # length is never mem.nf, so it raised on preallocated memory.
+        # The grid preallocate() uploaded is the one to use.
+        F = np.linspace(0.05, 5.0, 2000)
+        lc = self._lc(500, 13)
+        proc = ConditionalEntropyAsyncProcess()
+        ref = run_ce(proc, *lc, F)
+
+        proc.preallocate(max_nobs=500, freqs=F, nlcs=1)
+        r = proc.run([lc])
+        proc.finish()
+        assert_array_equal(np.asarray(r[0][0]), F.astype(np.float32))
+        assert_array_equal(np.copy(r[0][1]), ref)
+
+        # explicit memory from allocate() behaves the same way
+        proc2 = ConditionalEntropyAsyncProcess()
+        mems = proc2.allocate(normalize_light_curves([lc]), freqs=[F])
+        r = proc2.run([lc], memory=mems)
+        proc2.finish()
+        assert_array_equal(np.asarray(r[0][0]), F.astype(np.float32))
+        assert_allclose(np.copy(r[0][1]), ref, rtol=0, atol=1e-6)
+
+    def test_run_without_freqs_and_without_memory_uses_autofrequency(self):
+        lc = self._lc(200, 17)
+        proc = ConditionalEntropyAsyncProcess()
+        r = proc.run([lc])
+        proc.finish()
+        assert len(r[0][0]) == len(proc.autofrequency(lc[0]))
+
+
+class TestCEFastSharedMemoryLimit(object):
+    """audit section 4 row 122: a phase_bins x mag_bins histogram that
+    does not fit in shared memory died with an opaque pycuda
+    ``LogicError: cuLaunchKernel failed: invalid argument``."""
+
+    def test_oversized_histogram_raises_value_error(self):
+        t, y, dy = lightcurve(200, seed=1)
+        freqs = np.linspace(0.1, 3.0, 64)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              phase_bins=200, mag_bins=50)
+        with pytest.raises(ValueError,
+                           match=r"shared memory.*200 x 50"):
+            proc.run([(t, y, dy)], freqs=freqs)
+
+    def test_small_histogram_still_runs(self):
+        t, y, dy = lightcurve(200, seed=1)
+        freqs = np.linspace(0.1, 3.0, 64)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              phase_bins=10, mag_bins=5)
+        ce = run_ce(proc, t, y, dy, freqs)
+        assert np.all(np.isfinite(ce))
 
 
 class TestCEReuse(object):
