@@ -112,6 +112,8 @@ API notes
   frequencies packed into the data tuples) is still accepted for
   backward compatibility but is **deprecated** and emits a
   ``DeprecationWarning``; it returns bare power arrays instead of
-  ``(freqs, power)`` tuples.
+  ``(freqs, power)`` tuples. The weights ``w`` may have any scale (raw
+  :math:`1/\sigma^2`, all ones, ...): they are normalized to sum to one
+  internally, exactly like the weights derived from ``err``.
 
 .. [S1978] `Stellingwerf 1978 <https://ui.adsabs.harvard.edu/abs/1978ApJ...224..953S/abstract>`_

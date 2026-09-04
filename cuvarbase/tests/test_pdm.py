@@ -267,3 +267,40 @@ def test_binned_step_phase_exactly_one_no_oob_read():
     perm = rand.permutation(len(t))
     assert_allclose(run('binned_step', t[perm], y[perm], err[perm]), step,
                     atol=5e-6, rtol=0)
+
+
+@mark_cuda_test
+def test_deprecated_format_normalizes_weights():
+    """Audit id 111: the deprecated ``(t, y, w, freqs)`` input format assumed
+    ``sum(w) == 1``.  With raw inverse-variance weights (or all ones) the
+    host-side weighted mean and variance were scaled by ``sum(w)`` and every
+    kind returned a flat spectrum of exactly 1.0.  ``run()`` now normalizes
+    ``w`` (the statistic is invariant to the scale of ``w``), so the legacy
+    path must agree with the modern ``(t, y, err)`` path for any scaling.
+    """
+    rand = np.random.RandomState(111)
+    n = 300
+    t = np.sort(30 * rand.rand(n))
+    y = 12 + np.sin(2 * np.pi * 1.7 * t) + 0.2 * rand.randn(n)
+    err = 0.2 * (0.5 + rand.rand(n))
+    freqs = np.linspace(0.05, 5.0, 400)
+    proc = PDMAsyncProcess()
+
+    def run(data, kind, **kw):
+        res = proc.run(data, kind=kind, nbins=10, dphi=0.05, **kw)
+        proc.finish()
+        return res
+
+    cases = [
+        (err ** -2, err),           # raw inverse variance: sum(w) != 1
+        (weights(err), err),        # already normalized
+        (np.ones(n), np.ones(n)),   # uniform weights: sum(w) == n
+    ]
+    for kind in ['binned_linterp', 'binned_step_fast',
+                 'binless_tophat', 'binless_gauss_fast']:
+        for w, err_equiv in cases:
+            modern = np.copy(run([(t, y, err_equiv)], kind, freqs=freqs)[0][1])
+            with pytest.warns(DeprecationWarning):
+                legacy = np.copy(run([(t, y, w, freqs)], kind)[0])
+            assert np.ptp(modern) > 0.5          # a real periodogram
+            assert_allclose(legacy, modern, atol=1e-6, rtol=0)
