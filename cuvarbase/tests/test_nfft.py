@@ -410,6 +410,59 @@ class TestNFFT(object):
             phase_err = np.angle(g * np.conj(ref))
             assert np.sqrt(np.mean(phase_err ** 2)) < phase_tol
 
+    @staticmethod
+    def _high_k0_case(seed=9, N=500, T=365.0, k0=20000, nf=2000, spp=5.0):
+        rng = np.random.RandomState(seed)
+        t = np.sort(rng.rand(N)) * T
+        y = rng.randn(N)
+        df = 1.0 / (spp * (t.max() - t.min()))
+        return t, y, df, k0, nf, spp
+
+    def _run_band(self, proc, t, y, f0, k0, nf, spp):
+        # the one-sided modes k0 .. k0 + nf - 1 must sit inside the
+        # Gaussian window's alias-free band, so allocate k0 + nf modes
+        # (grid sigma * (k0 + nf)) and read the first nf entries
+        g = proc.run([(t, y, k0 + nf)], minimum_frequency=f0,
+                     samples_per_peak=spp)[0]
+        proc.finish()
+        return np.array(g)[:nf]
+
+    def test_minimum_frequency_rounds_to_an_integer_mode(self):
+        # id 104 (Sep 2026): nfft_shift / normalize computed the first
+        # mode k0 = f0 * spp * T as a FLT and used it as is; the periodic
+        # grid only has integer modes, so a fractional value -- from a
+        # user's f0 that is not a multiple of df, or from float32
+        # rounding of the product (~k0 * 2e-7) -- produced a Dirichlet-
+        # leakage mixture. The kernels now round k0 to the nearest
+        # integer; f0 = (k0 + 0.3) df is therefore identical to k0 df.
+        t, y, df, k0, nf, spp = self._high_k0_case()
+        proc = NFFTAsyncProcess(sigma=4, m=8, autoset_m=False)
+        g_int = self._run_band(proc, t, y, k0 * df, k0, nf, spp)
+        g_frac = self._run_band(proc, t, y, (k0 + 0.3) * df, k0, nf, spp)
+        scale = np.abs(g_int).max()
+        assert np.max(np.abs(g_frac - g_int)) <= 1e-6 * scale
+
+    @pytest.mark.parametrize("use_double,tol", [(False, 2e-3),
+                                                (True, 5e-9)])
+    def test_large_k0_band_matches_exact_dft(self, use_double, tol):
+        # ids 98/160 (Sep 2026): the shift phase 2 pi (i mod ng) k0 / ng
+        # and the normalize phase 2 pi f_k x0 were evaluated un-reduced
+        # in float32 (arguments ~1e5 rad at k0 = 2e4 .. 5e5), giving
+        # 0.1-0.4 rad phase errors at the top of high-frequency bands.
+        # They are now reduced modulo one cycle (exact integer
+        # arithmetic / double) before the trig. Measured on an A40
+        # (m = 12): float32 4.4e-3 -> 1.0e-3 relative to max|exact|
+        # (the rest is the float32 storage of t); double 3.5e-10.
+        t, y, df, k0, nf, spp = self._high_k0_case()
+        proc = NFFTAsyncProcess(sigma=4, m=12, autoset_m=False,
+                                use_double=use_double)
+        g = self._run_band(proc, t, y, k0 * df, k0, nf, spp)
+        # phases are relative to epoch = floor(min t) (NFFTMemory notes)
+        exact = direct_sums(t - np.floor(t.min()), y,
+                            (k0 + np.arange(nf)) * df)
+        err = np.max(np.abs(g - exact)) / np.abs(exact).max()
+        assert err < tol, err
+
     def test_nfft_adjoint_async(self, f0=0., ndata=10,
                                 batch_size=3, use_double=False):
         datas = []
