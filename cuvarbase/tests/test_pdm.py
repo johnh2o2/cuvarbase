@@ -378,3 +378,12 @@ def test_gpu_binned_step_statistic_and_noise_floor():
         assert abs(np.mean(p_means) - np.mean(expect_means)) < 0.03
         if n == 20:
             assert np.mean(p_means) > 0.3
+
+
+def test_run_docstring_states_statistic_and_dphi_semantics():
+    """Audit ids 110/117: run() must say what the returned power is and
+    what ``dphi`` means (tophat half-width / Gaussian standard deviation)."""
+    doc = PDMAsyncProcess.run.__doc__
+    assert 'half-width' in doc
+    assert 'standard deviation' in doc
+    assert 'no degrees-of-freedom correction' in doc
