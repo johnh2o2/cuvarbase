@@ -47,6 +47,15 @@ where :math:`p(m, \phi)` is the density of points that fall within the bin locat
 .. plot:: plots/ce_example.py
 
 
+.. note::
+
+   **Input validation.** Since 1.0 every entry point rejects
+   non-finite ``t``/``y``/``dy``, ``dy <= 0``, mismatched array
+   lengths, too-short light curves and non-finite or non-positive
+   frequency grids with a ``ValueError`` raised on the host, before
+   any GPU work. See :ref:`Input validation <input-validation>` for
+   the full rules and the pre-1.0 behaviour they replace.
+
 An example with ``cuvarbase``
 -----------------------------
 

@@ -265,6 +265,8 @@ to ``floor(min(t))`` (observation times are epoch-subtracted internally to
 preserve float32 precision).
 
 
+.. _input-validation:
+
 Input validation
 ----------------
 

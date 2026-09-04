@@ -157,6 +157,10 @@ deviation of a Gaussian prior on the harmonic amplitudes (a ridge term
 ``1 / amplitude_prior**2``) and is applied on every path. ``dy=None``
 gives unit weights.
 
+See :ref:`Input validation <input-validation>` for the rules every
+entry point applies to ``t``, ``y``, ``dy`` and the frequency grid
+before any GPU work.
+
 **The -1 sentinel.** A power of exactly ``-1`` is the kernels' marker
 for a non-finite or negative value at that frequency. **It should not
 occur.** Since 1.0 every entry point validates the light curve before
