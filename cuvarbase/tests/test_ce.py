@@ -666,8 +666,12 @@ class TestCEWeighted(object):
         Yc = np.array([0.0, 0.41, 0.5, 0.59, 1.0])
         proc = ConditionalEntropyAsyncProcess(phase_bins=PB, mag_bins=MB,
                                               weighted=True, max_phi=3.0)
+        # any trial frequency gives the same answer here: with
+        # phase_bins=1 every point folds into the single phase bin.
+        # (It used to be f = 0; entry points now require freqs > 0,
+        # since every method folds the data at 1 / f.)
         _, mem = run_ce_with_memory(proc, np.linspace(0, 1, 5), Yc,
-                                    sig * np.ones(5), np.array([0.0]))
+                                    sig * np.ones(5), np.array([1.0]))
         bins = mem.bins_g.get().reshape(1, PB, MB)[0, 0]
         m = np.arange(MB)
         P = (ndtr(((m + 1) / MB - Yc[:, None]) / sig)
