@@ -188,6 +188,19 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         shmem += data_mem
         func = faster_ce
 
+    if shmem > shmem_lim:
+        # Without this the launch fails deep inside pycuda with
+        # "cuLaunchKernel failed: invalid argument", which names
+        # neither the histogram nor the limit.
+        raise ValueError(
+            "use_fast=True needs %d bytes of shared memory per block for "
+            "the %d x %d (phase_bins x mag_bins) histogram, but this "
+            "device allows %d bytes per block. Reduce phase_bins * "
+            "mag_bins to at most about %d, or use use_fast=False (the "
+            "standard kernels keep the histogram in global memory)"
+            % (shmem, memory.phase_bins, memory.mag_bins, shmem_lim,
+               max(1, int((shmem_lim - u * memory.phase_bins) // (r + u)))))
+
     i_freq = 0
     while (i_freq < memory.nf):
         j_freq = min([i_freq + freq_batch_size, memory.nf])
@@ -624,6 +637,29 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         return self.memory
 
     @staticmethod
+    def _memory_freq_grids(memory, nlcs):
+        """The frequency grids already bound to ``memory``, or ``None``.
+
+        ``run(freqs=None)`` used to build a fresh ``autofrequency`` grid
+        even when :meth:`preallocate` (or :meth:`allocate`) had already
+        uploaded one; since the grid length is then almost never
+        ``mem.nf``, that combination raised
+        ``"memory was allocated for N frequencies ..."`` instead of
+        doing the work. When every memory object that will be used
+        carries a grid, that grid is the one the user asked to
+        preallocate, so use it.
+        """
+        if memory is None or len(memory) < nlcs:
+            return None
+        grids = []
+        for mem in memory[:nlcs]:
+            f = getattr(mem, 'freqs', None)
+            if f is None or mem.nf is None or len(f) != mem.nf:
+                return None
+            grids.append(np.asarray(f))
+        return grids
+
+    @staticmethod
     def _sync_memory_freqs(mem, freqs):
         """
         Make sure the frequency grid held by (and uploaded to) ``mem``
@@ -660,10 +696,15 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``dy``: observation uncertainties
         freqs: optional, array_like
             A single 1-D frequency grid (shared by all lightcurves) or a
-            list of per-lightcurve grids. If not specified, calls
-            ``autofrequency`` with default arguments
+            list of per-lightcurve grids. If not specified, the grid
+            already bound to ``memory`` (or to :meth:`preallocate`'s
+            ``self.memory``) is used, and failing that
+            ``autofrequency`` is called with default arguments.
         memory: optional, list of ``ConditionalEntropyMemory`` objects
-            List of memory objects, length of list must be ``>= len(data)``
+            List of memory objects, length of list must be ``>= len(data)``.
+            Defaults to the memory :meth:`preallocate` created. A grid
+            whose length differs from the one the memory was allocated
+            for raises ``ValueError``.
         set_data: boolean, optional (default: True)
             Transfers data to gpu if memory is provided
         **kwargs
@@ -683,12 +724,16 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         # Prepare data
         data = normalize_light_curves(data)
 
+        memory = memory if memory is not None else self.memory
+
         # create and/or check frequencies
         frqs = freqs
         if frqs is None:
+            frqs = self._memory_freq_grids(memory, len(data))
+        if frqs is None:
             frqs = [self.autofrequency(d[0], **kwargs) for d in data]
         else:
-            frqs = _freq_grids(freqs, len(data))
+            frqs = _freq_grids(frqs, len(data))
 
         if len(frqs) != len(data):
             raise ValueError(
@@ -701,8 +746,6 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                     raise OverflowError(
                         "Number of streams is too large - overflowing 32 bit integers\n"
                         "Decrease frequency range or use :func:`large_run` instead")
-
-        memory = memory if memory is not None else self.memory
 
         if memory is None:
             memory = self.allocate(data, freqs=frqs,
@@ -759,6 +802,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             list of (freqs, ce) corresponding to CE for each element of
             the ``data`` array
 
+        Notes
+        -----
+        Each batch gets its own memory, so ``large_run`` is unaffected by
+        (and does not disturb) memory created by :meth:`preallocate`.
+
         """
 
         # compile module if not compiled already
@@ -810,7 +858,15 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 imin = i * batch_size
                 imax = min([len(f), (i + 1) * batch_size])
 
-                r = self.run([d], freqs=f[slice(imin, imax)], **kwargs)
+                fbatch = np.asarray(f)[imin:imax]
+                # Allocate for this batch explicitly: the batches are
+                # slices of the grid, so a preallocated ``self.memory``
+                # (whose nf is the *full* grid) can never serve them and
+                # run() would raise. (Before the frequency-upload fix
+                # this path silently ran on the preallocated memory's
+                # zero-filled grid.)
+                mem = self.allocate([d], freqs=[fbatch], **kwargs)
+                r = self.run([d], freqs=[fbatch], memory=mem, **kwargs)
                 self.finish()
 
                 cper[imin:imax] = r[0][1][:]
