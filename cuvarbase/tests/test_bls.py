@@ -2984,3 +2984,110 @@ class TestKernelCompileCaching(object):
         c2 = B._cached_compile_bls()
         assert c1 is c2
         assert len(calls) == 3
+
+
+class TestAdaptiveUsesFusedKernel(object):
+    """Sep 2026 audit, ids 40/63 (plan item BLS-5).
+
+    ``eebls_gpu_fast_adaptive`` and ``eebls_transit(use_optimized=True)``
+    loaded a function dict without ``full_bls_no_sol_fused``, so the
+    shared implementation could only take the ``noverlap``-pass loop:
+    two launches and 1.7-2.3x the GPU time of ``eebls_gpu_fast`` on
+    identical inputs. They must now take the fused kernel wherever it is
+    valid (power-of-two ``noverlap``, ``dphi == 0``, shared memory
+    permitting) and keep the multi-pass fallback otherwise.
+    """
+
+    @staticmethod
+    def _data():
+        return data(snr=30, q=0.05, phi0=0.317, freq=1.0,
+                    baseline=365., ndata=300)
+
+    @staticmethod
+    def _launch_counter(monkeypatch):
+        """Count prepared launches by kernel name."""
+        from .. import bls as B
+        counts = {}
+
+        class Spy(object):
+            def __init__(self, name, func):
+                self._name, self._func = name, func
+
+            def prepared_call(self, *a, **k):
+                counts[self._name] = counts.get(self._name, 0) + 1
+                return self._func.prepared_call(*a, **k)
+
+            def prepared_async_call(self, *a, **k):
+                counts[self._name] = counts.get(self._name, 0) + 1
+                return self._func.prepared_async_call(*a, **k)
+
+            def __getattr__(self, k):
+                return getattr(self._func, k)
+
+        orig = B._get_cached_kernels
+
+        def spied(*a, **k):
+            return {name: Spy(name, f) for name, f in orig(*a, **k).items()}
+
+        monkeypatch.setattr(B, '_get_cached_kernels', spied)
+        return counts
+
+    def test_adaptive_launches_the_fused_kernel_once(self, monkeypatch):
+        from ..bls import eebls_gpu_fast_adaptive
+        counts = self._launch_counter(monkeypatch)
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+
+        eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                                noverlap=2)
+        assert counts == {'full_bls_no_sol_fused': 1}, counts
+
+    def test_transit_use_optimized_launches_the_fused_kernel_once(
+            self, monkeypatch):
+        counts = self._launch_counter(monkeypatch)
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+
+        eebls_transit(t, y, dy, freqs=freqs, qvals=q_transit(freqs),
+                      use_optimized=True, use_sparse=False, noverlap=2)
+        assert counts == {'full_bls_no_sol_fused': 1}, counts
+
+    @pytest.mark.parametrize("kw", [dict(noverlap=3), dict(dphi=0.25)])
+    def test_adaptive_falls_back_when_fused_is_invalid(self, kw,
+                                                       monkeypatch):
+        # non-power-of-two noverlap / a non-zero base phase offset are
+        # outside what the fused kernel implements
+        from ..bls import eebls_gpu_fast_adaptive
+        counts = self._launch_counter(monkeypatch)
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+
+        eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                                **kw)
+        assert 'full_bls_no_sol_fused' not in counts, counts
+        assert counts.get('full_bls_no_sol_optimized', 0) >= 2, counts
+
+    def test_fused_and_multipass_agree(self):
+        # Parity of the two paths at the default noverlap: hand the
+        # adaptive entry point a function dict WITHOUT the fused kernel
+        # to force the multi-pass loop.
+        from .. import bls as B
+        from ..bls import eebls_gpu_fast_adaptive, eebls_gpu_fast
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 500)
+        bs = B._choose_block_size(len(t))
+        multi = B._get_cached_kernels(bs, True,
+                                      ['full_bls_no_sol_optimized'])
+        assert 'full_bls_no_sol_fused' not in multi
+
+        kw = dict(qmin=0.01, qmax=0.1, block_size=bs)
+        p_fused = eebls_gpu_fast_adaptive(t, y, dy, freqs, **kw)
+        p_multi = eebls_gpu_fast_adaptive(t, y, dy, freqs,
+                                          functions=multi, **kw)
+        assert int(np.argmax(p_fused)) == int(np.argmax(p_multi))
+        assert_allclose(p_fused, p_multi, rtol=1e-4, atol=1e-5)
+
+        # and the adaptive path now returns what eebls_gpu_fast (fused
+        # since 1.0) returns, to float32 atomic-ordering noise
+        p_fast = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+        assert_allclose(p_fused, p_fast, rtol=1e-4, atol=1e-6)

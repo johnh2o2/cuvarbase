@@ -1385,10 +1385,18 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     # Override any user-provided block_size
     kwargs['block_size'] = block_size
 
-    # Get cached kernels for this block size
+    # Get cached kernels for this block size. The fused-noverlap kernel
+    # ships in the same module and costs nothing extra to load, so ask
+    # for it too: without it in the dict the shared implementation falls
+    # back to the ``noverlap``-pass loop, which was 1.7-2.3x the GPU
+    # time of eebls_gpu_fast on identical inputs (Sep 2026 audit, ids
+    # 40, 63).  ``_eebls_gpu_fast_impl`` still picks the multi-pass loop
+    # whenever the fused kernel is not valid (non-power-of-two
+    # ``noverlap``, ``dphi != 0``, or not enough shared memory).
     if functions is None:
         fname = 'full_bls_no_sol_optimized' if use_optimized else 'full_bls_no_sol'
-        functions = _get_cached_kernels(block_size, use_optimized, [fname])
+        functions = _get_cached_kernels(block_size, use_optimized,
+                                        [fname, 'full_bls_no_sol_fused'])
 
     # Use optimized implementation
     if use_optimized:
@@ -3059,9 +3067,11 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
             block_size = _choose_block_size(ndata)
         kwargs['block_size'] = block_size
 
-        # Get cached kernels for this block size
+        # Get cached kernels for this block size (fused-noverlap kernel
+        # included -- see eebls_gpu_fast_adaptive; ids 40, 63)
         fname = 'full_bls_no_sol_optimized'
-        functions = _get_cached_kernels(block_size, use_optimized, [fname])
+        functions = _get_cached_kernels(block_size, use_optimized,
+                                        [fname, 'full_bls_no_sol_fused'])
 
         powers = eebls_gpu_fast_optimized(t, y, dy, freqs,
                                           qmin=qmins, qmax=qmaxes,
