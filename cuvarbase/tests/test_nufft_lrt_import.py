@@ -207,6 +207,54 @@ class TestDetectorAlgebra:
         assert np.std(leftover) < 0.1 * sigma        # was ~10 sigma
         assert np.std(r - r.mean()) < 1.2 * sigma
 
+    def test_prior_response_matrix_singular_prior_limit(self):
+        # audit Sep 2026 (ids 122/156): pinv(prior_cov) turned a zero
+        # prior variance into an improper FLAT prior (base tree:
+        # diag(1, 0) gave -1.5934 == diag(1, 1e12), vs -1.5999 for
+        # diag(1, 1e-12)). The push-through form C (I + G C)^-1 gives
+        # the correct "pinned to the prior mean" limit, equal to the
+        # 1e-12-variance result, and equals inv(inv(C) + G) for a
+        # positive-definite prior.
+        import numpy as np
+        from cuvarbase.nufft_lrt import (_marginal_statistic,
+                                         _prior_response_matrix)
+
+        rng = np.random.RandomState(7)
+        nf, K = 24, 2
+        Y = rng.randn(nf) + 1j * rng.randn(nf)
+        T = rng.randn(nf) + 1j * rng.randn(nf)
+        V_ks = [rng.randn(nf) + 1j * rng.randn(nf) for _ in range(K)]
+        psd = 0.5 + rng.rand(nf)
+        w = np.ones(nf)
+        pinned = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 0.0]))
+        tiny = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 1e-12]))
+        flat = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 1e12]))
+        np.testing.assert_allclose(pinned, tiny, rtol=1e-8)
+        assert abs(pinned - flat) > 1e-3 * abs(flat)
+
+        A = rng.randn(K, K)
+        C = A @ A.T + 0.5 * np.eye(K)
+        G = rng.randn(K, K)
+        G = G @ G.T + np.eye(K)
+        M = _prior_response_matrix(G, C)
+        np.testing.assert_allclose(M, np.linalg.inv(np.linalg.inv(C) + G),
+                                   rtol=1e-10, atol=1e-12)
+
+    def test_prior_response_matrix_rejects_bad_priors(self):
+        import numpy as np
+        import pytest
+        from cuvarbase.nufft_lrt import _prior_response_matrix
+
+        G = np.eye(2)
+        with pytest.raises(ValueError, match="positive semidefinite"):
+            _prior_response_matrix(G, np.diag([1.0, -1.0]))
+        with pytest.raises(ValueError, match="symmetric"):
+            _prior_response_matrix(G, np.array([[1.0, 0.5], [0.0, 1.0]]))
+        with pytest.raises(ValueError, match="\\(K, K\\)"):
+            _prior_response_matrix(G, np.eye(3))
+        with pytest.raises(ValueError, match="finite"):
+            _prior_response_matrix(G, np.array([[1.0, 0.0], [0.0, np.nan]]))
+
     def test_epoch_grid(self):
         import numpy as np
         from cuvarbase.nufft_lrt import epoch_grid

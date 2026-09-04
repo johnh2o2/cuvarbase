@@ -282,6 +282,37 @@ class TestNUFFTLRT:
         assert np.isfinite(snr[0, 0])
 
     @mark_cuda_test
+    def test_user_psd_zero_bin_is_floored(self):
+        """audit id 121: a zero bin in a user PSD gave SNR ~1e6 (matched;
+        measured -998957 on the base tree) or nan (marginal); the PSD is
+        now floored at eps_floor * median once in run() for every
+        detector -- the result equals a run with the bin explicitly set
+        to that floor -- and its length is validated."""
+        proc = NUFFTLRTAsyncProcess()
+        y = self.rng.randn(len(self.t))
+        nf = 2 * len(self.t)
+        psd = np.ones(nf)
+        psd[37] = 0.0
+        psd_floored = psd.copy()
+        psd_floored[37] = 1e-3                  # eps_floor * median
+        kw = dict(durations=np.array([0.2]), epochs=np.array([0.3]), nf=nf,
+                  estimate_psd=False)
+        got = proc.run(self.t, y, np.array([2.0]), psd=psd, **kw)
+        want = proc.run(self.t, y, np.array([2.0]), psd=psd_floored, **kw)
+        assert np.all(np.isfinite(got))
+        assert_allclose(got, want, rtol=1e-6)
+        V = np.sin(self.t)[:, None]
+        mkw = dict(detector='marginal', systematics_basis=V,
+                   coeff_prior_cov=np.array([[1.0]]))
+        marg = proc.run(self.t, y, np.array([2.0]), psd=psd, **mkw, **kw)
+        marg_want = proc.run(self.t, y, np.array([2.0]), psd=psd_floored,
+                             **mkw, **kw)
+        assert np.all(np.isfinite(marg))
+        assert_allclose(marg, marg_want, rtol=1e-6)
+        with pytest.raises(ValueError, match="length nf"):
+            proc.run(self.t, y, np.array([2.0]), psd=np.ones(nf + 5), **kw)
+
+    @mark_cuda_test
     def test_double_precision(self):
         """Test double precision computation"""
         proc = NUFFTLRTAsyncProcess(use_double=True)
@@ -367,6 +398,12 @@ class TestNUFFTLRT:
                      systematics_basis=np.ones((len(self.t), 1)))
         with pytest.raises(ValueError, match="detector"):
             proc.run(self.t, y, np.array([2.0]), detector='bogus')
+        # audit ids 122/156: a non-PSD prior is rejected instead of
+        # being pinv'ed into a flat prior
+        with pytest.raises(ValueError, match="positive semidefinite"):
+            proc.run(self.t, y, np.array([2.0]), detector='marginal',
+                     systematics_basis=np.sin(self.t)[:, None],
+                     coeff_prior_cov=np.array([[-1.0]]))
 
     @mark_cuda_test
     def test_multiple_epochs(self):

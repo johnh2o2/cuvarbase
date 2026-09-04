@@ -173,6 +173,30 @@ def test_dy_is_ignored_with_a_warning(monkeypatch):
     np.testing.assert_array_equal(got, ref)
 
 
+def test_user_psd_is_validated_and_floored(monkeypatch):
+    proc = _mock_proc(monkeypatch)
+    t, y, period = _two_season_lc()
+    nf = 2 * len(t)
+    kw = dict(durations=np.array([0.2]), epochs=np.array([0.0]), nf=nf,
+              estimate_psd=False)
+    with pytest.raises(ValueError, match="length nf"):
+        proc.run(t, y, np.array([period]), psd=np.ones(nf + 3), **kw)
+    with pytest.raises(ValueError, match="finite"):
+        bad = np.ones(nf)
+        bad[5] = np.nan
+        proc.run(t, y, np.array([period]), psd=bad, **kw)
+    # a zero bin is floored at eps_floor * median (1e-3 here): the
+    # result equals a run with that bin explicitly set to the floor
+    zero = np.ones(nf)
+    zero[37] = 0.0
+    floored = zero.copy()
+    floored[37] = 1e-3
+    got = proc.run(t, y, np.array([period]), psd=zero, **kw)
+    want = proc.run(t, y, np.array([period]), psd=floored, **kw)
+    assert np.all(np.isfinite(got))
+    np.testing.assert_allclose(got, want, rtol=1e-9)
+
+
 def test_input_validation(monkeypatch):
     proc = _mock_proc(monkeypatch)
     t, y, period = _two_season_lc()
