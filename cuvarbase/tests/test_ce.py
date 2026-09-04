@@ -8,7 +8,8 @@ from numpy.testing import assert_allclose, assert_array_equal
 from scipy.special import ndtr
 from .. import ce as ce_module
 from ..ce import (ConditionalEntropyAsyncProcess, _needs_compile,
-                  _CE_KERNELS, _is_single_freq_grid)
+                  _CE_KERNELS, _is_single_freq_grid, _fast_grid_size,
+                  _MAX_BLOCKS_PER_SM)
 from ..memory import ConditionalEntropyMemory
 from ..utils import normalize_light_curves
 lsrtol = 1E-2
@@ -1147,6 +1148,130 @@ class TestCEReuse(object):
         run_ce(proc, t, y, dy, freqs)
         proc.large_run([(t, y, dy)], freqs=freqs, max_memory=1e5)
         assert len(calls) == 1
+
+
+class TestCEFastGridSize(object):
+    """CE-2 (audit ids 61/107): ``use_fast`` sized its grid from
+    ``floor(2 * shmem_lim / shmem)`` -- a per-block shared-memory ratio,
+    not a grid -- and capped the other branch at 200 blocks, so the
+    kernel ran on 3-34 blocks (5 at ndata = 2000) however large the
+    device.  The kernels are block-per-frequency with a ``gridDim.x``
+    stride, so the grid size must not change a single returned value.
+    """
+
+    # ------------------------------------------------------------------
+    # CPU-runnable: the sizing arithmetic itself
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _limits(monkeypatch, nsm=84, shmem_sm=102400, thr_sm=1536):
+        monkeypatch.setattr(ce_module, '_device_occupancy_limits',
+                            lambda: (nsm, shmem_sm, thr_sm))
+
+    def test_grid_fills_the_device(self, monkeypatch):
+        # A40-like: 84 SMs, 100 KB shared/SM, 1536 threads/SM. At
+        # ndata = 2000 (single precision) the fast kernel asks for
+        # 16440 B/block, so 6 blocks fit per SM by shared memory and 6
+        # by threads -> 504 blocks. The old heuristic gave 5.
+        self._limits(monkeypatch)
+        assert _fast_grid_size(16440, 256, 100000) == 84 * 6
+        # tiny histogram, no lightcurve in shared memory: threads bind
+        assert _fast_grid_size(440, 256, 100000) == 84 * 6
+        # small blocks: the hardware blocks/SM limit binds
+        assert _fast_grid_size(440, 64, 100000) == 84 * _MAX_BLOCKS_PER_SM
+
+    def test_grid_never_exceeds_the_frequency_count(self, monkeypatch):
+        self._limits(monkeypatch)
+        assert _fast_grid_size(16440, 256, 7) == 7
+        assert _fast_grid_size(16440, 256, 1) == 1
+
+    def test_grid_is_at_least_one_block_per_sm(self, monkeypatch):
+        # a block so large that not even one fits in the per-SM shared
+        # memory budget: still one block per SM, never zero
+        self._limits(monkeypatch)
+        assert _fast_grid_size(102401, 256, 1000) == 84
+        assert _fast_grid_size(0, 256, 1000) == 84 * 6
+
+    def test_grid_scales_with_the_device(self, monkeypatch):
+        self._limits(monkeypatch, nsm=8, shmem_sm=49152, thr_sm=1024)
+        assert _fast_grid_size(16440, 256, 100000) == 8 * min(2, 4)
+        self._limits(monkeypatch, nsm=132, shmem_sm=233472, thr_sm=2048)
+        assert _fast_grid_size(16440, 256, 100000) == 132 * 8
+
+    # ------------------------------------------------------------------
+    # GPU: the launch really uses it, and the result does not depend on it
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _record_grids():
+        """Patch ``prepared_async_call`` to record the grid of every
+        launch that uses dynamic shared memory (i.e. the fast kernels)."""
+        import pycuda.driver as cuda
+        grids = []
+        orig = cuda.Function.prepared_async_call
+
+        def rec(self, grid, block, stream, *args, **kwargs):
+            if kwargs.get('shared_size', 0) > 0:
+                grids.append(int(grid[0]))
+            return orig(self, grid, block, stream, *args, **kwargs)
+        return grids, orig, rec
+
+    def test_launch_grid_matches_the_occupancy_formula(self, monkeypatch):
+        import pycuda.driver as cuda
+        t, y, dy = lightcurve(2000, seed=5)
+        freqs = np.linspace(0.5, 3.0, 4001)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        run_ce(proc, t, y, dy, freqs[:16])          # compile
+        grids, orig, rec = self._record_grids()
+        monkeypatch.setattr(cuda.Function, 'prepared_async_call', rec)
+        run_ce(proc, t, y, dy, freqs)
+        assert len(grids) == 1
+        nsm = ce_module._device_occupancy_limits()[0]
+        # single precision, 10 x 5 bins, lightcurve in shared memory
+        shmem = 8 * 50 + 4 * 10 + 8 * 2000
+        assert grids[0] == _fast_grid_size(shmem, 256, len(freqs))
+        # the point of the change: at least one block per SM, and far
+        # more than the old floor(2 * shmem_lim / shmem) (5 on a 48 KB
+        # device at this ndata)
+        assert grids[0] >= nsm
+        assert grids[0] > 2 * 49152 // shmem
+
+    def test_max_nblocks_still_caps_when_given(self, monkeypatch):
+        import pycuda.driver as cuda
+        t, y, dy = lightcurve(400, seed=6)
+        freqs = np.linspace(0.5, 3.0, 1000)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        run_ce(proc, t, y, dy, freqs[:16])
+        grids, orig, rec = self._record_grids()
+        monkeypatch.setattr(cuda.Function, 'prepared_async_call', rec)
+        run_ce(proc, t, y, dy, freqs, max_nblocks=13)
+        run_ce(proc, t, y, dy, freqs, force_nblocks=3)
+        assert grids == [13, 3]
+
+    @pytest.mark.parametrize('use_double', [False, True])
+    @pytest.mark.parametrize('ndata,nfreq,phase_bins,mag_bins',
+                             [(300, 1013, 10, 5),
+                              (2000, 4001, 10, 5),
+                              (137, 257, 7, 6),
+                              (5000, 733, 20, 8)])
+    def test_result_is_bitwise_independent_of_the_grid(
+            self, ndata, nfreq, phase_bins, mag_bins, use_double):
+        """The frequency counts above are prime-ish on purpose: none of
+        the grids below divides them, so every block ends its stride
+        loop on a different frequency."""
+        t, y, dy = lightcurve(ndata, seed=11)
+        freqs = np.linspace(0.5, 4.0, nfreq)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              use_double=use_double,
+                                              phase_bins=phase_bins,
+                                              mag_bins=mag_bins)
+        ref = run_ce(proc, t, y, dy, freqs)          # library default
+        assert np.all(np.isfinite(ref))
+        for nblocks in (1, 3, 17, 64, 507, 4096):
+            other = run_ce(proc, t, y, dy, freqs, force_nblocks=nblocks)
+            assert_array_equal(other, ref)
+        # and through the batched frequency loop, whose last batch is
+        # shorter than the others
+        assert_array_equal(run_ce(proc, t, y, dy, freqs,
+                                  freq_batch_size=97), ref)
 
 
 class TestCEFrequencyInput(object):

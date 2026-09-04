@@ -95,6 +95,62 @@ def _freq_grids(freqs, nlcs):
     return list(freqs)
 
 
+# ---------------------------------------------------------------------------
+# Grid sizing for the block-per-frequency fast kernels
+# ---------------------------------------------------------------------------
+# Hardware limit on resident thread blocks per SM: 16 on sm_5x/6x/7.5/8.6,
+# 32 on sm_70/8.0.  16 is the safe value -- a grid-stride kernel loses
+# nothing by launching fewer blocks than could be resident.
+_MAX_BLOCKS_PER_SM = 16
+
+
+def _device_occupancy_limits():
+    """``(num_SMs, shared_memory_per_SM, max_threads_per_SM)`` of the
+    active device, with conservative fallbacks for drivers that do not
+    report the per-SM attributes."""
+    dev = ensure_context().device
+    att = cuda.device_attribute
+    nsm = int(dev.get_attribute(att.MULTIPROCESSOR_COUNT))
+    try:
+        shmem_sm = int(dev.get_attribute(
+            att.MAX_SHARED_MEMORY_PER_MULTIPROCESSOR))
+    except Exception:
+        shmem_sm = int(dev.get_attribute(att.MAX_SHARED_MEMORY_PER_BLOCK))
+    try:
+        thr_sm = int(dev.get_attribute(att.MAX_THREADS_PER_MULTIPROCESSOR))
+    except Exception:
+        thr_sm = 1024
+    return nsm, shmem_sm, thr_sm
+
+
+def _fast_grid_size(shmem, block_size, nfreq):
+    """Number of thread blocks to launch for ``ce_classical_fast`` /
+    ``ce_classical_faster``.
+
+    Both kernels give one trial frequency to each *block* and stride by
+    ``gridDim.x``, so every ``ce[i]`` is computed by exactly one block
+    from the same data in the same order: the result does not depend on
+    the grid size at all, and the only question is how many blocks keep
+    the device busy.  Fill the device -- ``num_SMs`` times the number of
+    blocks that can be resident on an SM (shared memory, threads and the
+    hardware block limit) -- capped at the number of frequencies in the
+    launch.
+
+    The heuristic this replaced, ``floor(2 * shmem_lim / shmem)``, is a
+    per-block shared-memory ratio rather than a grid size: it launched
+    34 blocks at ``ndata = 300`` and 5 blocks at ``ndata = 2000`` no
+    matter how large the device or the frequency grid was, leaving an
+    84-SM A40 (or a 128-SM 4090) almost entirely idle (Sep 2026 audit,
+    ids 61 and 107).
+    """
+    nsm, shmem_sm, thr_sm = _device_occupancy_limits()
+    by_shmem = (shmem_sm // shmem) if shmem > 0 else _MAX_BLOCKS_PER_SM
+    by_threads = (thr_sm // block_size) if block_size > 0 else 1
+    blocks_per_sm = max(1, min(int(by_shmem), int(by_threads),
+                               _MAX_BLOCKS_PER_SM))
+    return max(1, min(int(nfreq), nsm * blocks_per_sm))
+
+
 def conditional_entropy(memory, functions, block_size=256,
                         transfer_to_host=True,
                         transfer_to_device=True,
@@ -162,7 +218,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
                              freq_batch_size=None,
                              shmem_lc=True,
                              shmem_lim=None,
-                             max_nblocks=200,
+                             max_nblocks=None,
                              force_nblocks=None,
                              stream=None,
                              **kwargs):
@@ -233,12 +289,14 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     while (i_freq < memory.nf):
         j_freq = min([i_freq + freq_batch_size, memory.nf])
 
-        grid = (min([int(np.ceil((j_freq - i_freq) / block_size)),
-                     max_nblocks]), 1)
-        if data_in_shared_mem:
-            grid = (int(np.floor(2 * float(shmem_lim) / shmem)), 1)
+        # One block per trial frequency, grid-stride: size the grid from
+        # the device, not from the shared-memory footprint (ids 61/107).
+        nblocks = _fast_grid_size(shmem, block_size, j_freq - i_freq)
+        if max_nblocks is not None:
+            nblocks = min(nblocks, int(max_nblocks))
         if force_nblocks is not None:
-            grid = (force_nblocks, 1)
+            nblocks = int(force_nblocks)
+        grid = (nblocks, 1)
 
         if not grid[0] > 0:
             raise RuntimeError(
