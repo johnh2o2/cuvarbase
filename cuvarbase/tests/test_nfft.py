@@ -361,6 +361,55 @@ class TestNFFT(object):
         assert nonzero.min() == u and nonzero.max() == u + 2 * m
         assert np.max(np.abs(grid - ref)) < 1e-12
 
+    @pytest.mark.parametrize("use_double,mag_tol,phase_tol",
+                             [(False, 5e-5, 1e-3), (True, 3e-7, 1e-5)])
+    def test_absolute_times_bjd(self, use_double, mag_tol, phase_tol):
+        # Regression test for defect 12 (nfft-absolute-time, Sep 2026):
+        # NFFTMemory.fromdata cast absolute times to float32 as given,
+        # so at BJD scale (~2.457e6 d, float32 spacing 0.25 d) the
+        # transform's MAGNITUDES were wrong (rel. error 0.8 on this
+        # data). fromdata now subtracts epoch = floor(min(t)) in
+        # float64 first and records it as memory.epoch; the phases are
+        # relative to that epoch (class docstring).
+        rng = np.random.RandomState(5)
+        n = 400
+        t = np.sort(rng.rand(n)) * 30.0
+        y = np.cos(2 * np.pi * 1.3 * t) + 0.1 * rng.randn(n)
+        nf = 256
+        T = t.max() - t.min()
+        freqs = np.arange(nf) / T
+
+        def exact(tt, epoch):
+            return direct_sums(tt - epoch, y, freqs)
+
+        proc = NFFTAsyncProcess(sigma=nfft_sigma, m=nfft_m,
+                                autoset_m=False, use_double=use_double)
+
+        mem0 = proc.allocate([(t, y, nf)])
+        proc.run([(t, y, nf)], memory=mem0)
+        proc.finish()
+        g0 = np.array(mem0[0].ghat_c)
+        assert mem0[0].epoch == 0.0
+        scale = np.abs(exact(t, 0.0)).max()
+
+        for offset in (1000.5, 2457000.5):
+            tb = t + offset
+            mem = proc.allocate([(tb, y, nf)])
+            proc.run([(tb, y, nf)], memory=mem)
+            proc.finish()
+            g = np.array(mem[0].ghat_c)
+
+            epoch = mem[0].epoch
+            assert epoch == np.floor(tb.min())
+
+            # magnitudes are shift-invariant and must match t ~ 0
+            assert np.max(np.abs(np.abs(g) - np.abs(g0))) / scale < mag_tol
+            # phases follow the documented convention: relative to epoch
+            ref = exact(tb, epoch)
+            assert np.max(np.abs(g - ref)) / scale < mag_tol
+            phase_err = np.angle(g * np.conj(ref))
+            assert np.sqrt(np.mean(phase_err ** 2)) < phase_tol
+
     def test_nfft_adjoint_async(self, f0=0., ndata=10,
                                 batch_size=3, use_double=False):
         datas = []

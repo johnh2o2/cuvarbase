@@ -7,6 +7,7 @@ import pycuda.driver as cuda  # noqa: F401  (used by transfer methods)
 import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
+from ..utils import subtract_epoch
 from ._host import host_array
 from .. import _cufft as cufft
 
@@ -58,7 +59,7 @@ class NFFTMemory:
     """
     Container class for managing memory allocation and data transfer
     for NFFT computations on GPU.
-    
+
     Parameters
     ----------
     sigma : float
@@ -73,8 +74,29 @@ class NFFTMemory:
         Precompute psi values for faster gridding
     **kwargs : dict
         Additional parameters
+
+    Notes
+    -----
+    **Time origin / phase convention.** :meth:`fromdata` subtracts
+    ``epoch = floor(min(t))`` from the times in float64 *before* they
+    are cast to the device precision (``utils.subtract_epoch``, the
+    same convention as BLS), and stores it as ``self.epoch``. The
+    transform the kernels then compute is
+
+    .. math::
+
+        \hat g_k = \sum_j y_j \exp\left(2\pi i f_k (t_j - \mathrm{epoch})\right)
+
+    i.e. the magnitudes are those of the transform of the input and
+    the phases are relative to ``epoch``. Multiply by
+    ``exp(2j * pi * f_k * epoch)`` (in float64, on the host) if phases
+    relative to ``t = 0`` are needed. For data with ``min(t)`` in
+    ``[0, 1)`` the epoch is 0 and nothing changes. Before 1.0 the
+    absolute times were cast to float32 as given, so BJD-scale input
+    (~2.457e6 d, float32 spacing 0.25 d) produced wrong *magnitudes*
+    (rel. error 0.94; defect 12, ``nfft-absolute-time``).
     """
-    
+
     def __init__(self, sigma, stream, m, use_double=False,
                  precomp_psi=True, **kwargs):
         # Constructing GPU memory is a "first GPU use" -- retain the CUDA
@@ -86,6 +108,9 @@ class NFFTMemory:
         self.m = m
         self.use_double = use_double
         self.precomp_psi = precomp_psi
+        # Time origin subtracted by fromdata (see the class docstring);
+        # 0 unless fromdata was used with min(t) outside [0, 1).
+        self.epoch = kwargs.get('epoch', 0.0)
         # Pinned (page-locked) host buffer by default; falls back to
         # page-aligned if pinning fails.
         self.pinned = kwargs.get('pinned', True)
@@ -302,11 +327,19 @@ class NFFTMemory:
         Returns
         -------
         self : NFFTMemory
-        """
-        self.tmin = min(t)
-        self.tmax = max(t)
 
-        self.t = np.asarray(t).astype(self.real_type)
+        Notes
+        -----
+        Times are shifted by ``epoch = floor(min(t))`` in float64
+        before the cast to the device precision and ``self.epoch`` is
+        set; the transform's phases are relative to that epoch (see
+        the class notes).
+        """
+        t64, self.epoch = subtract_epoch(t)
+        self.tmin = float(np.min(t64))
+        self.tmax = float(np.max(t64))
+
+        self.t = t64.astype(self.real_type)
         self.y = np.asarray(y).astype(self.real_type)
 
         self.n0 = kwargs.get('n0', len(t))
