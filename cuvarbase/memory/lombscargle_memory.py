@@ -8,7 +8,43 @@ import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
 from ._host import host_array
-from .nfft_memory import NFFTMemory
+from .nfft_memory import NFFTMemory, next_fast_len
+
+# The Lomb-Scargle NFFTs read one-sided modes k0 .. k0 + nf - 1 (after
+# nfft_shift), and the Gaussian window is only alias-free for modes below
+# n / sigma of the grid. sigma = 2 leaves the top of EVERY band aliased
+# even with the grids sized from the top mode (measured maxabs up to 4.0
+# vs astropy); sigma >= 3 is required on the NFFT path.
+MIN_NFFT_SIGMA = 3
+
+
+def nfft_grid_sizes(nf, k0, nharmonics=1, sigma=4):
+    """Mode counts and (padded) grid lengths of the two Lomb-Scargle
+    NFFTs for a frequency grid ``df * (k0 + arange(nf))``.
+
+    The ``lomb`` kernel / ``_mh_power_from_spectra`` read entry
+    ``(h - 1) k0 + h i`` of the yw-spectrum for harmonics ``h = 1..H``
+    and entry ``(m - 1) k0 + m i`` of the w-spectrum for ``m = 1..2H``
+    (entry ``j`` holds mode ``k0 + j``), so the yw transform needs
+    ``H (nf + k0) - k0`` modes and the w transform twice that. Each
+    grid is sized from its TOP MODE, ``sigma * (k0 + count)``, not from
+    the count: before 1.0 the grids were ``sigma * count`` and any band
+    with ``fmin >= ~fmax / 2`` read aliased modes (powers 1e4..1e36,
+    defect 4, ``nfft-k0-size``). Lengths are padded to
+    :func:`~cuvarbase.memory.nfft_memory.next_fast_len`.
+
+    Returns
+    -------
+    (nf_yw, n_yw, nf_w, n_w) : ints
+        Mode count and grid length of the yw and w transforms.
+    """
+    H = int(nharmonics)
+    fft_size = H * (int(nf) + int(k0))
+    nf_yw = fft_size - int(k0)
+    nf_w = 2 * fft_size - int(k0)
+    n_yw = next_fast_len(int(np.ceil(sigma * (int(k0) + nf_yw) - 1e-9)))
+    n_w = next_fast_len(int(np.ceil(sigma * (int(k0) + nf_w) - 1e-9)))
+    return nf_yw, n_yw, nf_w, n_w
 
 
 def weights(err):
@@ -194,9 +230,16 @@ class LombScargleMemory:
                 if nfft_mem.precomp_psi:
                     nfft_mem.allocate_precomp_psi(n0=n0)
 
-            fft_size = self.nharmonics * (self.nf + k0)
-            self.nfft_mem_yw.allocate_grid(nf=fft_size - k0)
-            self.nfft_mem_w.allocate_grid(nf=2 * fft_size - k0)
+            if self.sigma < MIN_NFFT_SIGMA:
+                raise ValueError(
+                    "LombScargleMemory: sigma=%r is too small for the "
+                    "NFFT Lomb-Scargle (the top of every frequency band "
+                    "would be aliased); use sigma >= %d, or the direct "
+                    "sums (use_fft=False)" % (self.sigma, MIN_NFFT_SIGMA))
+            nf_yw, n_yw, nf_w, n_w = nfft_grid_sizes(
+                self.nf, k0, nharmonics=self.nharmonics, sigma=self.sigma)
+            self.nfft_mem_yw.allocate_grid(nf=nf_yw, n=n_yw)
+            self.nfft_mem_w.allocate_grid(nf=nf_w, n=n_w)
 
         self.lsp_g = gpuarray.zeros(self.nf, dtype=self.real_type)
         return self

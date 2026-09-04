@@ -19,6 +19,7 @@ from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader, normalize_light_curves
 from .utils import autofrequency as utils_autofreq
 from .memory import NFFTMemory, LombScargleMemory, weights
+from .memory.lombscargle_memory import nfft_grid_sizes, MIN_NFFT_SIGMA
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
 
 try:
@@ -325,6 +326,38 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
     return power
 
 
+def _check_nfft_grids(memory, nf, k0, nharms):
+    """Hard check that the NFFT memories can serve ``nf`` frequencies
+    starting at mode ``k0`` with ``nharms`` harmonics: the highest
+    spectrum entry read must exist, and the grid must be long enough
+    for that mode to sit in the Gaussian window's alias-free band
+    (``sigma * (k0 + count) <= n``, see
+    :func:`~cuvarbase.memory.lombscargle_memory.nfft_grid_sizes`).
+    """
+    H = int(nharms)
+    top_yw = (H - 1) * k0 + H * (nf - 1)
+    top_w = (2 * H - 1) * k0 + 2 * H * (nf - 1)
+    for name, nm, top in (('yw', memory.nfft_mem_yw, top_yw),
+                          ('w', memory.nfft_mem_w, top_w)):
+        if nm.nf is None or nm.n is None or nm.ghat_g is None:
+            raise RuntimeError(
+                "LombScargleMemory: NFFT grid '%s' is not allocated "
+                "(call allocate first)" % name)
+        if top >= nm.nf:
+            raise ValueError(
+                "NFFT grid '%s' holds %d modes but mode index %d is "
+                "needed for nf=%d, k0=%d, nharmonics=%d: the memory was "
+                "allocated for a different frequency grid" %
+                (name, nm.nf, top, nf, k0, H))
+        if nm.sigma * (k0 + nm.nf) > nm.n + 1e-9:
+            raise ValueError(
+                "NFFT grid '%s' (n=%d) is too short for modes up to "
+                "k0 + nf = %d at sigma=%r: need n >= sigma * (k0 + nf) "
+                "= %d, otherwise the top of the band is aliased" %
+                (name, nm.n, k0 + nm.nf, nm.sigma,
+                 int(np.ceil(nm.sigma * (k0 + nm.nf)))))
+
+
 def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
     """
     Compute Lomb-Scargle periodogram using direct summations. This
@@ -465,6 +498,9 @@ def lomb_scargle_async(memory, functions, freqs,
         nfft_kwargs['minimum_frequency'] = freqs[0]
         nfft_kwargs['samples_per_peak'] = samples_per_peak
 
+        _check_nfft_grids(memory, int(memory.nf), int(memory.k0),
+                          getattr(memory, 'nharmonics', 1))
+
         if use_cufinufft:
             # cuFINUFFT path: replace custom NFFT with cufinufft type-1
             cufinufft_nfft_adjoint(memory.nfft_mem_yw, **nfft_kwargs)
@@ -587,15 +623,24 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def memory_requirement(self, n0, nf, k0, nbatch=1,
                            autoadjust_sigma=False, **kwargs):
-        """ return an approximate GPU memory requirement in bytes """
+        """Approximate GPU memory requirement in bytes for ``nbatch``
+        lightcurves of ``n0`` points on a grid of ``nf`` frequencies
+        starting at mode ``k0``.
+
+        The NFFT grids are sized exactly as ``LombScargleMemory``
+        allocates them (from the top mode, padded to a 7-smooth
+        length; see
+        :func:`~cuvarbase.memory.lombscargle_memory.nfft_grid_sizes`).
+        ``autoadjust_sigma`` is accepted for backward compatibility
+        and ignored: it used to emulate that sizing when the
+        allocation itself did not do it.
+        """
         H = self.nharmonics
         sigma = self.nfft_proc.sigma
         m = self.nfft_proc.get_m(nf)
 
-        if autoadjust_sigma:
-            sigma = int(np.round(float(sigma * (nf + k0)) / nf))
-
-        fft_size = H * (nf + k0)
+        nf_yw, n_yw, nf_w, n_w = nfft_grid_sizes(nf, k0, nharmonics=H,
+                                                 sigma=sigma)
 
         mem = 0
 
@@ -613,24 +658,19 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         c = int(np.ceil(float(csize) / rsize))
 
         if kwargs.get('use_fft', True):
-            # yw grid / fft (doubled because complex)
-            mem += c * sigma * (fft_size - k0)
+            for nx in (n_yw, n_w):
+                # grid (complex)
+                mem += c * nx
+                # work area for cufft.Plan (x2: a safety margin -- the
+                # padded lengths are 7-smooth, so Bluestein's much
+                # larger work area is no longer triggered, but the
+                # estimate is per-plan and cheap)
+                mem += 1 / rsize * 2 * cufft.cufft.cufftEstimate1d(
+                    nx, cufft.cufft.CUFFT_C2C)
 
-            # work area size for cufft.Plan
-            # double because large non-power-of-two sizes trigger Bluestein algorithm
-            nx = sigma * (fft_size - k0)
-            mem += 1/rsize * 2 * cufft.cufft.cufftEstimate1d(nx, cufft.cufft.CUFFT_C2C)
-
-            # w grid / fft (doubled because complex)
-            mem += c * sigma * (2 * fft_size - k0)
-
-            # work area size for cufft.Plan
-            # double because large non-power-of-two sizes trigger Bluestein algorithm
-            nx = sigma * (2 * fft_size - k0)
-            mem += 1/rsize * 2 * cufft.cufft.cufftEstimate1d(nx, cufft.cufft.CUFFT_C2C)
-
-            # precomputation (q1 = n0, q2 = n0, q3 = 2m + 1)
-            mem += 2 * n0 + 2 * m + 1
+            # precomputation (q1 = n0, q2 = n0, q3 = 2m + 1), one set
+            # per NFFT grid
+            mem += 2 * (2 * n0 + 2 * m + 1)
 
         # inverse of design matrix
         if H > 1:
