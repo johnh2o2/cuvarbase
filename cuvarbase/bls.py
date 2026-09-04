@@ -2176,36 +2176,47 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             solutions)
 
 
-def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwargs):
+def _reject_use_simple(kwargs, where):
+    """The bubble-sort ``sparse_bls_simple.cu`` kernel was removed in
+    1.0 (it still carried the pre-PR#65 ``MAX_W_COMPLEMENT 1E-9`` bound
+    and returned powers up to 4.6 in pure noise on single-site data;
+    Sep 2026 audit, defect 20). Refuse the old switch loudly instead
+    of silently running the full kernel."""
+    if 'use_simple' in kwargs:
+        raise TypeError("%s: the 'use_simple' sparse kernel was removed in "
+                        "cuvarbase 1.0; drop the argument (the bitonic "
+                        "sort + prefix-sum kernel is the only sparse "
+                        "kernel)" % where)
+
+
+def compile_sparse_bls(block_size=_default_block_size, **kwargs):
     """
-    Compile sparse BLS GPU kernel
+    Compile sparse BLS GPU kernel (bitonic sort + prefix sums for O(1)
+    range queries).
 
     Parameters
     ----------
     block_size: int, optional (default: _default_block_size)
         CUDA threads per CUDA block.
-    use_simple: bool, optional (default: False)
-        Use simplified kernel (bubble sort + parallel pairs).
-        Full kernel uses bitonic sort + prefix sums for O(1) range queries.
 
     Returns
     -------
     kernel: PyCUDA function
         The compiled sparse_bls_kernel function
     """
+    _reject_use_simple(kwargs, 'compile_sparse_bls')
+
     # Compiling a kernel needs an active CUDA context (lazily created).
     ensure_context()
 
-    kernel_name = 'sparse_bls_simple' if use_simple else 'sparse_bls'
     cppd = dict(BLOCK_SIZE=block_size)
-    kernel_txt = _module_reader(find_kernel(kernel_name),
+    kernel_txt = _module_reader(find_kernel('sparse_bls'),
                                 cpp_defs=cppd)
 
     # compile kernel
     module = SourceModule(kernel_txt, options=['--use_fast_math'])
 
-    func_name = 'sparse_bls_kernel_simple' if use_simple else 'sparse_bls_kernel'
-    kernel = module.get_function(func_name)
+    kernel = module.get_function('sparse_bls_kernel')
 
     # Don't use prepare() - it causes issues with large shared memory
     return kernel
@@ -2214,7 +2225,7 @@ def compile_sparse_bls(block_size=_default_block_size, use_simple=False, **kwarg
 def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
                    ignore_negative_delta_sols=False,
                    block_size=64, max_ndata=None,
-                   stream=None, kernel=None, use_simple=False,
+                   stream=None, kernel=None,
                    convention='chi2ratio'):
     """
     GPU-accelerated sparse BLS implementation.
@@ -2253,8 +2264,6 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
         CUDA stream for async execution
     kernel: PyCUDA function, optional (default: None)
         Pre-compiled kernel. If None, compiles kernel automatically.
-    use_simple: bool, optional (default: False)
-        Use simple kernel (bubble sort). Passed to compile_sparse_bls.
     convention: str, optional (default: 'chi2ratio')
         Power-spectrum convention for the returned powers ('chi2ratio',
         'snr' or 'loglik'); see :func:`convert_bls_power`.
@@ -2300,8 +2309,7 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
 
     # Compile kernel if not provided
     if kernel is None:
-        kernel = compile_sparse_bls(block_size=block_size,
-                                    use_simple=use_simple)
+        kernel = compile_sparse_bls(block_size=block_size)
 
     # Allocate GPU memory
     t_g = gpuarray.to_gpu(t)
@@ -2319,17 +2327,13 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     if block_size & (block_size - 1) != 0:
         raise ValueError(f"block_size must be a power of 2, got {block_size}")
 
-    # Calculate shared memory size
-    if use_simple:
-        # Simple kernel: sh_phi[N] + sh_y[N] + sh_w[N] + 3*blockDim.x
-        shared_mem_size = (3 * max_ndata + 3 * block_size) * 4
-    else:
-        # Full kernel: sh_phi[n_pow2] + sh_y[n_pow2] + sh_w[n_pow2]
-        #            + sh_cumsum_w[N] + sh_cumsum_yw[N] + 3*blockDim.x
-        n_pow2 = 1
-        while n_pow2 < max_ndata:
-            n_pow2 *= 2
-        shared_mem_size = (3 * n_pow2 + 2 * max_ndata + 3 * block_size) * 4
+    # Calculate shared memory size:
+    #   sh_phi[n_pow2] + sh_y[n_pow2] + sh_w[n_pow2]
+    #   + sh_cumsum_w[N] + sh_cumsum_yw[N] + 3*blockDim.x
+    n_pow2 = 1
+    while n_pow2 < max_ndata:
+        n_pow2 *= 2
+    shared_mem_size = (3 * n_pow2 + 2 * max_ndata + 3 * block_size) * 4
 
     # Launch kernel
     # Grid: one block per frequency (or fewer if limited by hardware)
@@ -2623,6 +2627,7 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
 
     """
     ndata = len(t)
+    _reject_use_simple(kwargs, 'eebls_transit')
 
     # Determine whether to use sparse BLS
     if use_sparse is None:

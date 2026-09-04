@@ -1,7 +1,6 @@
 #include <stdio.h>
 #define RESTRICT __restrict__
 #define CONSTANT const
-#define MIN_W 1E-3
 //{CPP_DEFS}
 
 // Device/global functions shared with bls_optimized.cu live in a single

@@ -21,7 +21,18 @@ These tests assert the include mechanism instead of comparing two copies:
   without it, a same-name helper added to both files could drift again
   exactly like the original reduction_max bug. Only ``reduction_max``
   itself is exempt (divergent by design).
+
+The last two checks are generalized to EVERY kernel file
+(``kernels/*.cu`` and ``*.cuh``): a ``#define NAME value`` that appears
+in more than one file must carry the same value(s) everywhere, and a
+``__device__``/``__global__`` function defined in more than one file
+must have one body, with the intentionally divergent copies listed
+explicitly. The Sep 2026 audit (defect 20) found
+``sparse_bls_simple.cu`` still carrying ``MAX_W_COMPLEMENT 1E-9`` after
+PR #65 had set 1E-4 in ``sparse_bls.cu`` (powers up to 4.6 in pure
+noise on the opt-in kernel); the define check would have caught it.
 """
+import glob
 import os
 import re
 
@@ -40,6 +51,29 @@ INTENTIONALLY_DIVERGENT = {
 }
 
 INCLUDE_DIRECTIVE = '//{INCLUDE bls_common.cuh}'
+
+# Cross-file duplicated functions whose divergence is intentional: the
+# named FILES hold a sanctioned variant and are excluded from the
+# body comparison for that name; every other copy must still be
+# identical. Keep this list short and justified.
+INTENTIONALLY_DIVERGENT_COPIES = {
+    # full tree reduction (bls.cu) vs tree-to-warp + shuffle
+    # (bls_optimized.cu); see INTENTIONALLY_DIVERGENT above
+    'reduction_max': {'bls.cu', 'bls_optimized.cu'},
+    # cunfft.cu const-qualifies the parameters (CONSTANT int); the
+    # arithmetic is the same as bls_common.cuh's mod()
+    'mod': {'cunfft.cu'},
+    # ce.cu is the FLT (float-or-double) variant using floor();
+    # tls.cu declares it inline with a different parameter name. The
+    # float copies in bls_common.cuh and sparse_bls.cu must agree.
+    'mod1': {'ce.cu', 'tls.cu'},
+}
+
+# #define names whose values legitimately differ between files (none
+# today: MIN_W was a dead define in bls.cu/bls_optimized.cu -- the
+# shared bls_value uses literals -- and was deleted rather than
+# whitelisted). Map name -> set of files allowed to disagree.
+INTENTIONALLY_DIVERGENT_DEFINES = {}
 
 # An INCLUDE directive standing on its own line (the form _module_reader
 # expands). Anchored so it ignores prose that merely mentions the
@@ -161,3 +195,85 @@ def test_no_cross_file_drift_of_duplicated_functions():
     # both files (guards against the regex/brace-matcher going stale)
     assert 'reduction_max' in std and 'reduction_max' in opt
     assert std['reduction_max'] != opt['reduction_max']
+
+
+# --------------------------------------------------------------------
+# all kernel files
+# --------------------------------------------------------------------
+
+def _all_kernel_files():
+    kdir = os.path.dirname(find_kernel('bls'))
+    files = sorted(glob.glob(os.path.join(kdir, '*.cu'))
+                   + glob.glob(os.path.join(kdir, '*.cuh')))
+    assert len(files) >= 10, files
+    return files
+
+
+_DEFINE = re.compile(r"^[ \t]*#[ \t]*define[ \t]+(\w+(?:\([^)]*\))?)"
+                     r"(?:[ \t]+(.*?))?[ \t]*$", re.M)
+
+
+def _defines(src):
+    """name -> set of values defined for it in ``src`` (a name defined
+    in both branches of an #ifdef, e.g. FLT double/float, yields both
+    values; the SET must then agree across files)."""
+    src = re.sub(r"/\*.*?\*/", " ", src, flags=re.S)
+    out = {}
+    for m in _DEFINE.finditer(src):
+        value = re.sub(r"//.*$", "", m.group(2) or "").strip()
+        out.setdefault(m.group(1), set()).add(' '.join(value.split()))
+    return out
+
+
+def test_same_named_defines_agree_across_all_kernel_files():
+    per_name = {}
+    for path in _all_kernel_files():
+        for name, values in _defines(open(path).read()).items():
+            per_name.setdefault(name, {})[os.path.basename(path)] = values
+
+    drifted = []
+    for name, per_file in sorted(per_name.items()):
+        files = {f: v for f, v in per_file.items()
+                 if f not in INTENTIONALLY_DIVERGENT_DEFINES.get(name, ())}
+        if len(files) < 2:
+            continue
+        if len(set(frozenset(v) for v in files.values())) > 1:
+            drifted.append((name, {f: sorted(v) for f, v in files.items()}))
+    assert not drifted, (
+        "#define(s) with different values in different kernel files "
+        "(the MAX_W_COMPLEMENT 1E-9 vs 1E-4 drift of sparse_bls_simple.cu "
+        "was exactly this): %s -- use one value, or move the constant "
+        "into a shared header" % drifted)
+
+    # the guard itself must see the shared constants it protects
+    assert 'MAX_W_COMPLEMENT' in per_name and 'RESTRICT' in per_name
+    assert len(per_name['RESTRICT']) >= 5
+
+
+def test_no_cross_file_drift_of_duplicated_functions_in_any_kernel():
+    per_name = {}
+    for path in _all_kernel_files():
+        for name, body in _func_bodies(open(path).read()).items():
+            per_name.setdefault(name, {})[os.path.basename(path)] = body
+
+    drifted = []
+    for name, per_file in sorted(per_name.items()):
+        copies = {f: b for f, b in per_file.items()
+                  if f not in INTENTIONALLY_DIVERGENT_COPIES.get(name, ())}
+        if len(copies) >= 2 and len(set(copies.values())) > 1:
+            drifted.append((name, sorted(copies)))
+    assert not drifted, (
+        "function(s) defined in several kernel files with differing "
+        "bodies: %s -- share one implementation (bls_common.cuh-style "
+        "include) or list the sanctioned variant in "
+        "INTENTIONALLY_DIVERGENT_COPIES with a reason" % drifted)
+
+    # every whitelisted entry must still correspond to a real duplicate
+    # (a stale whitelist would hide a future rename)
+    for name, files in INTENTIONALLY_DIVERGENT_COPIES.items():
+        assert name in per_name and len(per_name[name]) >= 2, name
+        assert files <= set(per_name[name]), (name, files,
+                                              sorted(per_name[name]))
+    # the extractor sees the known duplicates
+    assert {'get_id', 'mod1', 'atomicAddDouble'} <= set(
+        n for n, d in per_name.items() if len(d) >= 2)
