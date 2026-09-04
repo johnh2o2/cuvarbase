@@ -50,11 +50,14 @@ def _check_ce_data(data, where):
     without any warning (Sep 2026 audit, defect 23).
     """
     for i, lc in enumerate(data):
-        if len(lc) < 2:
+        # exactly (t, y, dy): normalize_light_curves unpacks three
+        # values one line downstream, so a 2-tuple died there with
+        # a raw "not enough values to unpack" instead of this message
+        if len(lc) != 3:
             raise ValueError("%s: lightcurve %d must be a (t, y, dy) "
                              "tuple; got %d elements"
                              % (where, i, len(lc)))
-        dy = lc[2] if len(lc) > 2 else None
+        dy = lc[2]
         check_lightcurve(lc[0], lc[1], dy, min_n=_CE_MIN_NDATA,
                          name='%s lightcurve %d' % (where, i))
 
@@ -681,7 +684,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             f = getattr(mem, 'freqs', None)
             if f is None or mem.nf is None or len(f) != mem.nf:
                 return None
-            grids.append(np.asarray(f))
+            # float64: the memory holds the grid in the device's
+            # real_type (float32 by default), but this grid is echoed
+            # back as the result's frequency labels, which were
+            # float64 before this path existed.
+            grids.append(np.asarray(f, dtype=np.float64))
         return grids
 
     @staticmethod

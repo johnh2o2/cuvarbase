@@ -2951,6 +2951,20 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     qmins = np.asarray(qvals) * qmin_fac
     qmaxes = np.asarray(qvals) * qmax_fac
 
+    # Neither the sparse path nor the fused fast kernel takes these
+    # (they are eebls_gpu's); warn rather than dropping them silently --
+    # max_memory in particular exists to bound device allocation, and
+    # ndata < sparse_threshold is exactly the ZTF-scale regime.
+    for key in ('nstreams', 'max_memory'):   # eebls_gpu-only
+        if kwargs.pop(key, None) is not None:
+            warnings.warn(
+                "eebls_transit ignores %s: the default path runs "
+                "eebls_gpu_fast, which uses one stream and sizes its "
+                "own shared-memory batches. Call eebls_transit_gpu "
+                "(Keplerian bounds, solution at every frequency) or "
+                "eebls_gpu directly if you need %s." % (key, key),
+                UserWarning, stacklevel=2)
+
     # Use sparse BLS for small datasets
     if use_sparse:
         # The sparse path honors the same per-frequency Keplerian
@@ -2982,15 +2996,6 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
     # eebls_gpu, whose kernels collapsed array bounds to one batch-wide
     # window -- Sep 2026 audit defect 7); the best (q, phi) is recovered
     # at the top n_solutions peaks afterwards.
-    for key in ('nstreams', 'max_memory'):   # eebls_gpu-only
-        if kwargs.pop(key, None) is not None:
-            warnings.warn(
-                "eebls_transit ignores %s: the default path runs "
-                "eebls_gpu_fast, which uses one stream and sizes its "
-                "own shared-memory batches. Call eebls_transit_gpu "
-                "(Keplerian bounds, solution at every frequency) or "
-                "eebls_gpu directly if you need %s." % (key, key),
-                UserWarning, stacklevel=2)
     dlogq = kwargs.setdefault('dlogq', 0.3)
     noverlap = kwargs.setdefault('noverlap', 2)
     dphi = kwargs.get('dphi', 0.0)

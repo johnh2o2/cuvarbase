@@ -1090,15 +1090,16 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
           Neither is defined for ``nharmonics > 1`` (``ValueError``).
         * A power of exactly ``-1`` is the kernels' sentinel for a
           non-finite or negative value at that frequency
-          (``kernels/lomb.cu``). **It should not occur.** Since 1.0
-          every entry point validates the light curve first
+          (``kernels/lomb.cu``). Since 1.0 every entry point validates
+          the light curve first
           (:func:`cuvarbase.utils.check_lightcurve`), so the inputs
           that used to produce ``-1`` everywhere -- non-finite
           ``y``/``dy``, ``dy = 0``, mismatched lengths -- raise
-          ``ValueError`` instead. The kernel branch is kept as a
-          last-resort guard against a genuinely degenerate grid
-          (e.g. all-identical ``t``); a ``-1`` in a returned
-          periodogram is a bug report, not a valid power.
+          ``ValueError`` instead. Two degenerate cases the validator
+          deliberately still accepts DO return ``-1`` at every
+          frequency: a constant (zero-variance) ``y``, and
+          all-identical ``t``. Apart from those, a ``-1`` in a
+          returned periodogram is a bug report, not a valid power.
         * Precision: the default float32 pipeline agrees with the exact
           (float64) GLS to ~1e-4 in power for ``f * T`` up to ~1e4 and
           ~1e-3 at survey scale (``f * T ~ 1e5-1e6``). Because the Baluev
