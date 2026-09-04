@@ -699,13 +699,13 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
     -------
     >>> proc = LombScargleAsyncProcess()
     >>> Ndata = 1000
-    >>> t = np.sort(365 * np.random.rand(N))
+    >>> t = np.sort(365 * np.random.rand(Ndata))
     >>> y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)
     >>> y += 0.01 * np.random.randn(len(t))
     >>> dy = 0.01 * np.ones_like(y)
-    >>> freqs, powers = proc.run([(t, y, dy)])
+    >>> results = proc.run([(t, y, dy)])
     >>> proc.finish()
-    >>> ls_freqs, ls_powers = freqs[0], powers[0]
+    >>> ls_freqs, ls_powers = results[0]
 
     """
     def __init__(self, *args, **kwargs):
@@ -1044,6 +1044,30 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             arrays are page-locked host buffers filled asynchronously —
             call :meth:`finish` before reading them (the batched entry
             points synchronize for you)
+
+        Notes
+        -----
+        * ``floating_mean=True`` (default) is the generalized
+          Lomb-Scargle of Zechmeister & Kurster (2009), astropy's
+          ``fit_mean=True``. ``floating_mean=False`` is the classic
+          periodogram of the data centred on the **unweighted** mean
+          (``normalize_light_curves`` subtracts ``nanmean(y)``), which
+          differs from astropy's ``fit_mean=False, center_data=True``
+          for heteroscedastic errors. ``window=True`` returns the
+          spectral window as the periodogram of ``y = 1`` with the
+          ``STANDARD`` normalization, which is **4x** astropy's
+          ``LombScargle(t, ones, fit_mean=False, center_data=False)``.
+          Neither is defined for ``nharmonics > 1`` (``ValueError``).
+        * A power of exactly ``-1`` is the kernels' sentinel for a
+          non-finite or negative value at that frequency (non-finite
+          ``y``/``dy``, ``dy = 0``, degenerate ``t``). It is not a
+          valid periodogram value; check your input.
+        * Precision: the default float32 pipeline agrees with the exact
+          (float64) GLS to ~1e-4 in power for ``f * T`` up to ~1e4 and
+          ~1e-3 at survey scale (``f * T ~ 1e5-1e6``). Because the Baluev
+          false-alarm probability is exponentially sensitive to the peak
+          power (``d ln FAP / dP ~ -N / 2``), use ``use_double=True`` for
+          FAP-grade work on large ``f * T`` grids; it reaches ~1e-7.
 
         """
 
