@@ -90,11 +90,18 @@ def check_k0(freqs, k0=None, rtol=1E-6, atol=0.):
     rtol : float, optional (default: 1e-6)
         Tolerance on every spacing and on ``freqs[0] - k0 * df``, as a
         fraction of ``df``. A dtype-aware allowance for the rounding of
-        the grid's own construction (``4 eps(dtype) max|f|``, propagated
-        through the ``k0 * df`` product) is added, so float64
-        ``autofrequency``/``arange``-built grids of any size and float32
-        grids of moderate ``k0 + nf`` pass, while any deviation the
-        grid's precision can represent is rejected.
+        the grid's own construction is added on top, term by term:
+        ``4 eps(dtype) max|f|`` for the spacings, and
+        ``4 eps |freqs[0]| + 4 eps max|f| k0 / (nf - 1)`` for the first
+        mode. float64 ``autofrequency``/``arange``/``linspace`` grids of
+        any size and the float32 casts of the same grids pass, while a
+        first mode offset by a hundredth of a bin is rejected -- for a
+        float32 survey-scale grid too, as long as ``k0`` is not a large
+        fraction of ``nf``. (When it is, ``df`` itself is only known to
+        ``eps max|f| / (nf - 1)``, so offsets below
+        ``4 eps max|f| k0 / ((nf - 1) df)`` bins are genuinely
+        indistinguishable in that dtype; pass float64 frequencies, or
+        ``use_double=True``, for narrow high-frequency bands.)
     atol : float, optional (default: 0)
         Absolute tolerance (frequency units) added to both tests.
 
@@ -129,9 +136,16 @@ def check_k0(freqs, k0=None, rtol=1E-6, atol=0.):
             "grid; build one uniform grid per band instead"
             % (i + 1, i, diffs[i], df_med, len(bad), nf, rtol))
 
-    # first mode: the k0 * df product amplifies the spacing's rounding
-    # (two endpoint roundings over nf - 1 spacings) by k0 / (nf - 1)
-    k0_tol = rtol * df + round_tol * (1.0 + float(k0) / (nf - 1)) + atol
+    # first mode: the two terms of |f[0] - k0 * df| round differently.
+    # f[0] itself only carries its own storage error, eps * |f[0]|; the
+    # k0 * df product amplifies the spacing's rounding (two endpoint
+    # roundings, spread over nf - 1 spacings) by k0 / (nf - 1). Using
+    # round_tol = 4 eps max|f| for *both* opens a hole of
+    # 4 eps fmax / df modes -- 0.43 df on a float32 survey grid -- which
+    # is exactly the off-by-a-fraction-of-a-mode band shift defect 15
+    # closes (0.52 relative power error at a 0.1-mode offset).
+    k0_tol = (rtol * df + 4.0 * float(eps) * abs(float(f[0]))
+              + round_tol * float(k0) / (nf - 1) + atol)
     if not (abs(f[0] - k0 * df) <= k0_tol):
         raise ValueError(
             "freqs[0]=%.10g is not an integer multiple of the grid spacing "

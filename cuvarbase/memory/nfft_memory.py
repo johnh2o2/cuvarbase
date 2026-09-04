@@ -56,7 +56,7 @@ def next_fast_len(n):
 
 
 class NFFTMemory:
-    """
+    r"""
     Container class for managing memory allocation and data transfer
     for NFFT computations on GPU.
 
