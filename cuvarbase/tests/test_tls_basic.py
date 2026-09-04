@@ -10,10 +10,18 @@ import pytest
 import numpy as np
 
 try:
-    import pycuda
-    import pycuda.autoinit
+    # NOT pycuda.autoinit: it creates its own (non-primary) CUDA context
+    # at import time, while cuvarbase lazily retains the PRIMARY context
+    # (cuvarbase.base.ensure_context). pytest imports every test module
+    # during collection, so the stray autoinit context outlived this file
+    # and left two contexts on the stack for the whole session; pycuda's
+    # context-dependent kernel cache then handed out handles from the
+    # wrong one and unrelated tests died with
+    # "cuFuncSetBlockShape failed: invalid resource handle"
+    # (23 failures in test_nfft.py / the cuFINUFFT tests, Sep 2026).
+    import pycuda.driver  # noqa: F401
     PYCUDA_AVAILABLE = True
-except ImportError:
+except Exception:
     PYCUDA_AVAILABLE = False
 
 # Import modules to test
