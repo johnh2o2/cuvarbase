@@ -1,7 +1,6 @@
 #include <stdio.h>
 #define RESTRICT __restrict__
 #define CONSTANT const
-#define MIN_W 1E-3
 //{CPP_DEFS}
 
 // Optimized version of BLS kernel with following improvements:
@@ -68,7 +67,14 @@ __global__ void full_bls_no_sol_optimized(
 			f0 = freqs[i_freq + freq_offset];
 			nb0 = nbins0[i_freq + freq_offset];
 			nbf = nbinsf[i_freq + freq_offset];
-			max_bin_width = divrndup(nbf, nb0);
+			// Widest box: floor(nbf / nb0), i.e. the largest m whose
+			// q = m/nbf still satisfies q <= 1/nb0 (= the discretized
+			// qmax).  This used to be divrndup(nbf, nb0) with a strict
+			// `m < max_bin_width` loop, which is the same bound whenever
+			// nb0 does not divide nbf but drops the qmax box itself when
+			// it does (Sep 2026 audit, id 64: qmin=0.025/qmax=0.1 tested
+			// only q <= 0.075).
+			max_bin_width = nbf / nb0;
 
 #ifdef USE_LOG_BIN_SPACING
 			tot_nbins = count_tot_nbins(nb0, nbf, dlogq);
@@ -132,7 +138,7 @@ __global__ void full_bls_no_sol_optimized(
 			thread_w = 0.f;
 			unsigned int m0 = 0;
 
-			for (unsigned int m = 1; m < max_bin_width; m += dnbins(m, dlogq)){
+			for (unsigned int m = 1; m <= max_bin_width; m += dnbins(m, dlogq)){
 				for (s = m0; s < m; s++){
 					thread_yw += block_bins_yw[(n + s) % nbf];
 					thread_w += block_bins_w[(n + s) % nbf];

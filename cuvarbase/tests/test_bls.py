@@ -8,7 +8,14 @@ from ..bls import eebls_gpu, eebls_transit_gpu, \
                   q_transit, compile_bls, hone_solution,\
                   single_bls, eebls_gpu_custom, eebls_gpu_fast, \
                   eebls_gpu_fast_optimized, \
-                  sparse_bls_cpu, sparse_bls_gpu, eebls_transit
+                  sparse_bls_cpu, sparse_bls_gpu, eebls_transit, \
+                  transit_autofreq, \
+                  count_tot_nbins, _bls_batch_table, _max_nbins_tot, \
+                  _per_freq_nbins_tot, _cap_freq_batch_size, \
+                  _q_bounds_to_nbins, _MAX_FOLD_THREADS, \
+                  _fast_path_nbins, _fast_bls_box_scan, \
+                  _fast_bls_solutions
+from ..bls_frequencies import keplerian_freq_grid
 
 
 def transit_model(phi0, q, delta, q1=0.):
@@ -549,9 +556,15 @@ class TestBLS(object):
     @staticmethod
     def _brute_force_bls(t, y, dy, freq, ignore_negative_delta_sols=False,
                          qmin=0.0, qmax=0.5):
-        """Exhaustive BLS over all observation-pair transit boundaries."""
+        """Exhaustive BLS over all observation-pair transit boundaries
+        (float32 fold like the kernels; flux centred in float64 and
+        sums in float64 -- the sparse paths centre in float64 since
+        defect 8 of the Sep 2026 audit)."""
         t = np.asarray(t, dtype=np.float32)
-        y = np.asarray(y, dtype=np.float32)
+        y64 = np.asarray(y, dtype=np.float64)
+        w64 = np.power(np.asarray(dy, dtype=np.float64), -2)
+        w64 /= w64.sum()
+        y = (y64 - np.dot(w64, y64)).astype(np.float32)
         dy = np.asarray(dy, dtype=np.float32)
 
         ndata = len(t)
@@ -799,6 +812,24 @@ class TestBLS(object):
         with pytest.raises(TypeError):
             sparse_bls_gpu(t, y, dy, freqs, False, 128)
 
+    def test_use_simple_kernel_was_removed(self):
+        """The bubble-sort sparse kernel (sparse_bls_simple.cu) shipped
+        with the pre-PR#65 MAX_W_COMPLEMENT 1E-9 bound (powers up to
+        4.6 in pure noise); it is gone and the old switch must fail
+        loudly on every entry point that used to accept it."""
+        from ..bls import compile_sparse_bls
+        from ..utils import find_kernel
+        t, y, dy = data(ndata=50)
+        freqs = np.array([0.9, 1.0, 1.1])
+        with pytest.raises(TypeError, match="use_simple"):
+            sparse_bls_gpu(t, y, dy, freqs, use_simple=True)
+        with pytest.raises(TypeError, match="use_simple"):
+            compile_sparse_bls(use_simple=False)
+        with pytest.raises(TypeError, match="use_simple"):
+            eebls_transit(t, y, dy, fmin=0.9, fmax=1.1, use_simple=True)
+        import os
+        assert not os.path.exists(find_kernel('sparse_bls_simple'))
+
     def test_sparse_bls_inverted_q_bounds_raise(self):
         """qmin > qmax used to silently return an all-zero periodogram
         (every candidate rejected) — a pipeline reads that as 'no
@@ -814,8 +845,7 @@ class TestBLS(object):
             with pytest.raises(ValueError, match="qmax"):
                 fn(t, y, dy, freqs, qmax=0.0)
 
-    @pytest.mark.parametrize("use_simple", [False, True])
-    def test_sparse_bls_gpu_q_bounds(self, use_simple):
+    def test_sparse_bls_gpu_q_bounds(self):
         """GPU sparse BLS honors per-frequency q bounds (matches CPU)."""
         t, y, dy = data(snr=30, q=0.1, phi0=0.3, freq=1.0,
                         baseline=365., ndata=80)
@@ -826,8 +856,7 @@ class TestBLS(object):
         power_cpu, _ = sparse_bls_cpu(t, y, dy, freqs,
                                       qmin=qmins, qmax=qmaxes)
         power_gpu, sols_gpu = sparse_bls_gpu(t, y, dy, freqs,
-                                             qmin=qmins, qmax=qmaxes,
-                                             use_simple=use_simple)
+                                             qmin=qmins, qmax=qmaxes)
 
         assert_allclose(power_cpu, power_gpu, rtol=1e-3, atol=1e-5)
         for (q_g, _), p in zip(sols_gpu, power_gpu):
@@ -901,12 +930,21 @@ class TestBLS(object):
         assert sols is not None
         assert len(sols) == len(freqs)
 
-        best_freq = freqs[np.argmax(powers)]
+        # The sparse statistic is piecewise constant in frequency (the
+        # power only changes when a point crosses a box edge): with 50
+        # points the maximum is a plateau of ~20 grid frequencies
+        # spanning +-7 q/T around the injected frequency, and which of
+        # them argmax returns is a tie-break. Before the float64
+        # centring (defect 8) float32 noise broke the tie by luck within
+        # 2 q/T. Require the found peak to lie on the float64
+        # reference's maximum plateau, and that plateau to cover the
+        # injected frequency to within ~q/T (one phase-smear width).
+        qv = q_transit(freqs)
+        ref = _sparse_reference(t, y, dy, freqs, 0.5 * qv, 2.0 * qv)
+        plateau = ref >= ref.max() * (1 - 1e-5)
+        assert plateau[int(np.argmax(powers))]
         T = max(t) - min(t)
-        # the peak-frequency uncertainty is ~q/T (one phase-smear
-        # width); with only 50 points the peak can statistically land
-        # a couple of widths off, so allow 2 units
-        assert np.abs(best_freq - freq_true) < 2 * q / T
+        assert np.min(np.abs(freqs[plateau] - freq_true)) < 2 * q / T
 
     @pytest.mark.parametrize("ndata", [50, 100])
     def test_eebls_transit_standard_returns_3(self, ndata):
@@ -1770,3 +1808,993 @@ class TestPinnedBufferStreamParity(object):
         # off by the factor 1/yy; torn: garbage), not atomic-order
         # jitter between runs.
         assert_allclose(p_stream, p_default, rtol=1e-3)
+
+
+class TestBlsBatchSizing(object):
+    """Defect 1 of the Sep 2026 audit (``bls-overflow-oob``), the
+    default ``eebls_transit`` path for ndata >= 500 (``eebls_gpu``):
+
+    (a) the fold kernels indexed their ``ndata * nfreq`` threads in 32
+        bits while the host launched the exact product with an
+        uncapped auto batch, so a TESS 2-min year (262,800 points x an
+        18,551-frequency batch = 4.9e9 > 2^32) silently returned
+        65,372 zero powers, a power of 1.678 (> 1) and the wrong peak;
+    (b) the device bin buffers were sized from
+        ``count_tot_nbins(grid-wide min nbins0, grid-wide max nbinsf)``,
+        which is NOT an upper bound over batches (``count_tot_nbins``
+        is non-monotone in ``nbins0``), so a Keplerian-q batched grid
+        could overrun its buffers: ``eebls_transit(t, y, dy, fmin=0.02,
+        fmax=0.5)`` on 70,000 points died with ``illegal memory
+        access``.
+
+    The kernels now index in 64 bits, the host caps ``freq_batch_size``
+    at ``len(freqs)`` and ``(2^31 - 1) // ndata``, and the batch table
+    is built before allocating so the buffers are sized from the
+    actual maximum over batches.
+    """
+
+    # ---- pure-CPU checks of the sizing helpers ----
+
+    def test_count_tot_nbins_is_not_monotone_in_nbins0(self):
+        # the property that broke the old sizing (audit's numbers)
+        assert [count_tot_nbins(nb0, 359, 0.2) for nb0 in (28, 29, 30)] \
+            == [1875, 1939, 1704]
+
+    def test_batch_table_sizes_from_the_actual_batches(self):
+        # batch 0 starts at nbins0 = 29 (1939 cells per frequency)
+        # although the grid-wide minimum nbins0 is 28 (1875 cells): the
+        # old gs = freq_batch_size * 1875 * noverlap under-allocated
+        # batch 0 and the fold kernel's atomics ran off the buffer
+        nbins0 = np.array([29] * 5 + [28] * 5 + [30] * 5)
+        nbinsf = np.full(15, 359)
+        noverlap = 3
+        assert list(_per_freq_nbins_tot(nbins0, nbinsf, 0.2)) \
+            == [1939] * 5 + [1875] * 5 + [1704] * 5
+        table = _bls_batch_table(nbins0, nbinsf, 5, 0.2)
+        assert [(b[0], b[1]) for b in table] == [(0, 5), (5, 10), (10, 15)]
+        assert [b[2] for b in table] == [1939, 1875, 1704]
+
+        old_gs = 5 * count_tot_nbins(int(nbins0.min()), int(nbinsf.max()),
+                                     0.2) * noverlap
+        new_gs = max((b[1] - b[0]) * b[2] for b in table) * noverlap
+        batch0_bins = 5 * table[0][2] * noverlap
+        assert batch0_bins > old_gs      # the overrun
+        assert batch0_bins <= new_gs     # the fix
+
+        # a mixed batch: the stride is the per-frequency maximum, NOT
+        # the count of the batch-wide (min nb0, max nbf) collapse
+        # (1875 here, less than the 1939 cells its nb0 = 29 members
+        # need)
+        table = _bls_batch_table(nbins0, nbinsf, 7, 0.2)
+        assert [(b[0], b[1]) for b in table] == [(0, 7), (7, 14), (14, 15)]
+        assert [b[2] for b in table] == [1939, 1875, 1704]
+
+        # the memory-budget estimate is an upper bound over batches
+        assert _max_nbins_tot(nbins0, nbinsf, 0.2) >= max(b[2]
+                                                          for b in table)
+
+    def test_batch_table_last_batch_and_uneven_grids(self):
+        nbins0 = np.array([4, 4, 2, 2, 2, 8, 8])
+        nbinsf = np.array([50, 40, 60, 60, 20, 100, 100])
+        per_f = [count_tot_nbins(a, b, 0.3) for a, b in zip(nbins0, nbinsf)]
+        assert list(_per_freq_nbins_tot(nbins0, nbinsf, 0.3)) == per_f
+        table = _bls_batch_table(nbins0, nbinsf, 3, 0.3)
+        assert [(b[0], b[1]) for b in table] == [(0, 3), (3, 6), (6, 7)]
+        assert [b[2] for b in table] == [max(per_f[0:3]), max(per_f[3:6]),
+                                         per_f[6]]
+        with pytest.raises(ValueError):
+            _bls_batch_table(nbins0, nbinsf, 0, 0.3)
+
+    def test_max_nbins_tot_bounds_every_batching_of_a_keplerian_grid(self):
+        # HAT-like Keplerian grid with 0.5 q .. 2 q bounds, as
+        # eebls_transit builds it: every batch of every batch size
+        # needs at most the estimated number of cells
+        freqs, qvals = keplerian_freq_grid(0.5, 100., 3650.,
+                                           oversampling=2,
+                                           return_qvals=True)
+        qvals = qvals.astype(np.float64)[:5000]
+        nbins0, nbinsf = _q_bounds_to_nbins(0.5 * qvals, 2.0 * qvals)
+        for dlogq in (0.2, 0.3, -1.0):
+            bound = _max_nbins_tot(nbins0, nbinsf, dlogq)
+            for fbs in (1, 7, 100, 1234, len(qvals)):
+                table = _bls_batch_table(nbins0, nbinsf, fbs, dlogq)
+                assert max(b[2] for b in table) <= bound
+
+    def test_cap_freq_batch_size(self):
+        # (2^31 - 1) // ndata: the audit's 66,000-point case
+        assert _cap_freq_batch_size(10 ** 9, 66000, 10 ** 9) \
+            == _MAX_FOLD_THREADS // 66000 == 32537
+        assert 66000 * 32537 <= 2 ** 31 - 1 < 66000 * 32538
+        # never more than the grid
+        assert _cap_freq_batch_size(500, 100, 300) == 300
+        # never less than one frequency
+        assert _cap_freq_batch_size(0, 100, 300) == 1
+        # a sane request is left alone
+        assert _cap_freq_batch_size(5, 100, 300) == 5
+
+    def test_q_bounds_to_nbins(self):
+        nb0, nbf = _q_bounds_to_nbins([0.01, 0.02], [0.5, 0.25])
+        assert list(nb0) == [2, 4] and list(nbf) == [100, 50]
+        with pytest.raises(ValueError, match="qmin must be > 0"):
+            _q_bounds_to_nbins([0.0], [0.5])
+        with pytest.raises(ValueError, match="qmax must be <= 1"):
+            _q_bounds_to_nbins([0.1], [1.5])
+
+    def test_eebls_gpu_rejects_bad_bounds_before_any_gpu_work(self):
+        # used to be a ZeroDivisionError (qmin > qmax) or a device
+        # divide-by-zero (qmax > 1); validation now precedes the compile,
+        # so this runs on CPU-only machines too
+        t, y, dy = data(ndata=50)
+        freqs = np.array([0.9, 1.0, 1.1])
+        with pytest.raises(ValueError, match="qmin > qmax"):
+            eebls_gpu(t, y, dy, freqs, qmin=0.2, qmax=0.1)
+        with pytest.raises(ValueError, match="qmax must be <= 1"):
+            eebls_gpu(t, y, dy, freqs, qmin=0.1, qmax=2.0)
+        with pytest.raises(ValueError, match="qmin must be > 0"):
+            eebls_gpu(t, y, dy, freqs, qmin=0.0, qmax=0.5)
+        with pytest.raises(ValueError, match="qmin"):
+            eebls_gpu(t, y, dy, freqs, qmin=np.array([0.01, 0.02]))
+
+    # ---- GPU ----
+
+    @staticmethod
+    def _big_lc(ndata=131072, seed=1):
+        rng = np.random.RandomState(seed)
+        t = np.sort(rng.uniform(0, 30., ndata))
+        y = 1 - 0.01 * (((t * 0.5) % 1) < 0.3) + 0.002 * rng.randn(ndata)
+        dy = np.full(ndata, 0.002)
+        return t, y, dy
+
+    def test_fold_kernel_index_is_64_bit(self):
+        # Direct launch of bin_and_phase_fold_bst_multifreq with
+        # ndata * nfreq = 131072 * 32769 = 4.295e9 > 2^32 (the host
+        # entry points now cap the batch, so only a direct launch
+        # reaches this). With the old 32-bit bound `i < ndata * nfreq`
+        # the product wrapped to 65536: only half of frequency 0's
+        # points were binned and every other frequency stayed empty.
+        # One q level of 1024 bins keeps the atomics cheap (~1 s).
+        import pycuda.gpuarray as gpuarray
+        from ..bls import _function_signatures, _default_block_size
+        ndata, nf, nb = 131072, 32769, 1024
+        assert ndata * nf > 2 ** 32
+        t, y, dy = self._big_lc(ndata)
+        t32 = (t - np.floor(t.min())).astype(np.float32)
+        rng = np.random.RandomState(5)
+        yw = (1e-4 * rng.randn(ndata)).astype(np.float32)
+        w = np.full(ndata, 1. / ndata, dtype=np.float32)
+        freqs = np.linspace(0.3, 0.7, nf).astype(np.float32)
+
+        funcs = compile_bls(
+            function_names=['bin_and_phase_fold_bst_multifreq'])
+        func = funcs['bin_and_phase_fold_bst_multifreq']
+        t_g, yw_g, w_g, f_g = (gpuarray.to_gpu(a)
+                               for a in (t32, yw, w, freqs))
+        nb_g = gpuarray.to_gpu(np.full(nf, nb, dtype=np.uint32))
+        yw_bin = gpuarray.zeros(nf * nb, np.float32)
+        w_bin = gpuarray.zeros(nf * nb, np.float32)
+        bs = _default_block_size
+        grid = (int(np.ceil(float(ndata) * nf / bs)), 1)
+        args = (t_g.ptr, yw_g.ptr, w_g.ptr, yw_bin.ptr, w_bin.ptr, f_g.ptr,
+                nb_g.ptr, nb_g.ptr)
+        func.prepared_call(grid, (bs, 1, 1), *args, np.uint32(ndata),
+                           np.uint32(nf), np.uint32(0), np.uint32(1),
+                           np.float32(0.2), np.uint32(nb))
+        wb = w_bin.get()
+        ywb = yw_bin.get()
+
+        # float32 fold replica (bit-identical to the kernel's
+        # mod1(t * f) / floorf(nb * phi) for dphi = 0); check the first,
+        # a middle and the LAST frequency -- the last one's threads all
+        # lie beyond the 2^32 boundary
+        for k in (0, nf // 2, nf - 1):
+            phi = np.float32(t32 * freqs[k])
+            phi = phi - np.floor(phi)
+            b = np.floor(np.float32(nb) * phi).astype(np.int64) % nb
+            ref_w = np.bincount(b, weights=w.astype(np.float64),
+                                minlength=nb)
+            ref_yw = np.bincount(b, weights=yw.astype(np.float64),
+                                 minlength=nb)
+            assert_allclose(wb[k * nb:(k + 1) * nb], ref_w,
+                            rtol=1e-5, atol=1e-9)
+            assert_allclose(ywb[k * nb:(k + 1) * nb], ref_yw,
+                            rtol=1e-3, atol=1e-8)
+        # nothing was binned outside the requested cells, and every
+        # frequency saw all the weight
+        assert_allclose(wb.reshape(nf, nb).sum(axis=1), 1.0, rtol=1e-4)
+
+    def test_eebls_gpu_above_2_32_threads_matches_safe_batching(self):
+        # eebls_gpu with a user-supplied freq_batch_size whose
+        # ndata * batch exceeds 2^32 (before the fix: zeros / powers > 1;
+        # the audit's 66,000 x 66,000 case had corr -0.003 with the
+        # correct periodogram). One q level of 1024 bins keeps the two
+        # full-grid runs to well under a second each.
+        ndata, nf = 131072, 32769
+        t, y, dy = self._big_lc(ndata)
+        freqs = np.linspace(0.3, 0.7, nf)
+        q = 1. / 1024
+        kw = dict(qmin=q, qmax=q, noverlap=1)
+        p_big, sols_big = eebls_gpu(t, y, dy, freqs, freq_batch_size=nf,
+                                    **kw)
+        p_safe, sols_safe = eebls_gpu(t, y, dy, freqs,
+                                      freq_batch_size=4096, **kw)
+        assert not np.any(p_big == 0)
+        assert np.all(p_big <= 1.0)
+        assert_allclose(p_big, p_safe, rtol=1e-4, atol=1e-6)
+        assert np.argmax(p_big) == np.argmax(p_safe)
+
+    def test_eebls_gpu_keplerian_batches_do_not_overrun(self):
+        # The audit's reproducer for (b): HAT-like Keplerian grid
+        # (keplerian_freq_grid(0.5, 100, 3650), first 20,000
+        # frequencies, qmin = 0.5 q, qmax = 2 q), 600 points,
+        # freq_batch_size = 2435 (what a 1.5 GB budget gave the old
+        # sizing). Batch 0 starts at nbins0 = 131 and needs 2706 cells
+        # per frequency while the old buffers held 2565 (the grid-wide
+        # (81, 570) count): `illegal memory access` before the fix.
+        freqs, qvals = keplerian_freq_grid(0.5, 100., 3650.,
+                                           oversampling=2,
+                                           return_qvals=True)
+        freqs = freqs.astype(np.float64)[:20000]
+        qvals = qvals.astype(np.float64)[:20000]
+        qmins, qmaxes = 0.5 * qvals, 2.0 * qvals
+        nbins0, nbinsf = _q_bounds_to_nbins(qmins, qmaxes)
+        fbs, dlogq, noverlap = 2435, 0.2, 3
+        table = _bls_batch_table(nbins0, nbinsf, fbs, dlogq)
+        old_cells = count_tot_nbins(int(nbins0.min()), int(nbinsf.max()),
+                                    dlogq)
+        # the configuration really is one the old sizing overran: its
+        # batch-0 collapse (131, 570) needs more cells than the
+        # grid-wide (81, 570) collapse the buffers were sized from
+        nb0_b0 = int(nbins0[:fbs].min())
+        nbf_b0 = int(nbinsf[:fbs].max())
+        assert (nb0_b0, nbf_b0) == (131, 570)
+        assert count_tot_nbins(nb0_b0, nbf_b0, dlogq) > old_cells
+        # the per-frequency stride is what is allocated now
+        assert table[0][2] == int(np.max(_per_freq_nbins_tot(
+            nbins0[:fbs], nbinsf[:fbs], dlogq)))
+
+        rng = np.random.RandomState(0)
+        ndata = 600
+        t = np.sort(rng.uniform(0, 3650., ndata))
+        y = 1 + 0.002 * rng.randn(ndata)
+        dy = np.full(ndata, 0.002)
+        p, sols = eebls_gpu(t, y, dy, freqs, qmin=qmins, qmax=qmaxes,
+                            freq_batch_size=fbs, dlogq=dlogq,
+                            noverlap=noverlap)
+        assert np.all(np.isfinite(p))
+        assert np.all((p >= 0) & (p <= 1))
+        assert len(sols) == len(freqs)
+        qs = np.array([s[0] for s in sols])
+        assert np.all(qs >= 1. / nbinsf - 1e-6)
+        assert np.all(qs <= 1. / nbins0 + 1e-6)
+
+    def test_eebls_gpu_small_grid_allocates_only_what_it_needs(self):
+        # finding 135 / plan item BLS-2: a 300-frequency grid used to
+        # allocate scratch for the ~100K-frequency batch the free
+        # memory allowed (4 arrays x 5 streams x ~0.9 x free). The
+        # batch is now capped at len(freqs), so the scratch buffers
+        # hold exactly nfreq * cells * noverlap floats, and one scratch
+        # set per batch (not per stream) is allocated. The periodogram
+        # is unchanged (scalar q: batch boundaries never change it).
+        import cuvarbase.bls as B
+        t, y, dy = data(snr=10, q=0.05, phi0=0.3, freq=1.0, baseline=365.)
+        freqs = np.linspace(0.95, 1.05, 300)
+        qmin, qmax, noverlap, dlogq = 0.01, 0.1, 3, 0.2
+        need = len(freqs) * count_tot_nbins(10, 100, dlogq) * noverlap
+
+        sizes = []
+        real = B.gpuarray
+
+        class Recorder(object):
+            to_gpu = staticmethod(real.to_gpu)
+            maximum = staticmethod(real.maximum)
+
+            @staticmethod
+            def zeros(n, dtype=np.float32):
+                sizes.append(int(n))
+                return real.zeros(n, dtype=dtype)
+
+        B.gpuarray = Recorder
+        try:
+            p, sols = eebls_gpu(t, y, dy, freqs, qmin=qmin, qmax=qmax,
+                                noverlap=noverlap, dlogq=dlogq)
+        finally:
+            B.gpuarray = real
+        assert max(sizes) == need
+        # single batch -> one scratch set of 4 arrays (+ the 4
+        # per-frequency result arrays)
+        assert sizes.count(need) == 4
+
+        p2, sols2 = eebls_gpu(t, y, dy, freqs, qmin=qmin, qmax=qmax,
+                              noverlap=noverlap, dlogq=dlogq,
+                              freq_batch_size=50)
+        assert_allclose(p, p2, rtol=1e-4, atol=1e-6)
+
+
+class TestPerFrequencyQBounds(object):
+    """Defect 7 of the Sep 2026 audit (``bls-q-collapse``): ``eebls_gpu``
+    reduced per-frequency ``qmin``/``qmax`` arrays to one scalar pair
+    per batch (the batch-wide min/max) because the binned kernels took
+    scalar bin counts per launch, so every frequency in a batch was
+    searched over ``floor(1/max qmax) .. ceil(1/min qmin)`` bins:
+    2670/3049 Keplerian-grid solutions fell outside their own window
+    and the result changed with ``freq_batch_size`` / free memory.
+    The kernels now read per-frequency bin-count arrays, and the
+    ``eebls_transit`` default (ndata >= sparse_threshold) runs the fast
+    kernel (which always honoured the bounds) with a top-K solution
+    pass.
+    """
+
+    @staticmethod
+    def _lc(ndata=1200, baseline=200., freq=0.2, q=0.03, phi0=0.6,
+            snr=12., seed=11, sigma=0.01):
+        rng = np.random.RandomState(seed)
+        t = np.sort(rng.uniform(0, baseline, ndata)) + 100.3
+        delta = snr * sigma / np.sqrt(ndata * q * (1 - q))
+        y = 12. - delta * (((t * freq) - phi0) % 1.0 < q)
+        y += sigma * rng.randn(ndata)
+        dy = np.full(ndata, sigma)
+        return t, y, dy
+
+    # ---- CPU: the fast-kernel box scan used for the solution pass ----
+
+    def test_fast_box_scan_matches_brute_force_over_the_kernel_grid(self):
+        # every (q, phi) the fast kernel searches at one frequency is
+        # q = m / nbf, phi0 = (n + s / noverlap) / nbf; the scan must
+        # return the box single_bls scores highest
+        from ..utils import subtract_epoch
+        t, y, dy = self._lc(ndata=80, baseline=30., freq=1.0, q=0.1,
+                            phi0=0.3, snr=20., seed=3)
+        freq = 1.0
+        qmin, qmax, dlogq, noverlap = 0.05, 0.25, 0.3, 2
+        t64, epoch = subtract_epoch(t)
+        w = dy ** -2
+        w /= w.sum()
+        ybar = np.dot(w, y)
+        YY = np.dot(w, (y - ybar) ** 2)
+        t32 = t64.astype(np.float32)
+        nb0, nbf = _fast_path_nbins(np.float32([freq]), qmin, qmax)
+        nb0, nbf = int(nb0[0]), int(nbf[0])
+        assert (nb0, nbf) == (4, 20)
+
+        val, q, phi = _fast_bls_box_scan(
+            t32, ((y - ybar) * w).astype(np.float32),
+            w.astype(np.float32), np.float32(freq), nb0, nbf, dlogq,
+            noverlap)
+        p_scan = val / YY
+
+        # brute force over the same grid, in the original timescale.
+        # The ladder runs up to and including nbf // nb0 = 5 (q = 0.25
+        # = qmax); before the id-64 fix it stopped at 4 (q = 0.2).
+        ms, m = [], 1
+        while m <= nbf // nb0:
+            ms.append(m)
+            m += m * 3 // 10 if m * 3 // 10 > 0 else 1
+        assert ms[-1] == nbf // nb0 and ms[-1] / nbf == qmax
+        best = 0.
+        for s_pass in range(noverlap):
+            for m in ms:
+                for n in range(nbf):
+                    phi0 = ((n + s_pass / noverlap) / nbf
+                            + epoch * freq) % 1.0
+                    best = max(best, single_bls(t, y, dy, freq, m / nbf,
+                                                phi0))
+        assert abs(p_scan - best) < 1e-5 * max(best, 1e-3)
+        # and the returned (q, phi) reproduces that power
+        p_sol = single_bls(t, y, dy, freq, q,
+                           (phi + epoch * freq) % 1.0)
+        assert abs(p_sol - p_scan) < 1e-5 * max(best, 1e-3)
+        assert q in [mm / nbf for mm in ms]
+
+    def test_fast_solutions_selects_the_top_k_and_marks_the_rest(self):
+        t, y, dy = self._lc(ndata=150, baseline=30., freq=1.0, q=0.1,
+                            phi0=0.3, snr=20., seed=4)
+        freqs = np.linspace(0.9, 1.1, 41)
+        powers = np.exp(-0.5 * ((freqs - 1.0) / 0.01) ** 2)
+        sols = _fast_bls_solutions(t, y, dy, freqs, powers, 0.05, 0.25, 5,
+                                   dlogq=0.3, noverlap=2)
+        assert len(sols) == len(freqs)
+        filled = [i for i, s_ in enumerate(sols) if s_ is not None]
+        assert set(filled) == set(np.argsort(-powers)[:5])
+        assert 20 in filled
+        for i in filled:
+            q, phi = sols[i]
+            assert 0.05 <= q <= 0.25 and 0. <= phi < 1.
+        # zero-power frequencies get no solution; K = 0 -> all None
+        assert all(s_ is None for s_ in
+                   _fast_bls_solutions(t, y, dy, freqs, np.zeros(41),
+                                       0.05, 0.25, 5))
+        assert all(s_ is None for s_ in
+                   _fast_bls_solutions(t, y, dy, freqs, powers,
+                                       0.05, 0.25, 0))
+
+    # ---- GPU: eebls_gpu with per-frequency bounds ----
+
+    def test_eebls_gpu_array_bounds_are_honoured_per_frequency(self):
+        # two frequencies with disjoint windows in ONE batch; the
+        # injected transit at f = 0.05 has q = 0.15, outside that
+        # frequency's [0.01, 0.02] window. The old batch-wide collapse
+        # ([0.01, 0.2]) found q ~ 0.15 there.
+        t, y, dy = self._lc(ndata=1200, baseline=200., freq=0.05, q=0.15,
+                            phi0=0.2, snr=40., seed=5)
+        freqs = np.array([0.05, 2.5])
+        qmins = np.array([0.01, 0.10])
+        qmaxes = np.array([0.02, 0.20])
+        nb0, nbf = _q_bounds_to_nbins(qmins, qmaxes)
+
+        p, sols = eebls_gpu(t, y, dy, freqs, qmin=qmins, qmax=qmaxes)
+        p1, sols1 = eebls_gpu(t, y, dy, freqs, qmin=qmins, qmax=qmaxes,
+                              freq_batch_size=1)
+        for i in range(2):
+            assert 1. / nbf[i] - 1e-6 <= sols[i][0] <= 1. / nb0[i] + 1e-6
+        # one frequency per batch always had per-frequency semantics:
+        # the default batching must now agree with it
+        assert_allclose(p, p1, rtol=1e-5, atol=1e-7)
+        assert [s_[0] for s_ in sols] == [s_[0] for s_ in sols1]
+        # the wide (unconstrained) box the collapse used to return
+        p_wide, sols_wide = eebls_gpu(t, y, dy, freqs[:1], qmin=0.01,
+                                      qmax=0.2)
+        assert sols_wide[0][0] > 0.1 and p_wide[0] > p[0]
+
+    def test_eebls_gpu_keplerian_grid_independent_of_batching(self):
+        t, y, dy = self._lc()
+        freqs, q0 = transit_autofreq(t, qmin_fac=0.5, fmin=0.02, fmax=3.0)
+        freqs = freqs[::max(1, len(freqs) // 600)]
+        q0 = q_transit(freqs)
+        qmins, qmaxes = 0.5 * q0, 2.0 * q0
+        nb0, nbf = _q_bounds_to_nbins(qmins, qmaxes)
+
+        runs = {}
+        for fbs in (None, 200, 20, 1):
+            runs[fbs] = eebls_gpu(t, y, dy, freqs, qmin=qmins, qmax=qmaxes,
+                                  freq_batch_size=fbs)
+        p_ref, sols_ref = runs[None]
+        qs = np.array([s_[0] for s_ in sols_ref])
+        # every solution inside its own window (bin-count rounding)
+        assert np.all(qs >= 1. / nbf - 1e-6)
+        assert np.all(qs <= 1. / nb0 + 1e-6)
+        for fbs in (200, 20, 1):
+            p, sols = runs[fbs]
+            # float32 atomic-order noise only (the audit measured
+            # 1.7e-2 differences between batchings before the fix)
+            assert_allclose(p, p_ref, rtol=1e-4, atol=1e-6)
+            qb = np.array([s_[0] for s_ in sols])
+            # solutions may differ only where powers tie
+            diff = qb != qs
+            assert np.mean(diff) < 0.02
+
+    # ---- GPU: the eebls_transit default path ----
+
+    def test_eebls_transit_default_is_fast_kernel_plus_top_k_solutions(self):
+        t, y, dy = self._lc(ndata=2000, seed=12)
+        fr, p, sols = eebls_transit(t, y, dy, fmin=0.05, fmax=1.0)
+        q0 = q_transit(fr)
+        nb0, nbf = _fast_path_nbins(fr.astype(np.float32), 0.5 * q0,
+                                    2.0 * q0)
+
+        # the periodogram is the fast kernel's (per-frequency bounds)
+        p_fast = eebls_gpu_fast(t, y, dy, fr, qmin=0.5 * q0, qmax=2.0 * q0)
+        assert_allclose(p, p_fast, rtol=1e-4, atol=1e-6)
+        assert abs(fr[np.argmax(p)] - 0.2) < 3 * 0.03 / 200.
+
+        # top-10 solutions, None elsewhere, argmax included
+        assert len(sols) == len(fr)
+        filled = [i for i, s_ in enumerate(sols) if s_ is not None]
+        assert set(filled) == set(np.argsort(-p, kind='stable')[:10])
+        assert sols[int(np.argmax(p))] is not None
+
+        for i in filled:
+            q, phi = sols[i]
+            # inside this frequency's own window
+            assert q >= 1. / nbf[i] - 1e-6
+            assert q <= (-(-int(nbf[i]) // int(nb0[i]))) / float(nbf[i]) + 1e-6
+            assert q <= 2.0 * q0[i] * (1 + 1. / nb0[i]) + 1e-6
+            # and it is the box that produced the power: single_bls
+            # re-evaluates it exactly (float32 accumulation and, at a
+            # bin edge, one point's membership may differ)
+            p_single = single_bls(t, y, dy, fr[i], q, phi)
+            n_box = len(t) * q
+            assert abs(p_single - p[i]) < 1e-3 * p[i] + 1e-5 + 2. * p[i] / n_box
+
+    def test_eebls_transit_default_independent_of_batching_and_memory(self):
+        # the pre-1.0 default path changed 28,628/36,585 frequencies by
+        # up to 2.3e-2 between a 24 GB and a 7 GB card (the auto batch
+        # size set the collapsed window)
+        t, y, dy = self._lc(ndata=1200)
+        kw = dict(fmin=0.05, fmax=1.0)
+        fr, p, sols = eebls_transit(t, y, dy, **kw)
+        fr2, p2, sols2 = eebls_transit(t, y, dy, freq_batch_size=97, **kw)
+        fr3, p3, sols3 = eebls_transit(t, y, dy, max_memory=int(2e9),
+                                       nstreams=2, **kw)
+        assert_allclose(p2, p, rtol=1e-4, atol=1e-6)
+        assert_allclose(p3, p, rtol=1e-4, atol=1e-6)
+        for a, b in ((sols2, sols), (sols3, sols)):
+            assert [i for i, s_ in enumerate(a) if s_ is not None] \
+                == [i for i, s_ in enumerate(b) if s_ is not None]
+
+    def test_eebls_transit_solution_keywords(self):
+        t, y, dy = self._lc(ndata=800)
+        kw = dict(fmin=0.1, fmax=0.5)
+        fr, p, sols = eebls_transit(t, y, dy, n_solutions=3, **kw)
+        assert sum(s_ is not None for s_ in sols) == 3
+        fr, p0, sols0 = eebls_transit(t, y, dy, n_solutions=0, **kw)
+        assert len(sols0) == len(fr) and all(s_ is None for s_ in sols0)
+        assert_allclose(p0, p, rtol=1e-4, atol=1e-6)
+        # use_fast: same periodogram, no solution pass
+        fr, pf, none = eebls_transit(t, y, dy, use_fast=True, **kw)
+        assert none is None
+        assert_allclose(pf, p, rtol=1e-4, atol=1e-6)
+        # the binned search with a solution everywhere is still there
+        fr, pg, sg = eebls_transit_gpu(t, y, dy, **kw)
+        assert len(sg) == len(fr) and all(s_ is not None for s_ in sg)
+
+
+def _sparse_reference(t, y, dy, freqs, qmin=0.0, qmax=0.5):
+    """Exact float64 sparse-BLS reference (Panahi & Zucker 2021: every
+    cyclic run of phase-sorted points), with the kernels' float32 fold
+    and box definition (phi0 = first in-transit phase, q to the egress
+    midpoint) and weight guards -- the reference of the Sep 2026 audit
+    (repro/local/sparse-batch/sparse_exp.py). Returns 'chi2ratio'
+    powers."""
+    from ..utils import subtract_epoch
+    t64, epoch = subtract_epoch(np.asarray(t, dtype=np.float64))
+    y64 = np.asarray(y, dtype=np.float64)
+    w = np.asarray(dy, dtype=np.float64) ** -2
+    w /= w.sum()
+    x = y64 - np.dot(w, y64)
+    YY = np.dot(w, x ** 2)
+    N = len(t64)
+    out = np.zeros(len(freqs))
+    qmin = np.broadcast_to(np.asarray(qmin, float), (len(freqs),))
+    qmax = np.broadcast_to(np.asarray(qmax, float), (len(freqs),))
+    i = np.arange(N)[:, None]
+    L = np.arange(1, N)[None, :]
+    j = i + L
+    for k, f in enumerate(freqs):
+        phi = (np.float32(t64) * np.float32(f)) % np.float32(1.0)
+        phi = phi.astype(np.float64)
+        o = np.argsort(phi, kind='stable')
+        ps, ws, xs = phi[o], w[o], x[o]
+        cw = np.concatenate([[0.0], np.cumsum(np.concatenate([ws, ws]))])
+        cxw = np.concatenate([[0.0], np.cumsum(np.concatenate(
+            [ws * xs, ws * xs]))])
+        W = cw[j] - cw[i]
+        S = cxw[j] - cxw[i]
+        ps2 = np.concatenate([ps, ps + 1.0])
+        last = ps2[j - 1]
+        nxt = ps2[np.minimum(j, 2 * N - 1)]
+        q = 0.5 * (last + nxt) - ps[:, None]
+        valid = (q > 0) & (q >= qmin[k]) & (q <= qmax[k]) \
+            & (W > 1e-9) & (W < 1.0 - 1e-4)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            P = np.where(valid, S * S / (W * (1 - W)) / YY, 0.0)
+        out[k] = P.max()
+    return out
+
+
+def _untied_frequencies(t, freqs):
+    """Mask of the frequencies at which the kernels' float32 fold gives
+    no two observations the same phase. At a tie the candidate runs
+    depend on the sort order (bitonic vs argsort vs the stable sort of
+    the reference) and the reported egress midpoint collapses onto the
+    tied point (audit ids 65/74), so exact comparisons are only
+    meaningful away from ties (~20-25 % of a 365-day mag-12 grid at
+    f ~ 1.4 has one)."""
+    from ..utils import subtract_epoch
+    t64, _ = subtract_epoch(np.asarray(t, dtype=np.float64))
+    t32 = t64.astype(np.float32)
+    mask = np.ones(len(freqs), dtype=bool)
+    for k, f in enumerate(freqs):
+        phi = (t32 * np.float32(f)) % np.float32(1.0)
+        mask[k] = len(np.unique(phi)) == len(phi)
+    return mask
+
+
+def _same_peak(p, ref, rtol=1e-4):
+    """The reference power at the tested periodogram's argmax is the
+    reference maximum (plateaus of equal power, e.g. 4 adjacent grid
+    frequencies with the same in-transit set, break argmax ties by
+    float32 rounding order)."""
+    return ref[int(np.argmax(p))] >= ref.max() * (1 - rtol)
+
+
+class TestSparseCentering(object):
+    """Defect 8 of the Sep 2026 audit (``bls-sparse-uncentered``): the
+    sparse kernels (and ``sparse_bls_cpu`` / ``single_bls``) accumulated
+    float32 sums of raw ``w * y`` and subtracted ``ybar * W`` afterwards,
+    so on mag-12 fluxes (the ``eebls_transit`` default for ndata < 500)
+    the power was off by up to 1e-2 relative (argmax moved in 8/20
+    seeds) and one point ~1e3x more precise than the rest gave powers
+    up to 52 (> 1) at every frequency. The wrappers now centre in
+    float64 before the float32 cast; the audit measured ~1e-6 after
+    the fix."""
+
+    @staticmethod
+    def _mag12(N=200, seed=0, base=365.0, ybar=12.0, depth=5e-3,
+               sig=5e-3, f=1.37, q=0.02):
+        r = np.random.RandomState(seed)
+        t = np.sort(base * r.rand(N))
+        ph = (t * f) % 1
+        y = ybar - depth * (ph < q) + sig * r.randn(N)
+        dy = sig * (0.7 + 0.6 * r.rand(N))
+        return t, y, dy
+
+    @staticmethod
+    def _grid():
+        return 1.37 + (0.02 / 365 / 4) * np.arange(-100, 101)
+
+    # ---- CPU ----
+
+    def test_sparse_bls_cpu_mag12_matches_float64_reference(self):
+        # before the fix: max rel 1.1e-2 (audit), 67-78 % of the grid
+        # off by > 1e-3
+        freqs = self._grid()
+        qv = q_transit(freqs)
+        for seed in (0, 1):
+            t, y, dy = self._mag12(seed=seed)
+            ref = _sparse_reference(t, y, dy, freqs, 0.5 * qv, 2.0 * qv)
+            p, _ = sparse_bls_cpu(t, y, dy, freqs, qmin=0.5 * qv,
+                                  qmax=2.0 * qv)
+            ok = _untied_frequencies(t, freqs)
+            assert ok.mean() > 0.7
+            assert_allclose(p[ok], ref[ok], rtol=1e-4, atol=1e-7)
+            assert _same_peak(p, ref)
+
+    def test_sparse_bls_cpu_offset_invariance(self):
+        freqs = self._grid()[::4]
+        t, y, dy = self._mag12(seed=2)
+        p0, s0 = sparse_bls_cpu(t, y, dy, freqs)
+        p20, s20 = sparse_bls_cpu(t, y + 20., dy, freqs)
+        assert_allclose(p20, p0, rtol=1e-5, atol=1e-8)
+        assert [a[0] for a in s20] == [a[0] for a in s0]
+
+    def test_single_bls_offset_invariance_and_reference(self):
+        t, y, dy = self._mag12(seed=3)
+        freqs = self._grid()[::8]
+        ref = _sparse_reference(t, y, dy, freqs)
+        _, sols = sparse_bls_cpu(t, y, dy, freqs)
+        ok = _untied_frequencies(t, freqs)
+        assert ok.sum() >= 15
+        for k, f in enumerate(freqs):
+            if not ok[k]:
+                continue
+            q, phi = sols[k]
+            p = single_bls(t, y, dy, f, q, phi)
+            p20 = single_bls(t, y + 20., dy, f, q, phi)
+            assert abs(p20 - p) < 1e-5 * max(p, 1e-3)
+            # the solution reproduces the reference power
+            assert abs(p - ref[k]) < 1e-4 * max(ref[k], 1e-3)
+
+    def test_cpu_one_precise_point_powers_stay_below_one(self):
+        r = np.random.RandomState(3)
+        N = 200
+        t = np.sort(365 * r.rand(N))
+        y = 12.0 + 0.01 * r.randn(N)
+        dy0 = 0.01 * np.ones(N)
+        freqs = np.linspace(0.5, 1.5, 51)
+        ok = _untied_frequencies(t, freqs)
+        assert ok.mean() > 0.7
+        for R, tol in ((1e4, 1e-3), (1e6, 3e-2)):
+            dy = dy0.copy()
+            dy[17] = 0.01 / np.sqrt(R)
+            ref = _sparse_reference(t, y, dy, freqs)
+            p, _ = sparse_bls_cpu(t, y, dy, freqs)
+            assert np.all(p <= 1.0)
+            assert abs(p[ok].max() - ref[ok].max()) < tol * ref[ok].max()
+            assert _same_peak(p[ok], ref[ok])
+
+    # ---- GPU ----
+
+    def test_sparse_bls_gpu_mag12_matches_float64_reference(self):
+        freqs = self._grid()
+        qv = q_transit(freqs)
+        for seed in (0, 1, 2):
+            t, y, dy = self._mag12(seed=seed)
+            ref = _sparse_reference(t, y, dy, freqs, 0.5 * qv, 2.0 * qv)
+            p, _ = sparse_bls_gpu(t, y, dy, freqs, qmin=0.5 * qv,
+                                  qmax=2.0 * qv)
+            ok = _untied_frequencies(t, freqs)
+            assert ok.mean() > 0.7
+            assert_allclose(p[ok], ref[ok], rtol=1e-4, atol=1e-7)
+            assert _same_peak(p, ref)
+
+    def test_eebls_transit_default_sparse_path_matches_reference(self):
+        # the public default path (ndata < sparse_threshold) on mag-12
+        # data: peak rel err was up to 7.2e-3 before the fix
+        freqs = self._grid()
+        t, y, dy = self._mag12(seed=4)
+        fr, p, sols = eebls_transit(t, y, dy, freqs=freqs)
+        qv = q_transit(fr)
+        ref = _sparse_reference(t, y, dy, fr, 0.5 * qv, 2.0 * qv)
+        ok = _untied_frequencies(t, fr)
+        assert ok.mean() > 0.7
+        assert_allclose(p[ok], ref[ok], rtol=1e-4, atol=1e-7)
+        assert _same_peak(p, ref)
+
+    def test_sparse_bls_gpu_offset_invariance(self):
+        freqs = self._grid()[::2]
+        t, y, dy = self._mag12(seed=5)
+        p0, s0 = sparse_bls_gpu(t, y, dy, freqs)
+        p20, s20 = sparse_bls_gpu(t, y + 20., dy, freqs)
+        assert_allclose(p20, p0, rtol=1e-5, atol=1e-8)
+        assert [a[0] for a in s20] == [a[0] for a in s0]
+
+    def test_gpu_one_precise_point_powers_stay_below_one(self):
+        # R = 1e6: 401/401 powers > 1 (max 52) before the fix
+        r = np.random.RandomState(3)
+        N = 200
+        t = np.sort(365 * r.rand(N))
+        y = 12.0 + 0.01 * r.randn(N)
+        dy0 = 0.01 * np.ones(N)
+        freqs = np.linspace(0.5, 1.5, 201)
+        ok = _untied_frequencies(t, freqs)
+        assert ok.mean() > 0.7
+        for R, tol in ((1e4, 1e-3), (1e6, 3e-2)):
+            dy = dy0.copy()
+            dy[17] = 0.01 / np.sqrt(R)
+            ref = _sparse_reference(t, y, dy, freqs)
+            p, _ = sparse_bls_gpu(t, y, dy, freqs)
+            assert np.all(p <= 1.0)
+            assert abs(p[ok].max() - ref[ok].max()) < tol * ref[ok].max()
+            assert _same_peak(p[ok], ref[ok])
+
+
+class TestFastPathQmaxBox(object):
+    """Sep 2026 audit, id 64: the fast (shared-memory) kernels built
+    their box ladder as ``max_bin_width = divrndup(nbinsf, nbins0)``
+    and looped ``m < max_bin_width``. That is the same set of widths
+    whenever ``nbins0`` does not divide ``nbinsf``, but one level short
+    when it does, so ``qmax`` itself was never tested: with
+    ``qmin=0.025, qmax=0.1`` (nbinsf=40, nbins0=10) the widest box
+    searched was ``q = 0.075``, and an on-grid ``q = qmax`` transit was
+    recovered at ~74-86 % of its exact power. The bound is now
+    ``max_bin_width = nbinsf // nbins0`` with ``m <= max_bin_width``:
+    the widest box with ``q = m/nbinsf <= 1/nbins0`` is included and no
+    box wider than the discretized ``qmax`` is ever evaluated.
+    """
+
+    # ---- CPU: the ladder itself ----
+
+    def test_ladder_includes_the_qmax_box(self):
+        from ..bls import _fast_box_widths
+        # qmin = 0.025, qmax = 0.1 -> nbinsf = 40, nbins0 = 10
+        nb0, nbf = _fast_path_nbins(np.float32([1.0]), 0.025, 0.1)
+        assert (int(nb0[0]), int(nbf[0])) == (10, 40)
+        widths = _fast_box_widths(int(nbf[0]), int(nb0[0]), 0.3)
+        assert widths == [1, 2, 3, 4]
+        assert widths[-1] / int(nbf[0]) == 0.1        # == qmax
+        # the old ladder stopped at 3 (q = 0.075)
+        assert 4 in widths
+
+    def test_ladder_never_exceeds_the_discretized_qmax(self):
+        from ..bls import _fast_box_widths, dnbins
+        for dlogq in (0.2, 0.3, 0.5, -1.0):
+            for nb0 in range(1, 25):
+                for nbf in range(nb0, 220, 7):
+                    widths = _fast_box_widths(nbf, nb0, dlogq)
+                    assert widths[0] == 1
+                    # every searched q is within the discretized qmax
+                    assert widths[-1] <= nbf // nb0
+                    assert widths[-1] / nbf <= 1.0 / nb0 + 1e-12
+                    # ... and it is the LAST rung that fits: the next
+                    # step would overshoot
+                    assert (widths[-1] + dnbins(widths[-1], dlogq)
+                            > nbf // nb0)
+
+    def test_default_bounds_are_unchanged_by_the_fix(self):
+        # qmin=0.01, qmax=0.5 -> nbinsf=100, nbins0=2, max width 50,
+        # but the geometric step jumps 48 -> 62, so the default fast
+        # path searches exactly what it did before.
+        from ..bls import _fast_box_widths
+        assert _fast_box_widths(100, 2, 0.3)[-1] == 48
+        assert _fast_box_widths(100, 2, 0.2)[-1] == 44
+
+    # ---- CPU: the box scan used for the eebls_transit solution pass ----
+
+    @staticmethod
+    def _on_grid_box(nbf=40, m=4, n0=10, ndays=10, depth=0.02,
+                     sigma=1e-3, seed=17):
+        """Light curve whose flux dips in exactly bins ``n0 ..
+        n0+m-1`` of an ``nbf``-bin phase grid at f = 1 c/d, i.e. a box
+        of q = m/nbf starting at phi0 = n0/nbf."""
+        rand = np.random.RandomState(seed)
+        phase = (np.arange(nbf) + 0.5) / nbf
+        t = np.concatenate([d + phase for d in range(ndays)])
+        y = np.ones(len(t))
+        b = np.tile(np.arange(nbf), ndays)
+        y[(b >= n0) & (b < n0 + m)] -= depth
+        y += sigma * rand.randn(len(t))
+        dy = sigma * np.ones(len(t))
+        return t, y, dy
+
+    @staticmethod
+    def _scan_power(t, y, dy, freq, qmin, qmax, dlogq=0.3, noverlap=2):
+        """(power, q, phi0) of the fast-kernel box grid at one
+        frequency, in the caller's timescale."""
+        from ..utils import subtract_epoch
+        t64, epoch = subtract_epoch(t)
+        w = np.asarray(dy, dtype=np.float64) ** -2
+        w /= w.sum()
+        ybar = float(np.dot(w, y))
+        YY = float(np.dot(w, (np.asarray(y) - ybar) ** 2))
+        nb0, nbf = _fast_path_nbins(np.float32([freq]), qmin, qmax)
+        val, q, phi = _fast_bls_box_scan(
+            t64.astype(np.float32), ((y - ybar) * w).astype(np.float32),
+            w.astype(np.float32), np.float32(freq),
+            int(nb0[0]), int(nbf[0]), dlogq, noverlap)
+        return val / YY, q, (phi + epoch * freq) % 1.0
+
+    def test_box_scan_finds_the_qmax_wide_box(self):
+        t, y, dy = self._on_grid_box()
+        p, q, phi0 = self._scan_power(t, y, dy, 1.0, 0.025, 0.1)
+        # the injected box is exactly qmax wide and on the bin grid
+        assert q == pytest.approx(0.1, abs=1e-7)
+        assert phi0 == pytest.approx(0.25, abs=1e-6)
+        # the widest box the OLD ladder could reach (q = 0.075) leaves
+        # a quarter of the transit out and scores clearly lower
+        p3 = single_bls(t, y, dy, 1.0, 3. / 40., 0.25)
+        p3 = max(p3, single_bls(t, y, dy, 1.0, 3. / 40., 0.275))
+        assert p > 1.2 * p3
+        # the reported solution reproduces the power exactly
+        assert single_bls(t, y, dy, 1.0, q, phi0) == pytest.approx(
+            p, rel=1e-5)
+
+    # ---- GPU ----
+
+    def test_fast_kernel_evaluates_the_qmax_box(self):
+        # the kernel must agree with the CPU replica of its own grid
+        # (which now includes m = nbinsf // nbins0) and must recover
+        # the on-grid q = qmax transit at nearly its exact power
+        t, y, dy = self._on_grid_box()
+        freqs = np.array([1.0], dtype=np.float64)
+        p_gpu = eebls_gpu_fast(t, y, dy, freqs, qmin=0.025, qmax=0.1,
+                               dlogq=0.3, noverlap=2)
+        p_ref, q_ref, phi_ref = self._scan_power(t, y, dy, 1.0,
+                                                 0.025, 0.1)
+        assert_allclose(p_gpu[0], p_ref, rtol=2e-4, atol=1e-6)
+        assert q_ref == pytest.approx(0.1, abs=1e-7)
+        exact = single_bls(t, y, dy, 1.0, 0.1, 0.25)
+        assert p_gpu[0] > 0.95 * exact
+
+    def test_optimized_kernel_matches_the_standard_one(self):
+        t, y, dy = self._on_grid_box(seed=18)
+        freqs = np.linspace(0.9, 1.1, 201)
+        kw = dict(qmin=0.025, qmax=0.1, dlogq=0.3, noverlap=2)
+        p_std = eebls_gpu_fast(t, y, dy, freqs, **kw)
+        p_opt = eebls_gpu_fast_optimized(t, y, dy, freqs, **kw)
+        assert_allclose(p_opt, p_std, rtol=1e-4, atol=1e-6)
+
+    def test_batch_kernel_uses_the_same_ladder(self):
+        # bls_batch.cu carries its own copy of the box loop; it must
+        # keep the same widths as the single-LC kernels or the batch
+        # periodogram silently differs at the widest box
+        from ..bls import eebls_gpu_batch
+        t, y, dy = self._on_grid_box(seed=19)
+        freqs = np.linspace(0.9, 1.1, 201)
+        kw = dict(qmin=0.025, qmax=0.1, dlogq=0.3, noverlap=2)
+        p_fast = eebls_gpu_fast(t, y, dy, freqs, **kw)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            p_batch = eebls_gpu_batch([(t, y, dy)], freqs, **kw)[0]
+        assert_allclose(p_batch, p_fast, rtol=1e-3, atol=1e-5)
+
+
+class TestBatchNoverlapValidation(object):
+    """Sep 2026 audit, id 75: ``eebls_gpu_batch(noverlap=0)`` computed
+    ``n_passes = 1 if fused else noverlap`` and therefore launched
+    nothing, returning the untouched device buffer -- all zeros, or a
+    stale periodogram when a ``memory=`` was reused -- while
+    ``eebls_gpu_fast(noverlap=0)`` raised. A non-integer ``noverlap``
+    hit ``range(3.0)`` with a TypeError. The batch entry point now runs
+    the same ``_validate_noverlap`` guard as the fast paths."""
+
+    @staticmethod
+    def _data():
+        rand = np.random.RandomState(23)
+        t = np.sort(365. * rand.rand(300))
+        y = 1. + 0.01 * rand.randn(300)
+        dy = 0.01 * np.ones(300)
+        return t, y, dy
+
+    def test_bad_noverlap_raises(self):
+        # CPU-runnable: validation precedes any GPU work
+        from ..bls import eebls_gpu_batch
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 20)
+        for bad in (0, -1, 1.5, 3.0, "2", None):
+            with pytest.raises(ValueError, match="noverlap"):
+                eebls_gpu_batch([(t, y, dy)], freqs, noverlap=bad)
+
+    def test_valid_noverlap_still_runs(self):
+        from ..bls import eebls_gpu_batch
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            p = eebls_gpu_batch([(t, y, dy)], freqs, noverlap=1)[0]
+        assert np.all(np.isfinite(p)) and np.max(p) > 0.
+
+
+class TestSparseSharedMemoryLimit(object):
+    """Sep 2026 audit, ids 77/126: ``sparse_bls_gpu`` sized its dynamic
+    shared memory from ``ndata`` and never compared it with the
+    device's per-block limit, so anything above ~2,000 points died with
+    a bare ``cuLaunchKernel failed: invalid argument``. The size is now
+    checked before the launch and reported with the point limit."""
+
+    def test_shared_memory_formula(self):
+        from ..bls import _sparse_shared_mem_bytes
+        # matches the audit's measurements on a 48 KB device
+        assert _sparse_shared_mem_bytes(2000, 64) == 41344
+        assert _sparse_shared_mem_bytes(2500, 64) == 69920
+
+    def test_max_ndata_is_the_largest_that_fits(self):
+        from ..bls import _sparse_shared_mem_bytes, _sparse_max_ndata
+        for lim in (16384, 49152, 65536, 101376):
+            for block_size in (32, 64, 256):
+                n = _sparse_max_ndata(lim, block_size)
+                assert n > 0
+                assert _sparse_shared_mem_bytes(n, block_size) <= lim
+                assert _sparse_shared_mem_bytes(n + 1, block_size) > lim
+
+    def test_too_many_points_raises_a_clear_error(self):
+        rand = np.random.RandomState(29)
+        ndata = 6000
+        t = np.sort(365. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        freqs = np.linspace(0.95, 1.05, 5)
+        with pytest.raises(ValueError, match="shared memory"):
+            sparse_bls_gpu(t, y, dy, freqs)
+
+    def test_small_light_curve_still_runs(self):
+        rand = np.random.RandomState(31)
+        ndata = 200
+        t = np.sort(365. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        freqs = np.linspace(0.95, 1.05, 25)
+        p, sols = sparse_bls_gpu(t, y, dy, freqs)
+        assert np.all(np.isfinite(p)) and len(sols) == len(freqs)
+
+
+class TestBLSMemoryKeywords(object):
+    """Sep 2026 audit, id 67: ``BLSMemory.fromdata`` read
+    ``max_ndata``/``max_nfreqs`` with ``kwargs.get`` and then forwarded
+    the same ``kwargs`` to ``__init__``, so passing either raised
+    ``TypeError: got multiple values for argument``. Reusing a memory
+    with a different number of frequencies used to fail deep inside
+    pycuda with ``ary and self must be the same size``."""
+
+    @staticmethod
+    def _data(ndata=200):
+        rand = np.random.RandomState(37)
+        t = np.sort(365. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    def test_fromdata_accepts_max_ndata_and_max_nfreqs(self):
+        from ..bls import BLSMemory
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 50)
+        mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                 freqs=freqs, transfer=True,
+                                 max_ndata=len(t) + 100,
+                                 max_nfreqs=1000)
+        assert mem.max_ndata == len(t) + 100
+        assert mem.max_nfreqs == 1000
+        assert len(mem.t) == len(t) + 100
+
+    def test_reuse_with_a_different_nfreqs_raises_clearly(self):
+        from ..bls import BLSMemory
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 50)
+        mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                 freqs=freqs, transfer=True)
+        # same length: fine
+        mem.setdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                    freqs=freqs + 0.01, transfer=True)
+        with pytest.raises(ValueError, match="frequencies"):
+            mem.setdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                        freqs=np.linspace(0.95, 1.05, 120),
+                        transfer=True)

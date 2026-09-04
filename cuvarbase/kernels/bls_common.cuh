@@ -97,21 +97,34 @@ __global__ void store_best_sols_custom(unsigned int *argmaxes, float *best_phi,
 	}
 }
 
-__device__ int divrndup(int a, int b){
-	return (a % b > 0) ? a/b + 1 : a/b;
-}
-
+// Per-frequency bin counts: nbins0 / nbinsf are read from the arrays
+// uploaded by eebls_gpu (index i + freq_offset), so every frequency
+// decodes its argmax against its OWN q window. They used to be scalar
+// launch arguments collapsed to the batch-wide (min nbins0, max nbinsf)
+// -- Sep 2026 audit defect 7 (bls-q-collapse).
 __global__ void store_best_sols(unsigned int *argmaxes, float *best_phi,
 	                            float *best_q,
-	                            unsigned int nbins0, unsigned int nbinsf,
+	                            const unsigned int * __restrict__ nbins0_arr,
+	                            const unsigned int * __restrict__ nbinsf_arr,
 	                            unsigned int noverlap,
 	                            float dlogq, unsigned int nfreq, unsigned int freq_offset){
 
 	unsigned int i = get_id();
 
 	if (i < nfreq){
+		unsigned int nbins0 = nbins0_arr[i + freq_offset];
+		unsigned int nbinsf = nbinsf_arr[i + freq_offset];
 		unsigned int imax = argmaxes[i + freq_offset];
 		float dphi = 1.f / noverlap;
+
+		// The batch stride is the largest per-frequency cell count in
+		// the batch; a frequency whose every candidate box scored 0
+		// (all-zero row, e.g. ignore_negative_delta_sols with only
+		// inverted dips) can argmax into the zero-filled tail beyond
+		// its own cells. Clamp so the decoded (q, phi) stays inside
+		// this frequency's window (its power is 0 either way).
+		if (imax >= count_tot_nbins(nbins0, nbinsf, dlogq) * noverlap)
+			imax = 0;
 
 		unsigned int nb = nbins0;
 		unsigned int bin_offset = 0;
@@ -204,7 +217,14 @@ __global__ void full_bls_no_sol_fused(
 			f0 = freqs[i_freq + freq_offset];
 			nb0 = nbins0[i_freq + freq_offset];
 			nbf = nbinsf[i_freq + freq_offset];
-			max_bin_width = divrndup(nbf, nb0);
+			// Widest box: floor(nbf / nb0), i.e. the largest m whose
+			// q = m/nbf still satisfies q <= 1/nb0 (= the discretized
+			// qmax).  This used to be divrndup(nbf, nb0) with a strict
+			// `m < max_bin_width` loop, which is the same bound whenever
+			// nb0 does not divide nbf but drops the qmax box itself when
+			// it does (Sep 2026 audit, id 64: qmin=0.025/qmax=0.1 tested
+			// only q <= 0.075).
+			max_bin_width = nbf / nb0;
 			nfine = nbf * ((int) noverlap);
 		}
 
@@ -240,7 +260,7 @@ __global__ void full_bls_no_sol_fused(
 			thread_w = 0.f;
 			unsigned int f_m0 = 0;
 
-			for (unsigned int m = 1; m < max_bin_width; m += dnbins(m, dlogq)){
+			for (unsigned int m = 1; m <= max_bin_width; m += dnbins(m, dlogq)){
 				unsigned int f_m = m * noverlap;
 				for (unsigned int u = f_m0; u < f_m; u++){
 					unsigned int idx = jj + u;
@@ -293,17 +313,39 @@ __global__ void full_bls_no_sol_fused(
 // Note: this thread heavily utilizes global atomic operations, and could
 //       likely be improved by 1-2 orders of magnitude for large Ndata (10^4)
 //       if shared memory atomics were utilized.
+//
+// The thread index and the ndata * nfreq bound are 64-bit: the host
+// launches exactly ceil(ndata * nfreq / blockDim) blocks, and with a
+// 32-bit product (ndata = 66K points x a 66K-frequency batch is 4.4e9
+// > 2^32) the bound wrapped, so most threads exited and the rest
+// binned the wrong (data, frequency) pair -- silent zeros/garbage on
+// the default eebls_transit path for TESS 2-min / Kepler short-cadence
+// light curves (Sep 2026 audit, defect 1). The host additionally caps
+// freq_batch_size at (2^31 - 1) // ndata.
+//
+// nbins0_arr / nbinsf_arr give the per-frequency coarsest/finest bin
+// counts (index i_freq + freq_offset); nbins_tot is the batch STRIDE
+// (the largest count_tot_nbins over the batch's frequencies), so a
+// frequency with fewer levels leaves the tail of its row untouched
+// (zero, hence power 0 in binned_bls_bst). Scalar per-launch counts
+// collapsed every frequency to the batch-wide (min nbins0, max nbinsf)
+// window (Sep 2026 audit defect 7, bls-q-collapse).
 __global__ void bin_and_phase_fold_bst_multifreq(
 	                    float *t, float *yw, float *w,
 						float *yw_bin, float *w_bin, float *freqs,
-						unsigned int ndata, unsigned int nfreq, unsigned int nbins0, unsigned int nbinsf,
+						const unsigned int * __restrict__ nbins0_arr,
+						const unsigned int * __restrict__ nbinsf_arr,
+						unsigned int ndata, unsigned int nfreq,
 						unsigned int freq_offset, unsigned int noverlap, float dlogq,
 						unsigned int nbins_tot){
-	unsigned int i = get_id();
+	size_t i = ((size_t) blockIdx.x) * blockDim.x + threadIdx.x;
 
-	if (i < ndata * nfreq){
-		unsigned int i_data = i % ndata;
-		unsigned int i_freq = i / ndata;
+	if (i < ((size_t) ndata) * nfreq){
+		unsigned int i_data = (unsigned int) (i % ndata);
+		unsigned int i_freq = (unsigned int) (i / ndata);
+
+		unsigned int nbins0 = nbins0_arr[i_freq + freq_offset];
+		unsigned int nbinsf = nbinsf_arr[i_freq + freq_offset];
 
 		unsigned int offset = i_freq * nbins_tot * noverlap;
 
@@ -335,7 +377,8 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 	}
 }
 
-// needs ndata * nfreq threads
+// needs ndata * nfreq threads (64-bit index and bound, see
+// bin_and_phase_fold_bst_multifreq)
 // noverlap -- number of overlapped bins (noverlap * (1 / q) total bins)
 __global__ void bin_and_phase_fold_custom(
 	                    float *t, float *yw, float *w,
@@ -344,11 +387,11 @@ __global__ void bin_and_phase_fold_custom(
 						double epoch,
 						unsigned int nq, unsigned int nphi, unsigned int ndata,
 						unsigned int nfreq, unsigned int freq_offset){
-	unsigned int i = get_id();
+	size_t i = ((size_t) blockIdx.x) * blockDim.x + threadIdx.x;
 
-	if (i < ndata * nfreq){
-		unsigned int i_data = i % ndata;
-		unsigned int i_freq = i / ndata;
+	if (i < ((size_t) ndata) * nfreq){
+		unsigned int i_data = (unsigned int) (i % ndata);
+		unsigned int i_freq = (unsigned int) (i / ndata);
 
 		unsigned int offset = i_freq * nq * nphi;
 
