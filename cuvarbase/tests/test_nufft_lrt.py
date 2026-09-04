@@ -8,6 +8,7 @@ from pycuda.tools import mark_cuda_test
 
 try:
     from ..nufft_lrt import NUFFTLRTAsyncProcess
+    from ..cunfft import NFFTAsyncProcess
     NUFFT_LRT_AVAILABLE = True
 except ImportError:
     NUFFT_LRT_AVAILABLE = False
@@ -292,6 +293,38 @@ class TestNUFFTLRT:
         epoch_diff = np.abs(best_epoch - true_epoch)
         epoch_diff = min(epoch_diff, true_period - epoch_diff)
         assert epoch_diff < 0.5
+
+
+@pytest.mark.skipif(not NUFFT_LRT_AVAILABLE,
+                    reason="NUFFT LRT not available")
+class TestNFFTMemoryReuse:
+    """audit ids 118/155: ``NFFTAsyncProcess.run(memory=...)`` returned
+    the pinned host buffer before the async D2H copy landed and never
+    zeroed the atomic grid, so a second run on reused memory summed onto
+    the first (off by ~1e5-1e8)."""
+
+    @mark_cuda_test
+    def test_reused_memory_equals_fresh_runs(self):
+        rng = np.random.RandomState(3)
+        n = 5000
+        t = np.sort(rng.rand(n) * 30)
+        y1 = rng.randn(n)
+        y2 = rng.randn(n)
+        nf = 2 * n
+        proc = NFFTAsyncProcess()
+        fresh1 = np.array(proc.run([(t, y1, nf)])[0])
+        fresh2 = np.array(proc.run([(t, y2, nf)])[0])
+        mem = proc.allocate([(t, y1, nf)])
+        got1 = np.array(proc.run([(t, y1, nf)], memory=mem)[0])  # immediate
+        mem[0].y = y2.astype(mem[0].real_type)
+        got2 = np.array(proc.run([(t, y2, nf)], memory=mem)[0])
+        scale = np.abs(fresh1).max()
+        # measured (A40): 2e-5 for both; the un-zeroed grid gave 2.3e5
+        assert np.abs(got1 - fresh1).max() < 1e-3 * scale
+        assert np.abs(got2 - fresh2).max() < 1e-3 * scale
+        # the immediate read was complete (run() synchronized)
+        mem[0].stream.synchronize()
+        np.testing.assert_array_equal(got2, np.array(mem[0].ghat_c))
 
 
 if __name__ == '__main__':
