@@ -198,10 +198,18 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     
     Parameters
     ----------
-    sigma : float, optional (default: 2.0)
-        Oversampling factor for NFFT
+    sigma : float, optional (default: 4.0)
+        Oversampling factor of the NFFT grid (``sigma * nf`` grid
+        points). The transform returns the one-sided modes
+        ``k = 0..nf-1``, so the effective oversampling at the top of the
+        band is ``sigma / 2``; ``sigma = 4`` keeps every returned mode
+        inside the Gaussian window's accuracy band (full-band error
+        ~4e-4 in float32, ~1e-6 in float64 vs the exact adjoint DFT).
+        With ``sigma = 2`` (the pre-Sep-2026 default) the modes
+        ``k >= nf/2`` carried O(1) aliasing error.
     m : int, optional (default: None)
-        NFFT truncation parameter (auto-estimated if None)
+        NFFT truncation parameter. ``None`` means 8 when
+        ``autoset_m=False``; ignored when ``autoset_m=True``.
     use_double : bool, optional (default: False)
         Use double precision
     use_fast_math : bool, optional (default: True)
@@ -209,9 +217,10 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     block_size : int, optional (default: 256)
         CUDA block size
     autoset_m : bool, optional (default: True)
-        Automatically estimate m parameter
+        Choose ``m`` from the NFFT truncation-error bound (see
+        :meth:`cuvarbase.cunfft.NFFTAsyncProcess.estimate_m`).
     **kwargs : dict
-        Additional parameters
+        Additional parameters passed to :class:`NFFTAsyncProcess`.
         
     Example
     -------
@@ -229,7 +238,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     >>> snr = proc.run(t, y, periods, durations)
     """
     
-    def __init__(self, sigma=2.0, m=None, use_double=False,
+    def __init__(self, sigma=4.0, m=None, use_double=False,
                  use_fast_math=True, block_size=256, autoset_m=True,
                  **kwargs):
         super(NUFFTLRTAsyncProcess, self).__init__(**kwargs)
@@ -246,7 +255,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         
         # NUFFT processor for computing transforms
         self.nufft_proc = NFFTAsyncProcess(
-            sigma=sigma, m=m, use_double=use_double,
+            sigma=sigma, m=(8 if m is None else m), use_double=use_double,
             use_fast_math=use_fast_math, block_size=block_size,
             autoset_m=autoset_m, **kwargs
         )
@@ -322,14 +331,17 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # with no ``median(dt)*nf`` span limit, so multi-season / gappy
         # data is no longer silently truncated. ``ghat`` is returned at
         # Fourier modes k = 0..nf-1, i.e. frequencies k/(max(t)-min(t)),
-        # with ABSOLUTE-t phases: ghat[k] = sum_j y_j exp(2 pi i f_k t_j)
-        # (the kernel re-references to t=0, NOT to min(t); verified
-        # against the exact adjoint DFT on device, batch 3 Jul 2026).
-        # Only modes k < nf/2 lie inside the sigma=2 Gaussian window's
-        # guaranteed-accuracy band; the upper half band carries growing
-        # deconvolution error. The matched filter uses the same transform
-        # for data and template, so the common phase and per-mode error
-        # largely cancel in the whitened correlation.
+        # with a common per-mode phase set by the transform's own time
+        # reference (the kernel references t=0, not min(t)); that phase
+        # cancels in every Re sum A B*/P inner product of the detectors.
+        # Every one of the nf modes must be accurate: the per-mode NFFT
+        # error does NOT cancel between data and template (it is the
+        # l = -1 aliasing term of the Gaussian window, different for each
+        # input), so the grid is oversampled with sigma = 4 (default),
+        # which keeps k = 0..nf-1 inside the window's accuracy band
+        # (~4e-4 relative in float32, ~1e-6 in float64 against the exact
+        # adjoint DFT over the full band; with sigma = 2 the modes
+        # k >= nf/2 were aliased at O(1), in double precision too).
         t = np.asarray(t, dtype=self.real_type)
         y = np.asarray(y, dtype=self.real_type)
         if len(t) < 2:
