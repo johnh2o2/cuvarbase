@@ -76,9 +76,20 @@ __global__ void nfft_shift(
 	int batch = i / ng;
 
 	if (batch < nbatch) {
-        FLT k0 = f0 * spp * (xf - x0);
+		// First mode k0 = f0 / df = f0 * spp * (xf - x0), which is an
+		// INTEGER by construction (the periodic grid only has integer
+		// modes; a fractional k0 would give a Dirichlet-leakage mixture,
+		// not the transform). The FLT product carries ~k0 * 2e-7 of
+		// float32 rounding, so round it back before use (id 104).
+		long long k0 = (long long) rint(f0 * spp * (xf - x0));
 
-		FLT phi = (2.f * PI * (i % ng) * k0) / ng;
+		// phi = 2 pi (i mod ng) k0 / ng, reduced modulo one cycle in exact
+		// integer arithmetic. The un-reduced float32 product
+		// (i mod ng) * k0 reached ~1e12 at survey scale (ulp ~ 1e5 ->
+		// 0.1-0.4 rad phase errors at the top of the grid; ids 98/160).
+		long long r = (((long long) (i % ng)) * k0) % ((long long) ng);
+		if (r < 0) r += ng;
+		FLT phi = (2.f * PI * ((FLT) r)) / ng;
 
         CMPLX shift = CMPLX(cos(phi), sin(phi));
 
@@ -147,8 +158,15 @@ __global__ void fast_gaussian_grid(
 		// observation
 		FLT yi = y[i];
 
-		// nearest gridpoint (rounding down)
-		int u = (int) floorf(ng * xval - m);
+		// nearest gridpoint (rounding down). Must be the FLT-typed
+		// floor(): under DOUBLE_PRECISION floorf() rounded the double
+		// coordinate to float32 first, so points within a float32 ulp
+		// below an integer were deposited one cell to the right of
+		// where precompute_psi (which uses the exact fraction) placed
+		// the window -- ~n0*ng/2^24 misplaced points, making
+		// use_double=True LESS accurate than float32 at survey scale
+		// (nfft-floorf-double, Sep 2026). For float, floor() is floorf().
+		int u = (int) floor(ng * xval - m);
 
 		// precomputed filter values
 		FLT Q  = q1[di];
@@ -236,12 +254,18 @@ __global__ void normalize(
 		int k = i % nf;
 
 		FLT sT = spp * (xf - x0);
-        FLT n0 = (x0 / sT) * ng;
-		FLT k0 = f0 * sT;
+		// integer first mode (see nfft_shift)
+		FLT k0 = (FLT) rint(f0 * sT);
 		CMPLX G = gin[batch * ng + k];
 
-		// *= exp(2pi i (k0 + k) * n0 / n)
-		FLT theta_k = (2.f * PI * n0 * (k0 + k)) / ng;
+		// *= exp(2 pi i f_k x0) with f_k = (k0 + k) / sT: the phase of the
+		// time origin x0 the gridding subtracted. The argument is
+		// 2 pi f |tmin| (1e4-1e6 rad at survey scale), so reduce it modulo
+		// one cycle in double BEFORE the FLT trig -- evaluated as the
+		// float32 2 pi n0 (k0 + k) / ng it lost ~0.05-0.1 rad (ids 98/160).
+		double cyc = ((double) (k0 + k)) * ((double) x0) / ((double) sT);
+		cyc -= floor(cyc);
+		FLT theta_k = (FLT) (2.0 * 3.14159265358979323846264338327950288 * cyc);
 
 		G *= CMPLX(cos(theta_k), sin(theta_k));
 

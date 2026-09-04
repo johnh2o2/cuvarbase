@@ -19,6 +19,7 @@ from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader, normalize_light_curves
 from .utils import autofrequency as utils_autofreq
 from .memory import NFFTMemory, LombScargleMemory, weights
+from .memory.lombscargle_memory import nfft_grid_sizes, MIN_NFFT_SIGMA
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
 
 try:
@@ -28,19 +29,115 @@ except ImportError:
 
 
 
-def get_k0(freqs):
-    return max([1, int(round(freqs[0] / (freqs[1] - freqs[0])))])
+def _grid_spacing(freqs):
+    """``(f, df)``: the frequency grid as a 1-d float64 array and its
+    spacing estimated from the full span, ``(f[-1] - f[0]) / (nf - 1)``.
 
+    The full-span estimate is used everywhere (:func:`get_k0`,
+    :func:`check_k0`, the ``df`` handed to the kernels) because
+    ``f[1] - f[0]`` carries the rounding of two nearly equal numbers:
+    for ``freqs = df * (k0 + arange(nf))`` its relative error is
+    ``~k0 * eps``, which ``k0 * df`` then amplifies to ``k0**2 * eps``
+    (3e-5 modes at k0 = 365,000 in float64, and far worse for float32
+    grids).
 
-def check_k0(freqs, k0=None, rtol=1E-2, atol=1E-7):
-    k0 = k0 if k0 is not None else get_k0(freqs)
-    df = freqs[1] - freqs[0]
-    f0 = k0 * df
-    if not (abs(f0 - freqs[0]) < rtol * df + atol):
+    Raises ``ValueError`` for fewer than two frequencies or a
+    non-increasing / non-finite grid.
+    """
+    f = np.asarray(freqs, dtype=np.float64).ravel()
+    nf = len(f)
+    if nf < 2:
         raise ValueError(
-            "freqs[0]=%g is not k0 * df for integer k0 (df=%g): the GPU "
-            "Lomb-Scargle requires freqs = df * (k0 + arange(nf))"
-            % (freqs[0], df))
+            "at least two frequencies are needed (got %d): the GPU "
+            "Lomb-Scargle evaluates a uniform grid df * (k0 + arange(nf))"
+            % nf)
+    df = (f[-1] - f[0]) / (nf - 1)
+    if not (np.isfinite(df) and df > 0):
+        raise ValueError(
+            "freqs must be finite and strictly increasing (got freqs[0]=%r, "
+            "freqs[-1]=%r): the GPU Lomb-Scargle evaluates a uniform grid "
+            "df * (k0 + arange(nf)) with df > 0" % (f[0], f[-1]))
+    return f, df
+
+
+def get_k0(freqs):
+    """Index of the first mode, ``round(freqs[0] / df)`` (at least 1),
+    of a uniform grid ``freqs = df * (k0 + arange(nf))``."""
+    f, df = _grid_spacing(freqs)
+    return max([1, int(round(f[0] / df))])
+
+
+def check_k0(freqs, k0=None, rtol=1E-6, atol=0.):
+    """Validate that ``freqs`` is the uniform grid ``df * (k0 + arange(nf))``
+    the GPU kernels evaluate.
+
+    Every kernel (NFFT and direct sums) evaluates ``fmin + i * df``; the
+    user's array only labels the output. A grid that is not uniform --
+    two concatenated ``arange`` segments, a uniform grid with points
+    deleted, ``geomspace`` -- was silently evaluated on the implied
+    uniform grid and returned under the wrong labels before 1.0, when
+    only ``freqs[0:2]`` were inspected (defect 15,
+    ``ls-nonuniform-grid``). ``freqs[0]`` must also be an integer
+    multiple of ``df``: the NFFT can only produce integer modes (the
+    device rounds ``minimum_frequency`` to the nearest one).
+
+    Parameters
+    ----------
+    freqs : array_like
+        Candidate grid (any float dtype; compared in float64).
+    k0 : int, optional
+        Expected first mode; :func:`get_k0` of the grid if omitted.
+    rtol : float, optional (default: 1e-6)
+        Tolerance on every spacing and on ``freqs[0] - k0 * df``, as a
+        fraction of ``df``. A dtype-aware allowance for the rounding of
+        the grid's own construction (``4 eps(dtype) max|f|``, propagated
+        through the ``k0 * df`` product) is added, so float64
+        ``autofrequency``/``arange``-built grids of any size and float32
+        grids of moderate ``k0 + nf`` pass, while any deviation the
+        grid's precision can represent is rejected.
+    atol : float, optional (default: 0)
+        Absolute tolerance (frequency units) added to both tests.
+
+    Raises
+    ------
+    ValueError
+        Naming the first non-uniform spacing, or the fractional
+        ``freqs[0] / df``.
+    """
+    f, df = _grid_spacing(freqs)
+    nf = len(f)
+    k0 = get_k0(f) if k0 is None else int(k0)
+
+    dtype = np.asarray(freqs).dtype
+    eps = np.finfo(dtype).eps if np.issubdtype(dtype, np.floating) \
+        else np.finfo(np.float64).eps
+    round_tol = 4.0 * float(eps) * float(np.max(np.abs(f)))
+
+    # uniformity: every spacing against the median spacing (robust to a
+    # single gap, so the message names the gap and not the first point)
+    diffs = np.diff(f)
+    df_med = float(np.median(diffs))
+    bad = np.flatnonzero(np.abs(diffs - df_med)
+                         > rtol * df_med + round_tol + atol)
+    if len(bad):
+        i = int(bad[0])
+        raise ValueError(
+            "freqs is not uniformly spaced: freqs[%d] - freqs[%d] = %.10g "
+            "but the grid spacing is %.10g (%d of %d spacings deviate by "
+            "more than %g df). The GPU Lomb-Scargle evaluates exactly "
+            "freqs = df * (k0 + arange(nf)) and cannot use a non-uniform "
+            "grid; build one uniform grid per band instead"
+            % (i + 1, i, diffs[i], df_med, len(bad), nf, rtol))
+
+    # first mode: the k0 * df product amplifies the spacing's rounding
+    # (two endpoint roundings over nf - 1 spacings) by k0 / (nf - 1)
+    k0_tol = rtol * df + round_tol * (1.0 + float(k0) / (nf - 1)) + atol
+    if not (abs(f[0] - k0 * df) <= k0_tol):
+        raise ValueError(
+            "freqs[0]=%.10g is not an integer multiple of the grid spacing "
+            "df=%.10g (freqs[0] / df = %.8f, nearest integer k0 = %d): the "
+            "GPU Lomb-Scargle requires freqs = df * (k0 + arange(nf))"
+            % (f[0], df, f[0] / df, k0))
 
 
 def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
@@ -325,6 +422,38 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
     return power
 
 
+def _check_nfft_grids(memory, nf, k0, nharms):
+    """Hard check that the NFFT memories can serve ``nf`` frequencies
+    starting at mode ``k0`` with ``nharms`` harmonics: the highest
+    spectrum entry read must exist, and the grid must be long enough
+    for that mode to sit in the Gaussian window's alias-free band
+    (``sigma * (k0 + count) <= n``, see
+    :func:`~cuvarbase.memory.lombscargle_memory.nfft_grid_sizes`).
+    """
+    H = int(nharms)
+    top_yw = (H - 1) * k0 + H * (nf - 1)
+    top_w = (2 * H - 1) * k0 + 2 * H * (nf - 1)
+    for name, nm, top in (('yw', memory.nfft_mem_yw, top_yw),
+                          ('w', memory.nfft_mem_w, top_w)):
+        if nm.nf is None or nm.n is None or nm.ghat_g is None:
+            raise RuntimeError(
+                "LombScargleMemory: NFFT grid '%s' is not allocated "
+                "(call allocate first)" % name)
+        if top >= nm.nf:
+            raise ValueError(
+                "NFFT grid '%s' holds %d modes but mode index %d is "
+                "needed for nf=%d, k0=%d, nharmonics=%d: the memory was "
+                "allocated for a different frequency grid" %
+                (name, nm.nf, top, nf, k0, H))
+        if nm.sigma * (k0 + nm.nf) > nm.n + 1e-9:
+            raise ValueError(
+                "NFFT grid '%s' (n=%d) is too short for modes up to "
+                "k0 + nf = %d at sigma=%r: need n >= sigma * (k0 + nf) "
+                "= %d, otherwise the top of the band is aliased" %
+                (name, nm.n, k0 + nm.nf, nm.sigma,
+                 int(np.ceil(nm.sigma * (k0 + nm.nf)))))
+
+
 def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
     """
     Compute Lomb-Scargle periodogram using direct summations. This
@@ -395,6 +524,7 @@ def lomb_scargle_async(memory, functions, freqs,
         If False, uses direct sums.
     python_dir_sums: bool, optional (default: False)
         If True, performs direct sums with Python on the CPU
+        (``lomb_scargle_direct_sums``, float64, all harmonics; slow)
     transfer_to_device: bool, optional, (default: True)
         If the data is already on the gpu, set as False
     transfer_to_host: bool, optional, (default: True)
@@ -407,6 +537,19 @@ def lomb_scargle_async(memory, functions, freqs,
     -------
     lsp_c: ``np.array``
         The resulting periodgram (``memory.lsp_c``)
+
+    Notes
+    -----
+    ``memory.nharmonics > 1`` is honoured on every path. The NFFT path
+    reads the two spectra back and solves the small per-frequency
+    system on the host (:func:`_mh_power_from_spectra`); the direct-sum
+    kernel only forms the H = 1 moments, so ``use_fft=False`` with
+    ``nharmonics > 1`` (like ``python_dir_sums=True``) runs
+    :func:`lomb_scargle_direct_sums` on the host in float64 -- correct
+    but O(N nf H) on the CPU. Before 1.0 both silently returned the H = 1
+    periodogram (defect 13, ``ls-nharmonics-nofft``). Multiharmonic
+    power is always the floating-mean GLS: ``floating_mean=False`` and
+    ``window=True`` raise for ``nharmonics > 1``.
     """
     if use_cufinufft and not HAS_CUFINUFFT:
         raise ImportError(
@@ -415,12 +558,27 @@ def lomb_scargle_async(memory, functions, freqs,
 
     (lomb, lomb_dirsum), nfft_funcs = functions
 
-    df = freqs[1] - freqs[0]
+    freqs, df = _grid_spacing(freqs)
+    nf = len(freqs)
     samples_per_peak = 1./((memory.tmax - memory.tmin) * df)
     if not (get_k0(freqs) == memory.k0):
         raise ValueError(
             "freqs does not match the grid this memory was set up for "
             "(k0 mismatch: %d != %d)" % (get_k0(freqs), memory.k0))
+    if nf > memory.nf:
+        raise ValueError(
+            "memory was allocated for nf=%d frequencies but %d were given"
+            % (memory.nf, nf))
+
+    nharm = int(getattr(memory, 'nharmonics', 1))
+    if nharm > 1 and memory.mode != 1:
+        raise ValueError(
+            "nharmonics=%d is only implemented for the floating-mean "
+            "generalized Lomb-Scargle (floating_mean=True, window=False)"
+            % nharm)
+    reg_kwargs = None
+    if getattr(memory, 'amplitude_prior', None) is not None:
+        reg_kwargs = dict(amplitude_priors=memory.amplitude_prior)
 
     stream = memory.stream
 
@@ -431,12 +589,21 @@ def lomb_scargle_async(memory, functions, freqs,
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
-    # do direct summations with python on the CPU (for debugging)
-    if python_dir_sums:
-        t = memory.t_g.get()
-        yw = memory.yw_g.get()
-        w = memory.w_g.get()
-        return lomb_scargle_direct_sums(t, yw, w, freqs, memory.yy)
+    # Host direct sums (float64, any number of harmonics): requested
+    # explicitly (python_dir_sums), or use_fft=False with nharmonics > 1
+    # (the direct-sum kernel is H = 1 only).
+    if python_dir_sums or (not use_fft and nharm > 1):
+        if stream is not None:
+            stream.synchronize()
+        n0 = int(memory.n0)
+        t = memory.t_g.get()[:n0].astype(np.float64)
+        yw = memory.yw_g.get()[:n0].astype(np.float64)
+        w = memory.w_g.get()[:n0].astype(np.float64)
+        power = lomb_scargle_direct_sums(t, yw, w, freqs, memory.yy,
+                                         nharms=nharm,
+                                         **(reg_kwargs or {}))
+        memory.lsp_c[:nf] = power.astype(memory.real_type)
+        return memory.lsp_c
 
     # Use direct sums (on GPU)
     if not use_fft:
@@ -465,6 +632,9 @@ def lomb_scargle_async(memory, functions, freqs,
         nfft_kwargs['minimum_frequency'] = freqs[0]
         nfft_kwargs['samples_per_peak'] = samples_per_peak
 
+        _check_nfft_grids(memory, int(memory.nf), int(memory.k0),
+                          getattr(memory, 'nharmonics', 1))
+
         if use_cufinufft:
             # cuFINUFFT path: replace custom NFFT with cufinufft type-1
             cufinufft_nfft_adjoint(memory.nfft_mem_yw, **nfft_kwargs)
@@ -479,7 +649,6 @@ def lomb_scargle_async(memory, functions, freqs,
             nfft_adjoint_async(memory.nfft_mem_w, nfft_funcs,
                                **nfft_kwargs)
 
-    nharm = getattr(memory, 'nharmonics', 1)
     if nharm > 1:
         # Multiharmonic GLS: the GPU NFFT already produced the w-spectrum
         # (to 2H harmonics) and the w*(y-ybar)-spectrum (to H); read them
@@ -491,7 +660,8 @@ def lomb_scargle_async(memory, functions, freqs,
         sw = memory.nfft_mem_w.ghat_g.get()
         syw = memory.nfft_mem_yw.ghat_g.get()
         power = _mh_power_from_spectra(sw, syw, int(memory.k0), nharm,
-                                       int(memory.nf), memory.yy)
+                                       int(memory.nf), memory.yy,
+                                       reg_kwargs=reg_kwargs)
         memory.lsp_c[:memory.nf] = power.astype(memory.real_type)
         return memory.lsp_c
 
@@ -529,13 +699,13 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
     -------
     >>> proc = LombScargleAsyncProcess()
     >>> Ndata = 1000
-    >>> t = np.sort(365 * np.random.rand(N))
+    >>> t = np.sort(365 * np.random.rand(Ndata))
     >>> y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)
     >>> y += 0.01 * np.random.randn(len(t))
     >>> dy = 0.01 * np.ones_like(y)
-    >>> freqs, powers = proc.run([(t, y, dy)])
+    >>> results = proc.run([(t, y, dy)])
     >>> proc.finish()
-    >>> ls_freqs, ls_powers = freqs[0], powers[0]
+    >>> ls_freqs, ls_powers = results[0]
 
     """
     def __init__(self, *args, **kwargs):
@@ -587,15 +757,24 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def memory_requirement(self, n0, nf, k0, nbatch=1,
                            autoadjust_sigma=False, **kwargs):
-        """ return an approximate GPU memory requirement in bytes """
+        """Approximate GPU memory requirement in bytes for ``nbatch``
+        lightcurves of ``n0`` points on a grid of ``nf`` frequencies
+        starting at mode ``k0``.
+
+        The NFFT grids are sized exactly as ``LombScargleMemory``
+        allocates them (from the top mode, padded to a 7-smooth
+        length; see
+        :func:`~cuvarbase.memory.lombscargle_memory.nfft_grid_sizes`).
+        ``autoadjust_sigma`` is accepted for backward compatibility
+        and ignored: it used to emulate that sizing when the
+        allocation itself did not do it.
+        """
         H = self.nharmonics
         sigma = self.nfft_proc.sigma
         m = self.nfft_proc.get_m(nf)
 
-        if autoadjust_sigma:
-            sigma = int(np.round(float(sigma * (nf + k0)) / nf))
-
-        fft_size = H * (nf + k0)
+        nf_yw, n_yw, nf_w, n_w = nfft_grid_sizes(nf, k0, nharmonics=H,
+                                                 sigma=sigma)
 
         mem = 0
 
@@ -613,24 +792,19 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         c = int(np.ceil(float(csize) / rsize))
 
         if kwargs.get('use_fft', True):
-            # yw grid / fft (doubled because complex)
-            mem += c * sigma * (fft_size - k0)
+            for nx in (n_yw, n_w):
+                # grid (complex)
+                mem += c * nx
+                # work area for cufft.Plan (x2: a safety margin -- the
+                # padded lengths are 7-smooth, so Bluestein's much
+                # larger work area is no longer triggered, but the
+                # estimate is per-plan and cheap)
+                mem += 1 / rsize * 2 * cufft.cufft.cufftEstimate1d(
+                    nx, cufft.cufft.CUFFT_C2C)
 
-            # work area size for cufft.Plan
-            # double because large non-power-of-two sizes trigger Bluestein algorithm
-            nx = sigma * (fft_size - k0)
-            mem += 1/rsize * 2 * cufft.cufft.cufftEstimate1d(nx, cufft.cufft.CUFFT_C2C)
-
-            # w grid / fft (doubled because complex)
-            mem += c * sigma * (2 * fft_size - k0)
-
-            # work area size for cufft.Plan
-            # double because large non-power-of-two sizes trigger Bluestein algorithm
-            nx = sigma * (2 * fft_size - k0)
-            mem += 1/rsize * 2 * cufft.cufft.cufftEstimate1d(nx, cufft.cufft.CUFFT_C2C)
-
-            # precomputation (q1 = n0, q2 = n0, q3 = 2m + 1)
-            mem += 2 * n0 + 2 * m + 1
+            # precomputation (q1 = n0, q2 = n0, q3 = 2m + 1), one set
+            # per NFFT grid
+            mem += 2 * (2 * n0 + 2 * m + 1)
 
         # inverse of design matrix
         if H > 1:
@@ -694,11 +868,40 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
     def preallocate(self, max_nobs, nlcs=1, nf=None, k0=None,
                     freqs=None, streams=None, **kwargs):
+        """Allocate ``nlcs`` reusable :class:`LombScargleMemory` objects
+        (stored in ``self.memory`` and used by :meth:`run` when no
+        ``memory`` is passed) for lightcurves of up to ``max_nobs``
+        points on the grid ``df * (k0 + arange(nf))``.
 
+        Parameters
+        ----------
+        max_nobs : int
+            Largest number of observations any later ``run`` will pass.
+        nlcs : int, optional (default: 1)
+            Number of memory objects (lightcurves per ``run`` call).
+        nf, k0 : int, optional
+            Grid size and first mode; alternatively give ``freqs``.
+        freqs : array_like, optional
+            The uniform grid (validated with :func:`check_k0`).
+        streams : list of ``pycuda.driver.Stream``, optional
+            One stream per memory object. Defaults to ``self.streams``
+            (created as needed) -- the streams :meth:`finish`
+            synchronizes. Before 1.0 the default was ``None`` (the null
+            stream), so ``finish()`` did not wait for the result copy
+            and ``run()`` after ``preallocate()`` returned stale
+            powers. Streams given here that are not already in
+            ``self.streams`` are appended to it so ``finish()`` covers
+            them.
+        **kwargs
+            Passed to :class:`LombScargleMemory`.
+        """
         if freqs is not None:
+            check_k0(freqs)
             k0 = get_k0(freqs)
             nf = len(freqs)
-        if nf is not None and k0 is None:
+        if nf is None:
+            raise ValueError("preallocate needs nf (with k0) or freqs")
+        if k0 is None:
             raise ValueError("k0 must be given when nf is specified "
                              "without freqs")
 
@@ -706,9 +909,22 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         sigma = self.nfft_proc.sigma
 
+        if streams is None:
+            if len(self.streams) < nlcs:
+                self._create_streams(nlcs - len(self.streams))
+            streams = self.streams[:nlcs]
+        else:
+            streams = list(streams)
+            if len(streams) < nlcs:
+                raise ValueError("preallocate: %d streams given for nlcs=%d"
+                                 % (len(streams), nlcs))
+            for s in streams:
+                if not any(s is s0 for s0 in self.streams):
+                    self.streams.append(s)
+
         self.memory = []
         for i in range(nlcs):
-            stream = None if streams is None else streams[i]
+            stream = streams[i]
             mem = LombScargleMemory(sigma, stream, m,
                                     k0=k0,
                                     buffered_transfer=True,
@@ -788,23 +1004,37 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             list of [(t, y, dy), ...] containing
             * ``t``: observation times
             * ``y``: observations
-            * ``dy``: observation uncertainties
+            * ``dy``: observation uncertainties, or ``None`` for unit
+              weights (an unweighted periodogram)
         freqs: optional, list of ``np.ndarray`` frequencies
-            List of custom frequencies. Right now, this has to be linearly
-            spaced with ``freqs[0] / (freqs[1] - freqs[0])`` being an integer.
+            List of custom frequency grids (one per lightcurve; a single
+            array is used for all). Each grid **must** be uniform,
+            ``freqs = df * (k0 + np.arange(nf))`` with integer ``k0 >= 1``
+            and ``nf >= 2`` -- the kernels evaluate exactly that grid and
+            the array only labels the output. Grids are validated with
+            :func:`check_k0` and a ``ValueError`` names the first
+            offending point (concatenated or thinned grids, ``geomspace``,
+            ``linspace`` whose start is not a multiple of its step).
+            Use one uniform grid per band instead. Default: ``autofrequency``.
         memory: optional, list of ``LombScargleMemory`` objects
             List of memory objects, length of list must be ``>= len(data)``
         use_fft: optional, bool (default: True)
-            Uses the NFFT, otherwise just does direct summations (which
-            are quite slow...)
+            Uses the NFFT, otherwise direct summations (O(N nf); slow).
+            ``nharmonics > 1`` is supported on both paths -- with
+            ``use_fft=False`` the multiharmonic sums run on the host.
         floating_mean: optional, bool (default: True)
             Add a floating mean to the model (see Zechmeister & Kurster 2009)
         window: optional, bool (default: False)
             If true, computes the window function for the data instead of
             Lomb-Scargle
-        amplitude_prior: optional, float (default: None)
-            If not None, sets the variance of a Gaussian prior on
-            the amplitude (sometimes useful for suppressing aliases)
+        amplitude_prior: optional, float or array_like (default: None)
+            If not None, the *standard deviation* of a zero-centred
+            Gaussian prior on the amplitude of every harmonic (or one
+            per harmonic); a ridge term ``1 / amplitude_prior**2`` is
+            added to the amplitude normal equations (see
+            :func:`add_regularization`; sometimes useful for suppressing
+            aliases). Honoured on every path, including
+            ``nharmonics > 1`` (silently ignored there before 1.0).
         **kwargs
 
         Returns
@@ -814,6 +1044,30 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             arrays are page-locked host buffers filled asynchronously —
             call :meth:`finish` before reading them (the batched entry
             points synchronize for you)
+
+        Notes
+        -----
+        * ``floating_mean=True`` (default) is the generalized
+          Lomb-Scargle of Zechmeister & Kurster (2009), astropy's
+          ``fit_mean=True``. ``floating_mean=False`` is the classic
+          periodogram of the data centred on the **unweighted** mean
+          (``normalize_light_curves`` subtracts ``nanmean(y)``), which
+          differs from astropy's ``fit_mean=False, center_data=True``
+          for heteroscedastic errors. ``window=True`` returns the
+          spectral window as the periodogram of ``y = 1`` with the
+          ``STANDARD`` normalization, which is **4x** astropy's
+          ``LombScargle(t, ones, fit_mean=False, center_data=False)``.
+          Neither is defined for ``nharmonics > 1`` (``ValueError``).
+        * A power of exactly ``-1`` is the kernels' sentinel for a
+          non-finite or negative value at that frequency (non-finite
+          ``y``/``dy``, ``dy = 0``, degenerate ``t``). It is not a
+          valid periodogram value; check your input.
+        * Precision: the default float32 pipeline agrees with the exact
+          (float64) GLS to ~1e-4 in power for ``f * T`` up to ~1e4 and
+          ~1e-3 at survey scale (``f * T ~ 1e5-1e6``). Because the Baluev
+          false-alarm probability is exponentially sensitive to the peak
+          power (``d ln FAP / dP ~ -N / 2``), use ``use_double=True`` for
+          FAP-grade work on large ``f * T`` grids; it reaches ~1e-7.
 
         """
 
@@ -839,11 +1093,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                 "number of frequency grids (%d) does not match number of "
             "lightcurves (%d)" % (len(frqs), len(data)))
 
-        dfs = [frq[1] - frq[0] for frq in frqs]
+        # the kernels evaluate df * (k0 + arange(nf)) and the user's
+        # array only labels the output: validate every grid (uniform
+        # spacing, integer first mode, >= 2 points) before any GPU work
+        for frq in frqs:
+            check_k0(frq)
         k0s = [get_k0(frq) for frq in frqs]
-
-        # make sure k0 * df is the minimum frequency
-        [check_k0(frq, k0=k0) for frq, k0 in zip(frqs, k0s)]
 
         if memory is None:
             memory = self.memory
@@ -881,6 +1136,29 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         Parameters
         ----------
+        data: list of ``(t, y, dy)`` tuples
+            Lightcurves (``dy=None`` gives unit weights).
+        freqs: array_like, optional
+            The one uniform grid ``df * (k0 + np.arange(nf))`` shared by
+            all lightcurves (validated with :func:`check_k0`; a
+            non-uniform grid raises ``ValueError``). Default: the
+            ``autofrequency`` grid of the lightcurve with the longest
+            baseline (all of its points -- before 1.0 the last one was
+            dropped).
+        only_return_best_freqs: bool, optional (default: False)
+            Return ``(best_freqs, best_freq_faps)`` instead of the
+            periodograms: for each lightcurve the frequency of the highest
+            power (within ``ignore_freq_mask``) and the Baluev (2008)
+            false-alarm probability of that peak, :func:`fap_baluev`
+            with ``d_K = 2 * nharmonics + 1`` and ``fmax = max(freqs)``.
+            **Changed in 1.0:** the second element is the FAP itself
+            (small is significant; it can underflow to exactly 0 for
+            overwhelming peaks). Before 1.0 it was ``1 - FAP``, which
+            rounds to exactly 1.0 for every FAP below 1e-16 and used the
+            single-harmonic degrees of freedom for multiharmonic runs.
+        ignore_freq_mask: array_like of bool, optional
+            Frequencies to exclude from the peak search (same length as
+            ``freqs``).
         batch_size: int, optional (default: 1)
             Lightcurves processed per multi-stream batch. The default
             of 1 is the safe choice — all published survey-throughput
@@ -923,19 +1201,15 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if freqs is None:
             data_with_max_baseline = max(data,
                                          key=lambda d: np.max(d[0]) - np.min(d[0]))
+            # autofrequency already returns df * (k0 + arange(nf)); the
+            # old "correction" nf = round(max / df) - k0 dropped its last
+            # point (id 147)
             freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
 
-            # now correct frequencies
-            df = freqs[1] - freqs[0]
-            k0 = get_k0(freqs)
-            # nf = len(freqs)
-            nf = int(round(np.max(freqs) / df)) - k0
-            freqs = df * (k0 + np.arange(nf))
-
-        df = freqs[1] - freqs[0]
+        freqs = np.asarray(freqs)
+        check_k0(freqs)
         k0 = get_k0(freqs)
         nf = len(freqs)
-        check_k0(freqs, k0=k0)
 
         lsps = []
 
@@ -964,7 +1238,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         [mem.allocate(nf=nf, **kwargs) for mem in memory]
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
-        best_freqs, best_freq_significances = [], []
+        best_freqs, best_freq_faps = [], []
 
         default_mask = np.array([True] * len(freqs))
         mask = default_mask if ignore_freq_mask is None else ~np.asarray(ignore_freq_mask)
@@ -977,16 +1251,21 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
             for i, (f, p) in enumerate(results):
                 if only_return_best_freqs:
-                    best_index = np.argmax(p[mask])
-                    fap = fap_baluev(batch[i][0], batch[i][2], p[mask], np.max(freqs[mask]))
-                    significance = 1. - fap[best_index]
+                    pm = np.asarray(p[:nf], dtype=np.float64)[mask]
+                    best_index = int(np.argmax(pm))
+                    # FAP of the best peak only (identical value, and
+                    # the log-space fap_baluev is the CPU-bound part of
+                    # this option); d_K = 2H + 1 for H harmonics
+                    fap = fap_baluev(batch[i][0], batch[i][2],
+                                     pm[best_index], np.max(freqs[mask]),
+                                     d_K=2 * self.nharmonics + 1)
                     best_freqs.append(freqs[mask][best_index])
-                    best_freq_significances.append(significance)
+                    best_freq_faps.append(float(fap))
                 else:
                     lsps.append(np.copy(p))
 
         if only_return_best_freqs:
-            return best_freqs, best_freq_significances
+            return best_freqs, best_freq_faps
         else:
             return [(freqs, lsp) for lsp in lsps]
 
@@ -1000,15 +1279,17 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     ----------
     t: array_like
         Observation times.
-    dy: array_like
-        Observation uncertainties.
+    dy: array_like or None
+        Observation uncertainties (``None``: unit weights).
     z: array_like or float
         Periodogram value(s)
     fmax: float
         Maximum frequency searched
     d_K: int, optional (default: 3)
-        Number of degrees of fredom for periodgram model.
-        2H - 1 where H is the number of harmonics
+        Number of degrees of freedom of the periodogram model:
+        ``2H + 1`` (offset plus a cosine and sine amplitude per
+        harmonic) for ``H`` harmonics, so 3 for the standard
+        floating-mean Lomb-Scargle
     d_H: int, optional (default: 1)
         Number of degrees of freedom for default model.
     use_gamma: bool, optional (default: True)
@@ -1043,7 +1324,7 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     if use_gamma:
         g = np.exp(gammaln(0.5 * N_H) - gammaln(0.5 * (N_K + 1)))
 
-    w = np.power(dy, -2)
+    w = np.ones(N) if dy is None else np.power(dy, -2)
 
     tbar = np.dot(w, t) / sum(w)
     Dt = np.dot(w, np.power(t - tbar, 2)) / sum(w)
