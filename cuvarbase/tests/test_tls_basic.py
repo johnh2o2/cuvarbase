@@ -447,6 +447,25 @@ class TestTLSMemory:
         assert mem.max_ndata >= 100
         assert mem.max_nperiods >= 50
 
+    def test_memory_setdata_subtracts_epoch(self):
+        """Defect 11 (tls-T0): the legacy kernel folds relative to
+        floor(min t), subtracted in float64 BEFORE the float32 cast, so
+        BJD-scale times keep their phase and 't0_phase' means the same
+        thing on both paths."""
+        from cuvarbase.tls import TLSMemory
+
+        t = 2457000.3 + np.linspace(0, 100, 100)
+        y = np.ones(100)
+        dy = np.ones(100) * 0.01
+
+        mem = TLSMemory(max_ndata=1000, max_nperiods=100)
+        mem.setdata(t, y, dy, periods=np.linspace(1, 10, 50),
+                    transfer=False)
+
+        assert mem.epoch == 2457000.0
+        np.testing.assert_allclose(mem.t[:100], t - 2457000.0,
+                                   rtol=0, atol=1e-5)
+
 
 @pytest.mark.skipif(not PYCUDA_AVAILABLE,
                    reason="PyCUDA not available")
@@ -606,11 +625,16 @@ class TestFailedPeriodMasking:
         assert valid.sum() == 197
         assert not valid[3] and not valid[50] and not valid[150]
 
-    def test_all_failed_raises(self):
+    def test_all_failed_warns_and_masks_everything(self):
+        # id 89: a flat/noiseless light curve fails every trial period;
+        # since 1.0 that is a warning + all-False mask (the wrappers then
+        # return SDE = 0), not a RuntimeError
         from cuvarbase.tls import _mask_failed_periods, TLS_CHI2_SENTINEL
         chi2 = np.full(20, TLS_CHI2_SENTINEL)
-        with pytest.raises(RuntimeError, match="no valid solution"):
-            _mask_failed_periods(chi2)
+        with pytest.warns(UserWarning, match="no valid solution"):
+            valid = _mask_failed_periods(chi2)
+        assert valid.dtype == bool and valid.shape == (20,)
+        assert not valid.any()
 
     def test_no_failures_no_warning(self):
         import warnings as _warnings
@@ -759,3 +783,491 @@ class TestTLSStreamParity:
                                       stream=cuda.Stream())
         np.testing.assert_allclose(r_stream['chi2'], r_default['chi2'],
                                    rtol=1e-3)
+
+
+# ---------------------------------------------------------------------
+# 1.0 correctness fixes (Sep 2026 audit): CPU-runnable regression tests
+# ---------------------------------------------------------------------
+
+import warnings as _w
+import inspect as _inspect
+
+
+class TestDefaultDurationWindow:
+    """Defect 2 (tls-duration-window, audit id 9): tls_search_gpu /
+    tls_search without qmin/qmax used a constant q window [0.005, 0.15]
+    at every period while the default Ofir grid runs to span/2; beyond
+    P ~ 60 d (Sun-like) no trial duration was physical and a P = 365 d
+    transit on a 1400-d baseline came back at 182.5 d with half the
+    depth. The default window is now the Keplerian one that
+    tls_search_batch/tls_transit always used; the constant window is an
+    opt-in that warns."""
+
+    def test_keplerian_window_equals_q_transit_window(self):
+        periods = np.array([0.5, 1.0, 10.0, 100.0, 365.0, 700.0])
+        for R, M, Rp in ((1.0, 1.0, 1.0), (0.3, 0.3, 2.0), (1.5, 1.2, 1.0)):
+            qmin, qmax = tls_grids.duration_window(
+                periods, R_star=R, M_star=M, R_planet=Rp)
+            q = tls_grids.q_transit(periods, R, M, Rp)
+            np.testing.assert_allclose(qmin, 0.5 * q, rtol=1e-12)
+            np.testing.assert_allclose(qmax, 2.0 * q, rtol=1e-12)
+            # physical at every period, inside the kernels' (0, 1) bounds
+            assert np.all(qmin < q) and np.all(q < qmax)
+            assert np.all(qmin > 0) and np.all(qmax < 1)
+
+    def test_window_factors_honoured(self):
+        periods = np.array([3.0, 30.0])
+        qmin, qmax = tls_grids.duration_window(periods, qmin_fac=0.25,
+                                               qmax_fac=4.0)
+        q = tls_grids.q_transit(periods)
+        np.testing.assert_allclose(qmin, 0.25 * q)
+        np.testing.assert_allclose(qmax, 4.0 * q)
+
+    def test_fixed_window_crossover_near_60d(self):
+        # the documented crossover: q_kep(Sun, 1 R_earth) drops below the
+        # old constant qmin = 0.005 between P = 50 and 70 d
+        assert tls_grids.q_transit(50.0) > tls_grids.FIXED_QMIN
+        assert tls_grids.q_transit(70.0) < tls_grids.FIXED_QMIN
+        assert tls_grids.q_transit(365.0) < 0.5 * tls_grids.FIXED_QMIN
+
+    def test_fixed_window_warns_when_unphysical(self):
+        periods = np.array([1.0, 10.0, 120.0, 365.0])
+        with pytest.warns(UserWarning, match="excludes the Keplerian"):
+            qmin, qmax = tls_grids.duration_window(periods, window='fixed')
+        assert np.all(qmin == tls_grids.FIXED_QMIN)
+        assert np.all(qmax == tls_grids.FIXED_QMAX)
+
+    def test_fixed_window_silent_when_physical(self):
+        periods = np.array([1.0, 3.0, 10.0, 30.0])
+        with _w.catch_warnings():
+            _w.simplefilter("error")
+            qmin, qmax = tls_grids.duration_window(periods, window='fixed')
+        assert np.all(qmin == 0.005) and np.all(qmax == 0.15)
+
+    def test_unknown_window_rejected(self):
+        with pytest.raises(ValueError, match="window"):
+            tls_grids.duration_window(np.array([1.0]), window='boxy')
+
+    @staticmethod
+    def _capture_batch(monkeypatch):
+        """Intercept the fast path's tls_search_batch call (no GPU)."""
+        from cuvarbase import tls
+        captured = {}
+
+        def fake_batch(lightcurves, **kw):
+            captured.update(kw)
+            n = len(kw['periods'])
+            return [tls._null_result(n, 1.0, 'intercepted',
+                                     periods=kw['periods'], arrays=True)]
+
+        monkeypatch.setattr(tls, 'tls_search_batch', fake_batch)
+        return captured
+
+    def test_search_gpu_default_passes_keplerian_window(self, monkeypatch):
+        from cuvarbase import tls
+        captured = self._capture_batch(monkeypatch)
+        t = np.linspace(0, 1400, 2000)
+        y = np.ones(2000)
+        dy = np.full(2000, 3e-4)
+        periods = np.array([10.0, 100.0, 365.0])
+        r = tls.tls_search_gpu(t, y, dy, periods=periods,
+                               R_star=0.8, M_star=0.9)
+        q = tls_grids.q_transit(periods, 0.8, 0.9, 1.0)
+        np.testing.assert_allclose(captured['qmin'], 0.5 * q, rtol=1e-6)
+        np.testing.assert_allclose(captured['qmax'], 2.0 * q, rtol=1e-6)
+        assert captured['n_durations'] == 15
+        assert 'FAP' not in r
+
+    def test_search_gpu_window_kwargs_reach_the_batch(self, monkeypatch):
+        from cuvarbase import tls
+        captured = self._capture_batch(monkeypatch)
+        t = np.linspace(0, 100, 500)
+        y = np.ones(500)
+        dy = np.full(500, 1e-3)
+        periods = np.array([3.0, 30.0])
+        tls.tls_search_gpu(t, y, dy, periods=periods, R_planet=3.0,
+                           qmin_fac=0.3, qmax_fac=3.0, n_durations=7)
+        q = tls_grids.q_transit(periods, 1.0, 1.0, 3.0)
+        np.testing.assert_allclose(captured['qmin'], 0.3 * q, rtol=1e-6)
+        np.testing.assert_allclose(captured['qmax'], 3.0 * q, rtol=1e-6)
+        assert captured['n_durations'] == 7
+
+    def test_search_gpu_fixed_window_optin_warns(self, monkeypatch):
+        from cuvarbase import tls
+        captured = self._capture_batch(monkeypatch)
+        t = np.linspace(0, 1400, 2000)
+        y = np.ones(2000)
+        dy = np.full(2000, 3e-4)
+        with pytest.warns(UserWarning, match="excludes the Keplerian"):
+            tls.tls_search_gpu(t, y, dy, periods=np.array([10.0, 365.0]),
+                               duration_window='fixed')
+        assert np.all(captured['qmin'] == 0.005)
+        assert np.all(captured['qmax'] == 0.15)
+
+    def test_search_gpu_explicit_q_conflicts_with_window(self):
+        from cuvarbase import tls
+        t = np.linspace(0, 100, 500)
+        y = np.ones(500)
+        dy = np.full(500, 1e-3)
+        periods = np.array([3.0, 30.0])
+        with pytest.raises(ValueError, match="duration_window"):
+            tls.tls_search_gpu(t, y, dy, periods=periods,
+                               qmin=np.full(2, 0.01), qmax=np.full(2, 0.05),
+                               duration_window='fixed')
+        with pytest.raises(ValueError, match="both qmin and qmax"):
+            tls.tls_search_gpu(t, y, dy, periods=periods,
+                               qmin=np.full(2, 0.01))
+        with pytest.raises(ValueError, match="same length"):
+            tls.tls_search_gpu(t, y, dy, periods=periods,
+                               qmin=np.full(3, 0.01), qmax=np.full(3, 0.05))
+        with pytest.raises(ValueError, match="0 < qmin <= qmax < 1"):
+            tls.tls_search_gpu(t, y, dy, periods=periods,
+                               qmin=np.full(2, 0.05), qmax=np.full(2, 0.01))
+
+    def test_tls_cu_standard_kernel_is_marked_retired(self):
+        # the legacy path must not launch the kernel with the hard-coded
+        # [0.005, 0.15] window
+        from cuvarbase.utils import find_kernel
+        src = open(find_kernel('tls')).read()
+        assert 'RETAINED FOR API COMPATIBILITY ONLY' in src
+        from cuvarbase import tls
+        body = _inspect.getsource(tls.tls_search_gpu)
+        assert "kernels['standard']" not in body
+        assert "kernels['keplerian']" in body
+
+
+class TestReferenceSRDefinition:
+    """ids 81/146: SR was 1 - chi2/max(chi2); the reference package uses
+    chi2_min/chi2. Identical under the null but ~2x lower SDE for strong
+    signals, so published thresholds did not transfer. 1.0 adopts the
+    reference definition on every path."""
+
+    @staticmethod
+    def _ref_running_median(data, kernel):
+        # literal transcription of transitleastsquares.stats.running_median
+        idx = np.arange(kernel) + np.arange(len(data) - kernel + 1)[:, None]
+        med = np.median(data[idx], axis=1)
+        missing = len(data) - len(med)
+        front = int(missing * 0.5)
+        end = missing - front
+        med = np.append(np.full(front, med[0]), med)
+        med = np.append(med, np.full(end, med[-1]))
+        return med
+
+    @classmethod
+    def _ref_spectra(cls, chi2, kernel):
+        # literal transcription of transitleastsquares.stats.spectra
+        SR = np.min(chi2) / chi2
+        SDE_raw = (1 - np.mean(SR)) / np.std(SR)
+        power_raw = SR - np.mean(SR)
+        scale = SDE_raw / np.max(power_raw)
+        power_raw = power_raw * scale
+        if kernel % 2 == 0:
+            kernel = kernel + 1
+        if len(power_raw) > 2 * kernel:
+            my_median = cls._ref_running_median(power_raw, kernel)
+            power = power_raw - my_median
+            power = power - np.mean(power)
+            SDE = np.max(power / np.std(power))
+        else:
+            SDE = SDE_raw
+        return SDE_raw, SDE
+
+    @staticmethod
+    def _spectrum(n, dip_frac, seed=0):
+        rng = np.random.RandomState(seed)
+        chi2 = 1000.0 - 30.0 * np.sin(np.linspace(0, 3, n)) \
+            + rng.normal(0, 1.0, n)
+        chi2[int(0.7 * n)] -= dip_frac * 1000.0
+        return chi2
+
+    def test_signal_residue_is_chi2min_over_chi2(self):
+        chi2 = self._spectrum(500, 0.1)
+        SR = tls_stats.signal_residue(chi2)
+        np.testing.assert_allclose(SR, chi2.min() / chi2, rtol=1e-14)
+        assert SR.max() == 1.0
+        assert SR[int(0.7 * 500)] == 1.0
+
+    @pytest.mark.parametrize("n,kernel", [(2000, 91), (500, 51), (5000, 91)])
+    def test_sde_matches_reference_spectra(self, n, kernel):
+        chi2 = self._spectrum(n, 0.1)
+        SDE, SDE_raw, power = tls_stats.signal_detection_efficiency(
+            chi2, kernel_size=kernel)
+        ref_raw, ref = self._ref_spectra(chi2, kernel)
+        assert SDE_raw == pytest.approx(ref_raw, rel=1e-10)
+        assert SDE == pytest.approx(ref, rel=1e-10)
+
+    def test_auto_kernel_matches_reference_at_91(self):
+        # grids with >= 910 periods use the reference's 91-point kernel
+        chi2 = self._spectrum(3000, 0.05)
+        SDE = tls_stats.signal_detection_efficiency(chi2)[0]
+        assert SDE == pytest.approx(self._ref_spectra(chi2, 91)[1],
+                                    rel=1e-10)
+
+    def test_strong_signal_no_longer_halved(self):
+        # A dip that removes 80% of chi2 on a noisy background (audit:
+        # score/chi2_0 = 0.79 gave SDE 21.8 old vs 45.4 reference). The
+        # old SR = 1 - chi2/max(chi2) keeps the background noise at
+        # sigma_chi2/chi2_bg while chi2_min/chi2 shrinks it by
+        # chi2_min/chi2_bg, so the peak's z-score roughly doubles.
+        rng = np.random.RandomState(0)
+        n = 20000
+        chi2 = 1000.0 + rng.normal(0, 10.0, n)
+        chi2[int(0.7 * n)] = 200.0
+        SDE_new = tls_stats.signal_detection_efficiency(chi2)[0]
+        SR_old = 1.0 - chi2 / chi2.max()
+        SDE_old = (SR_old.max() - SR_old.mean()) / SR_old.std()
+        assert SDE_new > 1.7 * SDE_old
+        # ...while a weak signal is essentially unchanged (both linear in
+        # delta-chi2 when the dip is small relative to chi2)
+        chi2w = 1000.0 + rng.normal(0, 10.0, n)
+        chi2w[int(0.7 * n)] = 980.0
+        SDE_new_w = tls_stats.signal_detection_efficiency(
+            chi2w, detrend=False)[0]
+        SR_old_w = 1.0 - chi2w / chi2w.max()
+        SDE_old_w = (SR_old_w.max() - SR_old_w.mean()) / SR_old_w.std()
+        assert SDE_new_w == pytest.approx(SDE_old_w, rel=0.05)
+
+    def test_chi2_null_argument_deprecated(self):
+        chi2 = self._spectrum(300, 0.1)
+        with pytest.warns(DeprecationWarning, match="chi2_null"):
+            SR = tls_stats.signal_residue(chi2, chi2_null=5000.0)
+        np.testing.assert_allclose(SR, chi2.min() / chi2)
+
+    def test_perfect_fit_and_flat_spectra(self):
+        chi2 = np.array([10.0, 0.0, 5.0])   # noiseless perfect fit
+        SR = tls_stats.signal_residue(chi2)
+        assert np.all(np.isfinite(SR)) and SR[1] == 1.0 and SR[0] == 0.0
+        sde, sde_raw, power = tls_stats.signal_detection_efficiency(
+            np.full(50, 100.0))
+        assert sde == 0.0 and sde_raw == 0.0
+
+    def test_compute_all_statistics_uses_reference_sr(self):
+        chi2 = self._spectrum(400, 0.1)
+        stats = tls_stats.compute_all_statistics(
+            chi2, np.arange(400.0) + 1, int(0.7 * 400), 0.01, 0.1, 5)
+        np.testing.assert_allclose(stats['SR'], chi2.min() / chi2)
+        assert stats['SDE'] == pytest.approx(
+            tls_stats.signal_detection_efficiency(chi2)[0])
+
+
+class TestRunningMedianEdges:
+    """id 83: scipy.signal.medfilt zero-pads and drags the SR trend to
+    zero over the outer kernel//2 points (edge power inflated; null
+    peaks within 45 points of an edge 2.3x more often than uniform).
+    The trend must match the reference's edge-extended running median."""
+
+    def test_matches_reference_running_median_exactly(self):
+        rng = np.random.RandomState(4)
+        for n, kernel in ((300, 3), (300, 21), (300, 91), (300, 299),
+                          (1000, 91), (7, 5)):
+            x = rng.randn(n).cumsum()
+            got = tls_stats.running_median(x, kernel)
+            ref = TestReferenceSRDefinition._ref_running_median(x, kernel)
+            np.testing.assert_array_equal(got, ref)
+
+    def test_no_zero_padding_bias(self):
+        # a ramp: the reference trend at the ends is the first/last
+        # full-window median (x[45], x[-46]); zero-padded medfilt drags
+        # the first value down to x[0]
+        x = 100.0 + np.arange(200.0)
+        trend = tls_stats.running_median(x, 91)
+        assert trend[0] == x[45] and trend[44] == x[45]
+        assert trend[-1] == x[-46] and trend[-45] == x[-46]
+        np.testing.assert_array_equal(trend[45:-45], x[45:-45])
+        from scipy import signal
+        assert signal.medfilt(x, 91)[0] == x[0] < trend[0]
+        # a constant series has a constant trend
+        np.testing.assert_array_equal(
+            tls_stats.running_median(np.full(200, 5.0), 91), 5.0)
+
+    def test_detrended_power_flat_at_edges(self):
+        # an SR spectrum that is pure trend + noise must not get raised
+        # power at the ends
+        rng = np.random.RandomState(1)
+        chi2 = 1000.0 + 50.0 * np.linspace(0, 1, 2000) + rng.normal(0, 1, 2000)
+        _, _, power = tls_stats.signal_detection_efficiency(chi2)
+        edge = np.r_[power[:45], power[-45:]]
+        interior = power[45:-45]
+        assert abs(edge.mean() - interior.mean()) < 3 * interior.std() / np.sqrt(90)
+
+    def test_even_kernel_rounds_up_and_too_long_raises(self):
+        x = np.arange(20.0)
+        np.testing.assert_array_equal(tls_stats.running_median(x, 4),
+                                      tls_stats.running_median(x, 5))
+        with pytest.raises(ValueError, match="kernel"):
+            tls_stats.running_median(x, 21)
+        np.testing.assert_array_equal(tls_stats.running_median(x, 1), x)
+
+
+class TestFAPRemoved:
+    """Defect 10 (tls-fap, audit id 10): the returned 'FAP' was a fixed
+    piecewise function of the SDE (discontinuous at SDE = 7) unrelated
+    to the null; 23% of pure-noise light curves got FAP < 0.01. No
+    result dict carries a FAP unless a null bootstrap was requested."""
+
+    def test_compute_all_statistics_has_no_fap_key(self):
+        rng = np.random.RandomState(0)
+        chi2 = 1000 + rng.randn(300)
+        chi2[100] = 900
+        stats = tls_stats.compute_all_statistics(
+            chi2, np.arange(300.0) + 1, 100, 0.01, 0.1, 5)
+        assert 'FAP' not in stats
+        for k in ('SDE', 'SDE_raw', 'SNR', 'power', 'SR'):
+            assert k in stats
+
+    def test_null_result_has_no_fap(self):
+        from cuvarbase import tls
+        r = tls._null_result(10, 123.0, 'msg', periods=np.arange(10.0),
+                             arrays=True)
+        assert 'FAP' not in r
+        assert r['SDE'] == 0.0 and r['SDE_raw'] == 0.0 and r['SNR'] == 0.0
+        assert np.isnan(r['period']) and np.isnan(r['T0'])
+        assert r['chi2_min'] == 123.0 and r['error'] == 'msg'
+        assert r['n_failed_periods'] == 10
+        assert not r['valid_periods'].any()
+        assert np.all(np.isnan(r['chi2'])) and np.all(np.isnan(r['power']))
+
+    def test_heuristic_helper_still_works_but_warns(self):
+        with pytest.warns(UserWarning, match="uncalibrated"):
+            assert tls_stats.false_alarm_probability(9.0) == pytest.approx(1e-4)
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            # the documented discontinuity at SDE = 7
+            assert tls_stats.false_alarm_probability(6.999) == pytest.approx(0.1, rel=2e-3)
+            assert tls_stats.false_alarm_probability(7.0) == pytest.approx(0.01)
+            assert tls_stats.false_alarm_probability(4.0) == 1.0
+        with _w.catch_warnings():
+            _w.simplefilter("error")
+            g = tls_stats.false_alarm_probability(3.0, method='gaussian')
+        assert 0 < g < 0.01
+
+    def test_docs_do_not_claim_a_calibration(self):
+        import os
+        import cuvarbase
+        doc = tls_stats.signal_detection_efficiency.__doc__
+        assert '1% false alarm' not in doc
+        assert 'SDE > 7 for' not in doc
+        rst = os.path.join(os.path.dirname(cuvarbase.__file__), '..',
+                           'docs', 'source', 'tls.rst')
+        if os.path.exists(rst):
+            txt = open(rst).read()
+            assert 'preserves the false-alarm calibration' not in txt
+            assert 'fap_null_draws' in txt
+        # the wrong inline comment ("~10% at SDE=5, ~1% at SDE=7") is gone
+        src = _inspect.getsource(tls_stats.false_alarm_probability)
+        assert '~10% at SDE=5' not in src
+
+    def test_fast_path_result_has_no_fap(self, monkeypatch):
+        from cuvarbase import tls
+
+        def fake_batch(lightcurves, **kw):
+            n = len(kw['periods'])
+            r = tls._null_result(n, 1.0, 'x', periods=kw['periods'],
+                                 arrays=True)
+            r['FAP'] = 0.5   # even if a batch result carried one...
+            return [r]
+
+        monkeypatch.setattr(tls, 'tls_search_batch', fake_batch)
+        t = np.linspace(0, 100, 500)
+        r = tls.tls_search_gpu(t, np.ones(500), np.full(500, 1e-3),
+                               periods=np.array([3.0, 4.0]))
+        assert 'FAP' not in r        # ...tls_search_gpu never forwards it
+        assert 't0_phase' in r and 'T0' in r
+
+
+class TestSortedPeriodGrid:
+    """id 82: descending/shuffled user grids gave negative
+    period_uncertainty and a changed SDE (running median and neighbour
+    walk assume period order). Grids are sorted on entry and per-period
+    outputs scattered back to the caller's order."""
+
+    def test_sort_helper(self):
+        from cuvarbase import tls
+        asc = np.array([1.0, 2.0, 3.0])
+        p, order = tls._sort_period_grid(asc)
+        assert order is None and p is asc
+        desc = asc[::-1].copy()
+        p, order = tls._sort_period_grid(desc)
+        np.testing.assert_array_equal(p, asc)
+        np.testing.assert_array_equal(desc[order], p)
+        vals = np.array([10.0, 20.0, 30.0])   # aligned with ascending p
+        back = tls._to_caller_order(vals, order)
+        # caller order is descending: caller[i] = value of desc[i]
+        np.testing.assert_array_equal(back, [30.0, 20.0, 10.0])
+        assert tls._to_caller_order(vals, None) is vals
+        # bool arrays round-trip too
+        flags = np.array([True, False, True])
+        np.testing.assert_array_equal(tls._to_caller_order(flags, order),
+                                      flags[::-1])
+
+    def test_shuffled_round_trip(self):
+        from cuvarbase import tls
+        rng = np.random.RandomState(2)
+        grid = rng.uniform(1, 10, 50)
+        p, order = tls._sort_period_grid(grid)
+        assert np.all(np.diff(p) >= 0)
+        vals = p * 2
+        np.testing.assert_array_equal(tls._to_caller_order(vals, order),
+                                      grid * 2)
+
+    def test_validate_periods(self):
+        from cuvarbase import tls
+        for bad in (np.array([]), np.array([1.0, np.nan]),
+                    np.array([0.0, 1.0]), np.array([[1.0, 2.0]]),
+                    np.array([-1.0, 2.0])):
+            with pytest.raises(ValueError):
+                tls._validate_periods(bad)
+        np.testing.assert_array_equal(tls._validate_periods([3.0, 1.0]),
+                                      [3.0, 1.0])
+
+    def test_caller_staged_memory_requires_ascending_grid(self):
+        # legacy path with transfer_to_device=False: the caller staged
+        # the periods on the device, so a grid we would have to reorder
+        # is refused before any GPU work
+        from cuvarbase import tls
+        t = np.linspace(0, 100, 500)
+        with pytest.raises(ValueError, match="ascending"):
+            tls.tls_search_gpu(t, np.ones(500), np.full(500, 1e-3),
+                               periods=np.array([5.0, 3.0, 4.0]),
+                               use_fast=False, memory=object(),
+                               transfer_to_device=False)
+
+    def test_period_uncertainty_positive_on_sorted_input(self):
+        rng = np.random.RandomState(0)
+        periods = np.linspace(2, 4, 200)
+        chi2 = 1000 + rng.randn(200)
+        chi2[95:106] -= 50 * np.exp(-0.5 * ((np.arange(95, 106) - 100) / 2.0) ** 2)
+        best = int(np.argmin(chi2))
+        unc = tls_stats.compute_period_uncertainty(periods, chi2, best)
+        assert unc > 0
+
+
+class TestT0Convention:
+    """Defect 11 (tls-T0, audit ids 11/145): 'T0' was a fold phase on the
+    fast path (relative to floor(min t)), a phase relative to t = 0 on
+    the legacy path, and an absolute time that could precede the first
+    observation on the batch path. 1.0: 'T0' is the absolute time of the
+    first mid-transit at or after min(t) everywhere, plus 't0_phase'."""
+
+    def test_first_transit_at_or_after(self):
+        from cuvarbase.tls import _first_transit_at_or_after as f
+        P = 3.0
+        # audit case: t_start = 100.9, epoch 100, phase 0.1 -> 100.3
+        # precedes min(t); shift up one period
+        assert f(100.0 + 0.1009 * P, P, 100.9) == pytest.approx(100.3027 + P)
+        # already inside [tmin, tmin + P): unchanged
+        assert f(101.41, P, 100.3) == pytest.approx(101.41)
+        # many periods early or late: wrapped into range
+        assert f(101.41 - 5 * P, P, 100.3) == pytest.approx(101.41)
+        assert f(101.41 + 7 * P, P, 100.3) == pytest.approx(101.41)
+        # boundary: exactly tmin stays tmin
+        assert f(100.3, P, 100.3) == 100.3
+        # NaN propagates (null results)
+        assert np.isnan(f(np.nan, P, 100.3))
+
+    def test_docstrings_state_the_convention(self):
+        from cuvarbase import tls
+        for fn in (tls.tls_search_gpu, tls.tls_search_batch, tls.tls_transit):
+            assert 'at or after' in fn.__doc__, fn.__name__
+            assert 't0_phase' in fn.__doc__, fn.__name__

@@ -171,12 +171,19 @@ def run_tls_example(use_gpu=True):
     print(f"   Best period: {results['period']:.4f} ± {results['period_uncertainty']:.4f} days")
     print(f"   Best depth: {results['depth']:.6f} ({results['depth']*1e6:.1f} ppm)")
     print(f"   Best duration: {results['duration']:.4f} days")
-    print(f"   Best T0: {results['T0']:.4f} (phase)")
+    print(f"   Best T0: {results['T0']:.4f} (days; first mid-transit at or "
+          f"after min(t) = {t.min():.3f}; phase {results['t0_phase']:.4f} "
+          f"relative to floor(min(t)))")
     print(f"   Number of transits: {results['n_transits']}")
     print(f"\n   Statistics:")
-    print(f"   SDE: {results['SDE']:.2f}")
-    print(f"   SNR: {results['SNR']:.2f}")
-    print(f"   FAP: {results['FAP']:.2e}")
+    print(f"   SDE: {results['SDE']:.2f}  (reference-package definition: "
+          f"SR = chi2_min/chi2)")
+    print(f"   SNR: {results['SNR']:.2f}  (sqrt(chi2_0 - chi2_min))")
+    # No 'FAP' is returned: the SDE has no fixed false-alarm calibration
+    # (its null distribution depends on the grid and baseline). For an
+    # empirical FAP run the null bootstrap on the batch entry point:
+    #   tls.tls_search_batch([(t, y, dy)], periods=periods,
+    #                        fap_null_draws=200, fap_seed=1)[0]['FAP']
 
     # Compare to truth
     period_error = np.abs(results['period'] - period_true)
@@ -214,19 +221,20 @@ def run_tls_example(use_gpu=True):
     ax.legend()
     ax.grid(True, alpha=0.3)
 
-    # Plot 3: Phase-folded light curve at best period
+    # Plot 3: Phase-folded light curve at best period. T0 is an absolute
+    # mid-transit time, so folding relative to it puts the transit at
+    # phase 0 (plotted in [-0.5, 0.5) for a centred transit).
     ax = axes[1, 0]
-    phases = (t % results['period']) / results['period']
+    phases = ((t - results['T0']) / results['period'] + 0.5) % 1.0 - 0.5
     ax.plot(phases, y, 'k.', alpha=0.3, markersize=2)
     # Plot best-fit model
-    model_phases = np.linspace(0, 1, 1000)
+    model_phases = np.linspace(-0.5, 0.5, 1000)
     model_flux = np.ones(1000)
     duration_phase = results['duration'] / results['period']
-    t0_phase = results['T0']
-    in_transit = np.abs((model_phases - t0_phase + 0.5) % 1.0 - 0.5) < duration_phase / 2
+    in_transit = np.abs(model_phases) < duration_phase / 2
     model_flux[in_transit] = 1 - results['depth']
     ax.plot(model_phases, model_flux, 'r-', linewidth=2, label='Best-fit model')
-    ax.set_xlabel('Phase')
+    ax.set_xlabel('Phase relative to T0')
     ax.set_ylabel('Relative Flux')
     ax.set_title(f'Phase-Folded at P={results["period"]:.4f} days')
     ax.legend()
