@@ -14,6 +14,13 @@
 	#define FLT float
 #endif
 
+// Weighted-CE bins with less probability mass than this are ignored
+// (see weighted_ce); it is far below any mass that could change the
+// entropy but keeps denormal / underflowing bins from producing inf.
+#ifndef CE_WEIGHT_FLOOR
+	#define CE_WEIGHT_FLOOR 1E-20
+#endif
+
 
 __device__ double atomicAddDouble(double* address, double val)
 {
@@ -68,10 +75,19 @@ __global__ void histogram_data_weighted(FLT *t, FLT *y, FLT *dy,
 		if (m0 >= NMAG) m0 = NMAG - 1;
 
 		for(int m = 0; m < NMAG; m++){
+			// signed distances from the datum to the bin's lower and
+			// upper edges (in units of the normalized magnitude range)
 			FLT z = (((FLT) m) / NMAG - Y);
-			if (abs(z) > max_phi * DY && m != m0)
-				continue;
 			FLT zmax = z + (1 + MAG_OVERLAP) / ((FLT) NMAG);
+
+			// skip bin m only when the WHOLE bin lies more than max_phi
+			// sigma away from the datum (lower edge above Y + max_phi*DY
+			// or upper edge below Y - max_phi*DY); the datum's own bin is
+			// always kept.  Testing only the lower edge (as before) threw
+			// away the mass of every bin below the datum whose lower edge
+			// was > max_phi*DY away, biasing the histogram upward.
+			if ((z > max_phi * DY || zmax < -max_phi * DY) && m != m0)
+				continue;
 			FLT wtot = normcdf(zmax / DY) - normcdf(z / DY);
 
 			for(int n = n0; n >= n0 - PHASE_OVERLAP; n--)
@@ -390,8 +406,12 @@ __global__ void weighted_ce(FLT *bins, unsigned int nfreq, FLT *ce){
 				FLT pmn = bins[offset + m];
 				bin_tot += pmn;
 
-				if (pmn > 0.f && p_phi_n > 1E-10)
-					Hc += pmn * log((dm * p_phi_n) / pmn);
+				// Skip (numerically) empty bins: a tiny mass makes
+				// (dm * p_phi_n) / pmn overflow to inf in float32, and
+				// its contribution pmn * log(...) is negligible anyway.
+				// The log is split so the ratio is never formed.
+				if (pmn > CE_WEIGHT_FLOOR && p_phi_n > 1E-10)
+					Hc += pmn * (log(dm * p_phi_n) - log(pmn));
 			}
 		}
 		ce[i] = Hc / bin_tot;
