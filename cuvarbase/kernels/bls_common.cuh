@@ -101,17 +101,34 @@ __device__ int divrndup(int a, int b){
 	return (a % b > 0) ? a/b + 1 : a/b;
 }
 
+// Per-frequency bin counts: nbins0 / nbinsf are read from the arrays
+// uploaded by eebls_gpu (index i + freq_offset), so every frequency
+// decodes its argmax against its OWN q window. They used to be scalar
+// launch arguments collapsed to the batch-wide (min nbins0, max nbinsf)
+// -- Sep 2026 audit defect 7 (bls-q-collapse).
 __global__ void store_best_sols(unsigned int *argmaxes, float *best_phi,
 	                            float *best_q,
-	                            unsigned int nbins0, unsigned int nbinsf,
+	                            const unsigned int * __restrict__ nbins0_arr,
+	                            const unsigned int * __restrict__ nbinsf_arr,
 	                            unsigned int noverlap,
 	                            float dlogq, unsigned int nfreq, unsigned int freq_offset){
 
 	unsigned int i = get_id();
 
 	if (i < nfreq){
+		unsigned int nbins0 = nbins0_arr[i + freq_offset];
+		unsigned int nbinsf = nbinsf_arr[i + freq_offset];
 		unsigned int imax = argmaxes[i + freq_offset];
 		float dphi = 1.f / noverlap;
+
+		// The batch stride is the largest per-frequency cell count in
+		// the batch; a frequency whose every candidate box scored 0
+		// (all-zero row, e.g. ignore_negative_delta_sols with only
+		// inverted dips) can argmax into the zero-filled tail beyond
+		// its own cells. Clamp so the decoded (q, phi) stays inside
+		// this frequency's window (its power is 0 either way).
+		if (imax >= count_tot_nbins(nbins0, nbinsf, dlogq) * noverlap)
+			imax = 0;
 
 		unsigned int nb = nbins0;
 		unsigned int bin_offset = 0;
@@ -302,10 +319,20 @@ __global__ void full_bls_no_sol_fused(
 // the default eebls_transit path for TESS 2-min / Kepler short-cadence
 // light curves (Sep 2026 audit, defect 1). The host additionally caps
 // freq_batch_size at (2^31 - 1) // ndata.
+//
+// nbins0_arr / nbinsf_arr give the per-frequency coarsest/finest bin
+// counts (index i_freq + freq_offset); nbins_tot is the batch STRIDE
+// (the largest count_tot_nbins over the batch's frequencies), so a
+// frequency with fewer levels leaves the tail of its row untouched
+// (zero, hence power 0 in binned_bls_bst). Scalar per-launch counts
+// collapsed every frequency to the batch-wide (min nbins0, max nbinsf)
+// window (Sep 2026 audit defect 7, bls-q-collapse).
 __global__ void bin_and_phase_fold_bst_multifreq(
 	                    float *t, float *yw, float *w,
 						float *yw_bin, float *w_bin, float *freqs,
-						unsigned int ndata, unsigned int nfreq, unsigned int nbins0, unsigned int nbinsf,
+						const unsigned int * __restrict__ nbins0_arr,
+						const unsigned int * __restrict__ nbinsf_arr,
+						unsigned int ndata, unsigned int nfreq,
 						unsigned int freq_offset, unsigned int noverlap, float dlogq,
 						unsigned int nbins_tot){
 	size_t i = ((size_t) blockIdx.x) * blockDim.x + threadIdx.x;
@@ -313,6 +340,9 @@ __global__ void bin_and_phase_fold_bst_multifreq(
 	if (i < ((size_t) ndata) * nfreq){
 		unsigned int i_data = (unsigned int) (i % ndata);
 		unsigned int i_freq = (unsigned int) (i / ndata);
+
+		unsigned int nbins0 = nbins0_arr[i_freq + freq_offset];
+		unsigned int nbinsf = nbinsf_arr[i_freq + freq_offset];
 
 		unsigned int offset = i_freq * nbins_tot * noverlap;
 

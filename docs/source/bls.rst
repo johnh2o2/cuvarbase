@@ -118,7 +118,7 @@ At each trial frequency, the observations are sorted by phase. Then, instead of 
 - Transit start phase: :math:`\phi_0 = \phi_i`
 - Transit duration: :math:`q = \phi_j - \phi_i`
 
-This approach has complexity :math:`\mathcal{O}(N_{\rm freq} \times N_{\rm data}^2)` compared to :math:`\mathcal{O}(N_{\rm freq} \times N_{\rm data} \times N_{\rm bins})` for the standard gridded approach. For small datasets (typically :math:`N_{\rm data} < 500`), sparse BLS can be more efficient as it avoids testing redundant parameter combinations.
+This approach has complexity :math:`\mathcal{O}(N_{\rm freq} \times N_{\rm data}^2)` compared to :math:`\mathcal{O}(N_{\rm freq} \times N_{\rm data} \times N_{\rm bins})` for the standard gridded approach. ``cuvarbase`` selects it for small datasets (by default :math:`N_{\rm data} < 500`) for its detection properties -- every candidate transit is tested exactly, with no binning or phase-grid loss -- not for speed: on the GPU the sparse kernel is slower than the binned fast kernel at every :math:`N_{\rm data}` (its per-frequency work grows as :math:`N_{\rm data}^2`), and it needs :math:`\mathcal{O}(N_{\rm data})` shared memory per block, which limits it to roughly 2,000 points.
 
 Using Sparse BLS in ``cuvarbase``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -148,11 +148,21 @@ The ``eebls_transit`` function automatically selects between sparse BLS (for sma
         use_sparse=True  # Force sparse BLS
     )
 
-When ``eebls_transit`` selects the sparse path it applies the same
-per-frequency Keplerian duration bounds (``qmin_fac``/``qmax_fac``
-times the fiducial ``q_transit`` value) as the standard gridded
-search, so results are directly comparable across the
-``sparse_threshold`` boundary.
+Both paths apply the same per-frequency Keplerian duration bounds
+(``qmin_fac``/``qmax_fac`` times the fiducial ``q_transit`` value),
+exactly per frequency, so results are comparable across the
+``sparse_threshold`` boundary up to the two algorithms' different
+candidate sets (a binned box grid vs observation pairs). For
+:math:`N_{\rm data} \ge` ``sparse_threshold`` the periodogram comes
+from the fast shared-memory kernel (:func:`cuvarbase.bls.eebls_gpu_fast`)
+and the best-fit ``(q, phi0)`` is recovered at the ``n_solutions``
+(default 10) highest peaks; the remaining entries of ``solutions`` are
+``None``. For a solution at every frequency, run the full binned
+search with :func:`cuvarbase.bls.eebls_transit_gpu` or
+:func:`cuvarbase.bls.eebls_gpu` (which also honour per-frequency
+``qmin``/``qmax`` arrays exactly, independently of ``freq_batch_size``
+and of the free device memory; before 1.0 the standard path collapsed
+them to one batch-wide window).
 
 You can also use sparse BLS directly with ``sparse_bls_cpu`` (or
 ``sparse_bls_gpu``). By default all durations :math:`q \in (0, 0.5]`
