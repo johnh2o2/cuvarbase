@@ -26,6 +26,47 @@ import resource
 import warnings
 
 
+# Every kernel the CE module compiles, in the (sorted) order in which
+# ``ConditionalEntropyAsyncProcess.function_tuple`` is unpacked by
+# :func:`conditional_entropy` / :func:`conditional_entropy_fast`.
+_CE_KERNELS = ('ce_classical_fast', 'ce_classical_faster', 'constdpdm_ce',
+               'histogram_data_count', 'histogram_data_weighted',
+               'log_prob', 'standard_ce', 'weighted_ce')
+
+
+def _needs_compile(prepared_functions):
+    """True unless every CE kernel has already been compiled and prepared.
+
+    (The previous gate looked for a key ``'ce_wt'`` that no compile ever
+    produced, so the module was rebuilt with nvcc on every call.)
+    """
+    if not prepared_functions:
+        return True
+    return not all(name in prepared_functions for name in _CE_KERNELS)
+
+
+def _is_single_freq_grid(freqs):
+    """True if ``freqs`` is one 1-D grid (to be shared by every lightcurve)
+    rather than a sequence of per-lightcurve grids.
+
+    Accepts any 1-D numeric array or list (float32, float64, integers,
+    Python floats); previously only Python/np.float64 scalars were
+    recognized, so a float32 grid was mistaken for a list of grids.
+    """
+    if isinstance(freqs, np.ndarray):
+        return freqs.ndim == 1
+    if len(freqs) == 0:
+        return True
+    return isinstance(freqs[0], (float, int, np.floating, np.integer))
+
+
+def _freq_grids(freqs, nlcs):
+    """Expand ``freqs`` into a list of ``nlcs`` per-lightcurve grids."""
+    if _is_single_freq_grid(freqs):
+        return [freqs] * nlcs
+    return list(freqs)
+
+
 def conditional_entropy(memory, functions, block_size=256,
                         transfer_to_host=True,
                         transfer_to_device=True,
@@ -37,6 +78,12 @@ def conditional_entropy(memory, functions, block_size=256,
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
+
+    # The histogram kernels accumulate into ``bins_g``: it must start from
+    # zero on EVERY call, not only when ``run(set_data=True)`` zeroed it
+    # (``run(memory=..., set_data=False)`` used to accumulate counts
+    # across calls).
+    memory.bins_g.fill(memory.bins_g.dtype.type(0), stream=memory.stream)
 
     if memory.weighted:
         args = (grid, block, memory.stream)
@@ -99,6 +146,12 @@ def conditional_entropy_fast(memory, functions, block_size=256,
         att = cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK
         shmem_lim = dev.get_attribute(att)
 
+    if stream is None:
+        # launch on the memory's own stream so the data upload, the
+        # kernel and the result download are ordered and ``finish()``
+        # (which synchronizes the process streams) covers all of them
+        stream = memory.stream
+
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
@@ -107,11 +160,19 @@ def conditional_entropy_fast(memory, functions, block_size=256,
 
     block = (block_size, 1, 1)
 
-    # Get the shared memory requirement
+    # Shared memory layout (must match ce_classical_fast/faster):
+    #   block_bin[nmag * nphase] (uint32) | block_bin_phi[nphase] (uint32)
+    #   | pad to sizeof(FLT) | Hc[nmag * nphase] (FLT)
+    #   | t_sh[ndata] (FLT) | y_sh[ndata] (uint32)      (faster only)
     r = memory.real_type(1).nbytes
     u = np.uint32(1).nbytes
     shmem = (r + u) * memory.phase_bins * memory.mag_bins
     shmem += u * memory.phase_bins
+    # The alignment pad sits between the uint32 histograms and Hc, so it
+    # has to be added BEFORE the (optional) lightcurve block: computing
+    # it after adding ``data_mem`` made it depend on the parity of ndata
+    # and under-allocated by 4 bytes for odd ndata in double precision.
+    shmem += (-shmem) % r
     data_mem = (r + u) * len(memory.t)
 
     func = fast_ce
@@ -126,9 +187,6 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     if data_in_shared_mem:
         shmem += data_mem
         func = faster_ce
-
-    # Make sure we have extra memory for alignment
-    shmem += shmem % r
 
     i_freq = 0
     while (i_freq < memory.nf):
@@ -173,11 +231,12 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     ----------
     phase_bins: int, optional (default: 10)
         Number of phase bins to use.
-    mag_bins: int, optional (default: 10)
+    mag_bins: int, optional (default: 5)
         Number of mag bins to use.
     max_phi: float, optional (default: 3.)
-        For weighted CE; skips contibutions to bins that are more than
-        ``max_phi`` sigma away.
+        For weighted CE; a magnitude bin only receives probability mass
+        from a datum if some part of the bin lies within ``max_phi``
+        sigma of it (the datum's own bin always does).
     weighted: bool, optional (default: False)
         If true, uses the weighted version of the CE periodogram. Slower, but
         accounts for data uncertainties.
@@ -188,12 +247,54 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     mag_overlap: int, optional (default: 0)
         If > 0, the mag bins are overlapped with each other
     use_fast: bool, optional (default: False)
-        Use a somewhat experimental function to speed up
-        computations. This is perfect for large Nfreqs and nobs <~ 2000.
-        If True, use :func:`run` and not :func:`large_run` and set
-        ``nstreams = 1``.
+        Use the shared-memory kernels (one thread block per trial
+        frequency, histogram kept in shared memory). Results match the
+        standard kernels to floating-point precision; they are not
+        generally faster on current GPUs. Incompatible with
+        ``weighted=True`` and ``balanced_magbins=True``. Works with
+        ``run``, ``large_run`` and the batched entry points, in single
+        or double precision.
+    use_double: bool, optional (default: False)
+        Use double precision on the GPU.
+    balanced_magbins: bool, optional (default: False)
+        Use magnitude bins that each hold the same number of points to
+        within one (edges at the midpoints between adjacent sorted
+        groups; see
+        :meth:`cuvarbase.memory.ConditionalEntropyMemory.balance_magbins`)
+        instead of uniform bins. Incompatible with ``weighted``,
+        ``use_fast``, ``compute_log_prob`` and ``mag_overlap > 0``.
+    widen_mag_range: bool, optional (default: False)
+        Weighted CE only: widen the normalized magnitude range by
+        ``max_phi`` times the median uncertainty on each side, so that
+        the probability mass of the faintest/brightest points is not
+        truncated by the range edges.
     compute_log_prob: bool, optional (default: False)
-        Instead of computing CE, compute and return the log-probability periodogram.
+        Instead of the conditional entropy, return the Poisson
+        log-likelihood of the phase-folded histogram under the
+        phase-independent null model (``sum_{phi, m} [N log Nexp - Nexp
+        - lgamma(N + 1)]`` with ``Nexp = N_phi * p(m)``). Like the CE it
+        is *minimized* at the true frequency. Incompatible with
+        ``weighted`` and ``balanced_magbins``.
+
+    Notes
+    -----
+    The returned periodogram is Graham et al. (2013)'s conditional
+    entropy ``H(m|phi)`` plus a constant: the histogram is converted to
+    a *density* in magnitude, which adds ``sum_m p(m) log(dm_m)``, the
+    mass-weighted mean of the log bin widths ``dm_m`` (in units of the
+    normalized magnitude range). With ``mag_overlap=0`` every bin has
+    ``dm_m = 1 / mag_bins``, so the offset is ``log(1 / mag_bins)``
+    (``-1.609`` for the default ``mag_bins=5``). With ``mag_overlap > 0``
+    the unweighted kernels use ``dm_m = min(mag_overlap + 1, mag_bins -
+    m) / mag_bins`` (the top bins are truncated at the brightest
+    magnitude cell), whereas the weighted kernel integrates every bin
+    over the full window and uses the constant ``(mag_overlap + 1) /
+    mag_bins``; ``weighted=True`` and ``weighted=False`` spectra then
+    differ by a constant. With ``balanced_magbins=True`` each bin uses
+    its own width. In every case the offset is the same at every
+    frequency (the per-magnitude-bin totals do not depend on the trial
+    frequency), so the location of the minimum is unaffected; subtract
+    it if you need the entropy in Graham's normalization.
 
     Example
     -------
@@ -209,7 +310,6 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
     """
     def __init__(self, *args, **kwargs):
-        super(ConditionalEntropyAsyncProcess, self).__init__(*args, **kwargs)
         self.phase_bins = kwargs.get('phase_bins', 10)
         self.mag_bins = kwargs.get('mag_bins', 5)
         self.max_phi = kwargs.get('max_phi', 3.)
@@ -220,28 +320,95 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self.phase_overlap = kwargs.get('phase_overlap', 0)
         self.mag_overlap = kwargs.get('mag_overlap', 0)
 
-        if self.mag_overlap > 0:
-            if kwargs.get('balanced_magbins', False):
-                raise ValueError("mag_overlap must be zero "
-                                "if balanced_magbins is True")
-
-        if self.weighted and kwargs.get('use_fast', False):
-            raise ValueError("use_fast must be False if weighted is True")
-
+        self.balanced_magbins = kwargs.get('balanced_magbins', False)
+        self.widen_mag_range = kwargs.get('widen_mag_range', False)
+        self.use_fast = kwargs.get('use_fast', False)
         self.use_double = kwargs.get('use_double', False)
+
+        # Reject unsupported option combinations before touching the GPU
+        self._check_options(dict(weighted=self.weighted,
+                                 balanced_magbins=self.balanced_magbins,
+                                 compute_log_prob=self.compute_log_prob,
+                                 mag_overlap=self.mag_overlap),
+                            use_fast=self.use_fast)
+
+        super(ConditionalEntropyAsyncProcess, self).__init__(*args, **kwargs)
 
         self.real_type = np.float32
         if self.use_double:
             self.real_type = np.float64
 
         self.call_func = conditional_entropy
-        if kwargs.get('use_fast', False):
+        if self.use_fast:
             self.call_func = conditional_entropy_fast
-
-        self.use_fast = kwargs.get('use_fast', False)
 
         self.memory = kwargs.get('memory', None)
         self.shmem_lc = kwargs.get('shmem_lc', True)
+
+    @staticmethod
+    def _check_options(opts, use_fast=False):
+        """
+        Raise ``ValueError`` for option combinations that have no
+        implementation (see ``docs/source/ce.rst``).
+
+        Parameters
+        ----------
+        opts: dict
+            Memory options (``weighted``, ``balanced_magbins``,
+            ``compute_log_prob``, ``mag_overlap``); missing keys are
+            treated as their defaults.
+        use_fast: bool
+            Whether the shared-memory kernels are in use.
+        """
+        weighted = opts.get('weighted', False)
+        balanced = opts.get('balanced_magbins', False)
+        log_prob = opts.get('compute_log_prob', False)
+        mag_overlap = opts.get('mag_overlap', 0)
+
+        if weighted and use_fast:
+            raise ValueError("use_fast must be False if weighted is True")
+        if weighted and balanced:
+            raise ValueError("simultaneous balanced_magbins and weighted"
+                             " options is not currently supported")
+        if weighted and log_prob:
+            raise ValueError("simultaneous compute_log_prob and weighted"
+                             " options is not currently supported")
+        if balanced and use_fast:
+            raise ValueError("use_fast must be False if balanced_magbins "
+                             "is True (the fast kernels only implement "
+                             "uniform magnitude bins)")
+        if balanced and log_prob:
+            raise ValueError("simultaneous balanced_magbins and "
+                             "compute_log_prob options is not currently "
+                             "supported")
+        if balanced and mag_overlap > 0:
+            raise ValueError("mag_overlap must be zero "
+                             "if balanced_magbins is True")
+
+    def _memory_kwargs(self, **overrides):
+        """
+        Build the keyword arguments for ``ConditionalEntropyMemory`` from
+        the process settings, apply ``overrides`` (per-call kwargs) and
+        validate the resulting option combination.
+        """
+        kw = dict(phase_bins=self.phase_bins,
+                  mag_bins=self.mag_bins,
+                  mag_overlap=self.mag_overlap,
+                  phase_overlap=self.phase_overlap,
+                  max_phi=self.max_phi,
+                  weighted=self.weighted,
+                  use_double=self.use_double,
+                  compute_log_prob=self.compute_log_prob,
+                  balanced_magbins=self.balanced_magbins,
+                  widen_mag_range=self.widen_mag_range)
+        kw.update(overrides)
+        self._check_options(kw, use_fast=self.use_fast)
+        return kw
+
+    def _ensure_compiled(self, **kwargs):
+        """Compile and prepare the kernels once per process object."""
+        if _needs_compile(getattr(self, 'prepared_functions', None)):
+            self._compile_and_prepare_functions(**kwargs)
 
     def _compile_and_prepare_functions(self, **kwargs):
 
@@ -279,11 +446,13 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                                  np.uint32, np.uint32, np.uint32,
                                  np.uint32, np.uint32, np.uint32]
         )
+        if tuple(sorted(self.dtypes.keys())) != _CE_KERNELS:
+            raise RuntimeError("CE kernel table does not match _CE_KERNELS")
         for fname, dtype in self.dtypes.items():
             func = self.module.get_function(fname)
             self.prepared_functions[fname] = func.prepare(dtype)
         self.function_tuple = tuple(self.prepared_functions[fname]
-                                    for fname in sorted(self.dtypes.keys()))
+                                    for fname in _CE_KERNELS)
 
     def memory_requirement(self, n0, nf, **kwargs):
         """
@@ -343,17 +512,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             Memory object.
         """
 
-        kw = dict(phase_bins=self.phase_bins,
-                  mag_bins=self.mag_bins,
-                  mag_overlap=self.mag_overlap,
-                  phase_overlap=self.phase_overlap,
-                  max_phi=self.max_phi,
-                  stream=stream,
-                  weighted=self.weighted,
-                  use_double=self.use_double,
-                  compute_log_prob=self.compute_log_prob)
-
-        kw.update(kwargs)
+        kw = self._memory_kwargs(**kwargs)
+        kw['stream'] = stream
         mem = ConditionalEntropyMemory(**kw)
 
         mem.fromdata(t, y, dy=dy, freqs=freqs, allocate=True, **kwargs)
@@ -378,10 +538,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``t``: Observation times
             * ``y``: Observations
             * ``dy``: Observation uncertainties
-        freqs: list, optional
-            Either a list of floats (same frequencies for all data),
-            or a list of length ``n=len(data)``, with element ``i`` of the
-            list being a list of frequencies for the ``i``-th lightcurve.
+        freqs: array_like, optional
+            Either a single 1-D array of frequencies (same grid for all
+            lightcurves), or a list of length ``n=len(data)`` with
+            element ``i`` being the frequency grid for the ``i``-th
+            lightcurve.
         **kwargs
 
         Returns
@@ -399,9 +560,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         frqs = freqs
         if frqs is None:
             frqs = [self.autofrequency(t, **kwargs) for (t, y, dy) in data]
-
-        elif isinstance(freqs[0], float):
-            frqs = [freqs] * len(data)
+        else:
+            frqs = _freq_grids(freqs, len(data))
 
         for i, ((t, y, dy), f) in enumerate(zip(data, frqs)):
             mem = self.allocate_for_single_lc(t, y, dy=dy, freqs=f,
@@ -416,6 +576,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         """
         Preallocate memory for future runs.
 
+        The frequency grid is uploaded to the GPU here, and each memory
+        object is bound to one of the process streams (or to
+        ``streams[i]`` if given), so that :meth:`finish` synchronizes
+        the result transfers of later :meth:`run` calls.
+
         Parameters
         ----------
         max_nobs: int
@@ -425,37 +590,57 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         nlcs: int, optional (default: 1)
             Maximum batch size for ``run`` calls
         streams: list of ``pycuda.driver.Stream``
-            Length of list must be ``>= nlcs``
+            Length of list must be ``>= nlcs``; defaults to the process
+            streams (created as needed)
 
         Returns
         -------
         self.memory: list
             List of ``ConditionalEntropyMemory`` objects
         """
-        kw = dict(phase_bins=self.phase_bins,
-                  mag_bins=self.mag_bins,
-                  mag_overlap=self.mag_overlap,
-                  phase_overlap=self.phase_overlap,
-                  max_phi=self.max_phi,
-                  weighted=self.weighted,
-                  use_double=self.use_double,
-                  compute_log_prob=self.compute_log_prob,
-                  n0_buffer=max_nobs,
-                  buffered_transfer=True,
-                  allocate=True,
-                  freqs=freqs)
+        overrides = dict(n0_buffer=max_nobs,
+                         buffered_transfer=True,
+                         allocate=True,
+                         freqs=freqs)
+        overrides.update(kwargs)
+        kw = self._memory_kwargs(**overrides)
 
-        kw.update(kwargs)
+        if streams is None:
+            if len(self.streams) < nlcs:
+                self._create_streams(nlcs - len(self.streams))
+            streams = self.streams
+        elif len(streams) < nlcs:
+            raise ValueError("preallocate: %d streams given for nlcs=%d"
+                             % (len(streams), nlcs))
 
         self.memory = []
         for i in range(nlcs):
-            stream = None if streams is None else streams[i]
-            kw.update(dict(stream=stream))
+            kw.update(dict(stream=streams[i]))
             mem = ConditionalEntropyMemory(**kw)
             mem.allocate(**kwargs)
+            mem.transfer_freqs_to_gpu()
             self.memory.append(mem)
 
         return self.memory
+
+    @staticmethod
+    def _sync_memory_freqs(mem, freqs):
+        """
+        Make sure the frequency grid held by (and uploaded to) ``mem``
+        is ``freqs``: upload when the memory's grid was never transferred
+        (``allocate()`` only creates a zero-filled ``freqs_g``) and
+        re-upload when a ``run`` call passes a grid that differs from the
+        one the memory was allocated with.
+        """
+        f = np.asarray(freqs, dtype=mem.real_type)
+        if mem.nf is not None and len(f) != mem.nf:
+            raise ValueError(
+                "memory was allocated for %d frequencies but the call "
+                "passes %d; allocate (or preallocate) the memory for the "
+                "new grid" % (mem.nf, len(f)))
+        if (not getattr(mem, '_freqs_on_device', False)
+                or mem.freqs is None or not np.array_equal(mem.freqs, f)):
+            mem.transfer_freqs_to_gpu(freqs=f)
 
     def run(self, data,
             memory=None,
@@ -473,8 +658,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``t``: observation times
             * ``y``: observations
             * ``dy``: observation uncertainties
-        freqs: optional, list of ``np.ndarray`` frequencies
-            List of custom frequencies. If not specified, calls
+        freqs: optional, array_like
+            A single 1-D frequency grid (shared by all lightcurves) or a
+            list of per-lightcurve grids. If not specified, calls
             ``autofrequency`` with default arguments
         memory: optional, list of ``ConditionalEntropyMemory`` objects
             List of memory objects, length of list must be ``>= len(data)``
@@ -492,10 +678,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         """
         # compile module if not compiled already
-        if not hasattr(self, 'prepared_functions') or \
-            not all([func in self.prepared_functions for func in
-                     ['ce_wt']]):
-            self._compile_and_prepare_functions(**kwargs)
+        self._ensure_compiled(**kwargs)
 
         # Prepare data
         data = normalize_light_curves(data)
@@ -504,9 +687,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         frqs = freqs
         if frqs is None:
             frqs = [self.autofrequency(d[0], **kwargs) for d in data]
-
-        elif isinstance(frqs[0], float):
-            frqs = [frqs] * len(data)
+        else:
+            frqs = _freq_grids(freqs, len(data))
 
         if len(frqs) != len(data):
             raise ValueError(
@@ -527,10 +709,16 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                                    **kwargs)
             for mem in memory:
                 mem.transfer_freqs_to_gpu()
-        elif set_data:
+        else:
+            if len(memory) < len(data):
+                raise ValueError(
+                    "%d memory objects for %d lightcurves; preallocate "
+                    "with nlcs >= the batch size" % (len(memory), len(data)))
             for i, (t, y, dy) in enumerate(data):
-                memory[i].set_gpu_arrays_to_zero(**kwargs)
-                memory[i].setdata(t, y, dy=dy, **kwargs)
+                self._sync_memory_freqs(memory[i], frqs[i])
+                if set_data:
+                    memory[i].set_gpu_arrays_to_zero(**kwargs)
+                    memory[i].setdata(t, y, dy=dy, **kwargs)
 
         kw = dict(block_size=self.block_size,
                   shmem_lc=self.shmem_lc)
@@ -555,8 +743,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             * ``t``: observation times
             * ``y``: observations
             * ``dy``: observation uncertainties
-        freqs: optional, list of ``np.ndarray`` frequencies
-            List of custom frequencies. If not specified, calls
+        freqs: optional, array_like
+            A single 1-D frequency grid (shared by all lightcurves) or a
+            list of per-lightcurve grids. If not specified, calls
             ``autofrequency`` with default arguments
         max_memory: float, optional (default: None)
             Maximum memory per batch in bytes. If ``None``, it
@@ -573,10 +762,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         """
 
         # compile module if not compiled already
-        if not hasattr(self, 'prepared_functions') or \
-            not all([func in self.prepared_functions for func in
-                     ['ce_wt']]):
-            self._compile_and_prepare_functions(**kwargs)
+        self._ensure_compiled(**kwargs)
 
         if max_memory is None:
             free, total = cuda.mem_get_info()
@@ -586,9 +772,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         frqs = freqs
         if frqs is None:
             frqs = [self.autofrequency(d[0], **kwargs) for d in data]
-
-        elif isinstance(frqs[0], float):
-            frqs = [frqs] * len(data)
+        else:
+            frqs = _freq_grids(freqs, len(data))
 
         if len(frqs) != len(data):
             raise ValueError(
@@ -675,17 +860,10 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             batches.append([data[i] for i in range(start, finish)])
 
         # set up memory containers for gpu and cpu (pinned) memory
-        kwargs_mem = dict(buffered_transfer=True,
-                          n0_buffer=max_ndata,
-                          mag_overlap=self.mag_overlap,
-                          phase_overlap=self.phase_overlap,
-                          phase_bins=self.phase_bins,
-                          mag_bins=self.mag_bins,
-                          weighted=self.weighted,
-                          max_phi=self.max_phi,
-                          use_double=self.use_double,
-                          compute_log_prob=self.compute_log_prob)
-        kwargs_mem.update(kwargs)
+        overrides = dict(buffered_transfer=True,
+                         n0_buffer=max_ndata)
+        overrides.update(kwargs)
+        kwargs_mem = self._memory_kwargs(**overrides)
         memory = [ConditionalEntropyMemory(stream=stream, **kwargs_mem)
                   for stream in streams]
 

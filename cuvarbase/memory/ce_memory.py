@@ -87,6 +87,11 @@ class ConditionalEntropyMemory:
 
         self.freqs = kwargs.get('freqs', None)
         self.freqs_g = None
+        # True once ``freqs`` has been uploaded into ``freqs_g``;
+        # ``allocate_freqs`` creates a zero-filled array, so a run on a
+        # memory whose grid was never transferred would evaluate every
+        # frequency at f = 0 (``run(memory=...)`` checks this flag)
+        self._freqs_on_device = False
 
         self.mag_bin_fracs = None
         self.mag_bin_fracs_g = None
@@ -177,7 +182,8 @@ class ConditionalEntropyMemory:
                 "ConditionalEntropyMemory: requirement "
                 "`nf is not None` not satisfied")
         self.freqs_g = gpuarray.zeros(nf, dtype=self.real_type)
-        if self.ce_g is None:
+        self._freqs_on_device = False
+        if self.ce_g is None or self.ce_g.size != nf:
             self.ce_g = gpuarray.zeros(nf, dtype=self.real_type)
 
     def allocate(self, **kwargs):
@@ -228,31 +234,76 @@ class ConditionalEntropyMemory:
                                            stream=self.stream)
 
     def transfer_freqs_to_gpu(self, **kwargs):
-        """Transfer frequency array to GPU."""
+        """Transfer frequency array to GPU.
+
+        Uses ``freqs`` if given (it then becomes the memory's grid),
+        otherwise ``self.freqs``; the grid is cast to ``real_type``.
+        """
         freqs = kwargs.get('freqs', self.freqs)
         if not (freqs is not None):
             raise ValueError(
                 "ConditionalEntropyMemory: requirement "
                 "`freqs is not None` not satisfied")
-
+        freqs = np.ascontiguousarray(freqs, dtype=self.real_type)
+        if self.freqs_g is None or self.freqs_g.size != len(freqs):
+            raise ValueError(
+                "ConditionalEntropyMemory: freqs_g holds %s frequencies "
+                "but %d were given; call allocate(freqs=...) first"
+                % (None if self.freqs_g is None else self.freqs_g.size,
+                   len(freqs)))
+        self.freqs = freqs
         self.freqs_g.set_async(freqs, stream=self.stream)
+        self._freqs_on_device = True
 
     def transfer_ce_to_cpu(self, **kwargs):
         """Transfer conditional entropy results from GPU to CPU."""
         self.ce_g.get_async(stream=self.stream, ary=self.ce_c)
 
     def compute_mag_bin_fracs(self, y, **kwargs):
-        """Compute magnitude bin fractions for probability calculations."""
+        """Compute magnitude bin fractions for probability calculations.
+
+        ``y`` holds integer magnitude-bin indices; the fractions sum to 1.
+        """
         N = float(len(y))
-        mbf = np.array([np.sum(y == i)/N for i in range(self.mag_bins)])
+        yb = np.minimum(np.asarray(y).astype(np.int64), self.mag_bins - 1)
+        mbf = np.bincount(yb, minlength=self.mag_bins)[:self.mag_bins] / N
 
         if self.mag_bin_fracs is None:
             self.mag_bin_fracs = np.zeros(self.mag_bins, dtype=self.real_type)
         self.mag_bin_fracs[:self.mag_bins] = mbf[:]
 
+    # Lower limit on a balanced bin's width, as a fraction of the
+    # (already normalized) magnitude range.  Only reached when a whole
+    # bin (and the neighbouring edges) sit on one quantized magnitude
+    # value; it keeps ``log(width)`` finite.
+    balanced_min_width = 1e-6
+
     def balance_magbins(self, y, **kwargs):
-        """Create balanced magnitude bins with equal number of observations."""
-        yinds = np.argsort(y)
+        """Create balanced magnitude bins with equal number of observations.
+
+        The ``mag_bins`` bins each hold (as nearly as possible) the same
+        number of points.  Bin edges are placed at the midpoints between
+        the largest value of one group and the smallest value of the next,
+        so the widths ``mag_bwf`` tile the normalized magnitude range
+        ``[0, 1]`` (they sum to 1).  Widths are floored at
+        ``balanced_min_width`` so that quantized magnitudes (fewer distinct
+        values than points) cannot produce a zero-width bin, which would
+        make the conditional entropy ``-inf``.
+
+        Parameters
+        ----------
+        y : array-like
+            Magnitudes, normalized to ``[0, 1]``.
+
+        Returns
+        -------
+        ybins : array
+            Balanced bin index of each point.
+        mag_bwf : array, ``real_type``
+            Width of each bin (fraction of the magnitude range).
+        """
+        y = np.asarray(y)
+        yinds = np.argsort(y, kind='stable')
         ybins = np.zeros(len(y))
 
         if len(y) < self.mag_bins:
@@ -260,18 +311,32 @@ class ConditionalEntropyMemory:
                 "balanced_magbins requires at least mag_bins=%d "
                 "observations; got %d" % (self.mag_bins, len(y)))
 
-        di = len(y) / self.mag_bins
-        mag_bwf = np.zeros(self.mag_bins)
+        # integer group boundaries: bounds[-1] == len(y) exactly, so every
+        # sorted point belongs to a group (``int(i * (len(y) / mag_bins))``
+        # could fall one short of len(y) through float rounding and leave
+        # the brightest point(s) in bin 0)
+        bounds = (np.arange(self.mag_bins + 1) * len(y)) // self.mag_bins
+        edges = np.zeros(self.mag_bins + 1, dtype=np.float64)
+        edges[0] = np.min(y)
+        edges[-1] = np.max(y)
         for i in range(self.mag_bins):
-            imin = max([0, int(i * di)])
-            imax = min([len(y), int((i + 1) * di)])
+            imin, imax = int(bounds[i]), int(bounds[i + 1])
 
             inds = yinds[imin:imax]
             ybins[inds] = i
 
-            mag_bwf[i] = y[inds[-1]] - y[inds[0]]
+            if i > 0:
+                # midpoint between the previous group's largest value
+                # and this group's smallest value
+                edges[i] = 0.5 * (float(y[yinds[imin - 1]])
+                                  + float(y[yinds[imin]]))
 
-        mag_bwf /= (max(y) - min(y))
+        yrange = float(edges[-1] - edges[0])
+        if yrange > 0:
+            mag_bwf = np.diff(edges) / yrange
+        else:
+            mag_bwf = np.full(self.mag_bins, 1.0 / self.mag_bins)
+        mag_bwf = np.maximum(mag_bwf, self.balanced_min_width)
 
         return ybins, mag_bwf.astype(self.real_type)
 
@@ -314,10 +379,15 @@ class ConditionalEntropyMemory:
                 y = y.astype(self.ytype)
 
             else:
-                y = np.floor(y * self.mag_bins).astype(self.ytype)
+                # y is normalized to [0, 1] with the brightest point at
+                # exactly 1.0, so floor(y * mag_bins) would give the
+                # out-of-range index mag_bins for it: clamp into the
+                # last bin.
+                y = np.minimum(np.floor(y * self.mag_bins),
+                               self.mag_bins - 1).astype(self.ytype)
 
             if self.compute_log_prob:
-                self.compute_mag_bin_fracs(y)
+                self.compute_mag_bin_fracs(y[:self.n0])
 
         if self.buffered_transfer:
             arrs = [self.t, self.y]
