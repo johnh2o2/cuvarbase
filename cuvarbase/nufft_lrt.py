@@ -463,7 +463,15 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         nf : int, optional
             Number of frequency samples for NUFFT. If None, uses 2 * len(t)
         estimate_psd : bool, optional (default: True)
-            Estimate power spectrum from data. If False, must provide psd
+            Estimate power spectrum from data. If False, must provide psd.
+            The estimate is the ``smooth_window``-bin boxcar-smoothed
+            periodogram ``|Y_k|^2`` of the demeaned data (for
+            ``detector='marginal'``: of the basis-projected residual
+            ``y - V c_ols``, since the mean-subtracted data ``y - V mu``
+            still contain the realized systematics ``V (c - mu)``, whose
+            power the spectral window spreads over the whole band; the
+            PSD from ``y - V mu`` inflated the estimate ~36x and whitened
+            the transit away -- audit Sep 2026).
         psd : array-like, optional
             Pre-computed power spectrum of length ``nf`` in the
             convention of the module docstring (``E|S_k|^2`` of the
@@ -612,6 +620,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # the adjoint NFFT inside compute_nufft (compiled by nufft_proc).
 
         # ---- detector-specific data vector (float64 host algebra)
+        resid = None
         if detector == 'sequential':
             y_work = _sequential_detrend(t, y, V)
         elif detector == 'marginal':
@@ -622,6 +631,13 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
                 raise ValueError("coeff_prior_mean must have length K = %d"
                                  % K)
             y_work = y - V @ mu
+            if estimate_psd:
+                # PSD source: the basis-projected residual, NOT y - V mu
+                # (which still holds V (c - mu); with gappy sampling the
+                # spectral window spreads that power over the whole band
+                # and the whitening then removes the transit too)
+                resid = _sequential_detrend(t, y, V)
+                resid = resid - resid.mean()
         else:
             y_work = y
         y_demeaned = y_work - np.mean(y_work)
@@ -633,7 +649,11 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # a physical Fourier coefficient at every one of the nf modes (no
         # rfft-style zero-padded upper half), so the PSD spans all nf bins.
         if estimate_psd:
-            psd = (np.abs(Y_nufft) ** 2).astype(self.real_type, copy=False)
+            if resid is not None:
+                src = self.compute_nufft(t, resid, nf, **kwargs)
+            else:
+                src = Y_nufft
+            psd = (np.abs(src) ** 2).astype(self.real_type, copy=False)
             if smooth_window and smooth_window > 1:
                 psd = _smoothed_periodogram(psd, smooth_window)
             # Floor to avoid division issues
