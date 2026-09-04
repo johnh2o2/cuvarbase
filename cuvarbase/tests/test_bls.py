@@ -812,6 +812,24 @@ class TestBLS(object):
         with pytest.raises(TypeError):
             sparse_bls_gpu(t, y, dy, freqs, False, 128)
 
+    def test_use_simple_kernel_was_removed(self):
+        """The bubble-sort sparse kernel (sparse_bls_simple.cu) shipped
+        with the pre-PR#65 MAX_W_COMPLEMENT 1E-9 bound (powers up to
+        4.6 in pure noise); it is gone and the old switch must fail
+        loudly on every entry point that used to accept it."""
+        from ..bls import compile_sparse_bls
+        from ..utils import find_kernel
+        t, y, dy = data(ndata=50)
+        freqs = np.array([0.9, 1.0, 1.1])
+        with pytest.raises(TypeError, match="use_simple"):
+            sparse_bls_gpu(t, y, dy, freqs, use_simple=True)
+        with pytest.raises(TypeError, match="use_simple"):
+            compile_sparse_bls(use_simple=False)
+        with pytest.raises(TypeError, match="use_simple"):
+            eebls_transit(t, y, dy, fmin=0.9, fmax=1.1, use_simple=True)
+        import os
+        assert not os.path.exists(find_kernel('sparse_bls_simple'))
+
     def test_sparse_bls_inverted_q_bounds_raise(self):
         """qmin > qmax used to silently return an all-zero periodogram
         (every candidate rejected) — a pipeline reads that as 'no
@@ -827,8 +845,7 @@ class TestBLS(object):
             with pytest.raises(ValueError, match="qmax"):
                 fn(t, y, dy, freqs, qmax=0.0)
 
-    @pytest.mark.parametrize("use_simple", [False, True])
-    def test_sparse_bls_gpu_q_bounds(self, use_simple):
+    def test_sparse_bls_gpu_q_bounds(self):
         """GPU sparse BLS honors per-frequency q bounds (matches CPU)."""
         t, y, dy = data(snr=30, q=0.1, phi0=0.3, freq=1.0,
                         baseline=365., ndata=80)
@@ -839,8 +856,7 @@ class TestBLS(object):
         power_cpu, _ = sparse_bls_cpu(t, y, dy, freqs,
                                       qmin=qmins, qmax=qmaxes)
         power_gpu, sols_gpu = sparse_bls_gpu(t, y, dy, freqs,
-                                             qmin=qmins, qmax=qmaxes,
-                                             use_simple=use_simple)
+                                             qmin=qmins, qmax=qmaxes)
 
         assert_allclose(power_cpu, power_gpu, rtol=1e-3, atol=1e-5)
         for (q_g, _), p in zip(sols_gpu, power_gpu):
