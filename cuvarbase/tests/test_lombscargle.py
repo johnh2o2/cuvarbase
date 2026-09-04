@@ -1235,3 +1235,35 @@ class TestFapBaluevInputs(object):
         assert_allclose(fap_baluev(t, None, z, 5.0),
                         fap_baluev(t, 0.2 * np.ones_like(t), z, 5.0),
                         rtol=1e-12)
+
+
+class TestCufinufftBackend(object):
+    """The cufinufft backend was complex64 only and raised TypeError
+    for ``use_double=True`` (id 97); the precision now follows the
+    memory."""
+
+    def _proc(self, use_double):
+        from ..cufinufft_backend import HAS_CUFINUFFT
+        if not HAS_CUFINUFFT:
+            pytest.skip("cufinufft not installed")
+        return LombScargleAsyncProcess(use_cufinufft=True,
+                                       use_double=use_double)
+
+    @pytest.mark.parametrize("use_double,tol", [(False, 2e-3),
+                                                (True, 1e-6)])
+    def test_matches_astropy(self, use_double, tol):
+        t, y, dy = _realistic_lc()
+        freqs = _uniform_grid(1.0 / (5 * 365.0), 20.0, 365.0)
+        ref = LombScargle(t, y, dy).power(freqs)
+        proc = self._proc(use_double)
+        p = _run_gpu(proc, t, y, dy, freqs)
+        assert np.max(np.abs(p - ref)) < tol
+        assert np.argmax(p) == np.argmax(ref)
+
+    def test_narrow_band_double(self):
+        t, y, dy = _realistic_lc(N=300, T=365.0, f0=29.0, seed=3)
+        freqs = _uniform_grid(20.0, 30.0, 365.0)
+        ref = LombScargle(t, y, dy).power(freqs)
+        proc = self._proc(True)
+        p = _run_gpu(proc, t, y, dy, freqs)
+        assert np.max(np.abs(p - ref)) < 1e-6
