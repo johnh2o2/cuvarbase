@@ -315,6 +315,9 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     - T_k is the NUFFT of the transit template
     - P_s(k) is the power spectrum (adaptively estimated or provided)
     - w_k are frequency weights for one-sided spectrum
+
+    The value is a whitened correlation, not an N(0, 1) SNR: see the
+    module docstring for the PSD convention and the calibration caveat.
     
     Parameters
     ----------
@@ -338,7 +341,8 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         CUDA block size
     autoset_m : bool, optional (default: True)
         Choose ``m`` from the NFFT truncation-error bound (see
-        :meth:`cuvarbase.cunfft.NFFTAsyncProcess.estimate_m`).
+        :meth:`cuvarbase.cunfft.NFFTAsyncProcess.estimate_m`); one
+        ``m`` per :meth:`run` sized for the largest transformed vector.
     **kwargs : dict
         Additional parameters passed to :class:`NFFTAsyncProcess`.
         
@@ -553,8 +557,8 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             max_epochs)`` epochs spaced ``P / n`` apart -- and reduces
             by the maximum over epochs. Cost: that many NFFTs per
             (period, duration) cell (~2P/duration transforms at the
-            default oversampling). An explicit array is used as given
-            for every cell.
+            default oversampling; 0.2-0.4 ms each on an A40). An
+            explicit array is used as given for every cell.
         depth : float, optional (default: 1.0)
             Transit depth for template (not critical for normalized matched filter)
         nf : int, optional
