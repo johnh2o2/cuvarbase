@@ -39,6 +39,20 @@ Conventions
   from the null-percentile of signal-free or scrambled light curves as
   ``scripts/nufft_lrt_validation.py`` does. Raising ``nf`` inflates the
   raw value without adding information.
+* **Detectors** (:meth:`NUFFTLRTAsyncProcess.run`, ``detector=``):
+  ``'matched'`` (default) is the stationary whitened filter above;
+  ``'marginal'`` is Detector A of Taaki, Kamalabadi & Kemball (2020),
+  which marginalizes systematics coefficients under a Gaussian prior;
+  ``'sequential'`` least-squares cotrends against the same basis and
+  then runs the matched filter on the residual. The latter two need
+  ``systematics_basis``, Detector A also ``coeff_prior_cov``.
+* **Detector A's prior is effectively wider than specified.** Its
+  Gram matrix is accumulated over ``nf`` (by default ``2n``)
+  non-orthogonal NFFT modes, which overcounts the corresponding
+  time-domain inner products by ~2.2-2.4x for the samplings measured
+  in the Sep-2026 audit, so ``coeff_prior_cov`` acts as though it were
+  about that much wider. The effect on the statistic is small, but
+  calibrate the prior and the threshold together.
 * ``dy`` is not used by any detector (a ``UserWarning`` is emitted if it
   is passed); the noise model is the PSD.
 """
@@ -55,14 +69,17 @@ warnings.warn(
     "calibrated empirically (see docs/NUFFT_LRT_README.md).",
     UserWarning)
 
+# The EXPERIMENTAL warning above must fire before the GPU imports, so
+# every import below is deliberately not at the top of the file.
 import pycuda.driver as cuda  # noqa: E402
-import pycuda.gpuarray as gpuarray
-from pycuda.compiler import SourceModule
+import pycuda.gpuarray as gpuarray  # noqa: E402
+from pycuda.compiler import SourceModule  # noqa: E402
 
-from .base import GPUAsyncProcess, ensure_context
-from .cunfft import NFFTAsyncProcess
-from .memory import NFFTMemory
-from .utils import find_kernel, _module_reader, subtract_epoch
+from .base import GPUAsyncProcess, ensure_context  # noqa: E402
+from .cunfft import NFFTAsyncProcess  # noqa: E402
+from .memory import NFFTMemory  # noqa: E402
+from .utils import (find_kernel, _module_reader,  # noqa: E402
+                    subtract_epoch)
 
 
 def _whitened_inner(A, B, psd, weights):
@@ -244,7 +261,7 @@ def epoch_grid(period, duration, oversample=2.0, min_epochs=8,
 class NUFFTLRTMemory:
     """
     Memory management for NUFFT LRT computations.
-    
+
     Parameters
     ----------
     nfft_memory : NFFTMemory
@@ -254,7 +271,7 @@ class NUFFTLRTMemory:
     use_double : bool, optional (default: False)
         Use double precision
     """
-    
+
     def __init__(self, nfft_memory, stream, use_double=False, **kwargs):
         # Direct construction is a supported entry point (exported in
         # __all__): retain the CUDA context before any GPU allocation,
@@ -263,53 +280,54 @@ class NUFFTLRTMemory:
         self.nfft_memory = nfft_memory
         self.stream = stream
         self.use_double = use_double
-        
+
         self.real_type = np.float64 if use_double else np.float32
         self.complex_type = np.complex128 if use_double else np.complex64
-        
+
         # Memory for LRT computation
         self.template_g = None
         self.power_spectrum_g = None
         self.weights_g = None
         self.results_g = None
         self.results_c = None
-        
+
     def allocate(self, nf, **kwargs):
         """Allocate GPU memory for LRT computation."""
         self.nf = nf
-        
+
         # Template NUFFT result
         self.template_nufft_g = gpuarray.zeros(nf, dtype=self.complex_type)
-        
+
         # Power spectrum estimate
         self.power_spectrum_g = gpuarray.zeros(nf, dtype=self.real_type)
-        
+
         # Frequency weights for one-sided spectrum
         self.weights_g = gpuarray.zeros(nf, dtype=self.real_type)
-        
+
         # Results: [numerator, denominator]
         self.results_g = gpuarray.zeros(2, dtype=self.real_type)
         self.results_c = cuda.aligned_zeros(shape=(2,),
-                                           dtype=self.real_type,
-                                           alignment=4096)
-        
+                                            dtype=self.real_type,
+                                            alignment=4096)
+
         return self
-        
+
     def transfer_results_to_cpu(self):
         """Transfer LRT results from GPU to CPU."""
         cuda.memcpy_dtoh_async(self.results_c, self.results_g.ptr,
-                              stream=self.stream)
+                               stream=self.stream)
 
 
 class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     """
-    GPU implementation of NUFFT-based Likelihood Ratio Test for transit detection.
-    
+    GPU implementation of the NUFFT likelihood-ratio transit search.
+
     This implements a matched filter in the frequency domain:
-    
+
     .. math::
-        \\text{SNR} = \\frac{\\sum_k Y_k T_k^* w_k / P_s(k)}{\\sqrt{\\sum_k |T_k|^2 w_k / P_s(k)}}
-    
+        \\text{SNR} = \\frac{\\sum_k Y_k T_k^* w_k / P_s(k)}
+        {\\sqrt{\\sum_k |T_k|^2 w_k / P_s(k)}}
+
     where:
     - Y_k is the NUFFT of the lightcurve
     - T_k is the NUFFT of the transit template
@@ -318,7 +336,11 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
 
     The value is a whitened correlation, not an N(0, 1) SNR: see the
     module docstring for the PSD convention and the calibration caveat.
-    
+    :meth:`run` selects between three detectors with ``detector=``:
+    ``'matched'`` (default, the formula above), ``'marginal'`` (Taaki
+    et al. Detector A, systematics marginalized under a Gaussian prior)
+    and ``'sequential'`` (least-squares cotrend, then the filter).
+
     Parameters
     ----------
     sigma : float, optional (default: 4.0)
@@ -345,7 +367,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         ``m`` per :meth:`run` sized for the largest transformed vector.
     **kwargs : dict
         Additional parameters passed to :class:`NFFTAsyncProcess`.
-        
+
     Example
     -------
     >>> import numpy as np
@@ -369,29 +391,29 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     >>> i, j = np.unravel_index(np.argmax(snr), snr.shape)
     >>> periods[i], durations[j], best_epoch[i, j]   # ~5.3, 0.25, ~1.7 (mod P)
     """
-    
+
     def __init__(self, sigma=4.0, m=None, use_double=False,
                  use_fast_math=True, block_size=256, autoset_m=True,
                  **kwargs):
         super(NUFFTLRTAsyncProcess, self).__init__(**kwargs)
-        
+
         self.sigma = sigma
         self.m = m
         self.use_double = use_double
         self.use_fast_math = use_fast_math
         self.block_size = block_size
         self.autoset_m = autoset_m
-        
+
         self.real_type = np.float64 if use_double else np.float32
         self.complex_type = np.complex128 if use_double else np.complex64
-        
+
         # NUFFT processor for computing transforms
         self.nufft_proc = NFFTAsyncProcess(
             sigma=sigma, m=(8 if m is None else m), use_double=use_double,
             use_fast_math=use_fast_math, block_size=block_size,
             autoset_m=autoset_m, **kwargs
         )
-        
+
         self.function_names = [
             'nufft_matched_filter',
             'estimate_power_spectrum',
@@ -400,41 +422,41 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             'compute_mean',
             'generate_transit_template'
         ]
-        
+
         # Module options
         self.module_options = ['--use_fast_math'] if use_fast_math else []
         # Preprocessor defines for CUDA kernels
         self._cpp_defs = {}
         if use_double:
             self._cpp_defs['DOUBLE_PRECISION'] = None
-        
+
     def _compile_and_prepare_functions(self, **kwargs):
         """Compile CUDA kernels and prepare function calls."""
         module_txt = _module_reader(find_kernel('nufft_lrt'), self._cpp_defs)
-        
+
         self.module = SourceModule(module_txt, options=self.module_options)
-        
+
         # Function signatures
         self.dtypes = dict(
-            nufft_matched_filter=[np.intp, np.intp, np.intp, np.intp, np.intp,
-                                 np.int32, self.real_type],
+            nufft_matched_filter=[np.intp, np.intp, np.intp, np.intp,
+                                  np.intp, np.int32, self.real_type],
             estimate_power_spectrum=[np.intp, np.intp, np.int32, np.int32,
-                                    self.real_type],
+                                     self.real_type],
             compute_frequency_weights=[np.intp, np.int32, np.int32],
             demean_data=[np.intp, np.int32, self.real_type],
             compute_mean=[np.intp, np.intp, np.int32],
             generate_transit_template=[np.intp, np.intp, np.int32,
-                                      self.real_type, self.real_type,
-                                      self.real_type, self.real_type]
+                                       self.real_type, self.real_type,
+                                       self.real_type, self.real_type]
         )
-        
+
         # Prepare functions
         self.prepared_functions = {}
         for func_name in self.function_names:
             func = self.module.get_function(func_name)
             func.prepare(self.dtypes[func_name])
             self.prepared_functions[func_name] = func
-            
+
     def _nfft_memory(self, t, nf, l1_max, **kwargs):
         """Allocate ONE :class:`NFFTMemory` (device buffers, cuFFT plan,
         pinned host buffer) for the epoch-subtracted times ``t`` and
@@ -459,7 +481,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     def compute_nufft(self, t, y, nf, memory=None, **kwargs):
         """
         Compute the adjoint NUFFT of data on the GPU.
-        
+
         Parameters
         ----------
         t : array-like
@@ -475,7 +497,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             reused (``t`` must be the array the memory was built from).
         **kwargs : dict
             Additional parameters for NUFFT
-            
+
         Returns
         -------
         nufft_result : np.ndarray, complex
@@ -526,7 +548,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         t32 = np.ascontiguousarray(t64, dtype=self.real_type)
         ghat = self.nufft_proc.run([(t32, y, int(nf))], **kwargs)[0]
         return np.array(ghat, dtype=self.complex_type)
-        
+
     def run(self, t, y, periods, durations=None, epochs=None,
             depth=1.0, nf=None, estimate_psd=True, psd=None,
             smooth_window=5, eps_floor=1e-3,
@@ -560,7 +582,8 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             default oversampling; 0.2-0.4 ms each on an A40). An
             explicit array is used as given for every cell.
         depth : float, optional (default: 1.0)
-            Transit depth for template (not critical for normalized matched filter)
+            Transit depth of the template (the statistic is
+            normalized, so this only sets the template's scale)
         nf : int, optional
             Number of frequency samples for NUFFT. If None, uses 2 * len(t)
         estimate_psd : bool, optional (default: True)
@@ -615,7 +638,12 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             ``detector='marginal'``; estimate it from population fits
             as in the papers). Must be symmetric positive semidefinite;
             a zero variance pins that mode to its prior mean (drop the
-            mode from the basis if that is not intended).
+            mode from the basis if that is not intended). The Gram
+            matrix that meets this prior is accumulated over ``nf``
+            non-orthogonal NFFT modes and overcounts the corresponding
+            time-domain inner products by ~2.2-2.4x (audit Sep 2026),
+            so the prior acts as if it were about that much wider than
+            what you supply.
         dy : array-like, optional
             Not used by any detector (the noise model is the PSD); a
             ``UserWarning`` is emitted if it is passed.
@@ -713,7 +741,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
                 raise ValueError("epochs must be a non-empty 1-D finite "
                                  "array (or None)")
             epochs_arr = epochs_arr - t0
-        
+
         if nf is None:
             nf = 2 * n
         nf = int(nf)
@@ -763,7 +791,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # Compute NUFFT of lightcurve
         Y_nufft = self.compute_nufft(t, y_demeaned, nf, memory=mem,
                                      **kwargs)
-        
+
         # ---- power spectrum: estimated or supplied, floored ONCE here.
         # The adjoint NFFT returns a physical Fourier coefficient at every
         # one of the nf modes (no rfft-style zero-padded upper half), so
@@ -822,7 +850,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             T_nufft = self.compute_nufft(t, template, nf, memory=mem,
                                          **kwargs)
             return _statistic(T_nufft)
-        
+
         # ---- template loop
         if auto_epochs:
             snr_results = np.zeros((len(periods), len(durations)))
@@ -846,11 +874,11 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
                     snr_results[i, j, k] = _template_statistic(
                         period, epoch, duration)
         return snr_results
-        
+
     def _generate_template(self, t, period, epoch, duration, depth):
         """
         Generate simple box transit template.
-        
+
         Parameters
         ----------
         t : array-like
@@ -863,7 +891,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             Transit duration
         depth : float
             Transit depth
-            
+
         Returns
         -------
         template : np.ndarray
@@ -873,22 +901,22 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # Phase fold
         phase = np.fmod(t - epoch, period) / period
         phase[phase < 0] += 1.0
-        
+
         # Center phase around 0.5
         phase[phase > 0.5] -= 1.0
-        
+
         # Generate box template
         template = np.zeros_like(t)
         phase_width = duration / (2.0 * period)
         in_transit = np.abs(phase) <= phase_width
         template[in_transit] = -depth
-        
+
         return template
-        
+
     def _compute_matched_filter_snr(self, Y, T, P_s, weights, eps_floor):
         """
         Compute matched filter SNR.
-        
+
         Parameters
         ----------
         Y : np.ndarray
@@ -901,7 +929,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
             Frequency weights
         eps_floor : float
             Floor for power spectrum
-            
+
         Returns
         -------
         snr : float
@@ -912,16 +940,17 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         T = np.asarray(T, dtype=self.complex_type)
         P_s = np.asarray(P_s, dtype=self.real_type)
         weights = np.asarray(weights, dtype=self.real_type)
-        
+
         # Apply floor to power spectrum
         P_s = _floor_psd(P_s, eps_floor, self.real_type)
-        
+
         # Compute numerator: sum(Y * conj(T) * weights / P_s)
         numerator = np.real(np.sum((Y * np.conj(T)) * weights / P_s))
-        
+
         # Compute denominator: sqrt(sum(|T|^2 * weights / P_s))
-        denominator = np.sqrt(np.real(np.sum((np.abs(T) ** 2) * weights / P_s)))
-        
+        denominator = np.sqrt(np.real(np.sum((np.abs(T) ** 2)
+                                             * weights / P_s)))
+
         # Return SNR
         if denominator > 0:
             return numerator / denominator

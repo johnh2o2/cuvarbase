@@ -1,5 +1,24 @@
 # NUFFT-LRT (Taaki) Audit — July 2026
 
+> **SUPERSEDED (Sep 2026).** This report cleared the live path; the
+> September-2026 algorithm audit
+> (`analysis/audit-sep2026/ALGORITHM_AUDIT.md`, sections 2 and 6) found
+> five confirmed defects it missed, all now fixed. Read it instead of
+> this file for the module's current state. Specifically wrong here:
+> the "**the statistic and its implementation are correct**" verdict
+> (absolute BJD times were cast to float32 before folding and gridding,
+> `epochs=None` evaluated a single phase-0 template rather than a
+> search, `detector='sequential'` fitted the basis without an intercept,
+> `detector='marginal'` estimated its PSD from data that still contained
+> the realized systematics, and the default `sigma = 2` left the modes
+> `k >= nf/2` aliased at O(1)); **row 4**'s "harmless while dead"
+> reading of `kernels/nufft_lrt.cu` (the same float32-absolute-time fold
+> was live in `run()`, not only in the dead kernel); and **finding 5**'s
+> "mild for shallow transits" (self-whitening costs 24-28% of the
+> statistic already at the detection threshold). The July validation
+> campaign referenced below was never run; the Sep-2026 campaign is in
+> `analysis/audit-sep2026/campaign/` and predates the fixes.
+
 **Scope**: correctness audit of `cuvarbase.nufft_lrt` (462-line host module,
 204-line kernel file, 243-line GPU test file + import tests,
 `docs/NUFFT_LRT_README.md`, `examples/nufft_lrt_example.py`), contributed by
