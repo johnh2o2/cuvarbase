@@ -83,6 +83,18 @@ def nfft_adjoint_async(memory, functions,
     ``NFFTAsyncProcess.finish()``) before reading ``ghat_g``.
     """
 
+    # The light curve behind ``memory`` was validated where it was
+    # loaded (NFFTAsyncProcess.allocate / LombScargleMemory.setdata);
+    # only the transform's own scalars can be checked here. A
+    # non-finite minimum_frequency poisons every mode's phase factor
+    # and a non-positive samples_per_peak collapses the grid.
+    if not np.isfinite(minimum_frequency) or minimum_frequency < 0:
+        raise ValueError("nfft_adjoint_async: minimum_frequency must be "
+                         "finite and >= 0; got %r" % (minimum_frequency,))
+    if not (np.isfinite(samples_per_peak) and samples_per_peak > 0):
+        raise ValueError("nfft_adjoint_async: samples_per_peak must be "
+                         "finite and > 0; got %r" % (samples_per_peak,))
+
     precompute_psi, fast_gaussian_grid, slow_gaussian_grid, \
         nfft_shift, normalize = functions
 
