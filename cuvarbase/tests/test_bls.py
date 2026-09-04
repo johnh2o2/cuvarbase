@@ -2533,3 +2533,89 @@ class TestSparseCentering(object):
             assert np.all(p <= 1.0)
             assert abs(p[ok].max() - ref[ok].max()) < tol * ref[ok].max()
             assert _same_peak(p[ok], ref[ok])
+
+
+class TestSparseSharedMemoryLimit(object):
+    """Sep 2026 audit, ids 77/126: ``sparse_bls_gpu`` sized its dynamic
+    shared memory from ``ndata`` and never compared it with the
+    device's per-block limit, so anything above ~2,000 points died with
+    a bare ``cuLaunchKernel failed: invalid argument``. The size is now
+    checked before the launch and reported with the point limit."""
+
+    def test_shared_memory_formula(self):
+        from ..bls import _sparse_shared_mem_bytes
+        # matches the audit's measurements on a 48 KB device
+        assert _sparse_shared_mem_bytes(2000, 64) == 41344
+        assert _sparse_shared_mem_bytes(2500, 64) == 69920
+
+    def test_max_ndata_is_the_largest_that_fits(self):
+        from ..bls import _sparse_shared_mem_bytes, _sparse_max_ndata
+        for lim in (16384, 49152, 65536, 101376):
+            for block_size in (32, 64, 256):
+                n = _sparse_max_ndata(lim, block_size)
+                assert n > 0
+                assert _sparse_shared_mem_bytes(n, block_size) <= lim
+                assert _sparse_shared_mem_bytes(n + 1, block_size) > lim
+
+    def test_too_many_points_raises_a_clear_error(self):
+        rand = np.random.RandomState(29)
+        ndata = 6000
+        t = np.sort(365. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        freqs = np.linspace(0.95, 1.05, 5)
+        with pytest.raises(ValueError, match="shared memory"):
+            sparse_bls_gpu(t, y, dy, freqs)
+
+    def test_small_light_curve_still_runs(self):
+        rand = np.random.RandomState(31)
+        ndata = 200
+        t = np.sort(365. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        freqs = np.linspace(0.95, 1.05, 25)
+        p, sols = sparse_bls_gpu(t, y, dy, freqs)
+        assert np.all(np.isfinite(p)) and len(sols) == len(freqs)
+
+
+class TestBLSMemoryKeywords(object):
+    """Sep 2026 audit, id 67: ``BLSMemory.fromdata`` read
+    ``max_ndata``/``max_nfreqs`` with ``kwargs.get`` and then forwarded
+    the same ``kwargs`` to ``__init__``, so passing either raised
+    ``TypeError: got multiple values for argument``. Reusing a memory
+    with a different number of frequencies used to fail deep inside
+    pycuda with ``ary and self must be the same size``."""
+
+    @staticmethod
+    def _data(ndata=200):
+        rand = np.random.RandomState(37)
+        t = np.sort(365. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    def test_fromdata_accepts_max_ndata_and_max_nfreqs(self):
+        from ..bls import BLSMemory
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 50)
+        mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                 freqs=freqs, transfer=True,
+                                 max_ndata=len(t) + 100,
+                                 max_nfreqs=1000)
+        assert mem.max_ndata == len(t) + 100
+        assert mem.max_nfreqs == 1000
+        assert len(mem.t) == len(t) + 100
+
+    def test_reuse_with_a_different_nfreqs_raises_clearly(self):
+        from ..bls import BLSMemory
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 50)
+        mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                 freqs=freqs, transfer=True)
+        # same length: fine
+        mem.setdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                    freqs=freqs + 0.01, transfer=True)
+        with pytest.raises(ValueError, match="frequencies"):
+            mem.setdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                        freqs=np.linspace(0.95, 1.05, 120),
+                        transfer=True)
