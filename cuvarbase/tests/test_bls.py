@@ -2874,3 +2874,113 @@ class TestBLSMemoryKeywords(object):
             mem.setdata(t, y, dy, qmin=1e-2, qmax=0.5,
                         freqs=np.linspace(0.95, 1.05, 120),
                         transfer=True)
+
+
+class TestKernelCompileCaching(object):
+    """Sep 2026 audit, ids 3/7/43/60/126 (plan item BLS-1).
+
+    ``eebls_gpu``, ``eebls_gpu_custom``, ``hone_solution`` and
+    ``sparse_bls_gpu`` used to call ``compile_bls`` /
+    ``compile_sparse_bls`` directly whenever the caller did not supply
+    kernels, bypassing the LRU cache the fast/batch paths use. pycuda
+    runs an ``nvcc --preprocess`` subprocess on every ``SourceModule``
+    even when its own disk cache holds the cubin, so that cost ~0.4-0.5 s
+    (standard) and ~0.4-1.6 s (sparse) *per call*.
+
+    These tests assert compile *counts*, never wall times.
+    """
+
+    @staticmethod
+    def _data(ndata=100):
+        rand = np.random.RandomState(11)
+        t = np.sort(100. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    @staticmethod
+    def _counting(monkeypatch, name):
+        """Swap in a fresh kernel cache and count real compiles."""
+        from collections import OrderedDict
+        from .. import bls as B
+        monkeypatch.setattr(B, '_kernel_cache', OrderedDict())
+        calls = []
+        orig = getattr(B, name)
+
+        def counted(*args, **kwargs):
+            calls.append((args, tuple(sorted(kwargs.items()))))
+            return orig(*args, **kwargs)
+
+        monkeypatch.setattr(B, name, counted)
+        return calls
+
+    def test_sparse_bls_gpu_compiles_once_per_block_size(self, monkeypatch):
+        calls = self._counting(monkeypatch, 'compile_sparse_bls')
+        t, y, dy = self._data()
+        freqs = np.linspace(0.9, 1.1, 30)
+
+        p1, _ = sparse_bls_gpu(t, y, dy, freqs)
+        assert len(calls) == 1
+        p2, _ = sparse_bls_gpu(t, y, dy, freqs)
+        assert len(calls) == 1, "second call recompiled the sparse kernel"
+        # identical kernel, identical numbers
+        assert np.array_equal(p1, p2)
+
+        # a different block_size is a different kernel: compile again
+        sparse_bls_gpu(t, y, dy, freqs, block_size=32)
+        assert len(calls) == 2
+        sparse_bls_gpu(t, y, dy, freqs, block_size=32)
+        assert len(calls) == 2
+
+    def test_eebls_transit_sparse_path_shares_the_cached_kernel(
+            self, monkeypatch):
+        calls = self._counting(monkeypatch, 'compile_sparse_bls')
+        t, y, dy = self._data()
+        freqs = np.linspace(0.9, 1.1, 30)
+        qvals = q_transit(freqs)
+        for _ in range(3):
+            eebls_transit(t, y, dy, freqs=freqs, qvals=qvals,
+                          use_sparse=True)
+        assert len(calls) == 1
+
+    def test_eebls_gpu_compiles_once(self, monkeypatch):
+        calls = self._counting(monkeypatch, 'compile_bls')
+        t, y, dy = self._data()
+        freqs = np.linspace(0.9, 1.1, 20)
+
+        p1, _ = eebls_gpu(t, y, dy, freqs)
+        assert len(calls) == 1
+        p2, _ = eebls_gpu(t, y, dy, freqs)
+        assert len(calls) == 1, "second call recompiled the BLS kernels"
+        # same kernels, same numbers (eebls_gpu's multi-stream global
+        # atomics are not bit-reproducible run to run, hence allclose)
+        assert_allclose(p1, p2, rtol=1e-5, atol=1e-7)
+
+        # eebls_gpu_custom asks for the same (block_size, use_optimized,
+        # function_names) key: still one compile
+        eebls_gpu_custom(t, y, dy, freqs, np.array([0.05, 0.1]),
+                         np.array([0.0, 0.5]))
+        assert len(calls) == 1
+
+        # a different block_size must recompile
+        eebls_gpu(t, y, dy, freqs, block_size=128)
+        assert len(calls) == 2
+        eebls_gpu(t, y, dy, freqs, block_size=128)
+        assert len(calls) == 2
+
+    def test_prepare_false_bypasses_the_cache(self, monkeypatch):
+        # prepare=False returns unprepared functions, which the cache
+        # key does not model: it must fall through to a direct compile
+        # every time rather than hand back prepared kernels.
+        from .. import bls as B
+        calls = self._counting(monkeypatch, 'compile_bls')
+        fns1 = B._cached_compile_bls(prepare=False)
+        assert len(calls) == 1
+        fns2 = B._cached_compile_bls(prepare=False)
+        assert len(calls) == 2
+        assert fns1 is not fns2
+        # ... while the default (prepare=True) is cached and shared
+        c1 = B._cached_compile_bls()
+        c2 = B._cached_compile_bls()
+        assert c1 is c2
+        assert len(calls) == 3

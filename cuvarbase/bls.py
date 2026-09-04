@@ -180,6 +180,53 @@ def _get_cached_kernels(block_size, use_optimized=False, function_names=None):
         return compiled_functions
 
 
+def _cached_compile_bls(**kwargs):
+    """``compile_bls(**kwargs)`` through the thread-safe LRU cache.
+
+    The generated CUDA source depends only on ``block_size`` and
+    ``use_optimized`` (the kernel file), and the returned dict on
+    ``function_names`` and ``prepare`` -- exactly the cache key
+    :func:`_get_cached_kernels` uses -- so the default entry points can
+    share compilations instead of running ``nvcc`` again per call.
+    ``prepare=False`` (which returns unprepared functions) is the one
+    option the cache does not model, so it falls through to a direct
+    compile.
+
+    pycuda re-runs an ``nvcc --preprocess`` subprocess on every
+    ``SourceModule`` even when its own disk cache holds the cubin, so an
+    uncached ``compile_bls`` costs ~0.4-0.5 s per call (Sep 2026 audit,
+    ids 3, 7, 43, 60, 126). Bit-identical: the same compiled kernels.
+    """
+    if not kwargs.get('prepare', True):
+        return compile_bls(**kwargs)
+    return _get_cached_kernels(
+        kwargs.get('block_size', _default_block_size),
+        kwargs.get('use_optimized', False),
+        list(kwargs.get('function_names', _all_function_names)))
+
+
+def _get_cached_sparse_kernel(block_size):
+    """``compile_sparse_bls`` through the same LRU cache.
+
+    ``sparse_bls.cu`` is templated on ``BLOCK_SIZE`` alone, so that is
+    the whole key. Without this every ``sparse_bls_gpu`` /
+    ``eebls_transit(ndata < sparse_threshold)`` call recompiled the
+    kernel (~0.4-1.6 s) around ~2-20 ms of kernel work (Sep 2026 audit,
+    ids 7, 43, 60, 126)."""
+    ensure_context()
+    key = (block_size, 'sparse')
+    with _kernel_cache_lock:
+        if key in _kernel_cache:
+            _kernel_cache.move_to_end(key)
+            return _kernel_cache[key]
+        compiled = compile_sparse_bls(block_size=block_size)
+        _kernel_cache[key] = compiled
+        _kernel_cache.move_to_end(key)
+        if len(_kernel_cache) > _KERNEL_CACHE_MAX_SIZE:
+            _kernel_cache.popitem(last=False)
+        return compiled
+
+
 _function_signatures = {
     'full_bls_no_sol': [np.intp, np.intp, np.intp,
                         np.intp, np.intp, np.intp,
@@ -1433,7 +1480,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     check_freqs(freqs, name='eebls_gpu_custom')
 
     functions = functions if functions is not None \
-        else compile_bls(**kwargs)
+        else _cached_compile_bls(**kwargs)
 
     block_size = kwargs.get('block_size', _default_block_size)
     ndata = len(t)
@@ -1824,7 +1871,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     nbins0_f, nbinsf_f = _q_bounds_to_nbins(qmins, qmaxes)
 
     functions = functions if functions is not None \
-        else compile_bls(**kwargs)
+        else _cached_compile_bls(**kwargs)
 
     if max_memory is None:
         free, total = cuda.mem_get_info()
@@ -2563,9 +2610,11 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     if block_size & (block_size - 1) != 0:
         raise ValueError(f"block_size must be a power of 2, got {block_size}")
 
-    # Compile kernel if not provided
+    # Compile kernel if not provided (through the LRU cache: pycuda
+    # runs nvcc --preprocess on every SourceModule, so an uncached
+    # compile costs ~0.4-1.6 s around a ~2-20 ms kernel)
     if kernel is None:
-        kernel = compile_sparse_bls(block_size=block_size)
+        kernel = _get_cached_sparse_kernel(block_size)
 
     # Shared memory per block:
     #   sh_phi[n_pow2] + sh_y[n_pow2] + sh_w[n_pow2]
@@ -3444,7 +3493,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
 
     baseline = np.max(t) - np.min(t)
 
-    functions = compile_bls(**kwargs)
+    functions = _cached_compile_bls(**kwargs)
     i = 0
     while pn is None or i < 5 or ((pn - p0) / p0 > stop and i < max_iter):
 
