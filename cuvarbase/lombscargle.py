@@ -1112,6 +1112,29 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         Parameters
         ----------
+        data: list of ``(t, y, dy)`` tuples
+            Lightcurves (``dy=None`` gives unit weights).
+        freqs: array_like, optional
+            The one uniform grid ``df * (k0 + np.arange(nf))`` shared by
+            all lightcurves (validated with :func:`check_k0`; a
+            non-uniform grid raises ``ValueError``). Default: the
+            ``autofrequency`` grid of the lightcurve with the longest
+            baseline (all of its points -- before 1.0 the last one was
+            dropped).
+        only_return_best_freqs: bool, optional (default: False)
+            Return ``(best_freqs, best_freq_faps)`` instead of the
+            periodograms: for each lightcurve the frequency of the highest
+            power (within ``ignore_freq_mask``) and the Baluev (2008)
+            false-alarm probability of that peak, :func:`fap_baluev`
+            with ``d_K = 2 * nharmonics + 1`` and ``fmax = max(freqs)``.
+            **Changed in 1.0:** the second element is the FAP itself
+            (small is significant; it can underflow to exactly 0 for
+            overwhelming peaks). Before 1.0 it was ``1 - FAP``, which
+            rounds to exactly 1.0 for every FAP below 1e-16 and used the
+            single-harmonic degrees of freedom for multiharmonic runs.
+        ignore_freq_mask: array_like of bool, optional
+            Frequencies to exclude from the peak search (same length as
+            ``freqs``).
         batch_size: int, optional (default: 1)
             Lightcurves processed per multi-stream batch. The default
             of 1 is the safe choice — all published survey-throughput
@@ -1154,19 +1177,15 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if freqs is None:
             data_with_max_baseline = max(data,
                                          key=lambda d: np.max(d[0]) - np.min(d[0]))
+            # autofrequency already returns df * (k0 + arange(nf)); the
+            # old "correction" nf = round(max / df) - k0 dropped its last
+            # point (id 147)
             freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
 
-            # now correct frequencies
-            df = freqs[1] - freqs[0]
-            k0 = get_k0(freqs)
-            # nf = len(freqs)
-            nf = int(round(np.max(freqs) / df)) - k0
-            freqs = df * (k0 + np.arange(nf))
-
-        df = freqs[1] - freqs[0]
+        freqs = np.asarray(freqs)
+        check_k0(freqs)
         k0 = get_k0(freqs)
         nf = len(freqs)
-        check_k0(freqs, k0=k0)
 
         lsps = []
 
@@ -1195,7 +1214,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         [mem.allocate(nf=nf, **kwargs) for mem in memory]
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
-        best_freqs, best_freq_significances = [], []
+        best_freqs, best_freq_faps = [], []
 
         default_mask = np.array([True] * len(freqs))
         mask = default_mask if ignore_freq_mask is None else ~np.asarray(ignore_freq_mask)
@@ -1208,16 +1227,21 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
             for i, (f, p) in enumerate(results):
                 if only_return_best_freqs:
-                    best_index = np.argmax(p[mask])
-                    fap = fap_baluev(batch[i][0], batch[i][2], p[mask], np.max(freqs[mask]))
-                    significance = 1. - fap[best_index]
+                    pm = np.asarray(p[:nf], dtype=np.float64)[mask]
+                    best_index = int(np.argmax(pm))
+                    # FAP of the best peak only (identical value, and
+                    # the log-space fap_baluev is the CPU-bound part of
+                    # this option); d_K = 2H + 1 for H harmonics
+                    fap = fap_baluev(batch[i][0], batch[i][2],
+                                     pm[best_index], np.max(freqs[mask]),
+                                     d_K=2 * self.nharmonics + 1)
                     best_freqs.append(freqs[mask][best_index])
-                    best_freq_significances.append(significance)
+                    best_freq_faps.append(float(fap))
                 else:
                     lsps.append(np.copy(p))
 
         if only_return_best_freqs:
-            return best_freqs, best_freq_significances
+            return best_freqs, best_freq_faps
         else:
             return [(freqs, lsp) for lsp in lsps]
 
@@ -1231,15 +1255,17 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     ----------
     t: array_like
         Observation times.
-    dy: array_like
-        Observation uncertainties.
+    dy: array_like or None
+        Observation uncertainties (``None``: unit weights).
     z: array_like or float
         Periodogram value(s)
     fmax: float
         Maximum frequency searched
     d_K: int, optional (default: 3)
-        Number of degrees of fredom for periodgram model.
-        2H - 1 where H is the number of harmonics
+        Number of degrees of freedom of the periodogram model:
+        ``2H + 1`` (offset plus a cosine and sine amplitude per
+        harmonic) for ``H`` harmonics, so 3 for the standard
+        floating-mean Lomb-Scargle
     d_H: int, optional (default: 1)
         Number of degrees of freedom for default model.
     use_gamma: bool, optional (default: True)
@@ -1274,7 +1300,7 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     if use_gamma:
         g = np.exp(gammaln(0.5 * N_H) - gammaln(0.5 * (N_K + 1)))
 
-    w = np.power(dy, -2)
+    w = np.ones(N) if dy is None else np.power(dy, -2)
 
     tbar = np.dot(w, t) / sum(w)
     Dt = np.dot(w, np.power(t - tbar, 2)) / sum(w)

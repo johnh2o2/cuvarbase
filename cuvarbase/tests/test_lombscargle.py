@@ -1147,3 +1147,91 @@ class TestPreallocate(object):
             proc.finish()
             assert_allclose(np.asarray(r[0][1][:len(f)], dtype=np.float64),
                             ref, rtol=1e-5, atol=1e-6)
+
+
+class TestBatchedBestFreqs(object):
+    """``batched_run_const_nfreq(only_return_best_freqs=True)`` returns
+    the false-alarm probability of the best peak (``fap_baluev`` with
+    ``d_K = 2 H + 1``) -- before 1.0 it returned ``1 - FAP``, exactly
+    1.0 for every FAP below 1e-16, with ``d_K = 3`` for any H (ids 96,
+    129, 144)."""
+
+    @staticmethod
+    def _lc(N=100, T=100.0, amp=0.06, seed=3):
+        r = np.random.RandomState(seed)
+        t = np.sort(r.uniform(0, T, N))
+        y = amp * np.sin(2 * np.pi * t / 1.7) + 0.05 * r.randn(N)
+        return t, y, 0.05 * np.ones(N)
+
+    @pytest.mark.parametrize("H", [1, 2])
+    def test_returns_fap_of_best_peak(self, H):
+        from ..lombscargle import fap_baluev
+        t, y, dy = self._lc()
+        freqs = 0.002 * (50 + np.arange(1500))
+        proc = LombScargleAsyncProcess(nharmonics=H)
+        (f, p), = proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs)
+        p = np.asarray(p[:len(freqs)], dtype=np.float64)
+        i = int(np.argmax(p))
+        expected = float(fap_baluev(t, dy, p[i], freqs.max(),
+                                    d_K=2 * H + 1))
+        wrong_dK = float(fap_baluev(t, dy, p[i], freqs.max(), d_K=3))
+
+        bf, faps = proc.batched_run_const_nfreq(
+            [(t, y, dy)], freqs=freqs, only_return_best_freqs=True)
+        assert bf[0] == freqs[i]
+        assert faps[0] == pytest.approx(expected, rel=1e-6)
+        # a real FAP: representable, small, and not the old 1 - FAP
+        assert 0.0 < faps[0] < 1e-2
+        if H > 1:
+            assert wrong_dK != pytest.approx(expected, rel=1e-3)
+
+    def test_mask_is_honoured(self):
+        t, y, dy = self._lc()
+        freqs = 0.002 * (50 + np.arange(1500))
+        proc = LombScargleAsyncProcess()
+        (f, p), = proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs)
+        p = np.asarray(p[:len(freqs)], dtype=np.float64)
+        i = int(np.argmax(p))
+        ignore = np.zeros(len(freqs), dtype=bool)
+        ignore[max(0, i - 5):i + 6] = True
+        bf, faps = proc.batched_run_const_nfreq(
+            [(t, y, dy)], freqs=freqs, only_return_best_freqs=True,
+            ignore_freq_mask=ignore)
+        assert not ignore[np.flatnonzero(freqs == bf[0])[0]]
+        assert bf[0] == freqs[~ignore][np.argmax(p[~ignore])]
+
+    def test_dy_none_through_the_fap_path(self):
+        t, y, dy = self._lc()
+        freqs = 0.002 * (50 + np.arange(1500))
+        proc = LombScargleAsyncProcess()
+        ref = LombScargle(t, y).power(freqs)
+        bf, faps = proc.batched_run_const_nfreq(
+            [(t, y, None)], freqs=freqs, only_return_best_freqs=True)
+        assert bf[0] == freqs[np.argmax(ref)]
+        assert 0.0 <= faps[0] < 1.0
+
+    def test_freqs_none_keeps_every_autofrequency_point(self):
+        # the rebuilt grid dropped the last point (id 147)
+        from ..utils import autofrequency
+        t, y, dy = self._lc()
+        proc = LombScargleAsyncProcess()
+        (f, p), = proc.batched_run_const_nfreq([(t, y, dy)])
+        fa = autofrequency(t)
+        assert len(f) == len(fa)
+        assert_allclose(f, fa, rtol=1e-12)
+        r = proc.run([(t, y, dy)])
+        proc.finish()
+        assert len(r[0][0]) == len(fa)
+
+
+class TestFapBaluevInputs(object):
+    def test_dy_none_is_unit_weights(self):
+        from ..lombscargle import fap_baluev
+        rng = np.random.RandomState(4)
+        t = np.sort(rng.rand(80)) * 50.0
+        z = np.array([0.1, 0.3, 0.5])
+        assert_allclose(fap_baluev(t, None, z, 5.0),
+                        fap_baluev(t, np.ones_like(t), z, 5.0), rtol=1e-12)
+        assert_allclose(fap_baluev(t, None, z, 5.0),
+                        fap_baluev(t, 0.2 * np.ones_like(t), z, 5.0),
+                        rtol=1e-12)
