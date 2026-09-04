@@ -1,11 +1,11 @@
 # NUFFT-LRT: whitened matched-filter transit detection (Taaki)
 
 > **⚠️ EXPERIMENTAL** — this module emits a `UserWarning` on import.
-> The statistic and its implementation are audited correct
-> (`analysis/nufft-lrt-audit-jul2026.md`) and an injection-recovery
-> characterization exists (below), but the method has far less
-> operational mileage than cuvarbase's BLS/TLS and its thresholds must
-> be calibrated empirically per dataset (see "Statistical caveats").
+> The statistic's algebra has CPU/GPU unit tests, but the module's
+> injection-recovery re-validation after the Sep-2026 correctness fixes
+> (below) is still pending, the method has far less operational mileage
+> than cuvarbase's BLS/TLS, and its thresholds must be calibrated
+> empirically per dataset (see "Statistical caveats").
 
 ## What this is
 
@@ -17,7 +17,7 @@ the observed (irregular, gappy) times over the full baseline, and the
 detection statistic is the noise-whitened correlation
 
 ```
-SNR = Re Σ_k [ Y_k T_k* / P(k) ]  /  sqrt( Σ_k |T_k|² / P(k) )
+S = Re Σ_k [ Y_k T_k* / P(k) ]  /  sqrt( Σ_k |T_k|² / P(k) )
 ```
 
 with the noise power spectrum `P(k)` either supplied or estimated from
@@ -48,79 +48,128 @@ The method family is published in:
   marginalized in closed form. Computed in the whitened frequency
   domain via the Woodbury identity, so the systematics basis costs one
   NFFT per basis vector per lightcurve and K-dimensional algebra per
-  template. Supply `systematics_basis` (e.g. instrument cotrending
+  template (the template-independent K×K algebra is computed once per
+  search). Supply `systematics_basis` (e.g. instrument cotrending
   vectors, or PCA modes of a lightcurve population) and
   `coeff_prior_cov` (+ optional `coeff_prior_mean`), estimated from
-  population fits as in the paper.
+  population fits as in the paper. With `estimate_psd=True` (default)
+  the PSD is estimated from the basis-projected residual `y - V c_ols`,
+  not from `y - V mu`: the latter still contains the realized
+  systematics, whose power the spectral window spreads across the whole
+  band and which then whitens the transit away (confirmed defect, Sep
+  2026; fixed).
 - **`'sequential'`** — the papers' "standard" baseline: least-squares
-  cotrend against the basis in the time domain, then the stationary
-  filter on the residual.
+  cotrend (with an intercept: basis columns and data are centred, so
+  columns need not be zero-mean) against the basis in the time domain,
+  then the stationary filter on the residual.
 
 Not implemented (deliberately): **Detector B** (joint MAP plug-in over
 a depth grid) — the 2020 paper found it comparable to Detector A and
 describes it as exploratory; the closed-form marginalization supersedes
 the plug-in. The papers' phase-correlation epoch pre-estimation trick
-(2020, Appendix A) is also not implemented — epochs are searched on an
-explicit grid.
+(2020, Appendix A) is also not implemented — epochs are searched on a
+grid (automatic or explicit, see "Usage").
 
 **Honesty note on citing the papers:** the published validations cover
 *uniformly sampled* Kepler/TESS data, and the published gains of the
 joint detectors are modest (~2% detection efficiency on Kepler; 0.2%
 and not statistically significant on TESS). The NUFFT /
 irregular-sampling variant in this module appears in no publication —
-its characterization is the cuvarbase injection-recovery study below.
-Do not cite the papers' numbers as this module's performance.
+its characterization is the cuvarbase injection-recovery study
+(`scripts/nufft_lrt_validation.py`; see "Validation status"). Do not
+cite the papers' numbers as this module's performance.
 
 ## When is this the right tool?
 
-Decision guide, based on the measured injection-recovery study
-(`analysis/nufft-lrt-audit-jul2026.md`, validation section, and
-`benchmarks/results/nufft_lrt_validation_jul2026/`):
+What the Sep-2026 injection-recovery campaign (run *before* the fixes
+below, with an explicit epoch grid, epoch-relative times and a zero-mean
+basis, so it exercised none of the defects except the Detector A one)
+showed, at 60 injections per depth on 600-point ground-based sampling
+over 90 d:
+
+- The whitened NUFFT matched filter **matched BLS's completeness** in
+  white noise and in OU red noise at 1x and 3x the white level
+  (differences ≤ 0.08) and showed **no measurable gain over a flat-PSD
+  matched filter**; PSD whitening does not stabilize the false-alarm
+  threshold (null p95 8.4 → 12.4 with red noise, as for BLS).
+- With a **shared-systematics basis** the sequential cotrend + matched
+  filter recovered 0.57/0.95/1.00 of transits at depths 0.008/0.016/0.032
+  where BLS and TLS without a basis recovered 0.00/0.05/0.15 and
+  0.00/0.00/0.02. **Detector A results are pending re-measurement** after
+  the PSD fix (the campaign's Detector A arm measured the PSD defect,
+  not the detector; with the fix it matches — but does not beat — the
+  sequential baseline in the verifier's runs).
+
+So, based on the evidence in hand:
 
 **Reach for NUFFT-LRT when all of these hold:**
 
-1. **Your noise is genuinely correlated** on timescales comparable to
-   transit durations (stellar activity, unmodeled instrument drift) —
-   the whitening is the entire advantage; in white noise it can only
-   tie BLS at best (and in practice pays a small penalty for
-   estimating the PSD from the data).
+1. **You have a systematics basis** (CBVs, PCA modes of a population)
+   and want the cotrend and the search in one statistic — this is where
+   the campaign showed a gain over basis-free BLS/TLS, and it comes from
+   the basis, not from the whitening.
 2. **You are scoring a bounded set of candidates**, not running a blind
    survey: the cost is one adjoint NFFT *per template*
-   (period × duration × epoch), so ~10³–10⁴ templates is comfortable
-   and survey-scale grids (10⁶+) are not. Typical fits: vetting/
-   re-ranking BLS or TLS candidates under a realistic noise model,
-   or focused searches around known ephemerides.
+   (period × duration × epoch; 0.2–0.4 ms each on an A40 after the
+   per-run buffer reuse), so ~10³–10⁵ templates is comfortable and
+   survey-scale grids (10⁶+) are not. Typical fits: vetting/re-ranking
+   BLS or TLS candidates under a realistic noise model, or focused
+   searches around known ephemerides. Mind the period step: a box of
+   duration `d` drifts by `T dP / P` over the baseline `T` when the
+   trial period is off by `dP`, so the grid needs `dP <~ d P / (2 T)`
+   or an on-grid harmonic alias (P/2, 2P) beats the off-grid true
+   period.
 3. **You can calibrate thresholds empirically** (see caveats).
 
 **Prefer BLS** for blind box searches at scale (it is thousands of
-times cheaper per trial and its white-noise statistic is
-well-understood), **TLS** when limb-darkened template fidelity matters
-for small planets. (Lomb-Scargle is not a transit competitor at all — a
-short-duty-cycle box leaves only a small fraction of its power in the
-sinusoidal fundamental, which is why box searches exist.)
+times cheaper per trial, its white-noise statistic is well-understood,
+and in white or OU red noise it was as complete as this filter), **TLS**
+when limb-darkened template fidelity matters for small planets.
+(Lomb-Scargle is not a transit competitor at all — a short-duty-cycle
+box leaves only a small fraction of its power in the sinusoidal
+fundamental, which is why box searches exist.)
 
-**Use `detector='marginal'`** when you additionally have a shared
-systematics basis (CBVs, PCA modes of a population) whose overfitting
-during pre-detrending you want to avoid — this is the regime the 2020
-paper targets.
+## Statistical caveats
 
-## Statistical caveats (measured)
-
-- **The "SNR" is not N(0,1).** With the PSD estimated from the data,
-  the null distribution of the statistic is over-dispersed
-  (measured std ≈ 1.7 on white noise with the default settings — the
-  estimated-PSD modes are correlated and shared between numerator and
-  normalization). **Never apply a textbook SNR≳7 threshold; calibrate
-  the detection threshold on signal-free or scrambled data**, as the
-  validation harness does (null-percentile calibration).
+- **The statistic is not N(0, 1) and is not an SNR.** Under irregular
+  sampling the NFFT modes are not orthogonal, so the frequency-diagonal
+  whitened correlation is over-dispersed *even with the true noise
+  PSD*: its null standard deviation is 1.8-2.7 for ground-based sampling
+  at the default `nf = 2·len(t)` (about 1.4 for uniform sampling) and
+  grows with `nf` (28 → 51 at a fixed resolved template for `nf` = n →
+  8n). This is intrinsic to the statistic (an exact float64 DFT
+  reproduces it), not an NFFT accuracy or PSD-estimation artefact.
+  **Never apply a textbook SNR ≳ 7 threshold; calibrate the detection
+  threshold per (sampling, `nf`, PSD estimator) configuration on
+  signal-free or scrambled data**, as the validation harness does
+  (null-percentile calibration). Raising `nf` inflates the raw value
+  without adding information — pick `nf` once and calibrate at it.
 - **Self-whitening**: with `estimate_psd=True`, a strong transit
   inflates the PSD estimate at its own harmonic frequencies and
-  partially suppresses itself. Provide `psd=` from a transit-free
+  partially suppresses itself (24-28% of the statistic at threshold in
+  the audit's white-noise runs). Provide `psd=` from a transit-free
   noise model when you have one.
+- **PSD convention** (for `psd=`): `psd[k]` is the expected squared
+  modulus of the noise's *unnormalized* adjoint NFFT at mode `k`,
+  `P(k) = E|Σ_j s_j exp(2πi f_k t_j)|²`, `f_k = k/(max t − min t)`,
+  `k = 0..nf−1`. White noise of variance σ² per point has
+  `P(k) = n σ²` at every `k`. `psd = np.ones(nf)` therefore returns a
+  statistic in *data units*. Bins are floored at `eps_floor` (default
+  1e-3) times the positive median, for supplied and estimated PSDs
+  alike.
+- **`dy` is not used** by any detector (a `UserWarning` is emitted if it
+  is passed); the noise model is the PSD.
+- **Detector A's prior is effectively wider than you specify.** The Gram
+  matrix `G_ij = <v_i, v_j>_W` is accumulated over the `nf` (default
+  `2n`) non-orthogonal NFFT modes, which overcounts the corresponding
+  time-domain inner products by ~2.2–2.4× for the samplings measured in
+  the Sep-2026 audit, so `coeff_prior_cov` behaves as though it were
+  about that much wider. The effect on the statistic is small, but
+  calibrate the prior and the detection threshold on the same footing.
 - **Frequency resolution**: the default `nf = 2·len(t)` gives a
   maximum template frequency `nf / T_span`. Resolving a transit of
-  duration `d` wants `nf ≳ a few × T_span / d` — raise `nf` for short
-  transits on long sparse baselines.
+  duration `d` wants `nf ≳ a few × T_span / d` — but see the first
+  caveat before raising `nf`.
 
 ## Usage
 
@@ -128,45 +177,89 @@ paper targets.
 import numpy as np
 from cuvarbase.nufft_lrt import NUFFTLRTAsyncProcess
 
-proc = NUFFTLRTAsyncProcess()
+proc = NUFFTLRTAsyncProcess()      # sigma=4: full-band-accurate NFFT
 
-# 1) stationary whitened matched filter over a small grid
-periods = np.linspace(1.0, 10.0, 100)
-durations = np.linspace(0.1, 0.5, 5)
-snr = proc.run(t, y, periods, durations=durations)   # (100, 5)
+# Times may be absolute (BJD): floor(min(t)) is subtracted in float64
+# internally; epochs in and out are in YOUR time scale.
 
-# 2) with an epoch axis (epoch grid should scale ~ P/duration)
+# 1) focused period search with the automatic epoch grid (epochs=None):
+#    per (period, duration) cell, clip(ceil(2 P / duration), 8, 96)
+#    epochs are scanned and the max over epochs is returned together
+#    with the epoch that attains it -> two (nP, nD) arrays. The period
+#    step follows the drift criterion dP <~ dur * P / (2 T).
+durations = np.array([0.12, 0.25])
+T = t.max() - t.min()
+periods = np.arange(5.0, 5.6, durations.min() * 5.0 / (2 * T))
+snr, best_epoch = proc.run(t, y, periods, durations=durations)
+i, j = np.unravel_index(np.argmax(snr), snr.shape)
+print(periods[i], durations[j], best_epoch[i, j])
+# cost: ~2P/duration transforms per cell (max_epochs=96 caps it; raise
+# it for long periods, where P/96 exceeds the duration)
+
+# 2) explicit epochs -> one (nP, nD, nE) array, no reduction
 snr = proc.run(t, y, np.array([P]), durations=np.array([d]),
                epochs=np.linspace(0, P, 40, endpoint=False))
 
 # 3) Detector A (joint marginalized) with a systematics basis V (n, K)
 #    and a coefficient prior estimated from population fits
-snr = proc.run(t, y, periods, durations=durations,
-               detector='marginal', systematics_basis=V,
-               coeff_prior_mean=mu_c, coeff_prior_cov=cov_c)
+snr, best_epoch = proc.run(t, y, periods, durations=durations,
+                           detector='marginal', systematics_basis=V,
+                           coeff_prior_mean=mu_c, coeff_prior_cov=cov_c)
 
-# 4) known noise PSD (recommended when available)
-snr = proc.run(t, y, periods, durations=durations,
-               estimate_psd=False, psd=my_psd, nf=len(my_psd))
+# 4) known noise PSD (recommended when available; convention above)
+snr, best_epoch = proc.run(t, y, periods, durations=durations,
+                           estimate_psd=False, psd=my_psd, nf=len(my_psd))
 ```
 
-Threshold calibration sketch (do this for your dataset):
+Threshold calibration sketch (do this for your dataset, at the `nf`,
+sampling and PSD estimator you will search with):
 
 ```python
 null_maxima = []
 for y_null in signal_free_or_scrambled_lightcurves:
-    null_maxima.append(proc.run(t, y_null, periods, ...).max())
+    snr, _ = proc.run(t, y_null, periods, durations=durations)
+    null_maxima.append(snr.max())
 threshold = np.percentile(null_maxima, 95)   # 5% per-search FAR
 ```
 
-## Validation summary (July 2026)
+## Sep-2026 correctness fixes (all result-changing)
 
-<!-- VALIDATION_RESULTS -->
+1. **BJD-scale times**: `run()` and `compute_nufft` cast times to
+   float32 before folding/gridding; absolute BJD input returned a
+   different statistic (corr ~0.5, wrong argmax). Times are now
+   epoch-subtracted in float64 first.
+2. **`epochs=None`** evaluated a single phase-0 template per cell (0/12
+   random-epoch transits recovered) while being documented as a period
+   search. It is now an automatic epoch grid with a max reduction (see
+   Usage); the shipped example and this file used to show that
+   non-search as a detection.
+3. **`detector='sequential'`** fitted the basis without an intercept: a
+   1% column mean on relative flux dropped the statistic at the true
+   period from ~25 to ~5. The fit is now centred.
+4. **`detector='marginal'`** estimated the PSD from `y − V mu` (see
+   above): SNR at the true template 2.3 vs 8.9 for the sequential
+   baseline; now from the basis-projected residual (8.9 vs 8.9).
+5. **NFFT upper half band**: the default `sigma = 2` left modes
+   `k ≥ nf/2` aliased at O(1) (in double precision too, and
+   non-deterministic in float32); `sigma = 4` (the library's NFFT
+   default) makes every returned mode accurate (~4e-4 relative in
+   float32, ~1e-6 in float64 vs the exact adjoint DFT).
+6. Also: one NFFT buffer set per `run()` instead of one per template
+   (the per-template allocation was ~90% of the campaign's GPU time),
+   the NFFT reuse path is zeroed and synchronized, user PSDs are floored
+   and length-checked, singular coefficient priors give the correct
+   pinned-to-mean limit (a zero variance used to become a *flat* prior)
+   and non-PSD priors raise.
 
-Full protocol, raw JSON, and the audit:
-`scripts/nufft_lrt_validation.py`,
-`benchmarks/results/nufft_lrt_validation_jul2026/`,
-`analysis/nufft-lrt-audit-jul2026.md`.
+## Validation status
+
+Re-validation of the fixed code (all four noise configurations and all
+arms, plus a BJD-offset configuration, an `epochs=None` arm and a
+non-zero-mean basis, at ≥ 200 injections per depth) is pending; the
+pre-fix campaign JSON is archived under `analysis/audit-sep2026/campaign/`
+and its reading is summarized in "When is this the right tool?". Full
+protocol: `scripts/nufft_lrt_validation.py`; audit:
+`analysis/audit-sep2026/ALGORITHM_AUDIT.md` (section 6).
 
 ## Citation
 

@@ -177,8 +177,96 @@ class TestDetectorAlgebra:
         V = np.stack([t - t.mean(), (t - t.mean()) ** 2], axis=1)
         y = 1.0 + 0.01 * rng.randn(n) + V @ np.array([0.3, -0.02])
         r = _sequential_detrend(t, y, V)
-        # residual orthogonal to the basis
-        np.testing.assert_allclose(V.T @ r, 0.0, atol=1e-8 * n)
+        # the fit has an intercept: the demeaned residual is orthogonal
+        # to the CENTRED basis (the second column has mean var(t) != 0),
+        # and the residual keeps the mean of y
+        Vc = V - V.mean(axis=0)
+        np.testing.assert_allclose(Vc.T @ (r - r.mean()), 0.0,
+                                   atol=1e-8 * n)
+        np.testing.assert_allclose(r.mean(), y.mean(), rtol=1e-10)
+
+    def test_sequential_detrend_nonzero_mean_column(self):
+        # audit Sep 2026 (lrt-sequential-intercept): OLS without an
+        # intercept on relative flux (mean 1) with a basis column of
+        # mean 0.01 and unit std absorbs the mean flux into the
+        # coefficient and leaves a residual systematic of amplitude
+        # ybar * m_v / s_v = 0.01 -- 10x this noise. With the intercept
+        # the residual is the noise (up to the O(sigma/sqrt n) fit error).
+        import numpy as np
+        from cuvarbase.nufft_lrt import _sequential_detrend
+
+        rng = np.random.RandomState(7)
+        n, sigma = 2000, 1e-3
+        t = np.sort(rng.rand(n)) * 90.0
+        v = np.sin(2 * np.pi * t / 30.0)
+        v = (v - v.mean()) / v.std() + 0.01          # mean 0.01, std 1
+        noise = sigma * rng.randn(n)
+        y = 1.0 + 0.004 * v + noise
+        r = _sequential_detrend(t, y, v[:, None])
+        leftover = (r - r.mean()) - (noise - noise.mean())
+        assert np.std(leftover) < 0.1 * sigma        # was ~10 sigma
+        assert np.std(r - r.mean()) < 1.2 * sigma
+
+    def test_prior_response_matrix_singular_prior_limit(self):
+        # audit Sep 2026 (ids 122/156): pinv(prior_cov) turned a zero
+        # prior variance into an improper FLAT prior (base tree:
+        # diag(1, 0) gave -1.5934 == diag(1, 1e12), vs -1.5999 for
+        # diag(1, 1e-12)). The push-through form C (I + G C)^-1 gives
+        # the correct "pinned to the prior mean" limit, equal to the
+        # 1e-12-variance result, and equals inv(inv(C) + G) for a
+        # positive-definite prior.
+        import numpy as np
+        from cuvarbase.nufft_lrt import (_marginal_statistic,
+                                         _prior_response_matrix)
+
+        rng = np.random.RandomState(7)
+        nf, K = 24, 2
+        Y = rng.randn(nf) + 1j * rng.randn(nf)
+        T = rng.randn(nf) + 1j * rng.randn(nf)
+        V_ks = [rng.randn(nf) + 1j * rng.randn(nf) for _ in range(K)]
+        psd = 0.5 + rng.rand(nf)
+        w = np.ones(nf)
+        pinned = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 0.0]))
+        tiny = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 1e-12]))
+        flat = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 1e12]))
+        np.testing.assert_allclose(pinned, tiny, rtol=1e-8)
+        assert abs(pinned - flat) > 1e-3 * abs(flat)
+
+        A = rng.randn(K, K)
+        C = A @ A.T + 0.5 * np.eye(K)
+        G = rng.randn(K, K)
+        G = G @ G.T + np.eye(K)
+        M = _prior_response_matrix(G, C)
+        np.testing.assert_allclose(M, np.linalg.inv(np.linalg.inv(C) + G),
+                                   rtol=1e-10, atol=1e-12)
+
+    def test_prior_response_matrix_rejects_bad_priors(self):
+        import numpy as np
+        import pytest
+        from cuvarbase.nufft_lrt import _prior_response_matrix
+
+        G = np.eye(2)
+        with pytest.raises(ValueError, match="positive semidefinite"):
+            _prior_response_matrix(G, np.diag([1.0, -1.0]))
+        with pytest.raises(ValueError, match="symmetric"):
+            _prior_response_matrix(G, np.array([[1.0, 0.5], [0.0, 1.0]]))
+        with pytest.raises(ValueError, match="\\(K, K\\)"):
+            _prior_response_matrix(G, np.eye(3))
+        with pytest.raises(ValueError, match="finite"):
+            _prior_response_matrix(G, np.array([[1.0, 0.0], [0.0, np.nan]]))
+
+    def test_epoch_grid(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import epoch_grid
+
+        g = epoch_grid(5.3, 0.22)                     # ceil(2*5.3/0.22)=49
+        assert len(g) == 49
+        assert g[0] == 0.0
+        np.testing.assert_allclose(np.diff(g), 5.3 / 49)
+        assert len(epoch_grid(0.5, 0.3)) == 8          # min clamp
+        assert len(epoch_grid(18.0, 0.12)) == 96       # max clamp
+        assert len(epoch_grid(18.0, 0.12, max_epochs=300)) == 300
+        assert len(epoch_grid(5.3, 0.22, oversample=3.0)) == 73
 
 
 class TestPsdSmoothing:

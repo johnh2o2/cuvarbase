@@ -53,7 +53,11 @@ def nfft_adjoint_async(memory, functions,
     transfer_to_device: bool, optional, (default: True)
         If the data is already on the gpu, set as False
     transfer_to_host: bool, optional, (default: True)
-        If False, will not transfer the resulting nfft to CPU memory
+        If False, will not transfer the resulting nfft to CPU memory.
+        If True, the stream is synchronized before returning, so the
+        returned host buffer is complete (before Sep 2026 the pinned
+        buffer was returned while the device-to-host copy was still in
+        flight: immediate reads were stale on reused memory).
     precomp_psi: bool, optional, (default: True)
         Only relevant if ``fast`` is True. Will precompute values for the
         fast gridding procedure.
@@ -64,7 +68,17 @@ def nfft_adjoint_async(memory, functions,
     Returns
     -------
     ghat_cpu: ``np.array``
-        The resulting NFFT
+        The resulting NFFT (``memory.ghat_c``, the memory's pinned host
+        buffer -- copy it out before reusing the memory)
+
+    Notes
+    -----
+    The gridding kernels accumulate with atomic adds, so ``memory.ghat_g``
+    is zeroed here on every call; a memory object can be reused across
+    calls (before Sep 2026 a second call on the same memory summed onto
+    the previous grid). With ``transfer_to_host=False`` nothing is
+    synchronized: call ``memory.stream.synchronize()`` (or
+    ``NFFTAsyncProcess.finish()``) before reading ``ghat_g``.
     """
 
     precompute_psi, fast_gaussian_grid, slow_gaussian_grid, \
@@ -84,6 +98,12 @@ def nfft_adjoint_async(memory, functions,
     # transfer data -> gpu
     if transfer_to_device:
         memory.transfer_data_to_gpu()
+
+    # The gridding kernels accumulate into ghat_g with atomic adds: zero
+    # it on every call so reused memory does not sum onto the previous
+    # transform (only fresh gpuarray.zeros buffers were ever clean).
+    if use_grid is None:
+        memory.ghat_g.fill(memory.complex_type(0), stream=stream)
 
     # smooth data onto uniform grid
     if fast_grid:
@@ -161,9 +181,14 @@ def nfft_adjoint_async(memory, functions,
              memory.real_type(minimum_frequency))
     normalize.prepared_async_call(*args)
 
-    # Transfer result!
+    # Transfer result and wait for it: the caller gets the pinned host
+    # buffer, which is only valid once the async D2H copy has landed.
     if transfer_to_host:
         memory.transfer_nfft_to_cpu()
+        if stream is not None:
+            stream.synchronize()
+        else:
+            cuda.Context.synchronize()
 
     return memory.ghat_c
 
@@ -174,15 +199,20 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
     Parameters
     ----------
-    sigma: float, optional (default: 2)
-        Size of NFFT grid will be NFFT_SIZE * sigma
+    sigma: float, optional (default: 4)
+        Size of NFFT grid will be NFFT_SIZE * sigma. The transform
+        returns the one-sided modes ``k = 0..nf-1`` on a grid of
+        ``sigma * nf`` points, so the effective oversampling at the top
+        of the band is ``sigma / 2``: ``sigma >= 4`` is required for
+        full-band accuracy in this layout (with ``sigma = 2`` the modes
+        ``k >= nf/2`` are aliased at O(1), in double precision too).
     m: int, optional (default: 8)
-        Maximum radius for grid contributions (by default,
-        this value will automatically be set based on a specified
-        error tolerance)
-    autoset_m: bool, optional (default: True)
+        Maximum radius for grid contributions, used when
+        ``autoset_m`` is False.
+    autoset_m: bool, optional (default: False)
         Automatically set the ``m`` parameter based on the
-        error tolerance given by the ``m_tol`` parameter
+        error tolerance given by the ``tol`` parameter (see
+        :meth:`estimate_m`)
     tol: float, optional (default: 1E-8)
         Error tolerance for the NFFT (used to auto set ``m``)
     block_size: int, optional (default: 256)
@@ -284,7 +314,13 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         (A5000-validated, Jul 2026: max error is *below* the bound for
         every ``m <= 14`` on the reference configuration, bottoming out
         near ``1e-11`` from FFT roundoff amplified by the Gaussian
-        deconvolution). An earlier revision of this docstring described
+        deconvolution). That figure assumes the gridding kernel rounds
+        the grid coordinate in double: while ``cunfft.cu`` used
+        ``floorf()`` on that coordinate (the case before the Sep-2026
+        NFFT fixes) the double-precision error floor was ~1e-2 for
+        times far from the origin, and the ``~1e-10`` level was reached
+        only when the coordinates were exactly representable in
+        float32. An earlier revision of this docstring described
         a ``~1e-3``, m-independent error floor as inherent; that floor
         was a kernel defect -- a float32 ``PI`` literal in the phase
         factors of ``nfft_shift``/``normalize`` (error
@@ -429,13 +465,23 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             * ``t``: observation times
             * ``y``: observations
             * ``nf``: int, size of NFFT
-        memory:
+        memory: list of ``NFFTMemory``, optional
+            Preallocated memory (from :meth:`allocate`), one per
+            dataset; ``data`` is ignored when given. The memory may be
+            reused across calls: the grid is zeroed on every transform.
         **kwargs
+            Passed to :func:`nfft_adjoint_async` (``transfer_to_host``,
+            ``transfer_to_device``, ``fast_grid``, ...)
 
         Returns
         -------
         powers: list of np.ndarrays
-            List of adjoint NFFTs
+            List of adjoint NFFTs. Each is the memory's pinned host
+            buffer ``ghat_c``; with the default ``transfer_to_host=True``
+            the stream has been synchronized and the buffer is complete
+            on return (copy it before reusing the memory). With
+            ``transfer_to_host=False`` call :meth:`finish` (or
+            ``memory.stream.synchronize()``) before reading ``ghat_g``.
 
         """
         if not hasattr(self, 'prepared_functions') or \
