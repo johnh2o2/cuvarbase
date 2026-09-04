@@ -1840,11 +1840,16 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     w = np.power(dy, -2)
     w /= np.sum(w.astype(np.float32))
 
-    ybar = np.dot(w, np.asarray(y).astype(np.float32))
-    YY = np.dot(w, np.power(np.asarray(y).astype(np.float32) - ybar, 2))
+    # Centre in float64 before the float32 cast (defect 8 of the Sep
+    # 2026 audit: float32 sums of raw mag-12 fluxes minus ybar * W lost
+    # 1e-3..1e-2 of the power). ybar of the centred float32 flux is
+    # residual roundoff (~1e-8), kept for parity with the kernels.
+    yc, _ = _center_flux_float64(y, dy)
+    ybar = np.dot(w, yc)
+    YY = np.dot(w, np.power(yc - ybar, 2))
 
     W = np.sum(w[mask])
-    YW = np.dot(w[mask], np.asarray(y).astype(np.float32)[mask]) - ybar * W
+    YW = np.dot(w[mask], yc[mask]) - ybar * W
 
     if YW > 0 and ignore_negative_delta_sols:
         return 0
@@ -1960,6 +1965,26 @@ def _broadcast_q_bound(value, nfreqs, default, name):
     return arr
 
 
+def _center_flux_float64(y, dy):
+    """Weighted-mean-subtract ``y`` in float64 and return the centred
+    flux as float32 (plus the float64 normalized weights).
+
+    The sparse kernels and :func:`single_bls` accumulate float32 sums
+    of ``w * y``; with raw fluxes of magnitude ~12 (or normalized flux
+    ~1) those partial sums carry the mean, and subtracting
+    ``ybar * W`` afterwards cancels catastrophically: 1e-3..1e-2
+    relative power errors on mag-12 data and powers > 1 when one point
+    is ~1e3x more precise than the rest (Sep 2026 audit, defect 8).
+    Centring in float64 BEFORE the float32 cast (as the binned path
+    always did) leaves ~1e-6.
+    """
+    y64 = np.asarray(y, dtype=np.float64)
+    w64 = np.power(np.asarray(dy, dtype=np.float64), -2)
+    w64 /= np.sum(w64)
+    ybar = float(np.einsum('i,i->', w64, y64))
+    return (y64 - ybar).astype(np.float32), w64
+
+
 def _validate_q_bounds(qmins, qmaxes):
     """Reject transit-duration bounds that would silently produce an
     all-zero periodogram (every candidate box rejected)."""
@@ -2019,9 +2044,15 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     """
     _validate_convention(convention)
 
+    # Original flux kept for convert_bls_power's chi2_0
+    y_orig, dy_orig = y, dy
+
     t, epoch = subtract_epoch(t)
     t = t.astype(np.float32)
-    y = np.asarray(y).astype(np.float32)
+    # Centre in float64 BEFORE the float32 cast (see
+    # _center_flux_float64): the float32 pair scan below otherwise
+    # loses 1e-3..1e-2 of the power on mag-scale fluxes.
+    y, _ = _center_flux_float64(y, dy)
     dy = np.asarray(dy).astype(np.float32)
     # Keep a float64 copy for the phase re-referencing below: the
     # original-timescale conversion (phi + epoch*freq) % 1 must use the
@@ -2047,6 +2078,8 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     best_q = np.zeros(nfreqs, dtype=np.float32)
     best_phi = np.zeros(nfreqs, dtype=np.float32)
 
+    # residual float32 mean of the centred flux (~1e-8); kept so the
+    # scan is exactly the kernel's arithmetic
     ybar = float(np.dot(w, y))
     YY = float(np.dot(w, np.power(y - ybar, 2)))
 
@@ -2138,7 +2171,8 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     solutions = [(q, (phi + (epoch * freq)) % 1.0)
                  for (q, phi), freq in zip(solutions, freqs64)]
 
-    return (convert_bls_power(bls_powers, y, dy, convention=convention),
+    return (convert_bls_power(bls_powers, y_orig, dy_orig,
+                              convention=convention),
             solutions)
 
 
@@ -2234,10 +2268,17 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     """
     _validate_convention(convention)
 
+    # Original flux kept for convert_bls_power's chi2_0
+    y_orig, dy_orig = y, dy
+
     # Convert to numpy arrays (epoch-subtract before the float32 cast)
     t, epoch = subtract_epoch(t)
     t = t.astype(np.float32)
-    y = np.asarray(y).astype(np.float32)
+    # Centre in float64 BEFORE the float32 cast: the kernel's float32
+    # prefix sums of w*y otherwise carry the mean flux and the
+    # `YW -= ybar * W` correction cancels catastrophically (Sep 2026
+    # audit, defect 8; the in-kernel ybar is now ~1e-8 and harmless).
+    y, _ = _center_flux_float64(y, dy)
     dy = np.asarray(dy).astype(np.float32)
     # float64 copy for the phase re-referencing below (see
     # sparse_bls_cpu: the float32-cast frequency would put the
@@ -2321,7 +2362,8 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     solutions = [(q, (phi + (epoch * freq)) % 1.0)
                  for (q, phi), freq in zip(solutions, freqs64)]
 
-    return (convert_bls_power(bls_powers, y, dy, convention=convention),
+    return (convert_bls_power(bls_powers, y_orig, dy_orig,
+                              convention=convention),
             solutions)
 
 

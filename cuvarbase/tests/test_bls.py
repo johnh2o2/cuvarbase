@@ -556,9 +556,15 @@ class TestBLS(object):
     @staticmethod
     def _brute_force_bls(t, y, dy, freq, ignore_negative_delta_sols=False,
                          qmin=0.0, qmax=0.5):
-        """Exhaustive BLS over all observation-pair transit boundaries."""
+        """Exhaustive BLS over all observation-pair transit boundaries
+        (float32 fold like the kernels; flux centred in float64 and
+        sums in float64 -- the sparse paths centre in float64 since
+        defect 8 of the Sep 2026 audit)."""
         t = np.asarray(t, dtype=np.float32)
-        y = np.asarray(y, dtype=np.float32)
+        y64 = np.asarray(y, dtype=np.float64)
+        w64 = np.power(np.asarray(dy, dtype=np.float64), -2)
+        w64 /= w64.sum()
+        y = (y64 - np.dot(w64, y64)).astype(np.float32)
         dy = np.asarray(dy, dtype=np.float32)
 
         ndata = len(t)
@@ -908,12 +914,21 @@ class TestBLS(object):
         assert sols is not None
         assert len(sols) == len(freqs)
 
-        best_freq = freqs[np.argmax(powers)]
+        # The sparse statistic is piecewise constant in frequency (the
+        # power only changes when a point crosses a box edge): with 50
+        # points the maximum is a plateau of ~20 grid frequencies
+        # spanning +-7 q/T around the injected frequency, and which of
+        # them argmax returns is a tie-break. Before the float64
+        # centring (defect 8) float32 noise broke the tie by luck within
+        # 2 q/T. Require the found peak to lie on the float64
+        # reference's maximum plateau, and that plateau to cover the
+        # injected frequency to within ~q/T (one phase-smear width).
+        qv = q_transit(freqs)
+        ref = _sparse_reference(t, y, dy, freqs, 0.5 * qv, 2.0 * qv)
+        plateau = ref >= ref.max() * (1 - 1e-5)
+        assert plateau[int(np.argmax(powers))]
         T = max(t) - min(t)
-        # the peak-frequency uncertainty is ~q/T (one phase-smear
-        # width); with only 50 points the peak can statistically land
-        # a couple of widths off, so allow 2 units
-        assert np.abs(best_freq - freq_true) < 2 * q / T
+        assert np.min(np.abs(freqs[plateau] - freq_true)) < 2 * q / T
 
     @pytest.mark.parametrize("ndata", [50, 100])
     def test_eebls_transit_standard_returns_3(self, ndata):
@@ -2292,3 +2307,213 @@ class TestPerFrequencyQBounds(object):
         # the binned search with a solution everywhere is still there
         fr, pg, sg = eebls_transit_gpu(t, y, dy, **kw)
         assert len(sg) == len(fr) and all(s_ is not None for s_ in sg)
+
+
+def _sparse_reference(t, y, dy, freqs, qmin=0.0, qmax=0.5):
+    """Exact float64 sparse-BLS reference (Panahi & Zucker 2021: every
+    cyclic run of phase-sorted points), with the kernels' float32 fold
+    and box definition (phi0 = first in-transit phase, q to the egress
+    midpoint) and weight guards -- the reference of the Sep 2026 audit
+    (repro/local/sparse-batch/sparse_exp.py). Returns 'chi2ratio'
+    powers."""
+    from ..utils import subtract_epoch
+    t64, epoch = subtract_epoch(np.asarray(t, dtype=np.float64))
+    y64 = np.asarray(y, dtype=np.float64)
+    w = np.asarray(dy, dtype=np.float64) ** -2
+    w /= w.sum()
+    x = y64 - np.dot(w, y64)
+    YY = np.dot(w, x ** 2)
+    N = len(t64)
+    out = np.zeros(len(freqs))
+    qmin = np.broadcast_to(np.asarray(qmin, float), (len(freqs),))
+    qmax = np.broadcast_to(np.asarray(qmax, float), (len(freqs),))
+    i = np.arange(N)[:, None]
+    L = np.arange(1, N)[None, :]
+    j = i + L
+    for k, f in enumerate(freqs):
+        phi = (np.float32(t64) * np.float32(f)) % np.float32(1.0)
+        phi = phi.astype(np.float64)
+        o = np.argsort(phi, kind='stable')
+        ps, ws, xs = phi[o], w[o], x[o]
+        cw = np.concatenate([[0.0], np.cumsum(np.concatenate([ws, ws]))])
+        cxw = np.concatenate([[0.0], np.cumsum(np.concatenate(
+            [ws * xs, ws * xs]))])
+        W = cw[j] - cw[i]
+        S = cxw[j] - cxw[i]
+        ps2 = np.concatenate([ps, ps + 1.0])
+        last = ps2[j - 1]
+        nxt = ps2[np.minimum(j, 2 * N - 1)]
+        q = 0.5 * (last + nxt) - ps[:, None]
+        valid = (q > 0) & (q >= qmin[k]) & (q <= qmax[k]) \
+            & (W > 1e-9) & (W < 1.0 - 1e-4)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            P = np.where(valid, S * S / (W * (1 - W)) / YY, 0.0)
+        out[k] = P.max()
+    return out
+
+
+def _untied_frequencies(t, freqs):
+    """Mask of the frequencies at which the kernels' float32 fold gives
+    no two observations the same phase. At a tie the candidate runs
+    depend on the sort order (bitonic vs argsort vs the stable sort of
+    the reference) and the reported egress midpoint collapses onto the
+    tied point (audit ids 65/74), so exact comparisons are only
+    meaningful away from ties (~20-25 % of a 365-day mag-12 grid at
+    f ~ 1.4 has one)."""
+    from ..utils import subtract_epoch
+    t64, _ = subtract_epoch(np.asarray(t, dtype=np.float64))
+    t32 = t64.astype(np.float32)
+    mask = np.ones(len(freqs), dtype=bool)
+    for k, f in enumerate(freqs):
+        phi = (t32 * np.float32(f)) % np.float32(1.0)
+        mask[k] = len(np.unique(phi)) == len(phi)
+    return mask
+
+
+def _same_peak(p, ref, rtol=1e-4):
+    """The reference power at the tested periodogram's argmax is the
+    reference maximum (plateaus of equal power, e.g. 4 adjacent grid
+    frequencies with the same in-transit set, break argmax ties by
+    float32 rounding order)."""
+    return ref[int(np.argmax(p))] >= ref.max() * (1 - rtol)
+
+
+class TestSparseCentering(object):
+    """Defect 8 of the Sep 2026 audit (``bls-sparse-uncentered``): the
+    sparse kernels (and ``sparse_bls_cpu`` / ``single_bls``) accumulated
+    float32 sums of raw ``w * y`` and subtracted ``ybar * W`` afterwards,
+    so on mag-12 fluxes (the ``eebls_transit`` default for ndata < 500)
+    the power was off by up to 1e-2 relative (argmax moved in 8/20
+    seeds) and one point ~1e3x more precise than the rest gave powers
+    up to 52 (> 1) at every frequency. The wrappers now centre in
+    float64 before the float32 cast; the audit measured ~1e-6 after
+    the fix."""
+
+    @staticmethod
+    def _mag12(N=200, seed=0, base=365.0, ybar=12.0, depth=5e-3,
+               sig=5e-3, f=1.37, q=0.02):
+        r = np.random.RandomState(seed)
+        t = np.sort(base * r.rand(N))
+        ph = (t * f) % 1
+        y = ybar - depth * (ph < q) + sig * r.randn(N)
+        dy = sig * (0.7 + 0.6 * r.rand(N))
+        return t, y, dy
+
+    @staticmethod
+    def _grid():
+        return 1.37 + (0.02 / 365 / 4) * np.arange(-100, 101)
+
+    # ---- CPU ----
+
+    def test_sparse_bls_cpu_mag12_matches_float64_reference(self):
+        # before the fix: max rel 1.1e-2 (audit), 67-78 % of the grid
+        # off by > 1e-3
+        freqs = self._grid()
+        qv = q_transit(freqs)
+        for seed in (0, 1):
+            t, y, dy = self._mag12(seed=seed)
+            ref = _sparse_reference(t, y, dy, freqs, 0.5 * qv, 2.0 * qv)
+            p, _ = sparse_bls_cpu(t, y, dy, freqs, qmin=0.5 * qv,
+                                  qmax=2.0 * qv)
+            ok = _untied_frequencies(t, freqs)
+            assert ok.mean() > 0.7
+            assert_allclose(p[ok], ref[ok], rtol=1e-4, atol=1e-7)
+            assert _same_peak(p, ref)
+
+    def test_sparse_bls_cpu_offset_invariance(self):
+        freqs = self._grid()[::4]
+        t, y, dy = self._mag12(seed=2)
+        p0, s0 = sparse_bls_cpu(t, y, dy, freqs)
+        p20, s20 = sparse_bls_cpu(t, y + 20., dy, freqs)
+        assert_allclose(p20, p0, rtol=1e-5, atol=1e-8)
+        assert [a[0] for a in s20] == [a[0] for a in s0]
+
+    def test_single_bls_offset_invariance_and_reference(self):
+        t, y, dy = self._mag12(seed=3)
+        freqs = self._grid()[::8]
+        ref = _sparse_reference(t, y, dy, freqs)
+        _, sols = sparse_bls_cpu(t, y, dy, freqs)
+        ok = _untied_frequencies(t, freqs)
+        assert ok.sum() >= 15
+        for k, f in enumerate(freqs):
+            if not ok[k]:
+                continue
+            q, phi = sols[k]
+            p = single_bls(t, y, dy, f, q, phi)
+            p20 = single_bls(t, y + 20., dy, f, q, phi)
+            assert abs(p20 - p) < 1e-5 * max(p, 1e-3)
+            # the solution reproduces the reference power
+            assert abs(p - ref[k]) < 1e-4 * max(ref[k], 1e-3)
+
+    def test_cpu_one_precise_point_powers_stay_below_one(self):
+        r = np.random.RandomState(3)
+        N = 200
+        t = np.sort(365 * r.rand(N))
+        y = 12.0 + 0.01 * r.randn(N)
+        dy0 = 0.01 * np.ones(N)
+        freqs = np.linspace(0.5, 1.5, 51)
+        ok = _untied_frequencies(t, freqs)
+        assert ok.mean() > 0.7
+        for R, tol in ((1e4, 1e-3), (1e6, 3e-2)):
+            dy = dy0.copy()
+            dy[17] = 0.01 / np.sqrt(R)
+            ref = _sparse_reference(t, y, dy, freqs)
+            p, _ = sparse_bls_cpu(t, y, dy, freqs)
+            assert np.all(p <= 1.0)
+            assert abs(p[ok].max() - ref[ok].max()) < tol * ref[ok].max()
+            assert _same_peak(p[ok], ref[ok])
+
+    # ---- GPU ----
+
+    def test_sparse_bls_gpu_mag12_matches_float64_reference(self):
+        freqs = self._grid()
+        qv = q_transit(freqs)
+        for seed in (0, 1, 2):
+            t, y, dy = self._mag12(seed=seed)
+            ref = _sparse_reference(t, y, dy, freqs, 0.5 * qv, 2.0 * qv)
+            p, _ = sparse_bls_gpu(t, y, dy, freqs, qmin=0.5 * qv,
+                                  qmax=2.0 * qv)
+            ok = _untied_frequencies(t, freqs)
+            assert ok.mean() > 0.7
+            assert_allclose(p[ok], ref[ok], rtol=1e-4, atol=1e-7)
+            assert _same_peak(p, ref)
+
+    def test_eebls_transit_default_sparse_path_matches_reference(self):
+        # the public default path (ndata < sparse_threshold) on mag-12
+        # data: peak rel err was up to 7.2e-3 before the fix
+        freqs = self._grid()
+        t, y, dy = self._mag12(seed=4)
+        fr, p, sols = eebls_transit(t, y, dy, freqs=freqs)
+        qv = q_transit(fr)
+        ref = _sparse_reference(t, y, dy, fr, 0.5 * qv, 2.0 * qv)
+        ok = _untied_frequencies(t, fr)
+        assert ok.mean() > 0.7
+        assert_allclose(p[ok], ref[ok], rtol=1e-4, atol=1e-7)
+        assert _same_peak(p, ref)
+
+    def test_sparse_bls_gpu_offset_invariance(self):
+        freqs = self._grid()[::2]
+        t, y, dy = self._mag12(seed=5)
+        p0, s0 = sparse_bls_gpu(t, y, dy, freqs)
+        p20, s20 = sparse_bls_gpu(t, y + 20., dy, freqs)
+        assert_allclose(p20, p0, rtol=1e-5, atol=1e-8)
+        assert [a[0] for a in s20] == [a[0] for a in s0]
+
+    def test_gpu_one_precise_point_powers_stay_below_one(self):
+        # R = 1e6: 401/401 powers > 1 (max 52) before the fix
+        r = np.random.RandomState(3)
+        N = 200
+        t = np.sort(365 * r.rand(N))
+        y = 12.0 + 0.01 * r.randn(N)
+        dy0 = 0.01 * np.ones(N)
+        freqs = np.linspace(0.5, 1.5, 201)
+        ok = _untied_frequencies(t, freqs)
+        assert ok.mean() > 0.7
+        for R, tol in ((1e4, 1e-3), (1e6, 3e-2)):
+            dy = dy0.copy()
+            dy[17] = 0.01 / np.sqrt(R)
+            ref = _sparse_reference(t, y, dy, freqs)
+            p, _ = sparse_bls_gpu(t, y, dy, freqs)
+            assert np.all(p <= 1.0)
+            assert abs(p[ok].max() - ref[ok].max()) < tol * ref[ok].max()
+            assert _same_peak(p[ok], ref[ok])
