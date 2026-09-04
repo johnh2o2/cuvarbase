@@ -12,7 +12,8 @@ import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
 from ._host import host_array
-from ..utils import subtract_epoch, conflict_scatter_perm
+from ..utils import (subtract_epoch, conflict_scatter_perm,
+                     check_lightcurve, check_freqs)
 
 
 class BLSBatchMemory:
@@ -103,6 +104,7 @@ class BLSBatchMemory:
         max_nbins : int
             Maximum number of fine bins (for shared memory sizing).
         """
+        check_freqs(freqs, name='BLSBatchMemory.set_freqs')
         freqs = np.asarray(freqs, dtype=self.rtype)
         nf = len(freqs)
         if nf > self.nfreqs:
@@ -110,6 +112,15 @@ class BLSBatchMemory:
                 f"Got {nf} freqs but allocated for {self.nfreqs}")
 
         self.freqs[:nf] = freqs
+
+        # Validate before the uint32 cast below: a NaN, a zero qmin or
+        # a qmax >= 1 becomes a bin count of 0, which divides by zero
+        # in the kernel and atomicAdds outside the shared-memory
+        # histogram -- an illegal memory access that kills the CUDA
+        # context (Sep 2026 audit, defect 23). Imported lazily to
+        # avoid a circular import with cuvarbase.bls.
+        from ..bls import _validate_fast_q_bounds
+        _validate_fast_q_bounds(nf, qmin, qmax)
 
         qmin_arr = np.broadcast_to(np.asarray(qmin, dtype=self.rtype), (nf,))
         qmax_arr = np.broadcast_to(np.asarray(qmax, dtype=self.rtype), (nf,))
@@ -138,6 +149,8 @@ class BLSBatchMemory:
         dy : array_like
             Observation uncertainties.
         """
+        check_lightcurve(t, y, dy, min_n=2,
+                         name='BLSBatchMemory.set_lightcurve %d' % idx)
         # Epoch-subtract in float64 before the float32 cast: absolute
         # timestamps (e.g. BJD) would otherwise destroy the phase fold.
         t, epoch = subtract_epoch(t)

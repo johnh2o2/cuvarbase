@@ -26,7 +26,8 @@ import numpy as np
 
 from .base import ensure_context  # noqa: E402
 from .memory._host import host_array  # noqa: E402
-from .utils import find_kernel, _module_reader
+from .utils import (find_kernel, _module_reader,
+                    check_lightcurve)
 from . import tls_grids
 from . import tls_models
 from . import tls_stats
@@ -49,6 +50,14 @@ _NO_SOLUTION_MSG = (
     "TLS kernel returned no valid solution for any of the %d trial "
     "periods (a flat or noiseless light curve gives zero depth at every "
     "trial, which the kernels reject)")
+
+
+# Minimum number of observations any TLS entry point accepts. The
+# transit model is fitted against the constant-baseline chi2 of the
+# same light curve, which is identically zero for a single point (the
+# reported chi2 ratio came back 0/0), and the automatic Ofir period
+# grid needs a non-zero baseline.
+_TLS_MIN_NDATA = 2
 
 
 def _mask_failed_periods(chi2_vals):
@@ -753,6 +762,12 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     the wrong period). Normalize to a median (not mean) out-of-transit
     level of 1 to ~0.1 sigma per point before searching.
     """
+    # Validate the light curve before anything else: the automatic
+    # period grid is built from t, and a NaN sample or dy = 0 used to
+    # travel all the way to the kernel (chi2 off by a factor ~1e3 on
+    # the fast path; Sep 2026 audit, defect 23).
+    check_lightcurve(t, y, dy, min_n=_TLS_MIN_NDATA, name='tls_search_gpu')
+
     # Validate stellar parameters
     tls_grids.validate_stellar_parameters(R_star, M_star)
 
@@ -1091,6 +1106,7 @@ def tls_search(t, y, dy, **kwargs):
     tls_search_gpu : Lower-level GPU function
     tls_transit : Keplerian-aware search wrapper
     """
+    check_lightcurve(t, y, dy, min_n=_TLS_MIN_NDATA, name='tls_search')
     return tls_search_gpu(t, y, dy, **kwargs)
 
 
@@ -1188,6 +1204,8 @@ def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
     tls_grids.duration_grid_keplerian : Generate Keplerian duration grids
     tls_grids.q_transit : Calculate Keplerian fractional duration
     """
+    check_lightcurve(t, y, dy, min_n=_TLS_MIN_NDATA, name='tls_transit')
+
     # Generate period grid
     periods = tls_grids.period_grid_ofir(
         t, R_star=R_star, M_star=M_star,
@@ -1368,16 +1386,15 @@ def _preprocess_batch(lightcurves):
     n_lc = len(lightcurves)
     lens = np.array([len(lc[0]) for lc in lightcurves], dtype=np.int64)
     for i, (lc, n) in enumerate(zip(lightcurves, lens)):
-        if n == 0:
-            raise ValueError("lightcurve %d is empty" % i)
         if n > np.iinfo(np.int32).max:
             raise ValueError(
                 "lightcurve %d has %d points; the TLS kernels index "
                 "points within a chunk with int32" % (i, n))
-        if len(lc[1]) != n or len(lc[2]) != n:
-            raise ValueError(
-                "lightcurve %d: t, y, dy lengths differ (%d, %d, %d)"
-                % (i, n, len(lc[1]), len(lc[2])))
+        # equal lengths, finite t/y/dy, dy > 0 (dy = 0 gave a chi2
+        # 1.3e3 times too large on the fast path; Sep 2026 audit,
+        # defect 23)
+        check_lightcurve(lc[0], lc[1], lc[2], min_n=_TLS_MIN_NDATA,
+                         name='lightcurve %d' % i)
     # batch-wide offsets in int64 (a large survey can exceed 2^31
     # total points); per-chunk offsets are rebased and cast to int32
     # at upload, where the chunk-size cap keeps them small
@@ -1541,6 +1558,16 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
 
     if len(lightcurves) == 0:
         return []
+    # Validate every light curve up front: the automatic period grid is
+    # built from the longest baseline, and the kernels are compiled and
+    # the trial grids uploaded well before _preprocess_batch runs.
+    for i, lc in enumerate(lightcurves):
+        if len(lc) != 3:
+            raise ValueError("tls_search_batch: lightcurve %d must be a "
+                             "(t, y, dy) tuple; got %d elements"
+                             % (i, len(lc)))
+        check_lightcurve(lc[0], lc[1], lc[2], min_n=_TLS_MIN_NDATA,
+                         name='tls_search_batch lightcurve %d' % i)
     if n_durations < 2 or n_durations > _TLS_FAST_MAX_DURATIONS:
         raise ValueError("n_durations must be in [2, %d]" %
                          _TLS_FAST_MAX_DURATIONS)

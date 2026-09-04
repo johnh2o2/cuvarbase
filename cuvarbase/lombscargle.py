@@ -17,6 +17,7 @@ from . import _cufft as cufft
 
 from .core import GPUAsyncProcess
 from .utils import find_kernel, _module_reader, normalize_light_curves
+from .utils import check_lightcurve, check_freqs
 from .utils import autofrequency as utils_autofreq
 from .memory import NFFTMemory, LombScargleMemory, weights
 from .memory.lombscargle_memory import nfft_grid_sizes, MIN_NFFT_SIGMA
@@ -27,6 +28,15 @@ try:
 except ImportError:
     HAS_CUFINUFFT = False
 
+
+
+# Minimum number of observations the Lomb-Scargle entry points accept.
+# The generalized (floating-mean) periodogram fits three free
+# parameters -- offset, cosine and sine amplitude -- so fewer than four
+# points leave no residual degrees of freedom: the audit measured
+# powers of 9.9e9 at N = 2 and 1.6e4 at N = 3 (a normalized power
+# cannot exceed 1).
+_LS_MIN_NDATA = 4
 
 
 def _grid_spacing(freqs):
@@ -554,6 +564,11 @@ def lomb_scargle_async(memory, functions, freqs,
 
     Notes
     -----
+    The light curve itself is validated by the entry point that filled
+    ``memory`` (:meth:`LombScargleAsyncProcess.run` and friends call
+    :func:`cuvarbase.utils.check_lightcurve`); only the frequency grid
+    can be checked here.
+
     ``memory.nharmonics > 1`` is honoured on every path. The NFFT path
     reads the two spectra back and solves the small per-frequency
     system on the host (:func:`_mh_power_from_spectra`); the direct-sum
@@ -572,6 +587,7 @@ def lomb_scargle_async(memory, functions, freqs,
 
     (lomb, lomb_dirsum), nfft_funcs = functions
 
+    check_freqs(freqs, name='lomb_scargle_async')
     freqs, df = _grid_spacing(freqs)
     nf = len(freqs)
     samples_per_peak = 1./((memory.tmax - memory.tmin) * df)
@@ -1073,9 +1089,16 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
           ``LombScargle(t, ones, fit_mean=False, center_data=False)``.
           Neither is defined for ``nharmonics > 1`` (``ValueError``).
         * A power of exactly ``-1`` is the kernels' sentinel for a
-          non-finite or negative value at that frequency (non-finite
-          ``y``/``dy``, ``dy = 0``, degenerate ``t``). It is not a
-          valid periodogram value; check your input.
+          non-finite or negative value at that frequency
+          (``kernels/lomb.cu``). **It should not occur.** Since 1.0
+          every entry point validates the light curve first
+          (:func:`cuvarbase.utils.check_lightcurve`), so the inputs
+          that used to produce ``-1`` everywhere -- non-finite
+          ``y``/``dy``, ``dy = 0``, mismatched lengths -- raise
+          ``ValueError`` instead. The kernel branch is kept as a
+          last-resort guard against a genuinely degenerate grid
+          (e.g. all-identical ``t``); a ``-1`` in a returned
+          periodogram is a bug report, not a valid power.
         * Precision: the default float32 pipeline agrees with the exact
           (float64) GLS to ~1e-4 in power for ``f * T`` up to ~1e4 and
           ~1e-3 at survey scale (``f * T ~ 1e5-1e6``). Because the Baluev
@@ -1084,6 +1107,24 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
           FAP-grade work on large ``f * T`` grids; it reaches ~1e-7.
 
         """
+
+        # Validate before any device work (kernel compile included):
+        # dy = 0 or a non-finite y used to come back as an
+        # undocumented power of -1 at every frequency, and
+        # normalize_light_curves' nanmean silently absorbs NaNs (Sep
+        # 2026 audit, defect 23).
+        for i, lc in enumerate(data):
+            if len(lc) != 3:
+                raise ValueError(
+                    "LombScargleAsyncProcess.run: lightcurve %d must be "
+                    "a (t, y, dy) tuple; got %d elements" % (i, len(lc)))
+            check_lightcurve(lc[0], lc[1], lc[2], min_n=_LS_MIN_NDATA,
+                             name='LombScargleAsyncProcess.run '
+                                  'lightcurve %d' % i)
+
+        if freqs is not None:
+            for frq in (freqs if isinstance(freqs, list) else [freqs]):
+                check_freqs(frq, name='LombScargleAsyncProcess.run')
 
         # compile module if not compiled already
         if not hasattr(self, 'prepared_functions') or \
@@ -1111,6 +1152,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # array only labels the output: validate every grid (uniform
         # spacing, integer first mode, >= 2 points) before any GPU work
         for frq in frqs:
+            check_freqs(frq, name='LombScargleAsyncProcess.run')
             check_k0(frq)
         k0s = [get_k0(frq) for frq in frqs]
 
@@ -1197,6 +1239,18 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         To get best efficiency, make sure the maximum number of observations
         is not much larger than the typical number of observations
         """
+
+        # Validate before any device work (see run()).
+        for i, lc in enumerate(data):
+            if len(lc) != 3:
+                raise ValueError(
+                    "batched_run_const_nfreq: lightcurve %d must be a "
+                    "(t, y, dy) tuple; got %d elements" % (i, len(lc)))
+            check_lightcurve(lc[0], lc[1], lc[2], min_n=_LS_MIN_NDATA,
+                             name='batched_run_const_nfreq '
+                                  'lightcurve %d' % i)
+        if freqs is not None:
+            check_freqs(freqs, name='batched_run_const_nfreq')
 
         # compile and prepare module functions if not already done
         if not hasattr(self, 'prepared_functions') or \
@@ -1381,6 +1435,10 @@ def lomb_scargle_simple(t, y, dy, **kwargs):
     substantially slower than working with the
     ``LombScargleAsyncProcess`` interface.
     """
+    # Validated here as well as in run(): this wrapper constructs a
+    # process (and so a CUDA context) before it forwards the data.
+    check_lightcurve(t, y, dy, min_n=_LS_MIN_NDATA,
+                     name='lomb_scargle_simple')
 
     # Pass dy straight through: LombScargleMemory.setdata converts
     # uncertainties to normalized inverse-variance weights itself.

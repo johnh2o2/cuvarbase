@@ -79,7 +79,7 @@ from .base import GPUAsyncProcess, ensure_context  # noqa: E402
 from .cunfft import NFFTAsyncProcess  # noqa: E402
 from .memory import NFFTMemory  # noqa: E402
 from .utils import (find_kernel, _module_reader,  # noqa: E402
-                    subtract_epoch)
+                    subtract_epoch, check_lightcurve)
 
 
 def _whitened_inner(A, B, psd, weights):
@@ -701,14 +701,13 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         # ---- validate and epoch-subtract (float64) before ANY cast
         t = np.asarray(t, dtype=np.float64).ravel()
         y = np.asarray(y, dtype=np.float64).ravel()
-        if t.shape != y.shape:
-            raise ValueError("t and y must have the same length (got %d "
-                             "and %d)" % (len(t), len(y)))
-        if len(t) < 3:
-            raise ValueError("need at least 3 observations (got %d)"
-                             % len(t))
-        if not (np.all(np.isfinite(t)) and np.all(np.isfinite(y))):
-            raise ValueError("t and y must be finite")
+        # Shared validator, so the message reads the same as every
+        # other entry point's. min_n = 3: the detrending and PSD
+        # estimate need more than a two-point series (Detector A's
+        # marginal statistic raises a broadcast error at N <= 2).
+        # ``dy`` is deliberately not passed: no detector uses it (the
+        # noise model is the PSD) and it is warned about below.
+        check_lightcurve(t, y, min_n=3, name='NUFFTLRTAsyncProcess.run')
         if dy is not None:
             warnings.warn("NUFFTLRTAsyncProcess.run: dy is not used by any "
                           "detector (the noise model is the PSD); it is "
