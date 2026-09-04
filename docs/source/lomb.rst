@@ -162,15 +162,16 @@ entry point applies to ``t``, ``y``, ``dy`` and the frequency grid
 before any GPU work.
 
 **The -1 sentinel.** A power of exactly ``-1`` is the kernels' marker
-for a non-finite or negative value at that frequency. **It should not
-occur.** Since 1.0 every entry point validates the light curve before
-any GPU work (:func:`cuvarbase.utils.check_lightcurve`), so the inputs
-that used to fill a whole periodogram with ``-1`` -- non-finite ``y``
-or ``dy``, ``dy = 0``, mismatched array lengths, fewer than four
-observations -- raise ``ValueError`` instead. The kernel branch is
-kept as a last-resort guard against a degenerate grid (e.g.
-all-identical ``t``); a ``-1`` in a returned periodogram is a bug
-report, not a valid power.
+for a non-finite or negative value at that frequency. Since 1.0 every
+entry point validates the light curve before any GPU work
+(:func:`cuvarbase.utils.check_lightcurve`), so the inputs that used to
+fill a whole periodogram with ``-1`` -- non-finite ``y`` or ``dy``,
+``dy = 0``, mismatched array lengths, fewer than four observations --
+raise ``ValueError`` instead. Two degenerate cases the validator
+deliberately still accepts do return ``-1`` at every frequency: a
+constant (zero-variance) ``y``, and all-identical ``t``. Apart from
+those, a ``-1`` in a returned periodogram is a bug report, not a valid
+power.
 
 **Precision.** The default float32 pipeline agrees with the exact
 float64 generalized Lomb-Scargle to about 1e-4 in power for
