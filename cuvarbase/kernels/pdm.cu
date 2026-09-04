@@ -1,9 +1,9 @@
 #include<stdio.h>
-#define WEIGHT(k) (w==NULL ? 1.0f : w[k])
 #define GAUSSIAN(x) expf(-0.5f *x*x)
-#define WEIGHTED_LININTERP true
-#define SKIP_BIN(i) (bin_wtots[i] * NBINS < 0.01f)
 //INSERT_NBINS_HERE
+// Fractional part of x*f in float32. For x*f in (-2^-25, 0) this rounds to
+// exactly 1.0f, so every (int)(PHASE * NBINS) below must be wrapped with
+// `% NBINS` before it indexes a bin array.
 #define PHASE(x,f) (x * f - floorf(x * f))
 
 #define RESTRICT __restrict__
@@ -47,6 +47,7 @@ __device__ float var_step_function(
 
     for(int i = 0; i < ndata; i++){
         bin = (int) (PHASE(t[i], freq) * NBINS);
+        bin = bin % NBINS;
         var_tot += w[i] * (y[i] - bin_means[bin]) * (y[i] - bin_means[bin]);
     }
 
