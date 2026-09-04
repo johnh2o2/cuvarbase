@@ -4,7 +4,9 @@ import pycuda.gpuarray as gpuarray
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 from scipy.special import ndtr
-from ..ce import ConditionalEntropyAsyncProcess
+from .. import ce as ce_module
+from ..ce import (ConditionalEntropyAsyncProcess, _needs_compile,
+                  _CE_KERNELS, _is_single_freq_grid)
 from ..memory import ConditionalEntropyMemory
 from ..utils import normalize_light_curves
 lsrtol = 1E-2
@@ -918,3 +920,96 @@ class TestCEPreallocate(object):
                         rtol=0, atol=0)
         with pytest.raises(ValueError):
             proc.run([lc], freqs=F3)
+
+
+class TestCEReuse(object):
+    """id 112 (``set_data=False`` accumulated histograms across calls) and
+    CE-1 (the module was recompiled with nvcc on every call)."""
+
+    @pytest.mark.parametrize('compute_log_prob', [False, True])
+    def test_set_data_false_repeat_is_idempotent(self, compute_log_prob):
+        r = np.random.RandomState(0)
+        N = 60
+        t = np.sort(r.rand(N) * 20)
+        d = [(t, r.randn(N), np.ones(N))]
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess(compute_log_prob=compute_log_prob)
+        mems = proc.allocate(normalize_light_curves(d), freqs=[freqs])
+        mems[0].transfer_freqs_to_gpu()
+        first = None
+        for k in range(3):
+            res = proc.run(d, memory=mems, freqs=[freqs], set_data=(k == 0))
+            proc.finish()
+            p = np.copy(res[0][1])
+            assert mems[0].bins_g.get().sum() == N * len(freqs)
+            if first is None:
+                first = p
+            else:
+                assert_array_equal(p, first)
+
+    def test_compile_gate_logic(self):
+        # CPU-runnable
+        assert _needs_compile({})
+        assert _needs_compile(None)
+        assert _needs_compile({'ce_wt': object()})   # the old sentinel
+        assert not _needs_compile({k: object() for k in _CE_KERNELS})
+        assert _needs_compile({k: object() for k in _CE_KERNELS[:-1]})
+
+    def test_compiles_once_per_process(self, monkeypatch):
+        calls = []
+        real = ce_module.SourceModule
+
+        def counting(*args, **kwargs):
+            calls.append(1)
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(ce_module, 'SourceModule', counting)
+        t, y, dy = lightcurve(100, seed=3)
+        freqs = np.linspace(0.3, 1.2, 50)
+        proc = ConditionalEntropyAsyncProcess()
+        run_ce(proc, t, y, dy, freqs)
+        run_ce(proc, t, y, dy, freqs)
+        proc.large_run([(t, y, dy)], freqs=freqs, max_memory=1e5)
+        assert len(calls) == 1
+
+
+class TestCEFrequencyInput(object):
+    """ids 108/163: float32 (or any non-Python-float) frequency arrays
+    were rejected with a misleading 'number of frequency grids' error."""
+
+    def test_single_grid_detection(self):
+        # CPU-runnable
+        assert _is_single_freq_grid(np.linspace(0, 1, 5).astype(np.float32))
+        assert _is_single_freq_grid(np.linspace(0, 1, 5))
+        assert _is_single_freq_grid([0.1, 0.2, 0.3])
+        assert _is_single_freq_grid(np.arange(5))
+        assert not _is_single_freq_grid([np.linspace(0, 1, 5)])
+        assert not _is_single_freq_grid([[0.1, 0.2], [0.3, 0.4, 0.5]])
+        assert not _is_single_freq_grid(np.ones((2, 5)))
+
+    @pytest.mark.parametrize('ctor', [dict(), dict(use_fast=True),
+                                      dict(weighted=True)])
+    def test_float32_freqs_accepted(self, ctor):
+        t, y, dy = lightcurve(60, seed=0)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess(**ctor)
+        ref = run_ce(proc, t, y, dy, freqs)
+
+        def same(p):
+            # (the weighted kernel's float32 atomicAdd order varies
+            # between runs at the 1e-7 level)
+            assert_allclose(p, ref, rtol=0, atol=1e-6)
+
+        same(run_ce(proc, t, y, dy, freqs.astype(np.float32)))
+        same(run_ce(proc, t, y, dy, list(freqs)))
+        r = proc.large_run([(t, y, dy)], freqs=freqs.astype(np.float32))
+        proc.finish()
+        same(np.copy(r[0][1]))
+        # a list of per-lightcurve grids still works
+        r = proc.run([(t, y, dy), (t, y, dy)],
+                     freqs=[freqs.astype(np.float32), freqs])
+        proc.finish()
+        same(np.copy(r[0][1]))
+        same(np.copy(r[1][1]))
+        mems = proc.allocate([(t, y, dy)], freqs=freqs.astype(np.float32))
+        assert mems[0].nf == len(freqs)
