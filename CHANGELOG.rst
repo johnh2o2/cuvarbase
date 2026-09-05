@@ -163,6 +163,7 @@ What's new in cuvarbase
         * Single-sourced the device/global functions shared by ``bls.cu`` and ``bls_optimized.cu`` into ``bls_common.cuh``, inlined via a ``//{INCLUDE ...}`` directive expanded at load time (``_module_reader``). Removes the drift hazard that once let the ``reduction_max`` s>32 bug be fixed in only one copy; the kernel-drift test now asserts the include mechanism. Functionally equivalent; not bit-identical for the standard kernel — the shared header adopted the optimized variant's float literals, so ``store_best_sols``/``bls_value`` in the standard kernel now do a few divisions in float32 (under fast-math) instead of double-then-truncate, shifting reported solutions by ~1-2 ulp at most
         * Benchmark suite (``scripts/benchmark_*.py``) and multi-GPU results in ``docs/BENCHMARK_RESULTS.md``
     * **Docs**
+        * Dockerfile removed (never installed cuvarbase; rebuild queued for 1.1)
         * Performance claims re-grounded in measured data (257-354x vs astropy BoxLeastSquares across 7 GPU architectures for standard BLS; honest small-problem caveats for LS)
         * Corrected the nifty-ls reference to Garrison et al. (arXiv:2409.08090)
 

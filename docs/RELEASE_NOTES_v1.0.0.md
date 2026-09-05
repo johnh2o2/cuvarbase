@@ -136,7 +136,7 @@ Beyond the highlights above (BJD epoch handling, nondeterministic degenerate-box
 - `pyproject.toml` (PEP 517/621), Python 3.9–3.12 classifiers, dynamic versioning.
 - Dependencies removed: `scikit-cuda`, `future`. Pins: `pycuda>=2017.1.1,!=2024.1.2`.
 - New optional extras: `cuvarbase[cufinufft]`; batman-package enables limb-darkened TLS templates.
-- Dockerfile (CUDA 11.8 base) and GitHub Actions CI (CPU suite, packaging smoke test, flake8).
+- GitHub Actions CI (CPU suite, packaging smoke test, flake8). The repository's Dockerfile was removed: it never installed cuvarbase (a rebuilt image is queued for 1.1).
 
 ## Credits
 
