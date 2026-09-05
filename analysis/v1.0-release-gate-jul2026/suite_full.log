@@ -1,0 +1,44 @@
+........................................................................ [  9%]
+........................................................................ [ 18%]
+........................................................................ [ 27%]
+........................................................................ [ 36%]
+........................................................................ [ 45%]
+........................................................................ [ 54%]
+........................................................................ [ 63%]
+........................................................................ [ 72%]
+........................................................................ [ 81%]
+........................................................................ [ 90%]
+................................................................ss...... [ 99%]
+....                                                                     [100%]
+=============================== warnings summary ===============================
+cuvarbase/nufft_lrt.py:22
+  /workspace/cuvarbase/cuvarbase/nufft_lrt.py:22: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and not yet validated against a reference transit search; use with care. The NFFT transforms now run on the GPU over the full baseline (the earlier CPU-rfft / median(dt)*nf grid-truncation issues are fixed), but the matched-filter combination is still computed on the host and the method has not had a full injection-recovery validation.
+    warnings.warn(
+
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_snr_matches_astropy
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_loglik_matches_astropy_up_to_reference
+  /usr/local/lib/python3.11/dist-packages/astropy/timeseries/periodograms/bls/methods.py:113: RuntimeWarning: invalid value encountered in scalar divide
+    y_in = np.sum(y[m_in] * ivar[m_in]) / ivar_in
+
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_snr_matches_astropy
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_loglik_matches_astropy_up_to_reference
+  /usr/local/lib/python3.11/dist-packages/astropy/timeseries/periodograms/bls/methods.py:118: RuntimeWarning: divide by zero encountered in scalar divide
+    depth_err = np.sqrt(1.0 / ivar_in + 1.0 / ivar_out)
+
+cuvarbase/tests/test_tls_basic.py::TestTLSStreamParity::test_stream_matches_default
+  /workspace/cuvarbase/cuvarbase/tls.py:578: UserWarning: use_fast=True is ignored because a pre-compiled kernel, external memory/stream, or transfer control was supplied; falling back to the legacy per-point kernel (which caps ndata at ~3,500 points)
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 10 durations =============================
+22.32s call     cuvarbase/tests/test_ce.py::TestCE::test_batched_run_const_nfreq[5-0-10-1-False-True-False-None-False-3-7]
+19.61s call     cuvarbase/tests/test_ce.py::TestCE::test_batched_run[5-0-10-1-True-False-True-None-True-1-7]
+17.99s call     cuvarbase/tests/test_ce.py::TestCE::test_batched_run_const_nfreq[5-0-10-1-True-False-False-1-True-3-7]
+17.82s call     cuvarbase/tests/test_bls.py::TestBLS::test_standard[True-1-1-0-0-1.0]
+16.20s call     cuvarbase/tests/test_ce.py::TestCE::test_batched_run_const_nfreq[5-0-10-1-True-False-True-None-True-1-7]
+15.08s call     cuvarbase/tests/test_bls.py::TestBLS::test_transit_parameter_consistency[True-1-3--1-0.5-0.3]
+14.97s call     cuvarbase/tests/test_bls.py::TestBLS::test_custom[True-3-3-5-10-1.0]
+14.52s call     cuvarbase/tests/test_bls.py::TestBLS::test_fast_eebls[False--1.0-100-1.0-0.0-0.1-1.0]
+13.59s call     cuvarbase/tests/test_bls.py::TestBLS::test_custom[True-None-3-5-10-1.0]
+13.24s call     cuvarbase/tests/test_bls.py::TestBLS::test_standard[True-1-3-0-10-1.0]
+794 passed, 2 skipped, 6 warnings in 1005.99s (0:16:45)

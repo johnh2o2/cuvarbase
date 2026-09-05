@@ -1,0 +1,52 @@
+........................................................................ [ 10%]
+........................................................................ [ 21%]
+........................................................................ [ 31%]
+........................................................................ [ 42%]
+........................................................................ [ 53%]
+........................................................................ [ 63%]
+........................................................................ [ 74%]
+........................................................................ [ 84%]
+..........................................................sss.ss........ [ 95%]
+........................ss....                                           [100%]
+=============================== warnings summary ===============================
+cuvarbase/bls.py:738
+  /workspace/cuvarbase/cuvarbase/bls.py:738: DeprecationWarning: invalid escape sequence '\c'
+    """
+
+cuvarbase/bls.py:847
+  /workspace/cuvarbase/cuvarbase/bls.py:847: DeprecationWarning: invalid escape sequence '\c'
+    """
+
+cuvarbase/bls.py:1244
+  /workspace/cuvarbase/cuvarbase/bls.py:1244: DeprecationWarning: invalid escape sequence '\l'
+    """
+
+cuvarbase/bls.py:1926
+  /workspace/cuvarbase/cuvarbase/bls.py:1926: DeprecationWarning: invalid escape sequence '\c'
+    """
+
+cuvarbase/bls.py:2355
+  /workspace/cuvarbase/cuvarbase/bls.py:2355: DeprecationWarning: invalid escape sequence '\c'
+    """
+
+cuvarbase/tls_models.py:23
+  /workspace/cuvarbase/cuvarbase/tls_models.py:23: UserWarning: batman package not available. Install with: pip install batman-package
+    warnings.warn("batman package not available. Install with: pip install batman-package")
+
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_snr_matches_astropy
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_loglik_matches_astropy_up_to_reference
+  /usr/local/lib/python3.11/dist-packages/astropy/timeseries/periodograms/bls/methods.py:113: RuntimeWarning: invalid value encountered in scalar divide
+    y_in = np.sum(y[m_in] * ivar[m_in]) / ivar_in
+
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_snr_matches_astropy
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_loglik_matches_astropy_up_to_reference
+  /usr/local/lib/python3.11/dist-packages/astropy/timeseries/periodograms/bls/methods.py:118: RuntimeWarning: divide by zero encountered in scalar divide
+    depth_err = np.sqrt(1.0 / ivar_in + 1.0 / ivar_out)
+
+cuvarbase/tests/test_tls_basic.py::TestTLSKernel::test_kernel_compilation
+  /workspace/cuvarbase/cuvarbase/tls.py:18: UserWarning: cuvarbase.tls is EXPERIMENTAL and not recommended for science use in this release. The epoch (t0) grid is now duration-scaled and failed periods are masked from the statistics, but the rework has not yet been validated against the reference transitleastsquares package. Light curves with more than ~3,500 points exceed the kernel's shared-memory budget (a ValueError is raised). See analysis/V1_AUDIT_AND_GAMEPLAN.md in the repository. For validated transit searches use cuvarbase.bls (eebls_transit).
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+671 passed, 7 skipped, 11 warnings in 489.78s (0:08:09)
+EXIT=0
