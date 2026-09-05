@@ -122,7 +122,7 @@ def env_info():
 
 def _get_device():
     try:  # v1.0: lazy context helper
-        from cuvarbase.core import ensure_context
+        from cuvarbase.base import ensure_context
         return ensure_context().device
     except Exception:
         pass

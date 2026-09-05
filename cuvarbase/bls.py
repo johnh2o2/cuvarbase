@@ -20,7 +20,7 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import ensure_context
+from .base import ensure_context
 from .utils import (find_kernel, _module_reader, subtract_epoch,
                     conflict_scatter_perm, check_lightcurve, check_freqs)
 from .bls_frequencies import (_euler_transit_grid,
@@ -662,9 +662,11 @@ class BLSMemory:
         self.allocate_host_arrays(nfreqs=max_nfreqs, ndata=max_ndata)
 
     def allocate_pinned_arrays(self, nfreqs=None, ndata=None):
-        """Deprecated alias for :meth:`allocate_host_arrays`."""
-        warnings.warn("allocate_pinned_arrays is deprecated; use "
-                      "allocate_host_arrays", DeprecationWarning)
+        """Deprecated alias for :meth:`allocate_host_arrays` (shipped in
+        0.2.5; kept for 1.x, removed in 2.0)."""
+        warnings.warn("BLSMemory.allocate_pinned_arrays is deprecated; use "
+                      "allocate_host_arrays. It will be removed in 2.0",
+                      DeprecationWarning, stacklevel=2)
         return self.allocate_host_arrays(nfreqs=nfreqs, ndata=ndata)
 
     def allocate_host_arrays(self, nfreqs=None, ndata=None):

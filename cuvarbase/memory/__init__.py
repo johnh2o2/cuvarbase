@@ -5,9 +5,9 @@ This module contains classes for managing memory allocation and transfer
 between CPU and GPU for various periodogram computations.
 
 Attributes are resolved lazily (PEP 562) so that importing one memory
-class does not drag in the others' backends — in particular,
-``nfft_memory`` imports ``skcuda.fft``, which BLS/CE users must be able
-to avoid.
+class does not import the others' modules: ``nfft_memory`` and
+``lombscargle_memory`` bind libcufft through :mod:`cuvarbase._cufft`,
+which BLS/CE users never need to load.
 """
 
 _LAZY_ATTRS = {
