@@ -275,9 +275,21 @@ available via :func:`cuvarbase.bls.convert_bls_power`:
     # ... or convert an existing chi2ratio periodogram:
     p_loglik = convert_bls_power(p_chi2ratio, y, dy, 'loglik')
 
-Reported ``phi0`` values are transit *start* phases measured relative
-to ``floor(min(t))`` (observation times are epoch-subtracted internally to
-preserve float32 precision).
+Reported ``phi0`` values are transit *start* phases on the **original
+input timescale**: ``phi0 = (t_start * f) mod 1`` for the times you
+passed in, so the transit starts at ``t = (phi0 + n) / f`` for integer
+``n``. Internally every BLS path subtracts the epoch ``floor(min(t))``
+in float64 before the float32 cast (the fold is single precision, and
+absolute BJD-scale times would otherwise lose the phase entirely) and
+the kernels work in phases relative to that epoch; the reported
+solutions are moved back with ``(phi + epoch * f) mod 1`` in float64
+(:func:`cuvarbase.bls._rephase_solutions`). ``single_bls``,
+``hone_solution`` and ``eebls_gpu_custom`` accept ``phi0``/``phi_values``
+in the same input-timescale convention and re-reference them
+internally. The periodogram is therefore identical for ``t`` and
+``t + 2457000.5``, while the reported ``phi0`` differs between the two
+by ``(2457000.5 * f) mod 1`` -- as it must, since the phase of a
+transit at frequency ``f`` depends on the zero point of the clock.
 
 
 .. _input-validation:
