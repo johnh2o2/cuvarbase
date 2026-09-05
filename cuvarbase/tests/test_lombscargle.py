@@ -5,9 +5,8 @@ from numpy.testing import assert_allclose
 from astropy.timeseries import LombScargle
 
 from ..lombscargle import LombScargleAsyncProcess
-from pycuda.tools import mark_cuda_test
-#import pycuda.autoinit
-import pycuda.autoprimaryctx
+# NOT `import pycuda.autoprimaryctx`/`autoinit` here: cuvarbase retains
+# the primary context itself, lazily (cuvarbase.base.ensure_context).
 spp = 3
 nfac = 3
 # Tolerances vs astropy / between GPU paths. Before the Sep-2026 NFFT

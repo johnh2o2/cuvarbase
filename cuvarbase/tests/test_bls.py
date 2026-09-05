@@ -306,14 +306,12 @@ class TestBLS(object):
         for freq, (qg, phg), gpower in zip(freqs, gsols, power):
             q_and_phis = product(q_values, phi_values)
             
-            best_q, best_phi, best_p = None, None, None
+            best_p = None
             for Q, PHI in q_and_phis:
                 p = single_bls(t, y, dy, freq, Q, PHI,
                                ignore_negative_delta_sols=ignore_negative_delta_sols)
                 if best_p is None or p > best_p:
                     best_p = p
-                    best_q = Q
-                    best_phi = PHI
             
             assert np.abs(best_p - gpower) < 1e-5
 
@@ -1031,16 +1029,19 @@ class TestEeblsTransitSparseKwargs(object):
     def test_sparse_gpu_path_accepts_documented_kwargs(self):
         # Before the fix: TypeError('sparse_bls_gpu() got an unexpected
         # keyword argument "rho"') raised at call time, before any GPU
-        # work. GPU-runtime errors (e.g. on CPU-only test machines) are
-        # acceptable here -- we are only asserting the kwarg plumbing.
+        # work. Runs on a device; on CPU-only hosts the conftest turns
+        # the GPUStubError into a skip (it used to swallow every
+        # exception and so passed while asserting nothing).
         t, y, dy = self._data()
-        try:
-            eebls_transit(t, y, dy, rho=1.5, samples_per_peak=2,
-                          fmin=0.95, fmax=1.05, use_gpu=True)
-        except TypeError as e:
-            pytest.fail("sparse path crashed on documented kwarg: %s" % e)
-        except Exception:
-            pass  # GPU unavailable (stubbed) -- plumbing already verified
+        freqs, powers, sols = eebls_transit(t, y, dy, rho=1.5,
+                                            samples_per_peak=2,
+                                            fmin=0.95, fmax=1.05,
+                                            use_gpu=True)
+        assert len(freqs) == len(powers) == len(sols)
+        assert len(freqs) > 0
+        assert np.all(np.isfinite(powers))
+        # the injected transit (freq = 1.0) is the peak
+        assert abs(freqs[np.argmax(powers)] - 1.0) < 0.01
 
     def test_sparse_cpu_path_accepts_documented_kwargs(self):
         t, y, dy = self._data()
@@ -1070,18 +1071,20 @@ class TestEeblsTransitSparseKwargs(object):
                 assert q_found <= qmax_fac * qv + 1e-6
 
     def test_standard_path_unaffected(self):
-        # No warning and no kwargs filtering on the standard path
+        # No warning and no kwargs filtering on the standard path.
+        # Runs on a device (the conftest skips it on CPU-only hosts);
+        # a UserWarning is an error here, so "should not warn" is
+        # asserted rather than swallowed.
         import warnings as _warnings
         t, y, dy = self._data(ndata=100)
         with _warnings.catch_warnings():
             _warnings.simplefilter("error", UserWarning)
-            try:
-                eebls_transit(t, y, dy, fmin=0.95, fmax=1.05,
-                              use_sparse=False)
-            except UserWarning:
-                pytest.fail("standard path should not warn")
-            except Exception:
-                pass  # GPU unavailable (stubbed)
+            freqs, powers, sols = eebls_transit(t, y, dy, fmin=0.95,
+                                                fmax=1.05, use_sparse=False)
+        assert len(freqs) == len(powers) == len(sols)
+        assert len(freqs) > 0
+        assert np.all(np.isfinite(powers))
+        assert abs(freqs[np.argmax(powers)] - 1.0) < 0.01
 
 
 class TestEeblsGpuFastNoverlap(object):
@@ -1515,12 +1518,12 @@ class TestPowerConventions(object):
 
     def _our_power_at(self, t, y, dy, period, duration, transit_time):
         # Evaluate the native power at astropy's exact solution.
-        # astropy's transit_time is mid-transit; single_bls phases are
-        # relative to floor(min(t)) and phi0 is the transit start.
+        # astropy's transit_time is mid-transit; single_bls takes phi0
+        # (the transit START phase) in the ORIGINAL input timescale and
+        # re-references it to the subtracted epoch internally.
         freq = 1.0 / period
         q = duration / period
-        epoch = np.floor(t.min())
-        phi0 = ((transit_time - 0.5 * duration - epoch) * freq) % 1.0
+        phi0 = ((transit_time - 0.5 * duration) * freq) % 1.0
         return single_bls(t, y, dy, freq, q, phi0), q
 
     def test_snr_matches_astropy(self):
@@ -1638,7 +1641,9 @@ class TestEpochHandling(object):
     loses essentially all phase information: float32 carries ~7
     significant digits, so the fractional part of ``t * freq`` is
     dominated by rounding error. All BLS paths subtract ``min(t)`` (in
-    float64) before casting, and phases are reported relative to it.
+    float64) before casting; the phases they report are re-referenced
+    to the ORIGINAL input timescale (see
+    ``test_single_bls_phase_is_original_timescale``).
     """
 
     # Integer offset: epoch = floor(min(t)) makes the shifted and
@@ -1955,7 +1960,7 @@ class TestBlsBatchSizing(object):
         # points were binned and every other frequency stayed empty.
         # One q level of 1024 bins keeps the atomics cheap (~1 s).
         import pycuda.gpuarray as gpuarray
-        from ..bls import _function_signatures, _default_block_size
+        from ..bls import _default_block_size
         ndata, nf, nb = 131072, 32769, 1024
         assert ndata * nf > 2 ** 32
         t, y, dy = self._big_lc(ndata)
@@ -2579,6 +2584,9 @@ class TestBlsPrecisionDocs(object):
         here = os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.abspath(__file__))))
         path = os.path.join(here, 'docs', 'source', 'bls.rst')
+        if not os.path.exists(path):
+            pytest.skip("docs/source/bls.rst not found (running outside "
+                        "the source tree)")
         with open(path, encoding='utf-8') as f:
             return f.read()
 
