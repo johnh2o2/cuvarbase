@@ -197,3 +197,33 @@ def test_utils_weights_is_canonical():
     w = utils.weights(err)
     assert w.dtype == np.float64
     assert w.sum() == pytest.approx(1.0)
+
+
+# ---------------------------------------------------------------------
+# Removed (decision D3): never on PyPI, or the three 0.2.5-era helpers
+# ---------------------------------------------------------------------
+
+@pytest.mark.parametrize('module, name', [
+    ('cuvarbase.tls_stats', 'pink_noise_correction'),
+    ('cuvarbase.tls_grids', 'estimate_n_evaluations'),
+    ('cuvarbase.tls', '_next_pow2'),
+    ('cuvarbase.utils', 'tophat_window'),
+    ('cuvarbase.utils', 'gaussian_window'),
+    ('cuvarbase.utils', 'get_autofreqs'),
+])
+def test_removed_names_are_gone(module, name):
+    mod = importlib.import_module(module)
+    assert not hasattr(mod, name)
+
+
+def test_removed_parameters_are_gone():
+    import inspect
+    from cuvarbase import tls, tls_stats
+    assert 'durations' not in inspect.signature(tls.tls_search_gpu).parameters
+    assert 'n_transits' not in inspect.signature(
+        tls_stats.signal_to_noise).parameters
+    assert 'window_length' not in inspect.signature(
+        tls_stats.signal_detection_efficiency).parameters
+    # TLS never shipped, so the misnamed method is renamed without alias
+    assert hasattr(tls.TLSMemory, 'allocate_host_arrays')
+    assert not hasattr(tls.TLSMemory, 'allocate_pinned_arrays')
