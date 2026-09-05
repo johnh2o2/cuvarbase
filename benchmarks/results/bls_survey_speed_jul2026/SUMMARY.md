@@ -14,7 +14,7 @@ before/after in the same pod session; Keplerian frequency grids
 | TESS    | 20,000 | 1,788   |
 | Kepler  | 65,000 | 130,597 |
 
-Method + bottleneck ranking: `analysis/bls_survey_speed_jul2026/PROFILE_RANKING.md`
+Method + bottleneck ranking: `PROFILE_RANKING.md` (this directory)
 (ncu blocked by RunPod -> nsys + event decomposition + one-axis sweeps).
 
 ## Changes (each fully gated: full GPU suite + release gate 14/14 + parity)

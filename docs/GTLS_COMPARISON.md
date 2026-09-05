@@ -5,10 +5,12 @@ is the first and only *other* GPU implementation of Transit Least Squares — a 
 reimplementation of Hippke & Heller's (2019) TLS (`pip install gputls`, v0.5.1).
 Their Fig. 7 reports single-light-curve search time vs light-curve baseline for
 GTLS, reference CPU-TLS, and cuvarbase's GPU-BLS. This document reproduces that
-figure **on one GPU, holding the search fair**, using our improved TLS
-(`feature/tls-fast-survey`) and improved BLS (`feature/bls-survey-speed`).
+figure **on one GPU, holding the search fair**, using the improved TLS
+(`tls_search_batch`) and improved batched BLS (`eebls_gpu_batch`) that shipped in
+cuvarbase 1.0 (developed in July 2026 on the `feature/tls-fast-survey` and
+`feature/bls-survey-speed` branches, both merged before the release).
 
-**Figure:** `gtls_fig7_reproduction.png` (this directory). Benchmark: `scripts/gtls_benchmark/`. Raw data: `benchmarks/results/gtls_comparison_jul2026/`.
+**Figure:** `docs/gtls_fig7_reproduction.png` (beside this document). Benchmark: `scripts/gtls_benchmark/`. Raw data: `benchmarks/results/gtls_comparison_jul2026/`.
 
 All measurements: single RTX A5000 (24 GB, sm_86), CUDA 12.x, cupy 13.6,
 one injected batman transit per baseline (P=8.13 d, depth=4e-3, 110–400 ppm-class
@@ -97,8 +99,8 @@ by per-batch kernel-launch overhead that is very GPU/driver/CuPy-version-sensiti
 We anchor on both the same-GPU ratio and this paper-hardware cross-check so the
 conclusion holds either way.)
 
-**Bonus — improved BLS.** At the paper's *exact* Kunimoto BLS config, our July
-`feature/bls-survey-speed` batched BLS runs **5.3 s @1500 d on the A5000 vs the
+**Bonus — improved BLS.** At the paper's *exact* Kunimoto BLS config, the batched
+BLS shipped in 1.0 (`eebls_gpu_batch`, July 2026 `feature/bls-survey-speed` work) runs **5.3 s @1500 d on the A5000 vs the
 paper's reported 121.1 s cuvarbase-BLS on a 4090 — ~23× faster on weaker
 hardware** (opt1–opt4 + batched kernel; the paper's exact cuvarbase entry point /
 version is unspecified).

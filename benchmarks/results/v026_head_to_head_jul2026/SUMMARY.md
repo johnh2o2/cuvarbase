@@ -3,7 +3,9 @@
 **Purpose.** Release-notes performance numbers for v1.0.0 against the last
 official release, 0.2.6. Replaces the retracted "21-390x vs pre-v1.0" numbers,
 whose baseline paid per-call nvcc compilation (see
-`analysis/BENCHMARK_PROTOCOL_V1.md` sections 4.1 and 8, which ban their reuse).
+`BENCHMARK_PROTOCOL_V1.md` sections 4.1 and 8, which ban their reuse; the
+protocol is archived at
+https://github.com/johnh2o2/cuvarbase/blob/archive/pre-1.0-process/analysis/BENCHMARK_PROTOCOL_V1.md).
 This campaign follows that protocol's fairness rules (section 4) with the
 maintainer-approved amendment that the baseline is the 0.2.6 release, not a
 master checkout.
