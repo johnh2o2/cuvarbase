@@ -186,6 +186,37 @@ mean-centred on the host in float64 before any cast, so absolute (BJD)
 timestamps are safe.
 
 
+Reusing device memory across calls
+----------------------------------
+
+Since 1.0 :func:`cuvarbase.lombscargle.LombScargleAsyncProcess.batched_run_const_nfreq`
+reuses the ``LombScargleMemory`` set it built last -- pinned host
+buffers, device arrays and the two cuFFT plans -- whenever the next call
+asks for the same grid, precision, number of harmonics, model mode and
+prior, and its buffers are long enough for the new light curves. A
+survey loop that calls it once per light curve therefore pays the
+allocation once instead of once per call. If ``preallocate`` was used,
+that set is preferred over the cached one.
+
+The cached set is held on the process object for its lifetime, which is
+tens of megabytes at survey ``nf``. Drop the process object, or set
+``proc._batch_memory = None``, to release it. Passing any keyword that
+hands the memory its own buffer or fixes its size (``t_g``, ``lsp_c``,
+``nfft_mem_yw``, ``n0_buffer``, ``nf``, ``k0``, ...) opts that call out
+of the cache entirely, so it allocates its own set as before.
+
+**Reproducibility.** Two runs of the same build on the same input are
+bitwise identical when they go through the *same* buffers, but not
+necessarily across separate allocations: the float32 NFFT spreads the
+data onto the grid with ``atomicAdd``, whose summation order is not
+fixed. Measured on an A40, two runs of one unchanged build differ by up
+to ~5e-10 in absolute power at ``N = 65,000`` (up to ~1e-4 in *relative*
+terms, on powers near zero), and are bitwise identical at ZTF scale.
+Peak locations and ``use_double=True`` results are unaffected in every
+test. Compare float32 periodograms with a tolerance, not
+``np.array_equal``.
+
+
 Example: Basic
 --------------
 
