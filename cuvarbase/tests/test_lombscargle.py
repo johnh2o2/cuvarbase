@@ -1526,6 +1526,84 @@ class TestBatchedMemoryReuse(object):
         assert bf0[0] == bf1[0]
         assert fap0[0] == fap1[0]
 
+    def test_per_call_nharmonics_is_not_reused(self, monkeypatch):
+        """``nharmonics`` is read off the memory object
+        (``lomb_scargle_async``), so a per-call ``nharmonics=`` must key
+        and build its own memory set. Matching a cached H = 1 set
+        against a request for H = 2 silently returned the
+        single-harmonic periodogram (found reviewing LS-4)."""
+        freqs = 0.002 * (30 + np.arange(1500))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        p1 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+
+        ref = LombScargleAsyncProcess(nharmonics=2)
+        p2ref = np.copy(ref.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+
+        built = self._counting_memory(monkeypatch)
+        p2 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs,
+                                                  nharmonics=2)[0][1])
+        assert sum(built) == 1                 # not the cached H = 1 set
+        assert_allclose(np.asarray(p2, dtype=np.float64),
+                        np.asarray(p2ref, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+        # it really is a different periodogram from the H = 1 one
+        assert not np.allclose(np.asarray(p2[:len(freqs)], dtype=np.float64),
+                               np.asarray(p1[:len(freqs)], dtype=np.float64))
+
+        del built[:]
+        proc.batched_run_const_nfreq(d, freqs=freqs, nharmonics=2)
+        assert sum(built) == 0                 # the H = 2 set IS reused
+
+        del built[:]
+        p3 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        assert sum(built) == 1                 # back to H = 1: rebuild
+        assert_allclose(np.asarray(p3, dtype=np.float64),
+                        np.asarray(p1, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+
+    def test_per_call_use_double_is_not_reused(self, monkeypatch):
+        """Same as above for ``use_double=``: the memory's precision
+        sets the dtype of the returned periodogram, so a cached
+        single-precision set must not answer a ``use_double=True``
+        request. (Passing ``use_double`` per call only changes the
+        buffers -- the kernels keep the precision the process was
+        constructed with -- but that is pre-1.0 behaviour this must not
+        change silently; construct the process with ``use_double=True``
+        for a genuine double-precision run.)"""
+        freqs = 0.002 * (30 + np.arange(1500))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        p1 = proc.batched_run_const_nfreq(d, freqs=freqs)[0][1]
+        assert np.asarray(p1).dtype == np.float32
+
+        built = self._counting_memory(monkeypatch)
+        p2 = proc.batched_run_const_nfreq(d, freqs=freqs,
+                                          use_double=True)[0][1]
+        assert sum(built) == 1                 # not the float32 set
+        assert np.asarray(p2).dtype == np.float64
+
+    def test_a_buffer_sizing_kwarg_opts_out_of_the_cache(self, monkeypatch):
+        """``n0_buffer`` (like every other key that hands the memory a
+        buffer or its size) opts the call out of the cache entirely, so
+        it allocates its own set exactly as it did before 1.0."""
+        freqs = 0.002 * (30 + np.arange(1500))
+        d = [self._lc(N=400)]
+        proc = LombScargleAsyncProcess()
+        proc.batched_run_const_nfreq(d, freqs=freqs)
+        cached = proc._batch_memory
+        assert cached is not None
+
+        built = self._counting_memory(monkeypatch)
+        for _ in range(2):
+            proc.batched_run_const_nfreq(d, freqs=freqs, n0_buffer=1000)
+        assert sum(built) == 2                 # never reused, never cached
+        assert proc._batch_memory is cached
+
+        del built[:]
+        proc.batched_run_const_nfreq(d, freqs=freqs)
+        assert sum(built) == 0                 # the plain cache survived
+
     def test_grid_validation_still_rejects_a_bad_grid(self):
         """The batched path validates the shared grid once and tells
         run() to skip the repeat; the error must survive."""

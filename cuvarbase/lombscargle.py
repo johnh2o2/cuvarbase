@@ -527,13 +527,18 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
     return power
 
 
-# Keys that hand :class:`LombScargleMemory` a pre-built buffer (or
-# override the grid it was sized for): a memory object built with any of
-# them cannot be matched against a request by settings alone, so the
-# batched entry point neither reuses nor caches memory when one is given.
+# Keys that hand :class:`LombScargleMemory` (or the two
+# :class:`~cuvarbase.memory.nfft_memory.NFFTMemory` sets it builds) a
+# pre-built buffer, or that override the sizes it allocates for: a
+# memory object built with any of them cannot be matched against a
+# later request by settings alone, so the batched entry point neither
+# reuses nor caches memory when one is given and every such call
+# allocates its own set exactly as it did before 1.0.
 _LS_MEMORY_OVERRIDE_KWARGS = frozenset((
     't_g', 'yw_g', 'w_g', 'lsp_g', 'lsp_c', 't', 'yw', 'w',
-    'nfft_mem_yw', 'nfft_mem_w', 'n0', 'nf', 'k0'))
+    'nfft_mem_yw', 'nfft_mem_w', 'n0', 'nf', 'k0',
+    'buffered_transfer', 'n0_buffer',
+    'y_g', 'ghat_g', 'ghat_c', 'q1', 'q2', 'q3', 'cu_plan'))
 
 
 def _amplitude_prior_key(prior):
@@ -549,11 +554,26 @@ def _ls_memory_settings(nf, k0, m, sigma, use_double, nharmonics, use_fft,
                         kwargs):
     """The settings that make two :class:`LombScargleMemory` objects
     interchangeable for a run: grid, NFFT parameters, precision, model
-    mode and prior. Mirrors ``LombScargleMemory.__init__``'s defaults."""
+    mode and prior. Mirrors ``LombScargleMemory.__init__``'s defaults.
+
+    ``kwargs`` is the dict the memory constructor will actually be
+    handed, so EVERY setting is read from it (with the constructor's
+    own default) and the ``use_double``/``nharmonics`` arguments are
+    only the fallback for a dict that does not carry them. Reading
+    either from the process instead would make a per-call
+    ``nharmonics=``/``use_double=`` silently reuse a set built for the
+    process-level value.
+
+    ``precomp_psi=False`` is keyed for completeness; that path in fact
+    raises ``AttributeError`` inside
+    :func:`~cuvarbase.cunfft.nfft_adjoint_async` (which dereferences
+    ``memory.q1.ptr``) on 1.0 and on every earlier release, so no
+    memory set with ``precomp_psi=False`` ever reaches a second call.
+    """
     return dict(nf=int(nf), k0=int(k0), m=int(m), sigma=float(sigma),
-                use_double=bool(use_double),
-                nharmonics=int(nharmonics),
-                use_fft=bool(use_fft),
+                use_double=bool(kwargs.get('use_double', use_double)),
+                nharmonics=int(kwargs.get('nharmonics', nharmonics)),
+                use_fft=bool(kwargs.get('use_fft', use_fft)),
                 mode=(2 if kwargs.get('window', False)
                       else (1 if kwargs.get('floating_mean', True) else 0)),
                 precomp_psi=bool(kwargs.get('precomp_psi', True)),
@@ -1421,9 +1441,15 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         memory is held until the process object is dropped; set
         ``proc._batch_memory = None`` to release it early. Results are
         unchanged: the reused buffers are zeroed and overwritten before
-        every run, exactly as on the ``preallocate`` path. Passing
-        ``LombScargleMemory`` buffers directly (``t_g=``, ``lsp_c=``,
-        ...) opts out of both reuse and caching.
+        every run, exactly as on the ``preallocate`` path. A keyword
+        that overrides a process-level setting for one call
+        (``nharmonics=``, ``use_double=``) is part of the key, so such
+        a call allocates and caches its own set rather than matching
+        one built for the process default. Passing a
+        ``LombScargleMemory`` buffer directly, or fixing its size
+        (``t_g=``, ``lsp_c=``, ``nfft_mem_yw=``, ``n0_buffer=``,
+        ``nf=``, ``k0=``, ...), opts the call out of both reuse and
+        caching.
         """
 
         # Validate before any device work (see run()).
@@ -1491,6 +1517,11 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # call to this method built (pinned host buffers, device arrays
         # and two cuFFT plans -- tens of ms per call at survey nf).
         # kwargs that hand LombScargleMemory its own buffers opt out.
+        # The key is built from kwargs_lsmem -- the dict the constructor
+        # below is actually handed -- so a per-call nharmonics=/
+        # use_double= (which kwargs_lsmem.update(kwargs) has already
+        # written over the process-level value) keys and builds its own
+        # set instead of matching one built for the process default.
         memory = None
         cacheable = not (_LS_MEMORY_OVERRIDE_KWARGS & set(kwargs))
         if cacheable:
