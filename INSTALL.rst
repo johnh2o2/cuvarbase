@@ -50,16 +50,6 @@ Installing from source
     cd cuvarbase
     pip install -e .
 
-Docker
-------
-
-A ``Dockerfile`` (CUDA 11.8 base image) ships with the repository for containerized use:
-
-.. code:: bash
-
-    docker build -t cuvarbase .
-    docker run --gpus all -it cuvarbase python -c "import cuvarbase; print(cuvarbase.__version__)"
-
 Verifying the installation
 --------------------------
 

@@ -39,7 +39,7 @@ Until v1.0.0 is published to PyPI (the current PyPI release is the older `0.2.5`
 pip install "git+https://github.com/johnh2o2/cuvarbase.git@v1.0"
 ```
 
-or clone the repository and `pip install -e .` for a development checkout. A Dockerfile (CUDA 11.8) is included: `docker build -t cuvarbase . && docker run -it --gpus all cuvarbase`.
+or clone the repository and `pip install -e .` for a development checkout.
 
 Notes:
 
