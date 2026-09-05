@@ -186,6 +186,38 @@ mean-centred on the host in float64 before any cast, so absolute (BJD)
 timestamps are safe.
 
 
+Reusing device memory across calls
+----------------------------------
+
+Since 1.0 :func:`cuvarbase.lombscargle.LombScargleAsyncProcess.batched_run_const_nfreq`
+reuses the ``LombScargleMemory`` set it built last -- pinned host
+buffers, device arrays and the two cuFFT plans -- whenever the next call
+asks for the same grid, precision, number of harmonics, model mode and
+prior, and its buffers are long enough for the new light curves. A
+survey loop that calls it once per light curve therefore pays the
+allocation once instead of once per call. If ``preallocate`` was used,
+that set is preferred over the cached one.
+
+The cached set is held on the process object for its lifetime, which is
+tens of megabytes at survey ``nf``. Drop the process object, or set
+``proc._batch_memory = None``, to release it. Passing any keyword that
+hands the memory its own buffer or fixes its size (``t_g``, ``lsp_c``,
+``nfft_mem_yw``, ``n0_buffer``, ``nf``, ``k0``, ...) opts that call out
+of the cache entirely, so it allocates its own set as before.
+
+**Reproducibility.** The float32 NFFT spreads the data onto the grid
+with ``atomicAdd``, whose summation order is not fixed, so two runs of
+the same build on the same input need not be bitwise identical -- not
+even through the same buffers. Measured on an A40 with an unchanged
+build: sparse light curves on coarse grids are often bitwise stable,
+but dense configurations are not, differing by up to ~6e-8 in absolute
+power at ``N = 65,000``/``nf = 210,000`` and ~4e-7 at
+``N = 65,000``/``nf = 30,000`` and ``N = 300``/``nf = 219,000``, i.e.
+~1e-4 to ~3e-4 *relative* on powers near zero. Peak locations and
+``use_double=True`` results were unaffected in every test. Compare
+float32 periodograms with a tolerance, never with ``np.array_equal``.
+
+
 Example: Basic
 --------------
 
