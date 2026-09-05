@@ -160,7 +160,12 @@ cuvarbase\.base subpackage
 Module contents
 ---------------
 
+The package re-exports the classes below lazily (PEP 562); their
+canonical documentation is in the module sections above, so this block
+is not indexed.
+
 .. automodule:: cuvarbase
     :members:
     :undoc-members:
     :show-inheritance:
+    :no-index:
