@@ -283,7 +283,7 @@ if runtime and runtime.get('ports'):
             continue
         fi
         echo "  Sync attempt ${SYNC_TRY}: extracting on remote..."
-        EXTRACT_OUT=$(ssh ${SSH_XFER_OPTS} ${SSH_TARGET} "mkdir -p /workspace/cuvarbase && tar xzf /tmp/cuvarbase_sync.tar.gz --no-same-owner -C /workspace/cuvarbase 2>/dev/null; ls /workspace/cuvarbase/setup.py && echo SYNC_OK" 2>&1) || true
+        EXTRACT_OUT=$(ssh ${SSH_XFER_OPTS} ${SSH_TARGET} "mkdir -p /workspace/cuvarbase && tar xzf /tmp/cuvarbase_sync.tar.gz --no-same-owner -C /workspace/cuvarbase 2>/dev/null; ls /workspace/cuvarbase/pyproject.toml && echo SYNC_OK" 2>&1) || true
         echo "  Remote output: ${EXTRACT_OUT}"
         if echo "${EXTRACT_OUT}" | grep -q "SYNC_OK"; then
             SYNC_OK=true
