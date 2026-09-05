@@ -23,6 +23,9 @@ from pycuda.compiler import SourceModule
 from .core import ensure_context
 from .utils import (find_kernel, _module_reader, subtract_epoch,
                     conflict_scatter_perm, check_lightcurve, check_freqs)
+from .bls_frequencies import (_euler_transit_grid,
+                              _recursion_transit_grid,
+                              _validate_grid_method)
 from .memory.bls_memory import BLSBatchMemory
 from .memory._host import host_array
 
@@ -178,6 +181,53 @@ def _get_cached_kernels(block_size, use_optimized=False, function_names=None):
             _kernel_cache.popitem(last=False)  # Remove oldest (FIFO = LRU)
 
         return compiled_functions
+
+
+def _cached_compile_bls(**kwargs):
+    """``compile_bls(**kwargs)`` through the thread-safe LRU cache.
+
+    The generated CUDA source depends only on ``block_size`` and
+    ``use_optimized`` (the kernel file), and the returned dict on
+    ``function_names`` and ``prepare`` -- exactly the cache key
+    :func:`_get_cached_kernels` uses -- so the default entry points can
+    share compilations instead of running ``nvcc`` again per call.
+    ``prepare=False`` (which returns unprepared functions) is the one
+    option the cache does not model, so it falls through to a direct
+    compile.
+
+    pycuda re-runs an ``nvcc --preprocess`` subprocess on every
+    ``SourceModule`` even when its own disk cache holds the cubin, so an
+    uncached ``compile_bls`` costs ~0.4-0.5 s per call (Sep 2026 audit,
+    ids 3, 7, 43, 60, 126). Bit-identical: the same compiled kernels.
+    """
+    if not kwargs.get('prepare', True):
+        return compile_bls(**kwargs)
+    return _get_cached_kernels(
+        kwargs.get('block_size', _default_block_size),
+        kwargs.get('use_optimized', False),
+        list(kwargs.get('function_names', _all_function_names)))
+
+
+def _get_cached_sparse_kernel(block_size):
+    """``compile_sparse_bls`` through the same LRU cache.
+
+    ``sparse_bls.cu`` is templated on ``BLOCK_SIZE`` alone, so that is
+    the whole key. Without this every ``sparse_bls_gpu`` /
+    ``eebls_transit(ndata < sparse_threshold)`` call recompiled the
+    kernel (~0.4-1.6 s) around ~2-20 ms of kernel work (Sep 2026 audit,
+    ids 7, 43, 60, 126)."""
+    ensure_context()
+    key = (block_size, 'sparse')
+    with _kernel_cache_lock:
+        if key in _kernel_cache:
+            _kernel_cache.move_to_end(key)
+            return _kernel_cache[key]
+        compiled = compile_sparse_bls(block_size=block_size)
+        _kernel_cache[key] = compiled
+        _kernel_cache.move_to_end(key)
+        if len(_kernel_cache) > _KERNEL_CACHE_MAX_SIZE:
+            _kernel_cache.popitem(last=False)
+        return compiled
 
 
 _function_signatures = {
@@ -340,7 +390,8 @@ def fmax_transit(rho=1., qmax=0.5, **kwargs):
 
 
 def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
-                     rho=1., qmin_fac=0.2, qmax_fac=None, **kwargs):
+                     rho=1., qmin_fac=0.2, qmax_fac=None,
+                     method='vectorized', **kwargs):
     """
     Produce list of frequencies for a given frequency range
     suitable for performing Keplerian BLS.
@@ -367,6 +418,20 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     qmax_fac: float, optional (default: None)
         The maximum :math:`q` value to search in units of the Keplerian
         :math:`q` value. If ``None``, this defaults to ``1/qmin_fac``.
+    method: str, optional (default: ``'vectorized'``)
+        How to evaluate the spacing recursion
+        ``f_{n+1} = f_n + qmin_fac q(f_n) / (samples_per_peak T)``.
+        ``'vectorized'`` solves it with numpy
+        (:func:`cuvarbase.bls_frequencies._euler_transit_grid`): 12-30x
+        faster, and it converges to a fixed point of the same
+        recursion rather than approximating it -- the grid length is
+        identical and every frequency agrees to <= 4e-15 relative
+        (float64 rounding on the accumulated sum). ``'recursion'``
+        runs the original scalar Python loop, one ``q`` evaluation per
+        frequency; use it if you need grids bit-identical to
+        cuvarbase < 1.0.
+
+        .. versionadded:: 1.0
     **kwargs:
         passed to `fmin_transit`
 
@@ -400,11 +465,14 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
         fmax = fmax_transit(rho=rho, qmax=0.5 / qmax_fac, **kwargs)
 
     T = np.max(t) - np.min(t)
-    freqs = [fmin]
-    while freqs[-1] < fmax:
-        df = qmin_fac * q_transit(freqs[-1], rho=rho) / (samples_per_peak * T)
-        freqs.append(freqs[-1] + df)
-    freqs = np.array(freqs)
+    _validate_grid_method(method)
+    if method == 'recursion':
+        freqs = _recursion_transit_grid(fmin, fmax, qmin_fac,
+                                        samples_per_peak * T, rho=rho)
+    else:
+        freqs = _euler_transit_grid(fmin, fmax, qmin_fac,
+                                    samples_per_peak * T,
+                                    fmax_transit0(rho=rho), rho=rho)
     q0vals = q_transit(freqs, rho=rho)
     return freqs, q0vals
 
@@ -495,6 +563,62 @@ def compile_bls(block_size=_default_block_size,
     return functions
 
 
+def _rephase_solutions(best_q, best_phi, epoch, freqs):
+    """``(q, phi)`` pairs with the transit phases moved back to the
+    caller's original timescale.
+
+    The kernels report ``phi`` relative to the subtracted epoch; the
+    public convention is ``(t * f) mod 1`` on the input times, so
+    ``phi -> (phi + epoch * f) mod 1``.  Vectorized: the per-frequency
+    Python comprehension this replaces cost 39 ms at 60,121 frequencies
+    and 74 ms at 117,403 -- more than the GPU work it followed (Sep 2026
+    audit, id 136).
+
+    The arithmetic is float64 throughout and bit-identical to the
+    comprehension it replaces: ``epoch`` comes from
+    :func:`~cuvarbase.utils.subtract_epoch` as a ``np.float64``, so
+    ``epoch * f`` was already promoted to float64 even for the float32
+    grids :func:`~cuvarbase.bls_frequencies.keplerian_freq_grid`
+    returns.  The explicit cast keeps it that way if a caller ever
+    supplies a plain Python ``epoch`` (NumPy 2's weak-scalar promotion
+    would evaluate the whole expression in float32, which destroys the
+    phase at BJD-scale epochs).
+    """
+    phi = (np.asarray(best_phi, dtype=np.float64)
+           + epoch * np.asarray(freqs, dtype=np.float64)) % 1.0
+    return list(zip(best_q, phi))
+
+
+# conflict_scatter_perm(n) is a pure function of n (a golden-ratio
+# stride), and setdata used to rebuild it on every call: 0.09 ms of a
+# 1.15 ms TESS-scale setdata, more at Kepler lengths.  Small: one int64
+# array per distinct ndata, evicted oldest-first.
+_SCATTER_PERM_CACHE_MAX_SIZE = 8
+_scatter_perm_cache = OrderedDict()
+_scatter_perm_lock = threading.Lock()
+
+
+def _cached_conflict_scatter_perm(n):
+    """:func:`cuvarbase.utils.conflict_scatter_perm` memoized on ``n``.
+
+    The returned array is shared between callers and must be treated as
+    read-only (it is only ever used as a fancy index)."""
+    n = int(n)
+    with _scatter_perm_lock:
+        if n in _scatter_perm_cache:
+            _scatter_perm_cache.move_to_end(n)
+            return _scatter_perm_cache[n]
+    perm = conflict_scatter_perm(n)
+    if perm is not None:
+        perm.flags.writeable = False
+    with _scatter_perm_lock:
+        _scatter_perm_cache[n] = perm
+        _scatter_perm_cache.move_to_end(n)
+        if len(_scatter_perm_cache) > _SCATTER_PERM_CACHE_MAX_SIZE:
+            _scatter_perm_cache.popitem(last=False)
+    return perm
+
+
 class BLSMemory:
     def __init__(self, max_ndata, max_nfreqs, stream=None, **kwargs):
         # Constructing GPU memory is a "first GPU use" -- retain the CUDA
@@ -546,19 +670,31 @@ class BLSMemory:
     def allocate_host_arrays(self, nfreqs=None, ndata=None):
         """Allocate host arrays for transfers.
 
-        By default (``pinned=True``) these are page-locked so
-        ``set_async``/``get_async`` transfers overlap with computation;
-        if pinning fails they fall back to page-aligned memory (see
-        :func:`cuvarbase.memory._host.host_array`).
+        The buffers that are actually the source or destination of an
+        asynchronous copy are page-locked when ``pinned=True`` (the
+        default), so ``set_async``/``get_async`` overlap with
+        computation; if pinning fails they fall back to page-aligned
+        memory (see :func:`cuvarbase.memory._host.host_array`).
+
+        The rest are page-aligned: ``nbins0``/``nbinsf`` are replaced by
+        fresh (pageable) arrays in :meth:`setdata` before any transfer
+        can read them, and ``bls`` is only an async *destination* when a
+        stream is attached -- with ``stream=None``,
+        :meth:`transfer_data_to_cpu` builds a new array from
+        ``bls_g.get()`` and never writes into this one.  Page-locking
+        costs ~1.5-6.5 ms per buffer regardless of its size, which
+        dominated single ``eebls_gpu_fast(memory=None)`` calls at
+        survey grid sizes (Sep 2026 audit, id 41).
         """
         if nfreqs is None:
             nfreqs = int(self.max_nfreqs)
         if ndata is None:
             ndata = int(self.max_ndata)
 
-        self.bls = host_array((nfreqs,), self.rtype, pinned=self.pinned)
-        self.nbins0 = host_array((nfreqs,), np.int32, pinned=self.pinned)
-        self.nbinsf = host_array((nfreqs,), np.int32, pinned=self.pinned)
+        pin_result = self.pinned and self.stream is not None
+        self.bls = host_array((nfreqs,), self.rtype, pinned=pin_result)
+        self.nbins0 = host_array((nfreqs,), np.int32, pinned=False)
+        self.nbinsf = host_array((nfreqs,), np.int32, pinned=False)
         self.t = host_array((ndata,), self.rtype, pinned=self.pinned)
         self.yw = host_array((ndata,), self.rtype, pinned=self.pinned)
         self.w = host_array((ndata,), self.rtype, pinned=self.pinned)
@@ -624,7 +760,10 @@ class BLSMemory:
         t, self.epoch = subtract_epoch(t)
 
         w = np.power(dy, -2)
-        w /= np.sum(w)
+        # kept before the in-place normalization: chi2_0 below is the
+        # un-normalized weighted sum of squares, i.e. yy * sum(dy**-2)
+        wsum = np.sum(w)
+        w /= wsum
 
         self.ybar = np.sum(y * w)
         # einsum, not np.dot: BLAS ddot spawns a full threadpool for
@@ -636,8 +775,13 @@ class BLSMemory:
                                   np.power(y - self.ybar, 2)))
         # chi2 of the constant model for the data actually loaded here;
         # convert_bls_power scalings must use this rather than whatever
-        # y/dy a later (memory-reuse) call happens to pass.
-        self.chi2_0 = _chi2_null(y, dy)
+        # y/dy a later (memory-reuse) call happens to pass.  Derived
+        # from yy instead of a second pass over the light curve
+        # (_chi2_null): chi2_0 = sum_i w_i (y_i - ybar)^2 with the raw
+        # weights, and yy is the same sum with the normalized ones, so
+        # chi2_0 = yy * sum(dy**-2) to float64 rounding (Sep 2026
+        # audit, id 137).
+        self.chi2_0 = float(self.yy * np.float64(wsum))
 
         u = (y - self.ybar) * w
 
@@ -647,7 +791,7 @@ class BLSMemory:
         # atomics (3.1x on a TESS-like cadence). Binning is a sum, so
         # the order is semantically free. See
         # utils.conflict_scatter_perm.
-        perm = conflict_scatter_perm(len(t))
+        perm = _cached_conflict_scatter_perm(len(t))
         if perm is None:
             self.t[:len(t)] = t.astype(self.rtype)[:]
             self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
@@ -754,6 +898,53 @@ def _validate_noverlap(noverlap):
                          % (noverlap,))
 
 
+# Small per-thread pool of BLSMemory objects for the "no memory given"
+# fast path.  Reusing one costs a setdata (a few host passes) instead of
+# six host allocations plus four device allocations per call, which is
+# most of a short call's wall time at survey grid sizes (Sep 2026 audit,
+# id 41).  Set to 0 to disable the pool (every call then allocates its
+# own memory, as before 1.0).
+#
+# Thread-local rather than locked-and-shared: a BLSMemory is stateful
+# (it holds one light curve's t/yw/w and one frequency grid), so two
+# threads must never be handed the same one.
+_MEMORY_POOL_MAX_SIZE = 2
+_memory_pool_tls = threading.local()
+
+
+def _pooled_bls_memory(t, y, dy, qmin, qmax, freqs, kwargs):
+    """A :class:`BLSMemory` sized for ``(len(t), len(freqs))``, loaded
+    with this call's data, reused from the per-thread pool when one of
+    the right shape is there.
+
+    The key pins ``max_ndata`` and ``max_nfreqs``, so ``setdata``
+    overwrites every element of ``t``/``yw``/``w`` and every frequency
+    of the device grid: nothing of the previous light curve survives,
+    and the reuse guard in :meth:`BLSMemory.setdata` (device frequency
+    arrays keep their first size) can never trip.  Returns ``None`` when
+    pooling is disabled or the shape is unusable.
+    """
+    if _MEMORY_POOL_MAX_SIZE <= 0:
+        return None
+    pool = getattr(_memory_pool_tls, 'pool', None)
+    if pool is None:
+        pool = _memory_pool_tls.pool = OrderedDict()
+
+    key = (int(len(t)), int(len(freqs)), bool(kwargs.get('pinned', True)))
+    mem = pool.pop(key, None)
+    if mem is None:
+        mem = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
+                                 freqs=freqs, stream=None, transfer=True,
+                                 **kwargs)
+    else:
+        mem.setdata(t, y, dy, qmin=qmin, qmax=qmax, freqs=freqs,
+                    transfer=True, **kwargs)
+    pool[key] = mem
+    while len(pool) > _MEMORY_POOL_MAX_SIZE:
+        pool.popitem(last=False)
+    return mem
+
+
 def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
                          qmin=1e-2, qmax=0.5,
                          ignore_negative_delta_sols=False,
@@ -825,10 +1016,25 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
         shmem_lim = ensure_context().device.get_attribute(att)
 
     if memory is None:
-        memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
-                                    freqs=freqs, stream=stream,
-                                    transfer=True,
-                                    **kwargs)
+        # Reuse a pooled memory where that is invisible to the caller:
+        # only on the default stream (with a stream attached,
+        # transfer_data_to_cpu writes into -- and hands back -- the
+        # pinned ``bls`` buffer, which a pooled memory would overwrite
+        # on the next call) and only when the result is transferred
+        # back (otherwise ``memory.bls`` is returned as-is and would
+        # carry the previous call's periodogram instead of zeros), and
+        # never when the caller sized the buffers by hand.
+        memory = None
+        if (stream is None and transfer_to_host
+                and 'max_ndata' not in kwargs
+                and 'max_nfreqs' not in kwargs):
+            memory = _pooled_bls_memory(t, y, dy, qmin, qmax, freqs,
+                                        kwargs)
+        if memory is None:
+            memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
+                                        freqs=freqs, stream=stream,
+                                        transfer=True,
+                                        **kwargs)
     elif transfer_to_device:
         memory.setdata(t, y, dy, qmin=qmin, qmax=qmax,
                        freqs=freqs, transfer=True,
@@ -1338,10 +1544,18 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     # Override any user-provided block_size
     kwargs['block_size'] = block_size
 
-    # Get cached kernels for this block size
+    # Get cached kernels for this block size. The fused-noverlap kernel
+    # ships in the same module and costs nothing extra to load, so ask
+    # for it too: without it in the dict the shared implementation falls
+    # back to the ``noverlap``-pass loop, which was 1.7-2.3x the GPU
+    # time of eebls_gpu_fast on identical inputs (Sep 2026 audit, ids
+    # 40, 63).  ``_eebls_gpu_fast_impl`` still picks the multi-pass loop
+    # whenever the fused kernel is not valid (non-power-of-two
+    # ``noverlap``, ``dphi != 0``, or not enough shared memory).
     if functions is None:
         fname = 'full_bls_no_sol_optimized' if use_optimized else 'full_bls_no_sol'
-        functions = _get_cached_kernels(block_size, use_optimized, [fname])
+        functions = _get_cached_kernels(block_size, use_optimized,
+                                        [fname, 'full_bls_no_sol_fused'])
 
     # Use optimized implementation
     if use_optimized:
@@ -1433,7 +1647,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     check_freqs(freqs, name='eebls_gpu_custom')
 
     functions = functions if functions is not None \
-        else compile_bls(**kwargs)
+        else _cached_compile_bls(**kwargs)
 
     block_size = kwargs.get('block_size', _default_block_size)
     ndata = len(t)
@@ -1478,8 +1692,14 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     # move data to GPU
     w = np.power(dy, -2)
     w /= np.sum(w)
-    ybar = np.dot(w, y)
-    YY = np.dot(w, np.power(np.array(y) - ybar, 2))
+    # einsum, not np.dot: BLAS ddot spawns a full threadpool for large
+    # vectors, and on CPU-quota-limited containers the burst trips CFS
+    # throttling (measured on the pod at ndata = 20000: median 0.60 ms
+    # with a 98 ms tail and 12 throttle events per 50 calls, vs 0.17 ms
+    # and none for einsum).  Same operation, last-ulp float64 summation
+    # order.  See BLSMemory.setdata (Sep 2026 audit, id 45).
+    ybar = float(np.einsum('i,i->', w, y))
+    YY = float(np.einsum('i,i->', w, np.power(np.array(y) - ybar, 2)))
     yw = (np.array(y) - ybar) * np.array(w)
 
     t, epoch = subtract_epoch(t)
@@ -1824,7 +2044,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     nbins0_f, nbinsf_f = _q_bounds_to_nbins(qmins, qmaxes)
 
     functions = functions if functions is not None \
-        else compile_bls(**kwargs)
+        else _cached_compile_bls(**kwargs)
 
     if max_memory is None:
         free, total = cuda.mem_get_info()
@@ -1869,8 +2089,14 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     # move data to GPU
     w = np.power(dy, -2)
     w /= np.sum(w)
-    ybar = np.dot(w, y)
-    YY = np.dot(w, np.power(np.array(y) - ybar, 2))
+    # einsum, not np.dot: BLAS ddot spawns a full threadpool for large
+    # vectors, and on CPU-quota-limited containers the burst trips CFS
+    # throttling (measured on the pod at ndata = 20000: median 0.60 ms
+    # with a 98 ms tail and 12 throttle events per 50 calls, vs 0.17 ms
+    # and none for einsum).  Same operation, last-ulp float64 summation
+    # order.  See BLSMemory.setdata (Sep 2026 audit, id 45).
+    ybar = float(np.einsum('i,i->', w, y))
+    YY = float(np.einsum('i,i->', w, np.power(np.array(y) - ybar, 2)))
     yw = (np.array(y) - ybar) * np.array(w)
 
     t, epoch = subtract_epoch(t)
@@ -1972,9 +2198,9 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     best_q = bls_best_q.get()
     best_phi = bls_best_phi.get()
 
-    qphi_sols = list(zip(best_q, best_phi))
-    # Adjust phases to original timescale
-    qphi_sols = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(qphi_sols, freqs)]
+    # Adjust phases to original timescale (vectorized; see
+    # _rephase_solutions)
+    qphi_sols = _rephase_solutions(best_q, best_phi, epoch, freqs)
 
     return (convert_bls_power(bls_g.get() / YY, y, dy,
                               convention=convention),
@@ -2049,11 +2275,15 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     # 1e-3..1e-2 of the power). ybar of the centred float32 flux is
     # residual roundoff (~1e-8), kept for parity with the kernels.
     yc, _ = _center_flux_float64(y, dy)
-    ybar = np.dot(w, yc)
-    YY = np.dot(w, np.power(yc - ybar, 2))
+    # einsum, not np.dot (see eebls_gpu): single_bls runs once per
+    # reported solution, so the BLAS threadpool cliff was paid
+    # n_solutions times per eebls_transit call (measured median 93.9 ms
+    # per call at ndata = 20000, min 0.79 ms).
+    ybar = float(np.einsum('i,i->', w, yc))
+    YY = float(np.einsum('i,i->', w, np.power(yc - ybar, 2)))
 
     W = np.sum(w[mask])
-    YW = np.dot(w[mask], yc[mask]) - ybar * W
+    YW = float(np.einsum('i,i->', w[mask], yc[mask])) - ybar * W
 
     if YW > 0 and ignore_negative_delta_sols:
         return 0
@@ -2306,9 +2536,13 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     best_phi = np.zeros(nfreqs, dtype=np.float32)
 
     # residual float32 mean of the centred flux (~1e-8); kept so the
-    # scan is exactly the kernel's arithmetic
-    ybar = float(np.dot(w, y))
-    YY = float(np.dot(w, np.power(y - ybar, 2)))
+    # scan is exactly the kernel's arithmetic.  einsum, not np.dot:
+    # BLAS sdot/ddot spawns a full threadpool for large vectors and on
+    # CPU-quota-limited containers the burst trips CFS throttling (see
+    # eebls_gpu; Sep 2026 audit, id 45).  Same operation, different
+    # summation order.
+    ybar = float(np.einsum('i,i->', w, y))
+    YY = float(np.einsum('i,i->', w, np.power(y - ybar, 2)))
 
     # Vectorized pair scan. Transit candidates are exactly the
     # contiguous runs of phase-sorted observations (plus wrap-around
@@ -2392,11 +2626,10 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             best_q[i_freq] = q_best
             best_phi[i_freq] = phi_s[ii]
 
-    solutions = list(zip(best_q, best_phi))
     # Adjust phases to original timescale (float64 frequencies: the
-    # inverse conversion in single_bls uses the caller's float64 freq)
-    solutions = [(q, (phi + (epoch * freq)) % 1.0)
-                 for (q, phi), freq in zip(solutions, freqs64)]
+    # inverse conversion in single_bls uses the caller's float64 freq).
+    # Vectorized; see _rephase_solutions.
+    solutions = _rephase_solutions(best_q, best_phi, epoch, freqs64)
 
     return (convert_bls_power(bls_powers, y_orig, dy_orig,
                               convention=convention),
@@ -2563,9 +2796,11 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     if block_size & (block_size - 1) != 0:
         raise ValueError(f"block_size must be a power of 2, got {block_size}")
 
-    # Compile kernel if not provided
+    # Compile kernel if not provided (through the LRU cache: pycuda
+    # runs nvcc --preprocess on every SourceModule, so an uncached
+    # compile costs ~0.4-1.6 s around a ~2-20 ms kernel)
     if kernel is None:
-        kernel = compile_sparse_bls(block_size=block_size)
+        kernel = _get_cached_sparse_kernel(block_size)
 
     # Shared memory per block:
     #   sh_phi[n_pow2] + sh_y[n_pow2] + sh_w[n_pow2]
@@ -2625,11 +2860,10 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     best_q = best_q_g.get()
     best_phi = best_phi_g.get()
 
-    solutions = list(zip(best_q, best_phi))
     # Adjust phases to original timescale (float64 frequencies: the
-    # inverse conversion in single_bls uses the caller's float64 freq)
-    solutions = [(q, (phi + (epoch * freq)) % 1.0)
-                 for (q, phi), freq in zip(solutions, freqs64)]
+    # inverse conversion in single_bls uses the caller's float64 freq).
+    # Vectorized; see _rephase_solutions.
+    solutions = _rephase_solutions(best_q, best_phi, epoch, freqs64)
 
     return (convert_bls_power(bls_powers, y_orig, dy_orig,
                               convention=convention),
@@ -3010,9 +3244,11 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
             block_size = _choose_block_size(ndata)
         kwargs['block_size'] = block_size
 
-        # Get cached kernels for this block size
+        # Get cached kernels for this block size (fused-noverlap kernel
+        # included -- see eebls_gpu_fast_adaptive; ids 40, 63)
         fname = 'full_bls_no_sol_optimized'
-        functions = _get_cached_kernels(block_size, use_optimized, [fname])
+        functions = _get_cached_kernels(block_size, use_optimized,
+                                        [fname, 'full_bls_no_sol_fused'])
 
         powers = eebls_gpu_fast_optimized(t, y, dy, freqs,
                                           qmin=qmins, qmax=qmaxes,
@@ -3444,7 +3680,7 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
 
     baseline = np.max(t) - np.min(t)
 
-    functions = compile_bls(**kwargs)
+    functions = _cached_compile_bls(**kwargs)
     i = 0
     while pn is None or i < 5 or ((pn - p0) / p0 > stop and i < max_iter):
 
