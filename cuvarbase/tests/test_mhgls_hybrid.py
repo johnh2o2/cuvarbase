@@ -100,3 +100,92 @@ def test_lombscargle_accepts_nharmonics_gt_1():
     assert proc.nharmonics == 3
     with pytest.raises(ValueError):
         LombScargleAsyncProcess(nharmonics=0)
+
+
+def _mh_power_loop(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
+    """Reference: the per-frequency Python loop ``_mh_power_from_spectra``
+    used before it was vectorized, written on the public helpers it
+    called (``_mh_assemble_from_centered`` + ``add_regularization`` +
+    ``mhgls_from_sums``, all unchanged)."""
+    from cuvarbase.lombscargle import add_regularization, mhgls_from_sums
+    H = int(nharms)
+    i = np.arange(nf)
+    cm = np.empty((2 * H + 1, nf), dtype=np.float64)
+    sm = np.empty((2 * H + 1, nf), dtype=np.float64)
+    cm[0], sm[0] = 1.0, 0.0
+    for m in range(1, 2 * H + 1):
+        vals = sw[(m - 1) * k0 + m * i]
+        cm[m], sm[m] = vals.real, vals.imag
+    YC = np.empty((H, nf), dtype=np.float64)
+    YS = np.empty((H, nf), dtype=np.float64)
+    for h in range(1, H + 1):
+        vals = syw[(h - 1) * k0 + h * i]
+        YC[h - 1], YS[h - 1] = vals.real, vals.imag
+    power = np.empty(nf, dtype=np.float64)
+    for j in range(nf):
+        sums = _mh_assemble_from_centered(cm[:, j], sm[:, j],
+                                          YC[:, j], YS[:, j], H)
+        if reg_kwargs:
+            sums = add_regularization(sums, **reg_kwargs)
+        power[j] = mhgls_from_sums(sums, YY, 0.0)
+    return power
+
+
+@pytest.mark.parametrize("H", [1, 2, 3])
+@pytest.mark.parametrize("prior", [None, 0.5, 'per-harmonic'])
+def test_stacked_solve_matches_the_per_frequency_loop(H, prior):
+    """LS-5: ``_mh_power_from_spectra`` solves the 2H x 2H systems for
+    every frequency in one stacked ``np.linalg.solve`` instead of a
+    Python loop (60-90 us per frequency before; 84x faster at
+    nf = 20,000, H = 2 on the A40 pod host). Same arithmetic, so the
+    powers must agree to ~1e-15."""
+    t, y, w, ybar, YY, k0, nf, freqs, sw, syw = _data(H)
+    if prior == 'per-harmonic':
+        prior = list(0.3 + 0.1 * np.arange(H))
+    reg = None if prior is None else dict(amplitude_priors=prior)
+
+    ref = _mh_power_loop(sw, syw, k0, H, nf, YY, reg_kwargs=reg)
+    got = _mh_power_from_spectra(sw, syw, k0, H, nf, YY, reg_kwargs=reg)
+
+    assert got.shape == ref.shape
+    assert got.dtype == np.float64
+    np.testing.assert_allclose(got, ref, rtol=1e-12, atol=1e-14)
+    if H == 1:
+        # the H = 1 assembly involves no reordering at all
+        assert np.array_equal(got, ref)
+
+
+@pytest.mark.parametrize("H", [2, 3])
+def test_solve_chunking_does_not_change_the_result(H):
+    """The stack is solved in chunks of ``_MH_SOLVE_CHUNK`` frequencies
+    to bound the (chunk, 2H, 2H) temporary; the chunk size must not
+    touch the numbers."""
+    import cuvarbase.lombscargle as lsmod
+    t, y, w, ybar, YY, k0, nf, freqs, sw, syw = _data(H)
+    full = _mh_power_from_spectra(sw, syw, k0, H, nf, YY)
+    old = lsmod._MH_SOLVE_CHUNK
+    try:
+        for chunk in (1, 7, nf - 1, nf, 10 * nf):
+            lsmod._MH_SOLVE_CHUNK = chunk
+            assert np.array_equal(
+                _mh_power_from_spectra(sw, syw, k0, H, nf, YY), full), chunk
+    finally:
+        lsmod._MH_SOLVE_CHUNK = old
+
+
+def test_stacked_solve_is_not_a_python_loop(monkeypatch):
+    """Behavioural guard for LS-5: one ``np.linalg.solve`` call per
+    chunk, not one per frequency."""
+    H = 2
+    t, y, w, ybar, YY, k0, nf, freqs, sw, syw = _data(H)
+    calls = []
+    real_solve = np.linalg.solve
+
+    def counting_solve(a, b):
+        calls.append(np.shape(a))
+        return real_solve(a, b)
+
+    monkeypatch.setattr(np.linalg, 'solve', counting_solve)
+    _mh_power_from_spectra(sw, syw, k0, H, nf, YY)
+    assert len(calls) == 1, calls
+    assert calls[0] == (nf, 2 * H, 2 * H)

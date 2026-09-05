@@ -39,6 +39,12 @@ except ImportError:
 _LS_MIN_NDATA = 4
 
 
+# Frequencies per stacked multiharmonic solve in
+# :func:`_mh_power_from_spectra` (bounds the (chunk, 2H, 2H)
+# temporary; results do not depend on it).
+_MH_SOLVE_CHUNK = 1 << 16
+
+
 def _grid_spacing(freqs):
     """``(f, df)``: the frequency grid as a 1-d float64 array and its
     spacing estimated from the full span, ``(f[-1] - f[0]) / (nf - 1)``.
@@ -209,7 +215,7 @@ def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
     ys = np.asarray([np.dot(yw, np.sin(n * phase))
                      for n in ns[1:nharms+1]])
 
-    ybar = sum(yw)
+    ybar = np.sum(yw)
     C = np.asarray(c)[1:nharms+1]
     S = np.asarray(s)[1:nharms+1]
     YC = yc - ybar * C
@@ -412,6 +418,13 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
     tested :func:`_mh_assemble_from_centered` + :func:`mhgls_from_sums`
     (the small 2H x 2H solve runs in float64 on the host -- cheap, and
     numerically safer than a float32 in-kernel solve).
+
+    The systems for all ``nf`` frequencies are assembled and solved as
+    one stacked ``(nf, 2H, 2H)`` problem (in chunks of
+    ``_MH_SOLVE_CHUNK``) rather than one at a time in Python; the
+    arithmetic per frequency is the same as
+    ``mhgls_from_sums(add_regularization(_mh_assemble_from_centered(...)))``
+    and agrees with it to ~1e-16 relative.
     """
     H = int(nharms)
     i = np.arange(nf)
@@ -436,14 +449,173 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
         YC[h - 1] = vals.real
         YS[h - 1] = vals.imag
 
+    # The 2H x 2H systems are assembled and solved for all frequencies
+    # at once (np.linalg.solve broadcasts over a leading axis, calling
+    # the same LAPACK dgesv per matrix): the per-frequency Python loop
+    # this replaces cost 60-90 us per frequency (1.6 s at nf = 20,000,
+    # H = 2). Chunked so the (nf, 2H, 2H) stack stays small.
+    hs = np.arange(1, H + 1)
+    n_idx = hs[:, np.newaxis]
+    m_idx = hs[np.newaxis, :]
+    isum = n_idx + m_idx
+    idiff = np.abs(n_idx - m_idx)
+    # sgn(0) = 1 (see _mh_assemble_from_centered)
+    sgn = np.where(n_idx == m_idx, 1.0,
+                   np.sign(n_idx - m_idx)).astype(np.float64)
+
+    # regularization: a ridge 1/prior**2 on the diagonal of CC and SS
+    # and a shift of YC/YS toward the prior centroid (add_regularization)
+    D = cn0 = sn0 = None
+    if reg_kwargs:
+        priors = reg_kwargs.get('amplitude_priors', None)
+        if priors is not None:
+            D = np.ones(H, dtype=np.float64) * np.power(priors, -2)
+            c0 = reg_kwargs.get('cn0', None)
+            s0 = reg_kwargs.get('sn0', None)
+            cn0 = np.zeros(H) if c0 is None else np.asarray(c0, np.float64)
+            sn0 = np.zeros(H) if s0 is None else np.asarray(s0, np.float64)
+
     power = np.empty(nf, dtype=np.float64)
-    for j in range(nf):
-        sums = _mh_assemble_from_centered(cm[:, j], sm[:, j],
-                                          YC[:, j], YS[:, j], H)
-        if reg_kwargs:
-            sums = add_regularization(sums, **reg_kwargs)
-        power[j] = mhgls_from_sums(sums, YY, 0.0)
+    chunk = max(1, int(_MH_SOLVE_CHUNK))
+    for start in range(0, nf, chunk):
+        sl = slice(start, min(start + chunk, nf))
+        c = cm[:, sl]
+        s = sm[:, sl]
+        nc = c.shape[1]
+
+        C = c[1:H + 1]
+        S = s[1:H + 1]
+
+        cc = 0.5 * (c[isum] + c[idiff])
+        cs = 0.5 * (s[isum] - sgn[:, :, np.newaxis] * s[idiff])
+        ss = 0.5 * (c[idiff] - c[isum])
+
+        CC = cc - C[:, np.newaxis, :] * C[np.newaxis, :, :]
+        CS = cs - C[:, np.newaxis, :] * S[np.newaxis, :, :]
+        SS = ss - S[:, np.newaxis, :] * S[np.newaxis, :, :]
+
+        YCc = YC[:, sl]
+        YSc = YS[:, sl]
+        if D is not None:
+            dg = np.diag(D)[:, :, np.newaxis]
+            CC = CC + dg
+            SS = SS + dg
+            YCc = YCc + (D * cn0)[:, np.newaxis]
+            YSc = YSc + (D * sn0)[:, np.newaxis]
+
+        A = np.empty((nc, 2 * H, 2 * H), dtype=np.float64)
+        A[:, :H, :H] = CC.transpose(2, 0, 1)
+        A[:, :H, H:] = CS.transpose(2, 0, 1)
+        A[:, H:, :H] = CS.transpose(2, 1, 0)
+        A[:, H:, H:] = SS.transpose(2, 0, 1)
+
+        b = np.empty((nc, 2 * H, 1), dtype=np.float64)
+        b[:, :H, 0] = YCc.T
+        b[:, H:, 0] = YSc.T
+
+        theta = np.linalg.solve(A, b)[:, :, 0]
+        cn = theta[:, :H]
+        sn = theta[:, H:]
+
+        XX = (cn[:, :, np.newaxis] * cn[:, np.newaxis, :]) * A[:, :H, :H]
+        XX += 2 * (cn[:, :, np.newaxis] * sn[:, np.newaxis, :]) \
+            * A[:, :H, H:]
+        XX += (sn[:, :, np.newaxis] * sn[:, np.newaxis, :]) * A[:, H:, H:]
+
+        YX = 2 * ((cn * YCc.T).sum(axis=1) + (sn * YSc.T).sum(axis=1))
+        power[sl] = (YX - XX.sum(axis=(1, 2))) / YY
     return power
+
+
+# Keys that hand :class:`LombScargleMemory` (or the two
+# :class:`~cuvarbase.memory.nfft_memory.NFFTMemory` sets it builds) a
+# pre-built buffer, or that override the sizes it allocates for: a
+# memory object built with any of them cannot be matched against a
+# later request by settings alone, so the batched entry point neither
+# reuses nor caches memory when one is given and every such call
+# allocates its own set exactly as it did before 1.0.
+_LS_MEMORY_OVERRIDE_KWARGS = frozenset((
+    't_g', 'yw_g', 'w_g', 'lsp_g', 'lsp_c', 't', 'yw', 'w',
+    'nfft_mem_yw', 'nfft_mem_w', 'n0', 'nf', 'k0',
+    'buffered_transfer', 'n0_buffer',
+    'y_g', 'ghat_g', 'ghat_c', 'q1', 'q2', 'q3', 'cu_plan',
+    # LombScargleMemory takes these POSITIONALLY, so passing them as
+    # keywords has always raised TypeError("got multiple values for
+    # argument ..."). They must opt out of the cache too: on a cache
+    # hit the constructor is never called, so the call would silently
+    # succeed and silently ignore the keyword, returning the
+    # process-default result. Loud error beats wrong configuration.
+    'sigma', 'm', 'stream'))
+
+
+def _amplitude_prior_key(prior):
+    """Hashable, exact key for an ``amplitude_prior`` (scalar, sequence
+    or array); ``None`` for no prior."""
+    if prior is None:
+        return None
+    arr = np.asarray(prior, dtype=np.float64)
+    return (arr.shape, arr.tobytes())
+
+
+def _ls_memory_settings(nf, k0, m, sigma, use_double, nharmonics, use_fft,
+                        kwargs):
+    """The settings that make two :class:`LombScargleMemory` objects
+    interchangeable for a run: grid, NFFT parameters, precision, model
+    mode and prior. Mirrors ``LombScargleMemory.__init__``'s defaults.
+
+    ``kwargs`` is the dict the memory constructor will actually be
+    handed, so EVERY setting is read from it (with the constructor's
+    own default) and the ``use_double``/``nharmonics`` arguments are
+    only the fallback for a dict that does not carry them. Reading
+    either from the process instead would make a per-call
+    ``nharmonics=``/``use_double=`` silently reuse a set built for the
+    process-level value.
+
+    ``precomp_psi=False`` is keyed for completeness; that path in fact
+    raises ``AttributeError`` inside
+    :func:`~cuvarbase.cunfft.nfft_adjoint_async` (which dereferences
+    ``memory.q1.ptr``) on 1.0 and on every earlier release, so no
+    memory set with ``precomp_psi=False`` ever reaches a second call.
+    """
+    return dict(nf=int(nf), k0=int(k0), m=int(m), sigma=float(sigma),
+                use_double=bool(kwargs.get('use_double', use_double)),
+                nharmonics=int(kwargs.get('nharmonics', nharmonics)),
+                use_fft=bool(kwargs.get('use_fft', use_fft)),
+                mode=(2 if kwargs.get('window', False)
+                      else (1 if kwargs.get('floating_mean', True) else 0)),
+                precomp_psi=bool(kwargs.get('precomp_psi', True)),
+                pinned=bool(kwargs.get('pinned', True)),
+                prior=_amplitude_prior_key(kwargs.get('amplitude_prior',
+                                                      None)))
+
+
+def _ls_memory_matches(mem, settings, max_ndata):
+    """True if ``mem`` is already allocated for ``settings`` and can hold
+    a lightcurve of ``max_ndata`` points (see
+    :func:`_ls_memory_settings`)."""
+    try:
+        if mem.lsp_c is None or mem.lsp_g is None or mem.t_g is None:
+            return False
+        if not mem.buffered_transfer:
+            return False
+        if mem.n0_buffer is None or int(mem.n0_buffer) < int(max_ndata):
+            return False
+        if (int(mem.nf) != settings['nf'] or int(mem.k0) != settings['k0']
+                or int(mem.m) != settings['m']
+                or float(mem.sigma) != settings['sigma']):
+            return False
+        if (bool(mem.use_double) != settings['use_double']
+                or int(mem.nharmonics) != settings['nharmonics']
+                or bool(mem.use_fft) != settings['use_fft']
+                or int(mem.mode) != settings['mode']
+                or bool(mem.precomp_psi) != settings['precomp_psi']
+                or bool(mem.pinned) != settings['pinned']):
+            return False
+        if _amplitude_prior_key(mem.amplitude_prior) != settings['prior']:
+            return False
+    except AttributeError:
+        return False
+    return True
 
 
 def _check_nfft_grids(memory, nf, k0, nharms):
@@ -514,7 +686,7 @@ def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
         return mhdirect_sums(t, yw, w, f, YY, nharms=nharms)
     sums = [add_regularization(s, **kwargs) for s in list(map(sfunc, freqs))]
 
-    ybar = sum(yw)
+    ybar = np.sum(yw)
     return np.array([mhgls_from_sums(s, YY, ybar) for s in sums])
 
 
@@ -645,7 +817,7 @@ def lomb_scargle_async(memory, functions, freqs,
                 memory.real_type(memory.yy),
                 memory.real_type(memory.ybar),
                 memory.real_type(df),
-                memory.real_type(min(freqs)),
+                memory.real_type(np.min(freqs)),
                 memory.mode)
 
         lomb_dirsum.prepared_async_call(*args)
@@ -753,6 +925,11 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         self.module_options = self.nfft_proc.module_options
         self.use_double = self.nfft_proc.use_double
         self.memory = None
+        # Memory set (pinned host buffers, device arrays and cuFFT
+        # plans) reused by batched_run_const_nfreq across calls of
+        # the same shape; see that method's Notes. Set to None to
+        # release it.
+        self._batch_memory = None
 
         self.nharmonics = kwargs.get('nharmonics', 1)
 
@@ -1109,6 +1286,15 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         """
 
+        # Private: set by batched_run_const_nfreq, which has already
+        # run check_freqs/check_k0 on the single shared grid it shares
+        # across every light curve. Popped here so it never reaches the
+        # memory constructors below. It suppresses only the O(nf)
+        # uniformity/first-mode check: check_freqs itself always runs,
+        # so the Phase 1 validation (defect 23) cannot be switched off
+        # from a public entry point, however this keyword is reached.
+        grid_prechecked = kwargs.pop('_grid_prechecked', False)
+
         # Validate before any device work (kernel compile included):
         # dy = 0 or a non-finite y used to come back as an
         # undocumented power of -1 at every frequency, and
@@ -1123,6 +1309,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                              name='LombScargleAsyncProcess.run '
                                   'lightcurve %d' % i)
 
+        # check_freqs is O(nf) but cheap and is the Phase 1 guard
+        # against non-finite / non-positive grids: run it ALWAYS, so
+        # no keyword can turn defect 23's validation off.
         if freqs is not None:
             for frq in (freqs if isinstance(freqs, list) else [freqs]):
                 check_freqs(frq, name='LombScargleAsyncProcess.run')
@@ -1152,12 +1341,20 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # the kernels evaluate df * (k0 + arange(nf)) and the user's
         # array only labels the output: validate every grid (uniform
         # spacing, integer first mode, >= 2 points) before any GPU work
-        for frq in frqs:
-            if freqs is None:
-                # the autofrequency default did not go through the
-                # check at the top of this method
-                check_freqs(frq, name='LombScargleAsyncProcess.run')
-            check_k0(frq)
+        if not grid_prechecked:
+            # validate each *distinct* grid object once: batched callers
+            # pass the same array for every lightcurve and check_k0 is
+            # O(nf) (a median over the spacings)
+            checked = []
+            for frq in frqs:
+                if any(frq is done for done in checked):
+                    continue
+                if freqs is None:
+                    # the autofrequency default did not go through the
+                    # check at the top of this method
+                    check_freqs(frq, name='LombScargleAsyncProcess.run')
+                check_k0(frq)
+                checked.append(frq)
         k0s = [get_k0(frq) for frq in frqs]
 
         if memory is None:
@@ -1225,23 +1422,48 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             numbers (e.g. 4.4 ms/LC for ZTF-scale grids) were measured
             at ``batch_size=1``. The "multi-stream overhead" that made
             larger values slower is per-call setup, diagnosed Jul 2026
-            (A5000): this method builds ``batch_size`` separate
+            (A5000): this method needs ``batch_size`` separate
             ``LombScargleMemory`` sets — pinned host buffers, device
-            arrays, and a cuFFT plan each — on *every call*, a cost
-            that scales with ``batch_size``, while the GPU compute
-            stages barely benefit because a single survey-scale
-            Lomb-Scargle already saturates the device. When one call
-            processes many lightcurves (hundreds+) that setup
-            amortizes: ``batch_size=4`` measured ~10% faster per LC
-            than 1 at 256 LCs/call, while 8 was net slower. Only
-            increase this if your call sizes are large and you
+            arrays, and a cuFFT plan each — a cost that scales with
+            ``batch_size``, while the GPU compute stages barely benefit
+            because a single survey-scale Lomb-Scargle already
+            saturates the device. Since 1.0 that setup is paid once and
+            reused (see Notes), so the remaining cost of a larger
+            ``batch_size`` is device memory. When one call processes
+            many lightcurves (hundreds+) the setup amortizes:
+            ``batch_size=4`` measured ~10% faster per LC than 1 at 256
+            LCs/call, while 8 was net slower. Only increase this if you
             benchmark it on your own workload; see
             ``analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md``.
 
         Notes
         -----
         To get best efficiency, make sure the maximum number of observations
-        is not much larger than the typical number of observations
+        is not much larger than the typical number of observations.
+
+        **Memory reuse (new in 1.0).** Building a memory set (pinned
+        host buffers, device arrays and two cuFFT plans) costs tens of
+        milliseconds at survey ``nf``, which used to be paid on *every*
+        call. This method now reuses an already-allocated set when one
+        fits the problem — grid (``nf``, ``k0``), NFFT parameters,
+        precision, harmonics, model mode and ``amplitude_prior`` all
+        equal and its host buffers long enough for the longest
+        lightcurve in the call. It prefers the set
+        :meth:`preallocate` built (``self.memory``), and otherwise
+        keeps the one it built last (``self._batch_memory``), so a loop
+        of one-lightcurve calls allocates once. The reused device
+        memory is held until the process object is dropped; set
+        ``proc._batch_memory = None`` to release it early. Results are
+        unchanged: the reused buffers are zeroed and overwritten before
+        every run, exactly as on the ``preallocate`` path. A keyword
+        that overrides a process-level setting for one call
+        (``nharmonics=``, ``use_double=``) is part of the key, so such
+        a call allocates and caches its own set rather than matching
+        one built for the process default. Passing a
+        ``LombScargleMemory`` buffer directly, or fixing its size
+        (``t_g=``, ``lsp_c=``, ``nfft_mem_yw=``, ``n0_buffer=``,
+        ``nf=``, ``k0=``, ...), opts the call out of both reuse and
+        caching.
         """
 
         # Validate before any device work (see run()).
@@ -1253,8 +1475,6 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             check_lightcurve(lc[0], lc[1], lc[2], min_n=_LS_MIN_NDATA,
                              name='batched_run_const_nfreq '
                                   'lightcurve %d' % i)
-        if freqs is not None:
-            check_freqs(freqs, name='batched_run_const_nfreq')
 
         # compile and prepare module functions if not already done
         if not hasattr(self, 'prepared_functions') or \
@@ -1279,6 +1499,9 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
 
         freqs = np.asarray(freqs)
+        # one grid shared by every lightcurve: validate it once here and
+        # tell run() not to repeat the O(nf) checks per lightcurve
+        check_freqs(freqs, name='batched_run_const_nfreq')
         check_k0(freqs)
         k0 = get_k0(freqs)
         nf = len(freqs)
@@ -1302,36 +1525,78 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                             nharmonics=self.nharmonics,
                             use_fft=use_fft)
         kwargs_lsmem.update(kwargs)
-        memory = [LombScargleMemory(sigma, stream, m, k0=k0,
-                                    **kwargs_lsmem)
-                  for stream in streams]
 
-        # allocate memory
-        [mem.allocate(nf=nf, **kwargs) for mem in memory]
+        # Reuse an already-allocated memory set when one fits this
+        # problem: the one preallocate() built, else the one the last
+        # call to this method built (pinned host buffers, device arrays
+        # and two cuFFT plans -- tens of ms per call at survey nf).
+        # kwargs that hand LombScargleMemory its own buffers opt out.
+        # The key is built from kwargs_lsmem -- the dict the constructor
+        # below is actually handed -- so a per-call nharmonics=/
+        # use_double= (which kwargs_lsmem.update(kwargs) has already
+        # written over the process-level value) keys and builds its own
+        # set instead of matching one built for the process default.
+        memory = None
+        cacheable = not (_LS_MEMORY_OVERRIDE_KWARGS & set(kwargs))
+        if cacheable:
+            settings = _ls_memory_settings(nf, k0, m, sigma,
+                                           self.use_double,
+                                           self.nharmonics, use_fft,
+                                           kwargs_lsmem)
+
+            def _usable(mems):
+                return (mems is not None and len(mems) >= bsize
+                        and all(_ls_memory_matches(mem, settings, max_ndata)
+                                and any(mem.stream is st
+                                        for st in self.streams)
+                                for mem in mems[:bsize]))
+
+            for candidate in (self.memory, self._batch_memory):
+                if _usable(candidate):
+                    memory = candidate[:bsize]
+                    break
+
+        if memory is None:
+            memory = [LombScargleMemory(sigma, stream, m, k0=k0,
+                                        **kwargs_lsmem)
+                      for stream in streams]
+
+            # allocate memory
+            [mem.allocate(nf=nf, **kwargs) for mem in memory]
+
+            if cacheable:
+                self._batch_memory = memory
 
         funcs = (self.function_tuple, self.nfft_proc.function_tuple)
         best_freqs, best_freq_faps = [], []
 
-        default_mask = np.array([True] * len(freqs))
-        mask = default_mask if ignore_freq_mask is None else ~np.asarray(ignore_freq_mask)
+        # ``None`` means "every frequency": an all-True mask would only
+        # buy three nf-sized copies per lightcurve (16 ms at nf = 365k
+        # for np.array([True] * nf) alone)
+        mask = None if ignore_freq_mask is None \
+            else ~np.asarray(ignore_freq_mask)
         for b, batch in enumerate(batches):
 
             results = self.run(batch, memory=memory, freqs=freqs,
-                               use_fft=use_fft,
+                               use_fft=use_fft, _grid_prechecked=True,
                                **kwargs)
             self.finish()
 
             for i, (f, p) in enumerate(results):
                 if only_return_best_freqs:
-                    pm = np.asarray(p[:nf], dtype=np.float64)[mask]
+                    pm = np.asarray(p[:nf], dtype=np.float64)
+                    fm = freqs
+                    if mask is not None:
+                        pm = pm[mask]
+                        fm = freqs[mask]
                     best_index = int(np.argmax(pm))
                     # FAP of the best peak only (identical value, and
                     # the log-space fap_baluev is the CPU-bound part of
                     # this option); d_K = 2H + 1 for H harmonics
                     fap = fap_baluev(batch[i][0], batch[i][2],
-                                     pm[best_index], np.max(freqs[mask]),
+                                     pm[best_index], np.max(fm),
                                      d_K=2 * self.nharmonics + 1)
-                    best_freqs.append(freqs[mask][best_index])
+                    best_freqs.append(fm[best_index])
                     best_freq_faps.append(float(fap))
                 else:
                     lsps.append(np.copy(p))
@@ -1398,8 +1663,11 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
 
     w = np.ones(N) if dy is None else np.power(dy, -2)
 
-    tbar = np.dot(w, t) / sum(w)
-    Dt = np.dot(w, np.power(t - tbar, 2)) / sum(w)
+    # np.sum, not the builtin: sum() over a numpy array iterates it in
+    # Python (6 ms per call at N = 65,000)
+    wsum = np.sum(w)
+    tbar = np.dot(w, t) / wsum
+    Dt = np.dot(w, np.power(t - tbar, 2)) / wsum
 
     Teff = np.sqrt(4 * np.pi * Dt)
 

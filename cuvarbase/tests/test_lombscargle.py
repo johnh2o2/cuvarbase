@@ -1310,3 +1310,350 @@ class TestCufinufftBackend(object):
         proc = self._proc(True)
         p = _run_gpu(proc, t, y, dy, freqs)
         assert np.max(np.abs(p - ref)) < 1e-6
+
+
+class TestWeightsUseNumpyReductions(object):
+    """``weights()`` and ``LombScargleMemory.setdata`` used the Python
+    builtins ``sum``/``min``/``max`` on numpy arrays, which iterate the
+    array element by element: 11.4 ms per lightcurve at N = 65,000 and
+    150 ms at N = 1e6 of pure interpreter time for the same values
+    (Sep-2026 algorithm audit, LS-1). They now use ``np.sum`` /
+    ``np.min`` / ``np.max``.
+
+    The weight normalization moves by the last ulp (``np.sum`` is
+    pairwise, the builtin is a left-to-right accumulation), which is
+    also what makes the copy here agree with the canonical
+    ``cuvarbase.utils.weights`` bit for bit -- it already used
+    ``np.sum``, so the two disagreed before.
+    """
+
+    @staticmethod
+    def _dy(n, seed=5):
+        r = np.random.RandomState(seed)
+        return 0.01 * (1.0 + r.rand(n))
+
+    @pytest.mark.parametrize("n", [7, 300, 4096])
+    def test_matches_the_canonical_utils_weights_bitwise(self, n):
+        from ..memory.lombscargle_memory import weights as mem_weights
+        from ..utils import weights as utils_weights
+        dy = self._dy(n)
+        w = mem_weights(dy)
+        assert np.array_equal(w, utils_weights(dy))
+        assert np.array_equal(w, np.power(dy, -2) / np.sum(np.power(dy, -2)))
+        assert_allclose(np.sum(w), 1.0, rtol=1e-14)
+
+    @pytest.mark.parametrize("n", [7, 300, 4096])
+    def test_agrees_with_the_builtin_sum_to_the_last_ulp(self, n):
+        """Guards the direction of the change: the values are the same
+        to a few ulps, so nothing but rounding moved."""
+        from ..memory.lombscargle_memory import weights as mem_weights
+        dy = self._dy(n)
+        w = np.power(dy, -2)
+        assert_allclose(mem_weights(dy), w / sum(w), rtol=1e-14, atol=0.0)
+
+    @pytest.mark.parametrize("use_double", [False, True])
+    def test_setdata_tmin_tmax_are_the_array_extremes(self, use_double):
+        from ..memory.lombscargle_memory import LombScargleMemory
+        r = np.random.RandomState(11)
+        n = 500
+        t = np.sort(2455000.0 + 30.0 * r.rand(n))
+        y = 12 + 0.01 * r.randn(n)
+        dy = 0.01 * np.ones(n)
+        proc = LombScargleAsyncProcess(use_double=use_double)
+        freqs = 0.01 * (5 + np.arange(400))
+        mem = proc.allocate([(t, y, dy)], nfreqs=[len(freqs)],
+                            k0s=[5])[0]
+        mem.setdata(t=t, y=y, dy=dy)
+        tc = np.asarray(t).astype(mem.real_type)
+        assert mem.tmin == np.min(tc)
+        assert mem.tmax == np.max(tc)
+        # ... and the same values the Python builtins produced
+        assert mem.tmin == min(tc)
+        assert mem.tmax == max(tc)
+        assert isinstance(mem, LombScargleMemory)
+
+
+class TestBatchedMemoryReuse(object):
+    """``batched_run_const_nfreq`` rebuilt its ``LombScargleMemory``
+    set -- pinned host buffers, device arrays and two cuFFT plans -- on
+    every call, and built an ``np.array([True] * nf)`` mask whether or
+    not one was asked for (16 ms at nf = 365,000). It now reuses a
+    fitting memory set (``preallocate``'s first, then the one it built
+    last) and skips the mask entirely when ``ignore_freq_mask`` is None
+    (Sep-2026 algorithm audit, LS-4).
+    """
+
+    @staticmethod
+    def _lc(N=400, T=90.0, seed=2):
+        r = np.random.RandomState(seed)
+        t = np.sort(r.uniform(0, T, N))
+        y = 0.2 * np.sin(2 * np.pi * t / 1.9) + 0.05 * r.randn(N)
+        return t, y, 0.05 * np.ones(N)
+
+    @staticmethod
+    def _counting_memory(monkeypatch):
+        from .. import lombscargle as lsmod
+        built = []
+        original = lsmod.LombScargleMemory
+
+        class Counting(original):
+            def __init__(self, *args, **kwargs):
+                built.append(1)
+                super(Counting, self).__init__(*args, **kwargs)
+
+        monkeypatch.setattr(lsmod, 'LombScargleMemory', Counting)
+        return built
+
+    def test_memory_is_built_once_for_many_calls(self, monkeypatch):
+        freqs = 0.002 * (30 + np.arange(4000))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        built = self._counting_memory(monkeypatch)
+        proc.batched_run_const_nfreq(d, freqs=freqs)
+        assert sum(built) == 1
+        del built[:]
+        for _ in range(4):
+            proc.batched_run_const_nfreq(d, freqs=freqs)
+        assert sum(built) == 0
+
+    def test_reused_memory_gives_identical_powers(self):
+        freqs = 0.002 * (30 + np.arange(4000))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        proc.batched_run_const_nfreq(d, freqs=freqs)      # warm/compile
+        proc._batch_memory = None                          # force a rebuild
+        fresh = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        for _ in range(3):
+            again = np.copy(proc.batched_run_const_nfreq(d,
+                                                         freqs=freqs)[0][1])
+            assert np.array_equal(fresh, again)
+
+    def test_a_different_grid_is_not_reused(self, monkeypatch):
+        f1 = 0.002 * (30 + np.arange(4000))
+        f2 = 0.002 * (30 + np.arange(2500))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        proc.batched_run_const_nfreq(d, freqs=f1)
+        built = self._counting_memory(monkeypatch)
+        p2 = np.copy(proc.batched_run_const_nfreq(d, freqs=f2)[0][1])
+        assert sum(built) == 1
+        del built[:]
+        proc.batched_run_const_nfreq(d, freqs=f2)
+        assert sum(built) == 0
+        # and the shorter grid's powers are the head of the longer one
+        # (only to float32 NFFT accuracy: the two grids are padded to
+        # different 7-smooth lengths, so the spreading differs by ~2e-4
+        # relative near the top of the band)
+        p1 = np.copy(proc.batched_run_const_nfreq(d, freqs=f1)[0][1])
+        assert_allclose(np.asarray(p2[:len(f2)], dtype=np.float64),
+                        np.asarray(p1[:len(f2)], dtype=np.float64),
+                        rtol=1e-3, atol=1e-5)
+
+    def test_a_longer_lightcurve_forces_a_rebuild(self, monkeypatch):
+        freqs = 0.002 * (30 + np.arange(4000))
+        short, long_ = [self._lc(N=200, seed=3)], [self._lc(N=900, seed=4)]
+        proc = LombScargleAsyncProcess()
+        proc.batched_run_const_nfreq(short, freqs=freqs)
+        built = self._counting_memory(monkeypatch)
+        proc.batched_run_const_nfreq(long_, freqs=freqs)
+        assert sum(built) == 1
+        del built[:]
+        # the bigger buffers serve the short lightcurve too
+        proc.batched_run_const_nfreq(short, freqs=freqs)
+        assert sum(built) == 0
+
+    def test_padded_buffers_do_not_change_the_result(self):
+        # Two different device allocations, so this is the ~1e-8 float32
+        # tolerance of the NFFT gridding atomics, not bitwise (measured
+        # on the A40: same buffer 15/15 bitwise, fresh allocations up to
+        # 1.1e-8 on powers of order 1 -- true of the pre-1.0 code too).
+        freqs = 0.002 * (30 + np.arange(4000))
+        short = [self._lc(N=200, seed=3)]
+        proc = LombScargleAsyncProcess()
+        exact = np.asarray(proc.batched_run_const_nfreq(short,
+                                                        freqs=freqs)[0][1],
+                           dtype=np.float64)
+        # a run through buffers sized for 900 points
+        proc.batched_run_const_nfreq([self._lc(N=900, seed=4)], freqs=freqs)
+        padded = np.asarray(proc.batched_run_const_nfreq(short,
+                                                         freqs=freqs)[0][1],
+                            dtype=np.float64)
+        assert_allclose(padded, exact, rtol=1e-6, atol=1e-7)
+
+    def test_preallocated_memory_is_used(self, monkeypatch):
+        freqs = 0.002 * (30 + np.arange(4000))
+        d = [self._lc(N=400)]
+        proc = LombScargleAsyncProcess()
+        ref = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        proc._batch_memory = None
+        proc.preallocate(max_nobs=400, nlcs=1, freqs=freqs)
+        built = self._counting_memory(monkeypatch)
+        p = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        assert sum(built) == 0
+        assert proc._batch_memory is None      # preallocate's set was used
+        assert_allclose(np.asarray(p, dtype=np.float64),
+                        np.asarray(ref, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+
+    def test_amplitude_prior_change_is_not_reused(self, monkeypatch):
+        freqs = 0.002 * (30 + np.arange(2000))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        p0 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        built = self._counting_memory(monkeypatch)
+        p1 = np.copy(proc.batched_run_const_nfreq(
+            d, freqs=freqs, amplitude_prior=0.05)[0][1])
+        assert sum(built) == 1
+        # the prior really was applied (it is not the unregularized run)
+        assert not np.allclose(np.asarray(p0[:len(freqs)], dtype=np.float64),
+                               np.asarray(p1[:len(freqs)], dtype=np.float64))
+        del built[:]
+        p2 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        assert sum(built) == 1                 # back to no prior: rebuild
+        assert_allclose(np.asarray(p2, dtype=np.float64),
+                        np.asarray(p0, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+
+    def test_no_mask_matches_an_all_true_mask(self):
+        freqs = 0.002 * (30 + np.arange(3000))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        bf0, fap0 = proc.batched_run_const_nfreq(
+            d, freqs=freqs, only_return_best_freqs=True)
+        bf1, fap1 = proc.batched_run_const_nfreq(
+            d, freqs=freqs, only_return_best_freqs=True,
+            ignore_freq_mask=np.zeros(len(freqs), dtype=bool))
+        assert bf0[0] == bf1[0]
+        assert fap0[0] == fap1[0]
+
+    def test_per_call_nharmonics_is_not_reused(self, monkeypatch):
+        """``nharmonics`` is read off the memory object
+        (``lomb_scargle_async``), so a per-call ``nharmonics=`` must key
+        and build its own memory set. Matching a cached H = 1 set
+        against a request for H = 2 silently returned the
+        single-harmonic periodogram (found reviewing LS-4)."""
+        freqs = 0.002 * (30 + np.arange(1500))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        p1 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+
+        ref = LombScargleAsyncProcess(nharmonics=2)
+        p2ref = np.copy(ref.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+
+        built = self._counting_memory(monkeypatch)
+        p2 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs,
+                                                  nharmonics=2)[0][1])
+        assert sum(built) == 1                 # not the cached H = 1 set
+        assert_allclose(np.asarray(p2, dtype=np.float64),
+                        np.asarray(p2ref, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+        # it really is a different periodogram from the H = 1 one
+        assert not np.allclose(np.asarray(p2[:len(freqs)], dtype=np.float64),
+                               np.asarray(p1[:len(freqs)], dtype=np.float64))
+
+        del built[:]
+        proc.batched_run_const_nfreq(d, freqs=freqs, nharmonics=2)
+        assert sum(built) == 0                 # the H = 2 set IS reused
+
+        del built[:]
+        p3 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        assert sum(built) == 1                 # back to H = 1: rebuild
+        assert_allclose(np.asarray(p3, dtype=np.float64),
+                        np.asarray(p1, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+
+    def test_per_call_use_double_is_not_reused(self, monkeypatch):
+        """Same as above for ``use_double=``: the memory's precision
+        sets the dtype of the returned periodogram, so a cached
+        single-precision set must not answer a ``use_double=True``
+        request. (Passing ``use_double`` per call only changes the
+        buffers -- the kernels keep the precision the process was
+        constructed with -- but that is pre-1.0 behaviour this must not
+        change silently; construct the process with ``use_double=True``
+        for a genuine double-precision run.)"""
+        freqs = 0.002 * (30 + np.arange(1500))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        p1 = proc.batched_run_const_nfreq(d, freqs=freqs)[0][1]
+        assert np.asarray(p1).dtype == np.float32
+
+        built = self._counting_memory(monkeypatch)
+        p2 = proc.batched_run_const_nfreq(d, freqs=freqs,
+                                          use_double=True)[0][1]
+        assert sum(built) == 1                 # not the float32 set
+        assert np.asarray(p2).dtype == np.float64
+
+    def test_a_buffer_sizing_kwarg_opts_out_of_the_cache(self, monkeypatch):
+        """``n0_buffer`` (like every other key that hands the memory a
+        buffer or its size) opts the call out of the cache entirely, so
+        it allocates its own set exactly as it did before 1.0."""
+        freqs = 0.002 * (30 + np.arange(1500))
+        d = [self._lc(N=400)]
+        proc = LombScargleAsyncProcess()
+        proc.batched_run_const_nfreq(d, freqs=freqs)
+        cached = proc._batch_memory
+        assert cached is not None
+
+        built = self._counting_memory(monkeypatch)
+        for _ in range(2):
+            proc.batched_run_const_nfreq(d, freqs=freqs, n0_buffer=1000)
+        assert sum(built) == 2                 # never reused, never cached
+        assert proc._batch_memory is cached
+
+        del built[:]
+        proc.batched_run_const_nfreq(d, freqs=freqs)
+        assert sum(built) == 0                 # the plain cache survived
+
+    @pytest.mark.parametrize("kw", ['sigma', 'm', 'stream'])
+    def test_constructor_positional_kwargs_raise_cold_and_warm(self, kw):
+        """``LombScargleMemory`` takes sigma/m/stream positionally, so
+        passing them as keywords has always raised TypeError. They must
+        opt out of the memory cache too: on a cache hit the constructor
+        is never called, so the call would otherwise succeed silently
+        and IGNORE the keyword, returning the process-default result."""
+        freqs = 0.002 * (30 + np.arange(1500))
+        d = [self._lc(N=400)]
+        value = {'sigma': 4, 'm': 10, 'stream': None}[kw]
+        proc = LombScargleAsyncProcess()
+
+        # cold cache
+        with pytest.raises(TypeError):
+            proc.batched_run_const_nfreq(d, freqs=freqs, **{kw: value})
+
+        # warm the cache with a plain call, then the same request must
+        # still raise rather than quietly returning the default
+        proc.batched_run_const_nfreq(d, freqs=freqs)
+        assert proc._batch_memory is not None
+        with pytest.raises(TypeError):
+            proc.batched_run_const_nfreq(d, freqs=freqs, **{kw: value})
+
+    def test_grid_validation_cannot_be_switched_off_from_run(self):
+        """``_grid_prechecked`` is private to the batched path and may
+        suppress only the O(nf) uniformity check. ``check_freqs`` (the
+        defect-23 guard against non-finite / non-positive grids) runs
+        unconditionally, so no keyword reachable from a public entry
+        point can turn it off."""
+        proc = LombScargleAsyncProcess()
+        d = [self._lc(N=400)]
+        bad = 0.002 * (30 + np.arange(1500))
+        bad[7] = np.nan
+        with pytest.raises(ValueError):
+            proc.run(d, freqs=[bad], _grid_prechecked=True)
+
+        negative = np.linspace(-1.0, 5.0, 500)
+        with pytest.raises(ValueError):
+            proc.run(d, freqs=[negative], _grid_prechecked=True)
+
+    def test_grid_validation_still_rejects_a_bad_grid(self):
+        """The batched path validates the shared grid once and tells
+        run() to skip the repeat; the error must survive."""
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        bad = np.concatenate([0.002 * (30 + np.arange(500)),
+                              0.002 * (600 + np.arange(500))])
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=bad)
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=np.geomspace(0.1, 5.0, 500))
+        with pytest.raises(ValueError):
+            proc.run(d, freqs=[np.geomspace(0.1, 5.0, 500)])
