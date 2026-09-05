@@ -4,11 +4,11 @@ Install instructions
 Requirements
 ------------
 
-* **Python 3.9 – 3.12**
-* An **NVIDIA GPU** with a working CUDA driver, and the **CUDA toolkit** (11.x or 12.x; ``nvcc`` must be on your ``PATH``). cuvarbase is developed and validated against CUDA 11.8 and 12.4.
+* **Python 3.9 – 3.14**
+* An **NVIDIA GPU** with a working CUDA driver, and the **CUDA toolkit** (``nvcc`` must be on your ``PATH``). cuvarbase 1.0 is validated against **CUDA 12.4** (every archived release-gate record was produced with it); other 11.x/12.x toolkits may well work but are untested.
 * `PyCUDA <https://documen.tician.de/pycuda/>`_ >= 2017.1.1 (except 2024.1.2), installed automatically as a dependency.
 
-GPU execution requires Linux or Windows via WSL2. NVIDIA dropped CUDA support on macOS in 2019, so modern Macs cannot run the GPU code — although ``import cuvarbase`` and the CPU-only helpers (``sparse_bls_cpu``, ``single_bls``, ``fap_baluev``, the frequency-grid builders) work on any machine, GPU or not.
+GPU execution requires Linux or Windows via WSL2. NVIDIA dropped CUDA support on macOS in 2019, so modern Macs cannot run the GPU code. ``import cuvarbase`` itself needs neither a GPU nor pycuda, and the pure-numpy helpers in ``cuvarbase.utils`` (``check_lightcurve``, ``autofrequency``, ...), ``cuvarbase.bls_frequencies``, ``cuvarbase.tls_grids``, ``cuvarbase.tls_models`` and ``cuvarbase.tls_stats`` work on any machine. The method modules — ``cuvarbase.bls`` (including its CPU routines ``sparse_bls_cpu`` and ``single_bls``), ``cuvarbase.lombscargle`` (including ``fap_baluev``), ``ce``, ``pdm``, ``tls`` — import ``pycuda.driver`` at module top, so they need the pycuda *package* installed; a device is only touched at the first GPU call. See *GPU-less installs* below.
 
 Installing the CUDA toolkit
 ---------------------------
@@ -31,15 +31,18 @@ In a fresh virtual environment (venv or conda, Python 3.9+):
 
     pip install cuvarbase
 
-That's it. numpy, scipy, astropy, and pycuda are installed automatically. PyCUDA builds against your CUDA toolkit during installation, so the environment variables above must be set first.
+That's it. numpy, scipy and pycuda are installed automatically (astropy is only needed by the test suite). PyCUDA builds against your CUDA toolkit during installation, so the environment variables above must be set first — ``pip install cuvarbase`` cannot succeed on a machine without the CUDA toolkit.
 
 Optional extras:
 
 .. code:: bash
 
-    pip install cuvarbase[cufinufft]   # optional cuFINUFFT backend for Lomb-Scargle
-    pip install batman-package         # limb-darkened templates for the experimental TLS module
-    pip install cuvarbase[test]        # test-suite dependencies
+    pip install cuvarbase[cufinufft]     # optional cuFINUFFT backend for Lomb-Scargle
+    pip install cuvarbase[test]          # test-suite dependencies (pytest, nfft, astropy,
+                                         # batman-package, transitleastsquares)
+    pip install -r docs/requirements.txt # Sphinx + matplotlib, to build the documentation
+
+``batman-package`` (part of the ``test`` extra) enables limb-darkened TLS templates; without it TLS falls back to a trapezoid template with a warning.
 
 Installing from source
 ----------------------
@@ -50,15 +53,27 @@ Installing from source
     cd cuvarbase
     pip install -e .
 
+GPU-less installs
+-----------------
+
+Because ``pip install cuvarbase`` builds pycuda against the CUDA toolkit, it fails on a machine without one. To use the pure helpers (frequency grids, TLS duration grids and statistics, ``check_lightcurve``, ...) on such a machine, skip the dependency resolution:
+
+.. code:: bash
+
+    pip install numpy scipy
+    pip install --no-deps cuvarbase
+
+``import cuvarbase`` and the pure modules listed under *Requirements* then work; importing a method module (``cuvarbase.bls``, ``cuvarbase.lombscargle``, ...) raises ``ImportError`` because pycuda is absent. The test suite ships its own pycuda stub (``cuvarbase/tests/conftest.py``), so ``pytest --pyargs cuvarbase`` also runs on such a machine: the CPU tests pass and the GPU tests skip.
+
 Verifying the installation
 --------------------------
 
 .. code:: bash
 
-    python -c "import cuvarbase; print(cuvarbase.__version__)"          # works even without a GPU
-    python -c "from cuvarbase.bls import eebls_gpu_fast; print('GPU BLS ready')"
+    python -c "import cuvarbase; print(cuvarbase.__version__)"          # works even without a GPU or pycuda
+    python -c "from cuvarbase.bls import eebls_gpu_fast; print('GPU BLS ready')"   # needs pycuda
 
-For a real end-to-end check on a GPU machine, install the test extra and run the test suite:
+For a real end-to-end check on a GPU machine, install the test extra and run the test suite (on a GPU-less machine the same command runs the CPU tests and skips the rest):
 
 .. code:: bash
 
