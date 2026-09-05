@@ -205,16 +205,17 @@ hands the memory its own buffer or fixes its size (``t_g``, ``lsp_c``,
 ``nfft_mem_yw``, ``n0_buffer``, ``nf``, ``k0``, ...) opts that call out
 of the cache entirely, so it allocates its own set as before.
 
-**Reproducibility.** Two runs of the same build on the same input are
-bitwise identical when they go through the *same* buffers, but not
-necessarily across separate allocations: the float32 NFFT spreads the
-data onto the grid with ``atomicAdd``, whose summation order is not
-fixed. Measured on an A40, two runs of one unchanged build differ by up
-to ~5e-10 in absolute power at ``N = 65,000`` (up to ~1e-4 in *relative*
-terms, on powers near zero), and are bitwise identical at ZTF scale.
-Peak locations and ``use_double=True`` results are unaffected in every
-test. Compare float32 periodograms with a tolerance, not
-``np.array_equal``.
+**Reproducibility.** The float32 NFFT spreads the data onto the grid
+with ``atomicAdd``, whose summation order is not fixed, so two runs of
+the same build on the same input need not be bitwise identical -- not
+even through the same buffers. Measured on an A40 with an unchanged
+build: sparse light curves on coarse grids are often bitwise stable,
+but dense configurations are not, differing by up to ~6e-8 in absolute
+power at ``N = 65,000``/``nf = 210,000`` and ~4e-7 at
+``N = 65,000``/``nf = 30,000`` and ``N = 300``/``nf = 219,000``, i.e.
+~1e-4 to ~3e-4 *relative* on powers near zero. Peak locations and
+``use_double=True`` results were unaffected in every test. Compare
+float32 periodograms with a tolerance, never with ``np.array_equal``.
 
 
 Example: Basic
