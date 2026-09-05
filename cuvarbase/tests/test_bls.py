@@ -3232,3 +3232,62 @@ class TestBLSMemoryHostStaging(object):
         eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
         assert len(B._memory_pool_tls.pool) == 1
         B._memory_pool_tls.pool = None
+
+
+class TestNoBlasThreadpoolInPrologues(object):
+    """Sep 2026 audit, id 45 (plan item BLS-8).
+
+    ``np.dot`` on a long float vector goes to BLAS, which spawns a full
+    threadpool; on CPU-quota-limited containers (RunPod, Kubernetes) the
+    burst trips CFS throttling and stalls the process. The July 2026 work
+    moved ``BLSMemory.setdata`` and ``_chi2_null`` to ``np.einsum``; the
+    per-light-curve prologues of ``eebls_gpu``, ``eebls_gpu_custom``,
+    ``single_bls`` and ``sparse_bls_cpu`` were still on ``np.dot``.
+    Measured on the pod at ndata = 20000: the prologue's median went
+    0.60 -> 0.17 ms with a 98 ms tail and 12 CFS throttle events per 50
+    calls going to none, and ``single_bls`` 93.9 -> 0.7 ms.
+
+    Source-level guard (there is no timing assertion anywhere here) plus
+    a check that the change is a summation-order change only.
+    """
+
+    @pytest.mark.parametrize("name", ['eebls_gpu', 'eebls_gpu_custom',
+                                      'single_bls', 'sparse_bls_cpu'])
+    def test_prologue_does_not_call_np_dot(self, name):
+        import inspect
+        from .. import bls as B
+        src = inspect.getsource(getattr(B, name))
+        # comments mention np.dot on purpose; look at the code only
+        code = '\n'.join(line.split('#')[0] for line in src.splitlines())
+        assert 'np.dot' not in code, (
+            "%s reintroduced np.dot: use np.einsum('i,i->', ...) so the "
+            "per-light-curve prologue stays off the BLAS threadpool"
+            % name)
+        assert "np.einsum('i,i->'" in code
+
+    def test_einsum_and_dot_agree_to_rounding(self):
+        # The replacement is the same mathematical reduction in a
+        # different summation order: a few float64 ulps.
+        rand = np.random.RandomState(3)
+        for ndata in (150, 2000, 20000):
+            y = 1. + 0.01 * rand.randn(ndata)
+            dy = 0.01 * np.ones(ndata)
+            w = np.power(dy, -2.)
+            w /= np.sum(w)
+            ybar_dot = np.dot(w, y)
+            ybar_ein = float(np.einsum('i,i->', w, y))
+            assert abs(ybar_dot - ybar_ein) <= 64 * np.spacing(abs(ybar_ein))
+            yy_dot = np.dot(w, np.power(y - ybar_dot, 2))
+            yy_ein = float(np.einsum('i,i->', w, np.power(y - ybar_ein, 2)))
+            assert abs(yy_dot - yy_ein) <= 64 * np.spacing(abs(yy_ein))
+
+    def test_sparse_bls_cpu_still_matches_the_gpu_kernel(self):
+        # sparse_bls_cpu is the CPU reference for sparse_bls_gpu; the
+        # reordered sums must not move it away from the kernel.
+        t, y, dy = data(snr=30, q=0.05, phi0=0.317, freq=1.0,
+                        baseline=365., ndata=120)
+        freqs = np.linspace(0.95, 1.05, 60)
+        p_cpu, s_cpu = sparse_bls_cpu(t, y, dy, freqs)
+        p_gpu, s_gpu = sparse_bls_gpu(t, y, dy, freqs)
+        assert int(np.argmax(p_cpu)) == int(np.argmax(p_gpu))
+        assert_allclose(p_cpu, p_gpu, rtol=1e-4, atol=1e-6)

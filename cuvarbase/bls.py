@@ -1607,8 +1607,14 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     # move data to GPU
     w = np.power(dy, -2)
     w /= np.sum(w)
-    ybar = np.dot(w, y)
-    YY = np.dot(w, np.power(np.array(y) - ybar, 2))
+    # einsum, not np.dot: BLAS ddot spawns a full threadpool for large
+    # vectors, and on CPU-quota-limited containers the burst trips CFS
+    # throttling (measured on the pod at ndata = 20000: median 0.60 ms
+    # with a 98 ms tail and 12 throttle events per 50 calls, vs 0.17 ms
+    # and none for einsum).  Same operation, last-ulp float64 summation
+    # order.  See BLSMemory.setdata (Sep 2026 audit, id 45).
+    ybar = float(np.einsum('i,i->', w, y))
+    YY = float(np.einsum('i,i->', w, np.power(np.array(y) - ybar, 2)))
     yw = (np.array(y) - ybar) * np.array(w)
 
     t, epoch = subtract_epoch(t)
@@ -1998,8 +2004,14 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     # move data to GPU
     w = np.power(dy, -2)
     w /= np.sum(w)
-    ybar = np.dot(w, y)
-    YY = np.dot(w, np.power(np.array(y) - ybar, 2))
+    # einsum, not np.dot: BLAS ddot spawns a full threadpool for large
+    # vectors, and on CPU-quota-limited containers the burst trips CFS
+    # throttling (measured on the pod at ndata = 20000: median 0.60 ms
+    # with a 98 ms tail and 12 throttle events per 50 calls, vs 0.17 ms
+    # and none for einsum).  Same operation, last-ulp float64 summation
+    # order.  See BLSMemory.setdata (Sep 2026 audit, id 45).
+    ybar = float(np.einsum('i,i->', w, y))
+    YY = float(np.einsum('i,i->', w, np.power(np.array(y) - ybar, 2)))
     yw = (np.array(y) - ybar) * np.array(w)
 
     t, epoch = subtract_epoch(t)
@@ -2178,11 +2190,15 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     # 1e-3..1e-2 of the power). ybar of the centred float32 flux is
     # residual roundoff (~1e-8), kept for parity with the kernels.
     yc, _ = _center_flux_float64(y, dy)
-    ybar = np.dot(w, yc)
-    YY = np.dot(w, np.power(yc - ybar, 2))
+    # einsum, not np.dot (see eebls_gpu): single_bls runs once per
+    # reported solution, so the BLAS threadpool cliff was paid
+    # n_solutions times per eebls_transit call (measured median 93.9 ms
+    # per call at ndata = 20000, min 0.79 ms).
+    ybar = float(np.einsum('i,i->', w, yc))
+    YY = float(np.einsum('i,i->', w, np.power(yc - ybar, 2)))
 
     W = np.sum(w[mask])
-    YW = np.dot(w[mask], yc[mask]) - ybar * W
+    YW = float(np.einsum('i,i->', w[mask], yc[mask])) - ybar * W
 
     if YW > 0 and ignore_negative_delta_sols:
         return 0
@@ -2435,9 +2451,13 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     best_phi = np.zeros(nfreqs, dtype=np.float32)
 
     # residual float32 mean of the centred flux (~1e-8); kept so the
-    # scan is exactly the kernel's arithmetic
-    ybar = float(np.dot(w, y))
-    YY = float(np.dot(w, np.power(y - ybar, 2)))
+    # scan is exactly the kernel's arithmetic.  einsum, not np.dot:
+    # BLAS sdot/ddot spawns a full threadpool for large vectors and on
+    # CPU-quota-limited containers the burst trips CFS throttling (see
+    # eebls_gpu; Sep 2026 audit, id 45).  Same operation, different
+    # summation order.
+    ybar = float(np.einsum('i,i->', w, y))
+    YY = float(np.einsum('i,i->', w, np.power(y - ybar, 2)))
 
     # Vectorized pair scan. Transit candidates are exactly the
     # contiguous runs of phase-sorted observations (plus wrap-around
