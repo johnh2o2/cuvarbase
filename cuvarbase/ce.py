@@ -17,7 +17,7 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess, ensure_context
+from .base import GPUAsyncProcess, ensure_context
 from .utils import _module_reader, find_kernel, normalize_light_curves
 from .utils import check_lightcurve, check_freqs
 from .utils import autofrequency as utils_autofreq

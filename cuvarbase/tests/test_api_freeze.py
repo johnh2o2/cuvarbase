@@ -125,3 +125,75 @@ def test_nufft_lrt_warns_at_construction():
     src = inspect.getsource(nufft_lrt.NUFFTLRTAsyncProcess.__init__)
     body = src.split('):', 1)[1].lstrip()
     assert body.startswith('warnings.warn(_EXPERIMENTAL_MSG')
+
+
+# ---------------------------------------------------------------------
+# Compatibility shims kept for 1.x (decision D3: shipped in 0.2.5)
+# ---------------------------------------------------------------------
+
+def test_core_module_is_deprecated_alias():
+    sys.modules.pop('cuvarbase.core', None)
+    with pytest.warns(DeprecationWarning, match='removed in 2.0'):
+        import cuvarbase.core as core
+    from cuvarbase import base
+    assert core.GPUAsyncProcess is base.GPUAsyncProcess
+    assert core.ensure_context is base.ensure_context
+
+
+def test_no_internal_import_of_core():
+    pkg = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    offenders = []
+    for dirpath, _, files in os.walk(pkg):
+        if os.path.basename(dirpath) == 'tests':
+            continue
+        for f in files:
+            if f.endswith('.py') and f != 'core.py':
+                src = open(os.path.join(dirpath, f)).read()
+                if 'from .core import' in src or 'cuvarbase.core' in src:
+                    offenders.append(f)
+    assert offenders == []
+
+
+def test_bls_allocate_pinned_arrays_warns(monkeypatch):
+    from cuvarbase.bls import BLSMemory
+    mem = BLSMemory.__new__(BLSMemory)
+    calls = []
+    monkeypatch.setattr(mem, 'allocate_host_arrays',
+                        lambda **kw: calls.append(kw) or 'ok',
+                        raising=False)
+    with pytest.warns(DeprecationWarning, match='removed in 2.0'):
+        assert mem.allocate_pinned_arrays(nfreqs=3, ndata=4) == 'ok'
+    assert calls == [{'nfreqs': 3, 'ndata': 4}]
+
+
+def test_pdm_four_tuple_warning_wording():
+    import inspect
+    from cuvarbase import pdm
+    src = inspect.getsource(pdm.PDMAsyncProcess.run)
+    assert 'removed in 2.0' in src
+    assert 'NORMALIZED WEIGHTS' in src
+
+
+def test_gpu_async_process_device_keyword():
+    from cuvarbase.base import GPUAsyncProcess
+    # device=0 (the default) and the other legacy keywords are silent
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        proc = GPUAsyncProcess(reader=None, function_kwargs={}, device=0)
+    assert proc.device == 0
+    with pytest.warns(UserWarning, match='CUDA_DEVICE'):
+        proc = GPUAsyncProcess(device=1)
+    assert proc.device == 1
+
+
+def test_utils_weights_is_canonical():
+    import numpy as np
+    from cuvarbase import utils
+    from cuvarbase.memory import lombscargle_memory
+    import cuvarbase.memory as memory
+    assert lombscargle_memory.weights is utils.weights
+    assert memory.weights is utils.weights
+    err = np.array([0.1, 0.2, 0.4])
+    w = utils.weights(err)
+    assert w.dtype == np.float64
+    assert w.sum() == pytest.approx(1.0)

@@ -771,7 +771,7 @@ class TestTLSStreamParity:
     def test_stream_matches_default(self):
         import pycuda.driver as cuda
         from cuvarbase import tls
-        from cuvarbase.core import ensure_context
+        from cuvarbase.base import ensure_context
 
         rand = np.random.RandomState(7)
         t = np.linspace(0, 100, 400)

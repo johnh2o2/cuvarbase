@@ -15,7 +15,7 @@ from pycuda.compiler import SourceModule
 
 from . import _cufft as cufft
 
-from .core import GPUAsyncProcess
+from .base import GPUAsyncProcess
 from .utils import find_kernel, _module_reader, check_lightcurve
 from .memory import NFFTMemory
 

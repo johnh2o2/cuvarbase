@@ -1,11 +1,20 @@
-import numpy as np
-from ..utils import gaussian_window, tophat_window, get_autofreqs
+import warnings
+
 from .context import ensure_context
 import pycuda.driver as cuda
-from pycuda.compiler import SourceModule
 
 
 class GPUAsyncProcess:
+    """Base class of every GPU periodogram process.
+
+    ``reader``, ``function_kwargs`` and ``device`` have been accepted
+    since 0.2.5 but are not read by any process; they are kept for 1.x
+    and will be removed in 2.0. The device is selected by the
+    ``CUDA_DEVICE`` environment variable (via ``pycuda.autoprimaryctx``,
+    see :func:`cuvarbase.base.ensure_context`), so a ``device`` other
+    than 0 is ignored with a ``UserWarning``.
+    """
+
     def __init__(self, *args, **kwargs):
         # Constructing any GPU process is a "first GPU use" -- retain the
         # CUDA primary context now (no longer done eagerly at import).
@@ -14,6 +23,13 @@ class GPUAsyncProcess:
         self.nstreams = kwargs.get('nstreams', None)
         self.function_kwargs = kwargs.get('function_kwargs', {})
         self.device = kwargs.get('device', 0)
+        if self.device is not None and self.device != 0:
+            warnings.warn("GPUAsyncProcess(device=%r) is ignored: the "
+                          "device is selected by the CUDA_DEVICE "
+                          "environment variable (pycuda.autoprimaryctx). "
+                          "The device= keyword is deprecated and will be "
+                          "removed in 2.0" % (self.device,),
+                          UserWarning, stacklevel=2)
         self.streams = []
         self.gpu_data = []
         self.results = []
