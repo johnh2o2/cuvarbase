@@ -3091,3 +3091,144 @@ class TestAdaptiveUsesFusedKernel(object):
         # since 1.0) returns, to float32 atomic-ordering noise
         p_fast = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
         assert_allclose(p_fused, p_fast, rtol=1e-4, atol=1e-6)
+
+
+class TestBLSMemoryHostStaging(object):
+    """Sep 2026 audit, id 41 (plan item BLS-6).
+
+    ``BLSMemory.allocate_host_arrays`` page-locked all six host buffers,
+    three of which are never the source or destination of an async copy
+    (``nbins0``/``nbinsf`` are replaced by fresh pageable arrays in
+    ``setdata``; ``bls`` is only an async destination when a stream is
+    attached).  And the ``memory=None`` fast path allocated a whole
+    ``BLSMemory`` -- six host buffers plus four device buffers -- per
+    call, so back-to-back calls of the same shape re-paid it every time.
+    """
+
+    @staticmethod
+    def _data(ndata=200, seed=17):
+        rand = np.random.RandomState(seed)
+        t = np.sort(365. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    def test_only_transfer_buffers_are_page_locked(self):
+        import pycuda.driver as cuda
+        from ..bls import BLSMemory
+        mem = BLSMemory(64, 128)
+        pinned = cuda.pagelocked_empty(1, np.float32).base.__class__
+        for attr in ('t', 'yw', 'w'):
+            assert isinstance(getattr(mem, attr).base, pinned), attr
+        for attr in ('bls', 'nbins0', 'nbinsf'):
+            assert not isinstance(getattr(mem, attr).base, pinned), attr
+
+    def test_result_buffer_is_page_locked_with_a_stream(self):
+        # get_async into a pageable buffer is not asynchronous, and the
+        # normalization after it would race the DMA (see
+        # TestPinnedBufferStreamParity)
+        import pycuda.driver as cuda
+        from ..core import ensure_context
+        from ..bls import BLSMemory
+        ensure_context()
+        mem = BLSMemory(64, 128, stream=cuda.Stream())
+        pinned = cuda.pagelocked_empty(1, np.float32).base.__class__
+        assert isinstance(mem.bls.base, pinned)
+
+    def test_pooled_memory_stages_identical_bytes(self):
+        # The pool must never hand back another light curve's data: the
+        # staged host buffers, the uploaded device buffers and the
+        # normalization scalars have to equal what a freshly-allocated
+        # memory produces, bit for bit.
+        from .. import bls as B
+        from ..bls import BLSMemory
+        freqs = np.linspace(0.95, 1.05, 64)
+        B._memory_pool_tls.pool = None
+        for seed in (1, 2, 3):
+            t, y, dy = self._data(seed=seed)
+            pooled = B._pooled_bls_memory(t, y, dy, 1e-2, 0.5, freqs, {})
+            fresh = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                       freqs=freqs, transfer=True)
+            for attr in ('t', 'yw', 'w', 'freqs', 'nbins0', 'nbinsf'):
+                assert np.array_equal(np.asarray(getattr(pooled, attr)),
+                                      np.asarray(getattr(fresh, attr))), attr
+            for attr in ('t_g', 'yw_g', 'w_g', 'freqs_g', 'nbins0_g',
+                         'nbinsf_g'):
+                assert np.array_equal(getattr(pooled, attr).get(),
+                                      getattr(fresh, attr).get()), attr
+            for attr in ('yy', 'chi2_0', 'ybar', 'epoch'):
+                assert getattr(pooled, attr) == getattr(fresh, attr), attr
+        B._memory_pool_tls.pool = None
+
+    def test_pool_reuses_one_memory_per_shape(self):
+        from .. import bls as B
+        freqs = np.linspace(0.95, 1.05, 64)
+        B._memory_pool_tls.pool = None
+        t, y, dy = self._data()
+        m1 = B._pooled_bls_memory(t, y, dy, 1e-2, 0.5, freqs, {})
+        m2 = B._pooled_bls_memory(t, y, dy, 1e-2, 0.5, freqs, {})
+        assert m1 is m2
+        # a different ndata is a different entry
+        t2, y2, dy2 = self._data(ndata=100)
+        m3 = B._pooled_bls_memory(t2, y2, dy2, 1e-2, 0.5, freqs, {})
+        assert m3 is not m1
+        # ... and a different number of frequencies too (the device
+        # frequency arrays keep their first size)
+        f2 = np.linspace(0.95, 1.05, 128)
+        m4 = B._pooled_bls_memory(t, y, dy, 1e-2, 0.5, f2, {})
+        assert m4 is not m1
+        assert len(m4.freqs_g) == 128
+        B._memory_pool_tls.pool = None
+
+    def test_pooled_and_unpooled_results_agree(self):
+        # Interleave three different light curves through the pool and
+        # compare against the allocate-per-call path; also check that
+        # holding an earlier result across later calls is safe (the
+        # returned array must not alias a pooled buffer).
+        from .. import bls as B
+        freqs = np.linspace(0.95, 1.05, 300)
+        lcs = [data(snr=30, q=0.05, phi0=0.317, freq=1.0, baseline=365.,
+                    ndata=300, seed=s) for s in (11, 12, 13)]
+
+        old = B._MEMORY_POOL_MAX_SIZE
+        try:
+            B._MEMORY_POOL_MAX_SIZE = 0
+            B._memory_pool_tls.pool = None
+            ref = [eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+                   for (t, y, dy) in lcs]
+            B._MEMORY_POOL_MAX_SIZE = 2
+            B._memory_pool_tls.pool = None
+            got = [eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+                   for (t, y, dy) in lcs]
+        finally:
+            B._MEMORY_POOL_MAX_SIZE = old
+            B._memory_pool_tls.pool = None
+
+        for a, b in zip(got, ref):
+            assert int(np.argmax(a)) == int(np.argmax(b))
+            assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+        # distinct light curves must give distinct periodograms (a pool
+        # bug that reused stale data would make these equal)
+        assert not np.allclose(got[0], got[1], rtol=1e-3)
+
+    def test_pool_is_skipped_when_it_would_be_visible(self):
+        # A stream-attached call hands back the pinned bls buffer, and
+        # transfer_to_host=False hands back the raw buffer: neither may
+        # come from the pool.
+        import pycuda.driver as cuda
+        from ..core import ensure_context
+        from .. import bls as B
+        ensure_context()
+        t, y, dy = self._data(ndata=300)
+        freqs = np.linspace(0.95, 1.05, 100)
+        B._memory_pool_tls.pool = None
+        eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                       stream=cuda.Stream())
+        assert not getattr(B._memory_pool_tls, 'pool', None)
+        eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                       transfer_to_host=False)
+        assert not getattr(B._memory_pool_tls, 'pool', None)
+        # the ordinary call does use it
+        eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+        assert len(B._memory_pool_tls.pool) == 1
+        B._memory_pool_tls.pool = None

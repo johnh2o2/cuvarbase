@@ -593,19 +593,31 @@ class BLSMemory:
     def allocate_host_arrays(self, nfreqs=None, ndata=None):
         """Allocate host arrays for transfers.
 
-        By default (``pinned=True``) these are page-locked so
-        ``set_async``/``get_async`` transfers overlap with computation;
-        if pinning fails they fall back to page-aligned memory (see
-        :func:`cuvarbase.memory._host.host_array`).
+        The buffers that are actually the source or destination of an
+        asynchronous copy are page-locked when ``pinned=True`` (the
+        default), so ``set_async``/``get_async`` overlap with
+        computation; if pinning fails they fall back to page-aligned
+        memory (see :func:`cuvarbase.memory._host.host_array`).
+
+        The rest are page-aligned: ``nbins0``/``nbinsf`` are replaced by
+        fresh (pageable) arrays in :meth:`setdata` before any transfer
+        can read them, and ``bls`` is only an async *destination* when a
+        stream is attached -- with ``stream=None``,
+        :meth:`transfer_data_to_cpu` builds a new array from
+        ``bls_g.get()`` and never writes into this one.  Page-locking
+        costs ~1.5-6.5 ms per buffer regardless of its size, which
+        dominated single ``eebls_gpu_fast(memory=None)`` calls at
+        survey grid sizes (Sep 2026 audit, id 41).
         """
         if nfreqs is None:
             nfreqs = int(self.max_nfreqs)
         if ndata is None:
             ndata = int(self.max_ndata)
 
-        self.bls = host_array((nfreqs,), self.rtype, pinned=self.pinned)
-        self.nbins0 = host_array((nfreqs,), np.int32, pinned=self.pinned)
-        self.nbinsf = host_array((nfreqs,), np.int32, pinned=self.pinned)
+        pin_result = self.pinned and self.stream is not None
+        self.bls = host_array((nfreqs,), self.rtype, pinned=pin_result)
+        self.nbins0 = host_array((nfreqs,), np.int32, pinned=False)
+        self.nbinsf = host_array((nfreqs,), np.int32, pinned=False)
         self.t = host_array((ndata,), self.rtype, pinned=self.pinned)
         self.yw = host_array((ndata,), self.rtype, pinned=self.pinned)
         self.w = host_array((ndata,), self.rtype, pinned=self.pinned)
@@ -801,6 +813,53 @@ def _validate_noverlap(noverlap):
                          % (noverlap,))
 
 
+# Small per-thread pool of BLSMemory objects for the "no memory given"
+# fast path.  Reusing one costs a setdata (a few host passes) instead of
+# six host allocations plus four device allocations per call, which is
+# most of a short call's wall time at survey grid sizes (Sep 2026 audit,
+# id 41).  Set to 0 to disable the pool (every call then allocates its
+# own memory, as before 1.0).
+#
+# Thread-local rather than locked-and-shared: a BLSMemory is stateful
+# (it holds one light curve's t/yw/w and one frequency grid), so two
+# threads must never be handed the same one.
+_MEMORY_POOL_MAX_SIZE = 2
+_memory_pool_tls = threading.local()
+
+
+def _pooled_bls_memory(t, y, dy, qmin, qmax, freqs, kwargs):
+    """A :class:`BLSMemory` sized for ``(len(t), len(freqs))``, loaded
+    with this call's data, reused from the per-thread pool when one of
+    the right shape is there.
+
+    The key pins ``max_ndata`` and ``max_nfreqs``, so ``setdata``
+    overwrites every element of ``t``/``yw``/``w`` and every frequency
+    of the device grid: nothing of the previous light curve survives,
+    and the reuse guard in :meth:`BLSMemory.setdata` (device frequency
+    arrays keep their first size) can never trip.  Returns ``None`` when
+    pooling is disabled or the shape is unusable.
+    """
+    if _MEMORY_POOL_MAX_SIZE <= 0:
+        return None
+    pool = getattr(_memory_pool_tls, 'pool', None)
+    if pool is None:
+        pool = _memory_pool_tls.pool = OrderedDict()
+
+    key = (int(len(t)), int(len(freqs)), bool(kwargs.get('pinned', True)))
+    mem = pool.pop(key, None)
+    if mem is None:
+        mem = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
+                                 freqs=freqs, stream=None, transfer=True,
+                                 **kwargs)
+    else:
+        mem.setdata(t, y, dy, qmin=qmin, qmax=qmax, freqs=freqs,
+                    transfer=True, **kwargs)
+    pool[key] = mem
+    while len(pool) > _MEMORY_POOL_MAX_SIZE:
+        pool.popitem(last=False)
+    return mem
+
+
 def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
                          qmin=1e-2, qmax=0.5,
                          ignore_negative_delta_sols=False,
@@ -872,10 +931,25 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
         shmem_lim = ensure_context().device.get_attribute(att)
 
     if memory is None:
-        memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
-                                    freqs=freqs, stream=stream,
-                                    transfer=True,
-                                    **kwargs)
+        # Reuse a pooled memory where that is invisible to the caller:
+        # only on the default stream (with a stream attached,
+        # transfer_data_to_cpu writes into -- and hands back -- the
+        # pinned ``bls`` buffer, which a pooled memory would overwrite
+        # on the next call) and only when the result is transferred
+        # back (otherwise ``memory.bls`` is returned as-is and would
+        # carry the previous call's periodogram instead of zeros), and
+        # never when the caller sized the buffers by hand.
+        memory = None
+        if (stream is None and transfer_to_host
+                and 'max_ndata' not in kwargs
+                and 'max_nfreqs' not in kwargs):
+            memory = _pooled_bls_memory(t, y, dy, qmin, qmax, freqs,
+                                        kwargs)
+        if memory is None:
+            memory = BLSMemory.fromdata(t, y, dy, qmin=qmin, qmax=qmax,
+                                        freqs=freqs, stream=stream,
+                                        transfer=True,
+                                        **kwargs)
     elif transfer_to_device:
         memory.setdata(t, y, dy, qmin=qmin, qmax=qmax,
                        freqs=freqs, transfer=True,
