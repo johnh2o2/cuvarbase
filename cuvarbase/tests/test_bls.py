@@ -3405,3 +3405,59 @@ class TestPerFrequencyHostWork(object):
         chi2_0 = float(np.einsum('i,i->', w, (np.asarray(y) - ybar) ** 2))
         assert_allclose(p_snr, np.sqrt(chi2_0 * p), rtol=1e-5, atol=1e-6)
         assert_allclose(p_ll, 0.5 * chi2_0 * p, rtol=1e-5, atol=1e-6)
+
+
+class TestAdaptiveBlockSize(object):
+    """``eebls_gpu_fast_adaptive`` picks the CUDA block size from
+    ``ndata`` (ported from ``scripts/test_adaptive_correctness.py``).
+    The heuristic is CPU-checkable; the parity of the adaptive wrapper
+    with ``eebls_gpu_fast_optimized`` at the same block size runs on a
+    device (the conftest skips it on CPU-only hosts)."""
+
+    EXPECTED = [(2, 32), (10, 32), (32, 32), (33, 64), (50, 64), (64, 64),
+                (65, 128), (100, 128), (128, 128), (129, 256), (500, 256),
+                (65536, 256)]
+
+    @pytest.mark.parametrize("ndata,expected", EXPECTED)
+    def test_choose_block_size(self, ndata, expected):
+        from ..bls import _choose_block_size
+        bs = _choose_block_size(ndata)
+        assert bs == expected
+        assert bs in (32, 64, 128, 256)
+
+    def test_choose_block_size_is_monotonic(self):
+        from ..bls import _choose_block_size
+        sizes = [_choose_block_size(n) for n in range(2, 600)]
+        assert all(a <= b for a, b in zip(sizes, sizes[1:]))
+        assert set(sizes) == {32, 64, 128, 256}
+
+    @staticmethod
+    def _lc(ndata, seed=42):
+        rand = np.random.RandomState(seed)
+        t = np.sort(rand.uniform(0, 100, ndata))
+        period, depth = 5.0, 0.01
+        phase = (t % period) / period
+        y = np.ones(ndata) - depth * ((phase > 0.4) & (phase < 0.5))
+        y += rand.normal(0, 0.01, ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    @pytest.mark.parametrize("ndata", [10, 50, 100, 500])
+    def test_adaptive_matches_optimized_at_the_chosen_block_size(self,
+                                                                 ndata):
+        # GPU only. The adaptive wrapper is eebls_gpu_fast_optimized with
+        # block_size=_choose_block_size(ndata) and the same cached
+        # kernel set; results must agree to float32 rounding (the
+        # fold/bin arithmetic is identical, only the launch shape
+        # differs) and the peak must be the same grid point.
+        from ..bls import (eebls_gpu_fast_adaptive, eebls_gpu_fast_optimized,
+                           _choose_block_size)
+        t, y, dy = self._lc(ndata)
+        freqs = np.linspace(0.05, 0.5, 100)
+        bs = _choose_block_size(ndata)
+        p_adaptive = eebls_gpu_fast_adaptive(t, y, dy, freqs)
+        p_fixed = eebls_gpu_fast_optimized(t, y, dy, freqs, block_size=bs)
+        assert p_adaptive.shape == freqs.shape
+        assert np.all(np.isfinite(p_adaptive))
+        assert_allclose(p_adaptive, p_fixed, rtol=1e-5, atol=1e-6)
+        assert np.argmax(p_adaptive) == np.argmax(p_fixed)

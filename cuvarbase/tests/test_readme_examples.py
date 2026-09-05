@@ -1,5 +1,10 @@
 """
-Test code examples from README.md to ensure they work correctly.
+BLS API smoke tests in the shape of the README's Quick Start.
+
+``test_quick_start_example`` mirrors the README's ``eebls_gpu`` snippet;
+the other two are API smoke tests for ``eebls_gpu_fast_adaptive`` (the
+README no longer carries an adaptive example) and for the agreement of
+the standard and adaptive periodograms.
 
 These require a GPU; on CPU-only machines ``cuvarbase/tests/conftest.py``
 converts them to skips. (An earlier version of this file was silently never
@@ -10,7 +15,7 @@ import numpy as np
 
 
 class TestReadmeExamples:
-    """Test that README.md code examples work correctly"""
+    """README Quick Start snippet plus BLS API smoke tests (GPU)."""
 
     def _data(self, ndata=1000):
         np.random.seed(42)  # For reproducibility
@@ -41,7 +46,8 @@ class TestReadmeExamples:
             "Best period %s not near 2.5 or 1.25" % best_period
 
     def test_adaptive_bls_example(self):
-        """Test the adaptive BLS example from README"""
+        """API smoke test: eebls_gpu_fast_adaptive on the Quick Start
+        data returns a finite, non-trivial periodogram."""
         from cuvarbase import bls
 
         t, y, dy = self._data()
