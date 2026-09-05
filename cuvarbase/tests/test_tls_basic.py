@@ -944,6 +944,92 @@ class TestDefaultDurationWindow:
         assert "kernels['keplerian']" in body
 
 
+class TestTransitDurationWindowBounds:
+    """Phase 2 TLS-1 (audit section 5, id 52): tls_transit built the
+    whole (nperiods x n_durations) Keplerian duration table with
+    duration_grid_keplerian and then threw it away -- only the q_values
+    it also returns were used. It now calls tls_grids.duration_window,
+    the shared window helper the other entry points use, which returns
+    exactly the same bounds. Bit-neutral: these tests pin the bounds
+    handed to tls_search_gpu to the legacy expression, bitwise."""
+
+    @staticmethod
+    def _capture_search(monkeypatch):
+        """Intercept tls_transit's tls_search_gpu call (no GPU)."""
+        from cuvarbase import tls
+        captured = {}
+
+        def fake_search(t, y, dy, **kw):
+            captured.update(kw)
+            n = len(kw['periods'])
+            return tls._null_result(n, 1.0, 'intercepted',
+                                    periods=kw['periods'], arrays=True)
+
+        monkeypatch.setattr(tls, 'tls_search_gpu', fake_search)
+        return captured
+
+    PARAMS = [dict(), dict(R_star=0.7, M_star=0.65, R_planet=2.3,
+                           qmin_fac=0.4, qmax_fac=2.5, n_durations=9),
+              dict(R_star=2.2, M_star=1.9, R_planet=11.0,
+                   qmin_fac=0.25, qmax_fac=3.0),
+              dict(R_star=0.3, M_star=0.3)]
+
+    def test_bounds_bitwise_match_duration_grid_keplerian(self, monkeypatch):
+        from cuvarbase import tls
+        t = np.linspace(0, 90.0, 1200)
+        y = np.ones(1200)
+        dy = np.full(1200, 1e-3)
+        for kw in self.PARAMS:
+            captured = self._capture_search(monkeypatch)
+            tls.tls_transit(t, y, dy, period_min=0.5, period_max=30.0, **kw)
+            periods = captured['periods']
+            # the pre-1.0 expression, verbatim
+            _, _, q_values = tls_grids.duration_grid_keplerian(
+                periods, R_star=kw.get('R_star', 1.0),
+                M_star=kw.get('M_star', 1.0),
+                R_planet=kw.get('R_planet', 1.0),
+                qmin_fac=kw.get('qmin_fac', 0.5),
+                qmax_fac=kw.get('qmax_fac', 2.0),
+                n_durations=kw.get('n_durations', 15))
+            assert len(periods) > 100
+            assert np.array_equal(captured['qmin'],
+                                  q_values * kw.get('qmin_fac', 0.5))
+            assert np.array_equal(captured['qmax'],
+                                  q_values * kw.get('qmax_fac', 2.0))
+            assert captured['n_durations'] == kw.get('n_durations', 15)
+
+    def test_duration_table_is_not_built(self, monkeypatch):
+        """The (nperiods x n_durations) table nothing reads: 59 ms of a
+        237 ms Kepler-4yr call (A40, shared)."""
+        from cuvarbase import tls
+        self._capture_search(monkeypatch)
+        calls = []
+        real = tls_grids.duration_grid_keplerian
+
+        def counting(*a, **kw):
+            calls.append(1)
+            return real(*a, **kw)
+
+        monkeypatch.setattr(tls_grids, 'duration_grid_keplerian', counting)
+        t = np.linspace(0, 90.0, 1200)
+        tls.tls_transit(t, np.ones(1200), np.full(1200, 1e-3),
+                        period_min=0.5, period_max=30.0)
+        assert calls == []
+
+    def test_bounds_match_the_other_entry_points(self, monkeypatch):
+        """tls_transit and tls_search_gpu must agree on the window."""
+        from cuvarbase import tls
+        captured = self._capture_search(monkeypatch)
+        t = np.linspace(0, 90.0, 1200)
+        tls.tls_transit(t, np.ones(1200), np.full(1200, 1e-3),
+                        R_star=0.8, M_star=0.9, period_min=0.5,
+                        period_max=30.0)
+        qmin, qmax = tls_grids.duration_window(
+            captured['periods'], R_star=0.8, M_star=0.9)
+        assert np.array_equal(captured['qmin'], qmin)
+        assert np.array_equal(captured['qmax'], qmax)
+
+
 class TestReferenceSRDefinition:
     """ids 81/146: SR was 1 - chi2/max(chi2); the reference package uses
     chi2_min/chi2. Identical under the null but ~2x lower SDE for strong
