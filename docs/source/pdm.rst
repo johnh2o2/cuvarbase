@@ -199,6 +199,17 @@ API notes
 * ``nbins`` controls the number of phase bins for the ``binned_*``
   variants; ``dphi`` (in cycles) is the tophat half-width or the Gaussian
   standard deviation for the ``binless_*`` variants (see above).
+* ``run`` keeps the device buffers it allocates and reuses them on the
+  next call that asks for the same shapes (same number of lightcurves,
+  same ``len(t)`` and ``len(freqs)`` for each), re-uploading the
+  frequency grid only when it changed. Loops over many short
+  lightcurves on a fixed grid -- including every chunk of
+  ``batched_run_const_nfreq`` and ``large_run`` -- therefore pay for
+  the allocation once instead of once per call; peak device memory is
+  unchanged, and each call still returns its own result array, so
+  results kept from an earlier ``run`` are never overwritten. Passing
+  your own ``gpu_data``/``pow_cpus`` from :meth:`allocate` bypasses the
+  cache, as before.
 * The legacy input format ``[(t, y, w, freqs), ...]`` (weights and
   frequencies packed into the data tuples) is still accepted for
   backward compatibility but is **deprecated** and emits a

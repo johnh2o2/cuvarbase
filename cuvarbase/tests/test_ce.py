@@ -8,7 +8,8 @@ from numpy.testing import assert_allclose, assert_array_equal
 from scipy.special import ndtr
 from .. import ce as ce_module
 from ..ce import (ConditionalEntropyAsyncProcess, _needs_compile,
-                  _CE_KERNELS, _is_single_freq_grid)
+                  _CE_KERNELS, _is_single_freq_grid, _fast_grid_size,
+                  _MAX_BLOCKS_PER_SM)
 from ..memory import ConditionalEntropyMemory
 from ..utils import normalize_light_curves
 lsrtol = 1E-2
@@ -1147,6 +1148,240 @@ class TestCEReuse(object):
         run_ce(proc, t, y, dy, freqs)
         proc.large_run([(t, y, dy)], freqs=freqs, max_memory=1e5)
         assert len(calls) == 1
+
+
+class TestCEFastGridSize(object):
+    """CE-2 (audit ids 61/107): ``use_fast`` sized its grid from
+    ``floor(2 * shmem_lim / shmem)`` -- a per-block shared-memory ratio,
+    not a grid -- and capped the other branch at 200 blocks, so the
+    kernel ran on 3-34 blocks (5 at ndata = 2000) however large the
+    device.  The kernels are block-per-frequency with a ``gridDim.x``
+    stride, so the grid size must not change a single returned value.
+    """
+
+    # ------------------------------------------------------------------
+    # CPU-runnable: the sizing arithmetic itself
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _limits(monkeypatch, nsm=84, shmem_sm=102400, thr_sm=1536):
+        monkeypatch.setattr(ce_module, '_device_occupancy_limits',
+                            lambda: (nsm, shmem_sm, thr_sm))
+
+    def test_grid_fills_the_device(self, monkeypatch):
+        # A40-like: 84 SMs, 100 KB shared/SM, 1536 threads/SM. At
+        # ndata = 2000 (single precision) the fast kernel asks for
+        # 16440 B/block, so 6 blocks fit per SM by shared memory and 6
+        # by threads -> 504 blocks. The old heuristic gave 5.
+        self._limits(monkeypatch)
+        assert _fast_grid_size(16440, 256, 100000) == 84 * 6
+        # tiny histogram, no lightcurve in shared memory: threads bind
+        assert _fast_grid_size(440, 256, 100000) == 84 * 6
+        # small blocks: the hardware blocks/SM limit binds
+        assert _fast_grid_size(440, 64, 100000) == 84 * _MAX_BLOCKS_PER_SM
+
+    def test_grid_never_exceeds_the_frequency_count(self, monkeypatch):
+        self._limits(monkeypatch)
+        assert _fast_grid_size(16440, 256, 7) == 7
+        assert _fast_grid_size(16440, 256, 1) == 1
+
+    def test_grid_is_at_least_one_block_per_sm(self, monkeypatch):
+        # a block so large that not even one fits in the per-SM shared
+        # memory budget: still one block per SM, never zero
+        self._limits(monkeypatch)
+        assert _fast_grid_size(102401, 256, 1000) == 84
+        assert _fast_grid_size(0, 256, 1000) == 84 * 6
+
+    def test_grid_scales_with_the_device(self, monkeypatch):
+        self._limits(monkeypatch, nsm=8, shmem_sm=49152, thr_sm=1024)
+        assert _fast_grid_size(16440, 256, 100000) == 8 * min(2, 4)
+        self._limits(monkeypatch, nsm=132, shmem_sm=233472, thr_sm=2048)
+        assert _fast_grid_size(16440, 256, 100000) == 132 * 8
+
+    # ------------------------------------------------------------------
+    # GPU: the launch really uses it, and the result does not depend on it
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _record_grids():
+        """Patch ``prepared_async_call`` to record the grid of every
+        launch that uses dynamic shared memory (i.e. the fast kernels)."""
+        import pycuda.driver as cuda
+        grids = []
+        orig = cuda.Function.prepared_async_call
+
+        def rec(self, grid, block, stream, *args, **kwargs):
+            if kwargs.get('shared_size', 0) > 0:
+                grids.append(int(grid[0]))
+            return orig(self, grid, block, stream, *args, **kwargs)
+        return grids, orig, rec
+
+    def test_launch_grid_matches_the_occupancy_formula(self, monkeypatch):
+        import pycuda.driver as cuda
+        t, y, dy = lightcurve(2000, seed=5)
+        freqs = np.linspace(0.5, 3.0, 4001)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        run_ce(proc, t, y, dy, freqs[:16])          # compile
+        grids, orig, rec = self._record_grids()
+        monkeypatch.setattr(cuda.Function, 'prepared_async_call', rec)
+        run_ce(proc, t, y, dy, freqs)
+        assert len(grids) == 1
+        nsm = ce_module._device_occupancy_limits()[0]
+        # single precision, 10 x 5 bins, lightcurve in shared memory
+        shmem = 8 * 50 + 4 * 10 + 8 * 2000
+        assert grids[0] == _fast_grid_size(shmem, 256, len(freqs))
+        # the point of the change: at least one block per SM, and far
+        # more than the old floor(2 * shmem_lim / shmem) (5 on a 48 KB
+        # device at this ndata)
+        assert grids[0] >= nsm
+        assert grids[0] > 2 * 49152 // shmem
+
+    def test_max_nblocks_still_caps_when_given(self, monkeypatch):
+        import pycuda.driver as cuda
+        t, y, dy = lightcurve(400, seed=6)
+        freqs = np.linspace(0.5, 3.0, 1000)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        run_ce(proc, t, y, dy, freqs[:16])
+        grids, orig, rec = self._record_grids()
+        monkeypatch.setattr(cuda.Function, 'prepared_async_call', rec)
+        run_ce(proc, t, y, dy, freqs, max_nblocks=13)
+        run_ce(proc, t, y, dy, freqs, force_nblocks=3)
+        assert grids == [13, 3]
+
+    @pytest.mark.parametrize('use_double', [False, True])
+    @pytest.mark.parametrize('ndata,nfreq,phase_bins,mag_bins',
+                             [(300, 1013, 10, 5),
+                              (2000, 4001, 10, 5),
+                              (137, 257, 7, 6),
+                              (5000, 733, 20, 8)])
+    def test_result_is_bitwise_independent_of_the_grid(
+            self, ndata, nfreq, phase_bins, mag_bins, use_double):
+        """The frequency counts above are prime-ish on purpose: none of
+        the grids below divides them, so every block ends its stride
+        loop on a different frequency."""
+        t, y, dy = lightcurve(ndata, seed=11)
+        freqs = np.linspace(0.5, 4.0, nfreq)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              use_double=use_double,
+                                              phase_bins=phase_bins,
+                                              mag_bins=mag_bins)
+        ref = run_ce(proc, t, y, dy, freqs)          # library default
+        assert np.all(np.isfinite(ref))
+        for nblocks in (1, 3, 17, 64, 507, 4096):
+            other = run_ce(proc, t, y, dy, freqs, force_nblocks=nblocks)
+            assert_array_equal(other, ref)
+        # and through the batched frequency loop, whose last batch is
+        # shorter than the others
+        assert_array_equal(run_ce(proc, t, y, dy, freqs,
+                                  freq_batch_size=97), ref)
+
+
+class TestCEFastSkipsGlobalHistogram(object):
+    """CE-3 (audit id 161): ``allocate_bins`` allocated an
+    ``nf * phase_bins * mag_bins`` histogram -- 20 MB for a
+    100k-frequency 10 x 5 search -- that ``ce_classical_fast`` /
+    ``_faster`` never read, and ``run(memory=...)`` zero-filled it on
+    every call.  The fast memory now skips it entirely; the returned
+    numbers must not move."""
+
+    @staticmethod
+    def _memory(proc, t, y, dy, freqs, use_fast):
+        """A memory object for ``proc`` with ``bins_g`` forced on or off."""
+        kw = proc._memory_kwargs()
+        kw['use_fast'] = use_fast
+        if not proc.streams:
+            proc._create_streams(1)
+        kw['stream'] = proc.streams[0]
+        mem = ConditionalEntropyMemory(**kw)
+        tn, yn, dyn = normalize_light_curves([(t, y, dy)])[0]
+        mem.fromdata(tn, yn, dy=dyn, freqs=freqs, allocate=True)
+        mem.transfer_freqs_to_gpu()
+        return mem
+
+    def test_fast_memory_has_no_global_histogram(self):
+        t, y, dy = lightcurve(300, seed=2)
+        freqs = np.linspace(0.5, 3.0, 2000)
+        fast = ConditionalEntropyAsyncProcess(use_fast=True)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        mf = fast.allocate(normalize_light_curves([(t, y, dy)]),
+                           freqs=[freqs])[0]
+        ms = std.allocate(normalize_light_curves([(t, y, dy)]),
+                          freqs=[freqs])[0]
+        assert mf.bins_g is None
+        assert ms.bins_g is not None
+        assert ms.bins_g.size == len(freqs) * 10 * 5
+        # nbins is still reported (it describes the histogram shape)
+        assert mf.nbins == len(freqs) * 10 * 5
+
+    def test_memory_requirement_drops_the_histogram(self):
+        fast = ConditionalEntropyAsyncProcess(use_fast=True)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        n0, nf = 1000, 100000
+        hist = nf * 10 * 5 * 4
+        assert (std.memory_requirement(n0, nf)
+                - fast.memory_requirement(n0, nf)) == hist
+        assert fast.memory_requirement(n0, nf) > 0
+
+    @pytest.mark.parametrize('use_double', [False, True])
+    @pytest.mark.parametrize('ndata,nfreq', [(300, 1013), (2000, 4001)])
+    def test_results_identical_with_and_without_the_histogram(
+            self, ndata, nfreq, use_double):
+        t, y, dy = lightcurve(ndata, seed=4)
+        freqs = np.linspace(0.5, 4.0, nfreq)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              use_double=use_double)
+        with_bins = self._memory(proc, t, y, dy, freqs, use_fast=False)
+        assert with_bins.bins_g is not None
+        res = proc.run([(t, y, dy)], memory=[with_bins], freqs=freqs)
+        proc.finish()
+        old = np.copy(res[0][1])
+        new = run_ce(proc, t, y, dy, freqs)     # default: no bins_g
+        assert np.all(np.isfinite(old))
+        assert_array_equal(new, old)
+
+    def test_standard_kernels_reject_a_fast_memory(self):
+        t, y, dy = lightcurve(200, seed=5)
+        freqs = np.linspace(0.5, 3.0, 128)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        mem = self._memory(std, t, y, dy, freqs, use_fast=True)
+        with pytest.raises(ValueError, match="use_fast=True"):
+            std.run([(t, y, dy)], memory=[mem], freqs=freqs)
+
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_set_data_false_repeat_is_still_idempotent(self, use_fast):
+        """``set_gpu_arrays_to_zero`` must keep zeroing ``bins_g`` when
+        there is one (id 112) and must not trip over its absence."""
+        t, y, dy = lightcurve(80, seed=6)
+        freqs = np.linspace(0.3, 3.0, 64)
+        proc = ConditionalEntropyAsyncProcess(use_fast=use_fast)
+        mems = proc.allocate(normalize_light_curves([(t, y, dy)]),
+                             freqs=[freqs])
+        mems[0].transfer_freqs_to_gpu()
+        first = None
+        for k in range(3):
+            res = proc.run([(t, y, dy)], memory=mems, freqs=[freqs],
+                           set_data=(k == 0))
+            proc.finish()
+            p = np.copy(res[0][1])
+            if mems[0].bins_g is not None:
+                assert mems[0].bins_g.get().sum() == 80 * len(freqs)
+            if first is None:
+                first = p
+            else:
+                assert_array_equal(p, first)
+
+    def test_preallocate_and_large_run_still_work(self):
+        t, y, dy = lightcurve(150, seed=7)
+        freqs = np.linspace(0.4, 3.0, 500)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        mems = proc.preallocate(150, freqs, nlcs=1)
+        assert mems[0].bins_g is None
+        res = proc.run([(t, y, dy)], freqs=freqs)
+        proc.finish()
+        prealloc = np.copy(res[0][1])
+        big = proc.large_run([(t, y, dy)], freqs=freqs, max_memory=2e5)
+        ref = run_ce(ConditionalEntropyAsyncProcess(use_fast=True),
+                     t, y, dy, freqs)
+        assert_array_equal(prealloc, ref)
+        assert_allclose(big[0][1], ref, rtol=0, atol=1e-6)
 
 
 class TestCEFrequencyInput(object):

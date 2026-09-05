@@ -229,6 +229,10 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
     def __init__(self, *args, **kwargs):
         super(PDMAsyncProcess, self).__init__(*args, **kwargs)
+        # Device buffers kept from the last run() with allocation of its
+        # own, reused by the next call that asks for the same shapes.
+        # See _allocate_cached.
+        self._alloc_cache = None
 
     def _compile_and_prepare_functions(self, nbins=10):
         with open(find_kernel('pdm'), 'r') as f:
@@ -304,6 +308,51 @@ class PDMAsyncProcess(GPUAsyncProcess):
 
             gpu_data.append((t_g, y_g, w_g, freqs_g, pow_g))
             pow_cpus.append(pow_cpu)
+        return gpu_data, pow_cpus
+
+    def _allocate_cached(self, norm_data, frqs, **kwargs):
+        """:meth:`allocate`, with the *device* buffers reused between
+        calls of the same shape.
+
+        ``run()`` allocated and zero-filled five device arrays plus a
+        page-locked host buffer per lightcurve on every call, and
+        uploaded the frequency grid synchronously with
+        ``gpuarray.to_gpu``.  For short lightcurves and modest grids
+        that is most of the wall time (Sep 2026 audit, id 161), and it
+        repeats for every chunk of :meth:`batched_run_const_nfreq` /
+        :meth:`large_run`, which always ask for the same shapes.
+
+        The device buffers depend only on ``(len(t), len(freqs))`` per
+        lightcurve, so the last set is kept and reused whenever the
+        shape signature matches; the frequency grid is re-uploaded only
+        when it actually changed.  The *result* buffers are always
+        freshly allocated, so arrays returned by an earlier ``run()``
+        are never overwritten by a later one.
+
+        Peak device memory is unchanged (the same buffers, reused
+        rather than freed and reallocated); a call with different
+        shapes drops the cached set, which frees it.
+        """
+        sig = tuple((len(t), len(f)) for (t, y, w, f) in norm_data)
+        cache = self._alloc_cache
+
+        if cache is None or cache[0] != sig:
+            gpu_data, pow_cpus = self.allocate(norm_data, freqs=frqs,
+                                               **kwargs)
+            grids = [np.asarray(f, dtype=np.float32)
+                     for (t, y, w, f) in norm_data]
+            self._alloc_cache = (sig, gpu_data, grids)
+            return gpu_data, pow_cpus
+
+        _sig, gpu_data, grids = cache
+        for i, (t, y, w, f) in enumerate(norm_data):
+            f32 = np.asarray(f).astype(np.float32)
+            if not np.array_equal(f32, grids[i]):
+                # synchronous, exactly as gpuarray.to_gpu was
+                gpu_data[i][3].set(f32)
+                grids[i] = f32
+        pow_cpus = [host_array((len(f),), np.float32)
+                    for (t, y, w, f) in norm_data]
         return gpu_data, pow_cpus
 
     def run(self, data, gpu_data=None, pow_cpus=None, freqs=None,
@@ -434,7 +483,8 @@ class PDMAsyncProcess(GPUAsyncProcess):
                 norm_data.append((t, y, w, frqs[i]))
 
         if pow_cpus is None or gpu_data is None:
-            gpu_data, pow_cpus = self.allocate(norm_data, freqs=frqs, **pdm_kwargs)
+            gpu_data, pow_cpus = self._allocate_cached(norm_data, frqs,
+                                                       **pdm_kwargs)
 
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
         func = self.prepared_functions[function]
@@ -482,8 +532,8 @@ class PDMAsyncProcess(GPUAsyncProcess):
         """Run PDM on many lightcurves that share one frequency grid.
 
         Processes ``data`` in chunks of ``batch_size`` lightcurves,
-        synchronizing and freeing each chunk's GPU memory before the next
-        (so peak GPU memory scales with ``batch_size``, not
+        synchronizing after each chunk and reusing its GPU buffers for
+        the next one (so peak GPU memory scales with ``batch_size``, not
         ``len(data)``), and resolves the shared frequency grid once.
         Results match per-lightcurve :meth:`run`.
 
