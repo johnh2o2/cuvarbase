@@ -96,6 +96,21 @@ However, if you can use the assumption that the transit is caused by an edge-on 
 
 This duty-cycle-aware spacing :math:`\delta f \approx q(f) / (\mathrm{OS}\,T)` is the optimal transit-search grid of Ofir (2014) [O2014]_ (his eq. 4, with oversampling :math:`\mathrm{OS}`); it is implemented in :func:`cuvarbase.bls.transit_autofreq` and :func:`cuvarbase.bls_frequencies.keplerian_freq_grid`.
 
+The grid is defined by the recursion :math:`f_{n+1} = f_n + \delta f(f_n)`
+from :math:`f_{\rm min}` up to the first point at or above
+:math:`f_{\rm max}`. Both functions solve that recursion with numpy
+(``method='vectorized'``, the default) rather than a Python loop with one
+:math:`q` evaluation per frequency, which cost 0.2-4 s per call at survey
+grid sizes -- more than the GPU search that followed. The vectorized
+solver converges to a fixed point of the *same* recursion (a continuum
+seed followed by defect correction), so it reproduces the grid length
+exactly and every frequency to within float64 rounding
+(:math:`\lesssim 10^{-15}` relative, measured over ZTF/HAT/TESS/Kepler
+baselines and :math:`\rho_\star` from 0.05 to 5); the float32 grid
+:func:`~cuvarbase.bls_frequencies.keplerian_freq_grid` returns, and the
+float32 grid the kernels search, are bit-identical either way. Pass
+``method='recursion'`` for the original scalar loop.
+
 The minimum frequency you could hope to measure a transit period would be :math:`f_{\rm min} \approx 2/T` (Ofir 2014, Sect. 3.1 [O2014]_), and the maximum frequency is determined by :math:`\sin{\pi q} < 1` which implies
 
 .. math::
