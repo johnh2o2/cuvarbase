@@ -85,7 +85,8 @@ PSD, which absorbs this; noted in `compute_nufft`.
 ALL PASS. The batch-2 "PDM sparse-bin high-frequency artifact" recovery
 failure was entirely the benchmark's argmin-on-maximize-convention bug
 (C1 audit finding); PDM itself recovers the injected signal at every
-config. `benchmark_results_by_gpu/pdm_a5000.json` updated with the
+config. `benchmark_results_by_gpu/pdm_a5000.json` (now
+`benchmarks/results/pdm_a5000.json`) updated with the
 recovery table (batch-2 throughput grid retained unmodified).
 
 ## A3: NFFT error-floor diagnosis

@@ -2,7 +2,8 @@
 
 Companion to `analysis/tls-audit-jul2026.md` (Phase 1b of the pre-release
 audit). Every quantitative performance claim in README.md, CHANGELOG.rst,
-`analysis/TLS_COST_ANALYSIS.md`, and `analysis/GTLS_COMPARISON.md` was traced
+`analysis/TLS_COST_ANALYSIS.md`, and `analysis/GTLS_COMPARISON.md` (both now
+under `docs/`) was traced
 to the raw archives under `benchmarks/results/`; all ratios were **recomputed
 from the raw JSON/txt files** — prose in analysis docs was treated as under
 audit, not as ground truth.
