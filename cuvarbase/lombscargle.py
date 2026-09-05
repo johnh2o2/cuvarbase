@@ -3,15 +3,10 @@ Lomb-Scargle periodogram implementation.
 
 GPU-accelerated implementation of the generalized Lomb-Scargle periodogram.
 """
-import resource
-
 import numpy as np
-from scipy.special import gamma, gammaln
+from scipy.special import gammaln
 
-import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-# import pycuda.autoinit
 
 from . import _cufft as cufft
 
@@ -19,8 +14,8 @@ from .base import GPUAsyncProcess
 from .utils import find_kernel, _module_reader, normalize_light_curves
 from .utils import check_lightcurve, check_freqs
 from .utils import autofrequency as utils_autofreq
-from .memory import NFFTMemory, LombScargleMemory, weights
-from .memory.lombscargle_memory import nfft_grid_sizes, MIN_NFFT_SIGMA
+from .memory import LombScargleMemory
+from .memory.lombscargle_memory import nfft_grid_sizes
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
 
 
@@ -1582,7 +1577,6 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             if cacheable:
                 self._batch_memory = memory
 
-        funcs = (self.function_tuple, self.nfft_proc.function_tuple)
         best_freqs, best_freq_faps = [], []
 
         # ``None`` means "every frequency": an all-True mask would only

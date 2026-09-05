@@ -10,7 +10,6 @@ References
 - Kovács et al. (2002), "Box Least Squares", A&A 391, 369
 """
 
-import sys
 import threading
 import warnings
 import operator
@@ -585,7 +584,7 @@ def tls_search_gpu(t, y, dy, periods=None, *,
                    period_min=None, period_max=None, n_transits_min=2,
                    oversampling_factor=3, duration_grid_step=1.1,
                    R_planet_min=0.5, R_planet_max=5.0,
-                   limb_dark='quadratic', u=[0.4804, 0.1867],
+                   limb_dark='quadratic', u=None,
                    block_size=None, t0_oversample=3.0,
                    kernel=None, memory=None, stream=None,
                    transfer_to_device=True, transfer_to_host=True,
@@ -767,6 +766,8 @@ def tls_search_gpu(t, y, dy, periods=None, *,
     the wrong period). Normalize to a median (not mean) out-of-transit
     level of 1 to ~0.1 sigma per point before searching.
     """
+    if u is None:
+        u = [0.4804, 0.1867]
     # Validate the light curve before anything else: the automatic
     # period grid is built from t, and a NaN sample or dy = 0 used to
     # travel all the way to the kernel (chi2 off by a factor ~1e3 on
@@ -1437,7 +1438,7 @@ def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
                      t0_oversample=3.0,
                      refine_top_k=50, refine_oversample=33.0,
                      block_size=None, nbins=None,
-                     limb_dark='quadratic', u=[0.4804, 0.1867],
+                     limb_dark='quadratic', u=None,
                      return_arrays=False, sde_kernel_size=None,
                      fap_null_draws=0, fap_seed=None,
                      _warn_failed=False):
@@ -1495,7 +1496,8 @@ def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
         the narrowest trial duration / t0_oversample, within the
         device's shared-memory limit.
     limb_dark, u : optional
-        Limb-darkening law/coefficients for the transit template.
+        Limb-darkening law/coefficients for the transit template
+        (defaults: ``'quadratic'``, ``[0.4804, 0.1867]``).
     return_arrays : bool
         Also return the per-period chi2/t0/duration/depth arrays and
         derived spectra for each lightcurve (adds D2H transfer time).
@@ -1549,6 +1551,8 @@ def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
         only, keeping the detection statistic's scale consistent
         across periods.
     """
+    if u is None:
+        u = [0.4804, 0.1867]
     tls_grids.validate_stellar_parameters(R_star, M_star)
     tls_models.validate_limb_darkening_coeffs(u, limb_dark)
 
