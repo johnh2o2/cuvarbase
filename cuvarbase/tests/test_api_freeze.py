@@ -267,3 +267,65 @@ def test_keyword_only_after_data_arguments(case):
     # machinery, before any body (and any GPU work) runs
     with pytest.raises(TypeError):
         func(*positional, None)
+
+
+# ---------------------------------------------------------------------
+# Explicit __all__ per user-facing module (finding 135)
+# ---------------------------------------------------------------------
+
+_MODULES_WITH_ALL = ['bls', 'bls_frequencies', 'ce', 'cunfft', 'lombscargle',
+                     'pdm', 'tls', 'tls_grids', 'tls_models', 'tls_stats',
+                     'utils', 'cufinufft_backend', 'nufft_lrt']
+
+
+@pytest.mark.parametrize('modname', _MODULES_WITH_ALL)
+def test_module_all_is_explicit_and_resolvable(modname):
+    import inspect
+    mod = importlib.import_module('cuvarbase.' + modname)
+    names = mod.__all__
+    assert isinstance(names, list) and names
+    assert len(names) == len(set(names))
+    for name in names:
+        assert not name.startswith('_'), name
+        obj = getattr(mod, name)   # AttributeError == a stale entry
+        assert not inspect.ismodule(obj), name
+        if inspect.isfunction(obj) or inspect.isclass(obj):
+            assert obj.__module__ == mod.__name__, (name, obj.__module__)
+    # star-imports and autodoc must not publish the imported modules
+    for leaked in ('np', 'cuda', 'gpuarray', 'warnings', 'threading',
+                   'os', 'sys', 'SourceModule'):
+        assert leaked not in names
+
+
+def _docs_dir():
+    repo_root = os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(repo_root, 'docs', 'source')
+
+
+def test_documented_names_are_in_module_all():
+    # Sphinx autodoc ``:members:`` honours ``__all__``: a documented
+    # name missing from it silently drops off the API page.
+    import glob
+    import inspect
+    import re
+    docs = _docs_dir()
+    if not os.path.isdir(docs):
+        pytest.skip('docs/source not present (installed wheel)')
+    pattern = re.compile(r'cuvarbase\.([a-z_]+)\.([A-Za-z_][A-Za-z0-9_]*)')
+    referenced = set()
+    for path in glob.glob(os.path.join(docs, '*.rst')):
+        with open(path) as fh:
+            for m in pattern.finditer(fh.read()):
+                if m.group(1) in _MODULES_WITH_ALL:
+                    referenced.add((m.group(1), m.group(2)))
+    assert referenced, 'no cuvarbase.<module>.<name> references found'
+    missing = []
+    for modname, name in sorted(referenced):
+        mod = importlib.import_module('cuvarbase.' + modname)
+        obj = getattr(mod, name, None)
+        if obj is None or inspect.ismodule(obj) or name.startswith('_'):
+            continue   # a typo in the docs is the docs' problem
+        if name not in mod.__all__:
+            missing.append('cuvarbase.%s.%s' % (modname, name))
+    assert missing == []

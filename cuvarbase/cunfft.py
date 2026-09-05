@@ -20,6 +20,12 @@ from .utils import find_kernel, _module_reader, check_lightcurve
 from .memory import NFFTMemory
 
 
+__all__ = [
+    'nfft_adjoint_async',
+    'NFFTAsyncProcess',
+]
+
+
 def nfft_adjoint_async(memory, functions,
                        minimum_frequency=0., block_size=256,
                        just_return_gridded_data=False, use_grid=None,

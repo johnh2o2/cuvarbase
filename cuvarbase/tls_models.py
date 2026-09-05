@@ -17,6 +17,21 @@ import warnings
 from collections import OrderedDict
 
 import numpy as np
+
+
+__all__ = [
+    'BATMAN_AVAILABLE',
+    'create_reference_transit',
+    'create_transit_model_cache',
+    'simple_trapezoid_transit',
+    'interpolate_transit_model',
+    'generate_transit_template',
+    'generate_template_tables',
+    'get_default_limb_darkening',
+    'validate_limb_darkening_coeffs',
+]
+
+
 try:
     import batman
     BATMAN_AVAILABLE = True

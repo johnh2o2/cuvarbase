@@ -36,6 +36,15 @@ import pycuda.gpuarray as gpuarray
 
 from .base import ensure_context
 
+
+__all__ = [
+    'HAS_CUFINUFFT',
+    'check_cufinufft',
+    'free_plan_cache',
+    'cufinufft_nfft_adjoint',
+]
+
+
 # LRU cache of cufinufft Plans keyed on (nf_total, eps, n_pts,
 # gpu_method, dtype). Plan creation (cuFFT plan + GPU workspace allocation)
 # dominated the per-call cost of this backend; reuse amortizes it.

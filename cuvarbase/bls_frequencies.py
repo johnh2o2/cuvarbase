@@ -15,6 +15,13 @@ Consistent with :func:`cuvarbase.bls.transit_autofreq`.
 import numpy as np
 
 
+__all__ = [
+    'keplerian_freq_grid',
+    'uniform_freq_grid',
+    'freq_grid_stats',
+]
+
+
 def _q_transit(freq, rho=1.0):
     """
     Keplerian transit duration fraction q = T_dur / P.
