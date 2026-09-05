@@ -1,9 +1,17 @@
 # Issue sweep — drafted close comments (execute on release day, after v1.0.0 is live)
 
-Decision (maintainer, Jul 10 2026): close all 10 open issues with evidence
-comments; open ONE consolidated "v1.1 roadmap" issue (body at the bottom).
-Order of operations: publish release → post roadmap issue → close the 10 with
-the comments below (several reference the roadmap issue number).
+Decision (maintainer, Jul 10 2026; reconfirmed for the Sep-2026 state): close
+all 10 open issues with evidence comments; open ONE consolidated "v1.1
+roadmap" issue (body at the bottom). Order of operations: publish release →
+post roadmap issue → close the 10 with the comments below (several reference
+the roadmap issue number).
+
+Placeholders to fill on release day: `#ROADMAP` (the roadmap issue number),
+`<N>` (the "passed" count from the Phase 5 gate log, 0 skipped),
+`<LRT-STATUS>` (the Phase 4 outcome for NUFFT-LRT: "official" or
+"experimental"). Archived pre-1.0 material is cited by the archive tag
+`archive/pre-1.0-process` (pushed on release day), never by an `analysis/`
+path on `master`.
 
 ---
 
@@ -41,8 +49,9 @@ v1.0.0 publishes a full measured benchmark suite: `docs/BENCHMARK_RESULTS.md`
 (BLS vs astropy across 7 GPU architectures, survey-scale Lomb–Scargle vs
 nifty-ls, the TLS-vs-GTLS head-to-head, Keplerian-grid savings, survey cost
 projections), with raw JSON + configs archived under `benchmarks/results/`
-and a written protocol (`analysis/BENCHMARK_PROTOCOL_V1.md`). The release
-notes carry the headline tables. Closing as shipped in v1.0.0.
+and the written protocol preserved at
+https://github.com/johnh2o2/cuvarbase/blob/archive/pre-1.0-process/analysis/BENCHMARK_PROTOCOL_V1.md.
+The release notes carry the headline tables. Closing as shipped in v1.0.0.
 
 ## #28 — Refactor the cuvarbase codebase for improved quality, efficiency, and usability → CLOSE (v1.0 is this refactor)
 
@@ -50,10 +59,12 @@ Status at v1.0.0, which was effectively this issue's execution: memory
 management refactored into `cuvarbase.memory` with genuinely pinned host
 buffers; thread-safe LRU kernel caching (34× on per-lightcurve loops);
 lazy CUDA context + PEP 562 imports (`import cuvarbase` works GPU-less);
-typed exceptions and validated inputs; scikit-cuda and `future` dropped;
-Python 3.9–3.12 + numpy 2.x; CI (CPU suite, packaging smoke, flake8); the
-GPU-validated test suite grew from ~37 tests to 700+ with a 14-check release
-gate. Remaining polish items (docstring audit, notebooks, naming) are
+typed exceptions and input validation that raises on bad data; scikit-cuda
+and `future` dropped; Python 3.9+ and numpy 2.x; CI (CPU suite, packaging
+smoke, flake8); a September 2026 per-method soundness audit whose 25
+confirmed defects are fixed with regression tests; the GPU-validated test
+suite grew from ~37 tests to <N> (0 skipped at the release gate) with a
+14-check release gate. Remaining polish items (docstring audit, notebooks, naming) are
 tracked in the v1.1 roadmap (#ROADMAP). Closing — further quality work will
 be scoped as concrete issues rather than this umbrella.
 
@@ -83,8 +94,10 @@ The optimization work this issue asked for shipped across v1.0.0, largely via
 @astrobatty's contributions: CE enhancements and bug fixes (PR #61 — with CE
 now in maintenance mode and `periodfind` recommended for actively-developed
 GPU CE/AOV), fast PDM kernels (PR #62), plus the BLS survey-speed campaign
-(2.0–12.7× end-to-end), sparse-BLS vectorization, and the survey-scale TLS
-engine. Per-algorithm performance work continues as concrete scoped issues
+(2.0–12.7× end-to-end), sparse-BLS vectorization, the survey-scale TLS
+engine, and the Sep-2026 pass (kernel caching on every BLS entry point,
+device-sized CE `use_fast` grids, pooled PDM buffers, a stacked
+multiharmonic LS solve, a numpy solver for the Keplerian frequency grid). Per-algorithm performance work continues as concrete scoped issues
 (v1.1 roadmap #ROADMAP) rather than this umbrella. Closing.
 
 ## #33 — Elevate and complete phase dispersion minimization capabilities → CLOSE (shipped)
@@ -122,23 +135,43 @@ none are release-blocking regressions — the v1.0.0 CHANGELOG's "Known
 limitations and deferred work" section is the user-facing summary.
 
 **Validation / correctness**
-- [ ] NUFFT-LRT (`cuvarbase.nufft_lrt`): full injection-recovery validation
-      (it ships experimental with an import warning; GPU rewire is done)
-- [ ] Legacy TLS kernel (`use_fast=False`): float64 epoch subtraction like
-      every other path (currently documented as unsafe at BJD scale), or
-      formal deprecation of the legacy path
-- [ ] Input validation for non-finite y/dy across entry points (currently
-      NaNs degrade results silently, matching legacy behavior)
+- [ ] NUFFT-LRT (`cuvarbase.nufft_lrt`): shipped in 1.0.0 as <LRT-STATUS>
+      after the Sep-2026 fixes and the pre-tag injection-recovery
+      re-validation (importable, quarantined from the top-level namespace,
+      warning at construction, outside the 1.x stability promise).
+      Remaining: promote Detector A (`detector='marginal'`) once its arm of
+      the re-validation is quoted in the docs; bring the module into the
+      top-level namespace and the stability promise
+- [ ] Legacy TLS kernel (`use_fast=False`): formal deprecation or removal
+      of the legacy path (the fast batch path is the default on every
+      entry point)
+- [ ] float64 frequency/period grid builders (the grids are built in
+      float64 and handed to the kernels as float32 today)
+- [ ] Thread-safety of the `*AsyncProcess` objects (documented as
+      one-process-per-thread in 1.0)
 
 **Performance (measured opportunities on record)**
 - [ ] TLS fast kernel: XOR-swizzle for the 32-way shared-memory bank
       conflicts when NBINS/n_t0 ≡ 0 mod 32 (~2–4% of trials)
 - [ ] TLS: chunk-pipelined GPU/CPU overlap (double-buffering) for
       multi-chunk surveys
-- [ ] LS `batched_run_const_nfreq` batch_size>1: amortize per-call memory-set
-      construction (diagnosed Jul 2026; ~10% on the table)
+- [ ] TLS coarse-kernel rewrite: a band-of-periods-per-block kernel so the
+      light curve is not re-folded once per trial period (87-100% of kernel
+      time today; the audit measured 2-4× available)
+- [ ] PDM `_fast` kernel rewrite (numerically equivalent to the default
+      kernels but only 0.7-2.0× on Ada; either make it win or drop it)
+- [ ] CE float32 frequency grids on the device (float64 upload today)
 - [ ] Multi-GPU dispatch (the one architectural idea worth adopting from the
-      GTLS comparison; see analysis/GTLS_COMPARISON.md)
+      GTLS comparison; see docs/GTLS_COMPARISON.md)
+
+**Packaging / infrastructure**
+- [ ] Dockerfile rebuild (the 2023 one was deleted in 1.0: it never
+      installed cuvarbase and pulled the dropped scikit-cuda); smoke-build
+      it on a GPU pod before it ships
+- [ ] `cuvarbase._cufft` hardening (the in-house ctypes cuFFT binding:
+      library discovery across CUDA layouts, error-code coverage)
+- [ ] Stellar-parameter overrides for the Keplerian frequency/duration
+      grids (per-target `R_star`/`M_star` in the batch APIs)
 
 **Docs / community**
 - [ ] Docstring audit + example notebooks (residue of #29)
