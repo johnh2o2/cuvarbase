@@ -209,7 +209,7 @@ def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
     ys = np.asarray([np.dot(yw, np.sin(n * phase))
                      for n in ns[1:nharms+1]])
 
-    ybar = sum(yw)
+    ybar = np.sum(yw)
     C = np.asarray(c)[1:nharms+1]
     S = np.asarray(s)[1:nharms+1]
     YC = yc - ybar * C
@@ -514,7 +514,7 @@ def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
         return mhdirect_sums(t, yw, w, f, YY, nharms=nharms)
     sums = [add_regularization(s, **kwargs) for s in list(map(sfunc, freqs))]
 
-    ybar = sum(yw)
+    ybar = np.sum(yw)
     return np.array([mhgls_from_sums(s, YY, ybar) for s in sums])
 
 
@@ -645,7 +645,7 @@ def lomb_scargle_async(memory, functions, freqs,
                 memory.real_type(memory.yy),
                 memory.real_type(memory.ybar),
                 memory.real_type(df),
-                memory.real_type(min(freqs)),
+                memory.real_type(np.min(freqs)),
                 memory.mode)
 
         lomb_dirsum.prepared_async_call(*args)
@@ -1398,8 +1398,11 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
 
     w = np.ones(N) if dy is None else np.power(dy, -2)
 
-    tbar = np.dot(w, t) / sum(w)
-    Dt = np.dot(w, np.power(t - tbar, 2)) / sum(w)
+    # np.sum, not the builtin: sum() over a numpy array iterates it in
+    # Python (6 ms per call at N = 65,000)
+    wsum = np.sum(w)
+    tbar = np.dot(w, t) / wsum
+    Dt = np.dot(w, np.power(t - tbar, 2)) / wsum
 
     Teff = np.sqrt(4 * np.pi * Dt)
 

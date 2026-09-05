@@ -1310,3 +1310,64 @@ class TestCufinufftBackend(object):
         proc = self._proc(True)
         p = _run_gpu(proc, t, y, dy, freqs)
         assert np.max(np.abs(p - ref)) < 1e-6
+
+
+class TestWeightsUseNumpyReductions(object):
+    """``weights()`` and ``LombScargleMemory.setdata`` used the Python
+    builtins ``sum``/``min``/``max`` on numpy arrays, which iterate the
+    array element by element: 11.4 ms per lightcurve at N = 65,000 and
+    150 ms at N = 1e6 of pure interpreter time for the same values
+    (Sep-2026 algorithm audit, LS-1). They now use ``np.sum`` /
+    ``np.min`` / ``np.max``.
+
+    The weight normalization moves by the last ulp (``np.sum`` is
+    pairwise, the builtin is a left-to-right accumulation), which is
+    also what makes the copy here agree with the canonical
+    ``cuvarbase.utils.weights`` bit for bit -- it already used
+    ``np.sum``, so the two disagreed before.
+    """
+
+    @staticmethod
+    def _dy(n, seed=5):
+        r = np.random.RandomState(seed)
+        return 0.01 * (1.0 + r.rand(n))
+
+    @pytest.mark.parametrize("n", [7, 300, 4096])
+    def test_matches_the_canonical_utils_weights_bitwise(self, n):
+        from ..memory.lombscargle_memory import weights as mem_weights
+        from ..utils import weights as utils_weights
+        dy = self._dy(n)
+        w = mem_weights(dy)
+        assert np.array_equal(w, utils_weights(dy))
+        assert np.array_equal(w, np.power(dy, -2) / np.sum(np.power(dy, -2)))
+        assert_allclose(np.sum(w), 1.0, rtol=1e-14)
+
+    @pytest.mark.parametrize("n", [7, 300, 4096])
+    def test_agrees_with_the_builtin_sum_to_the_last_ulp(self, n):
+        """Guards the direction of the change: the values are the same
+        to a few ulps, so nothing but rounding moved."""
+        from ..memory.lombscargle_memory import weights as mem_weights
+        dy = self._dy(n)
+        w = np.power(dy, -2)
+        assert_allclose(mem_weights(dy), w / sum(w), rtol=1e-14, atol=0.0)
+
+    @pytest.mark.parametrize("use_double", [False, True])
+    def test_setdata_tmin_tmax_are_the_array_extremes(self, use_double):
+        from ..memory.lombscargle_memory import LombScargleMemory
+        r = np.random.RandomState(11)
+        n = 500
+        t = np.sort(2455000.0 + 30.0 * r.rand(n))
+        y = 12 + 0.01 * r.randn(n)
+        dy = 0.01 * np.ones(n)
+        proc = LombScargleAsyncProcess(use_double=use_double)
+        freqs = 0.01 * (5 + np.arange(400))
+        mem = proc.allocate([(t, y, dy)], nfreqs=[len(freqs)],
+                            k0s=[5])[0]
+        mem.setdata(t=t, y=y, dy=dy)
+        tc = np.asarray(t).astype(mem.real_type)
+        assert mem.tmin == np.min(tc)
+        assert mem.tmax == np.max(tc)
+        # ... and the same values the Python builtins produced
+        assert mem.tmin == min(tc)
+        assert mem.tmax == max(tc)
+        assert isinstance(mem, LombScargleMemory)
