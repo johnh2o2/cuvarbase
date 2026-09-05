@@ -2323,7 +2323,7 @@ def _validate_convention(convention):
                          % (_BLS_POWER_CONVENTIONS, convention))
 
 
-def convert_bls_power(power, y, dy, convention='chi2ratio'):
+def convert_bls_power(power, y, dy, *, convention='chi2ratio'):
     """
     Convert the native BLS power to another power-spectrum convention.
 
@@ -3355,7 +3355,7 @@ def _get_cached_batch_kernels(block_size):
         return compiled
 
 
-def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
+def eebls_gpu_batch(lightcurves, freqs, *, qmin=1e-2, qmax=0.5,
                     noverlap=2, dlogq=0.3, dphi=0.0,
                     ignore_negative_delta_sols=False,
                     max_batch_lcs=256, block_size=None,
