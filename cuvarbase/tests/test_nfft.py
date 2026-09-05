@@ -496,3 +496,152 @@ class TestNFFT(object):
 
             assert_allclose(ghat_s.real, ghat_b.real, **tols)
             assert_allclose(ghat_s.imag, ghat_b.imag, **tols)
+
+
+class _FakePtr(object):
+    ptr = 0
+
+
+class _FakeKernel(object):
+    def __init__(self):
+        self.calls = []
+
+    def prepared_async_call(self, *args):
+        self.calls.append(args)
+
+
+class _FakeStream(object):
+    def synchronize(self):
+        pass
+
+
+class _FakeGrid(object):
+    ptr = 0
+
+    def __init__(self, n):
+        self.n = n
+
+    def fill(self, value, stream=None):
+        pass
+
+    def get(self):
+        return np.zeros(self.n, dtype=np.complex64)
+
+
+class _FakeNFFTMemory(object):
+    """Just enough of NFFTMemory for nfft_adjoint_async's gridding
+    dispatch (just_return_gridded_data=True stops right after it)."""
+
+    def __init__(self, precomp_psi):
+        self.precomp_psi = precomp_psi
+        self.stream = _FakeStream()
+        self.real_type = np.float32
+        self.complex_type = np.complex64
+        self.n0, self.nf, self.m = 20, 40, 4
+        self.n = 200
+        self.b = 1.5
+        self.tmin, self.tmax = 0.0, 1.0
+        self.t_g, self.y_g = _FakePtr(), _FakePtr()
+        self.ghat_g = _FakeGrid(self.n)
+        # exactly what NFFTMemory holds when built with precomp_psi=False
+        self.q1 = self.q2 = self.q3 = (_FakePtr() if precomp_psi else None)
+
+    def transfer_data_to_gpu(self):
+        pass
+
+
+class TestPrecompPsiDispatch(object):
+    """``precomp_psi=False`` used to raise AttributeError: the gridding
+    branch dispatched on ``fast_grid`` alone and then dereferenced the
+    psi tables ``q1/q2/q3`` that ``NFFTMemory`` only allocates with
+    ``precomp_psi=True`` (Sep-2026 readiness audit; Phase 2 verification
+    carry-over). It now uses the inline-psi ``slow_gaussian_grid``
+    kernel, and the default path is untouched. These run without a
+    device on fake kernels."""
+
+    @staticmethod
+    def _call(memory, **kwargs):
+        from ..cunfft import nfft_adjoint_async
+        names = ('precompute_psi', 'fast_gaussian_grid',
+                 'slow_gaussian_grid', 'nfft_shift', 'normalize')
+        funcs = dict((n, _FakeKernel()) for n in names)
+        out = nfft_adjoint_async(memory, tuple(funcs[n] for n in names),
+                                 just_return_gridded_data=True, **kwargs)
+        assert out.shape == (memory.n,)
+        return dict((n, len(funcs[n].calls)) for n in names)
+
+    def test_memory_without_psi_tables_uses_the_inline_kernel(self):
+        calls = self._call(_FakeNFFTMemory(precomp_psi=False))
+        assert calls['slow_gaussian_grid'] == 1
+        assert calls['precompute_psi'] == 0
+        assert calls['fast_gaussian_grid'] == 0
+
+    def test_kwarg_false_uses_the_inline_kernel(self):
+        # a memory that has tables but a call that asks not to use them
+        calls = self._call(_FakeNFFTMemory(precomp_psi=True),
+                           precomp_psi=False)
+        assert calls['slow_gaussian_grid'] == 1
+        assert calls['precompute_psi'] == 0
+        assert calls['fast_gaussian_grid'] == 0
+
+    def test_default_path_is_unchanged(self):
+        calls = self._call(_FakeNFFTMemory(precomp_psi=True))
+        assert calls['precompute_psi'] == 1
+        assert calls['fast_gaussian_grid'] == 1
+        assert calls['slow_gaussian_grid'] == 0
+
+    def test_fast_grid_false_still_uses_the_inline_kernel(self):
+        calls = self._call(_FakeNFFTMemory(precomp_psi=True),
+                           fast_grid=False)
+        assert calls['slow_gaussian_grid'] == 1
+        assert calls['precompute_psi'] == 0
+
+    def test_missing_tables_with_precomp_psi_true_is_a_clear_error(self):
+        mem = _FakeNFFTMemory(precomp_psi=True)
+        mem.q1 = None
+        with pytest.raises(ValueError, match='q1/q2/q3'):
+            self._call(mem)
+
+
+class TestPrecompPsiFalseOnDevice(object):
+    """End to end on the GPU (skips without one): ``precomp_psi=False``
+    through ``NFFTAsyncProcess.run`` now returns the transform instead
+    of raising AttributeError, and it agrees with the default path and
+    with the exact direct sums."""
+
+    def test_precomp_psi_false_matches_default(self):
+        t, tsc, y, err = data(ndata=100)
+        nf = int(nfft_sigma * len(t))
+        kw = dict(sigma=nfft_sigma, m=nfft_m, minimum_frequency=0.,
+                  samples_per_peak=spp)
+        ref = np.array(simple_gpu_nfft(t, y, nf, **kw))
+        proc = NFFTAsyncProcess(sigma=nfft_sigma, m=nfft_m, autoset_m=False)
+        mem = proc.allocate([(t, y, nf)], precomp_psi=False)
+        assert mem[0].precomp_psi is False
+        assert mem[0].q1 is None and mem[0].q2 is None and mem[0].q3 is None
+        got = np.array(proc.run([(t, y, nf)], memory=mem,
+                                minimum_frequency=0., samples_per_peak=spp,
+                                precomp_psi=False)[0])
+        proc.finish()
+        scale = np.max(np.abs(ref))
+        assert np.all(np.isfinite(got))
+        # the inline-psi kernel differs from the factorized table
+        # product by float32 roundoff and atomic order only
+        assert np.max(np.abs(got - ref)) / scale < 1e-4
+        # ... and both are the transform (phases relative to floor(min t))
+        exact = direct_sums(t - np.floor(t.min()), y,
+                            np.arange(nf) / (spp * (t.max() - t.min())))
+        assert np.max(np.abs(got - exact)) / scale < 5e-3
+
+    def test_precomp_psi_false_through_run_kwargs(self):
+        # the kwarg alone (run allocates the memory itself)
+        t, tsc, y, err = data(ndata=60)
+        nf = int(nfft_sigma * len(t))
+        ref = np.array(simple_gpu_nfft(t, y, nf, sigma=nfft_sigma,
+                                       m=nfft_m, minimum_frequency=0.,
+                                       samples_per_peak=spp))
+        got = np.array(simple_gpu_nfft(t, y, nf, sigma=nfft_sigma,
+                                       m=nfft_m, minimum_frequency=0.,
+                                       samples_per_peak=spp,
+                                       precomp_psi=False))
+        assert np.max(np.abs(got - ref)) / np.max(np.abs(ref)) < 1e-4

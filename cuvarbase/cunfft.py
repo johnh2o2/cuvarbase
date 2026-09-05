@@ -122,19 +122,35 @@ def nfft_adjoint_async(memory, functions,
     if use_grid is None:
         memory.ghat_g.fill(memory.complex_type(0), stream=stream)
 
-    # smooth data onto uniform grid
-    if fast_grid:
-        if memory.precomp_psi:
-            grid = (grid_size(memory.n0 + 2 * memory.m + 1), 1)
-            args = (grid, block, stream)
-            args += (memory.t_g.ptr,)
-            args += (memory.q1.ptr, memory.q2.ptr, memory.q3.ptr)
-            args += (np.int32(memory.n0), np.int32(memory.n),
-                     np.int32(memory.m), memory.real_type(memory.b))
-            args += (memory.real_type(memory.tmin),
-                     memory.real_type(memory.tmax),
-                     memory.real_type(samples_per_peak))
-            precompute_psi.prepared_async_call(*args)
+    # smooth data onto uniform grid.
+    # ``fast_gaussian_grid`` reads the psi tables q1/q2/q3, which
+    # NFFTMemory allocates only when it was built with precomp_psi=True.
+    # Before 1.0 this branch dispatched on ``fast_grid`` alone and then
+    # dereferenced ``memory.q1.ptr`` unconditionally, so precomp_psi=False
+    # (through NFFTAsyncProcess.run/allocate or LombScargleAsyncProcess)
+    # raised AttributeError on every release (Sep-2026 readiness audit,
+    # Phase 2 verification carry-over). The inline-psi kernel
+    # ``slow_gaussian_grid`` needs no tables, so a call without them is
+    # routed there; the default (tables allocated and requested) is
+    # unchanged.
+    use_precomp_psi = bool(fast_grid) and bool(precomp_psi) \
+        and bool(memory.precomp_psi)
+    if use_precomp_psi:
+        if memory.q1 is None or memory.q2 is None or memory.q3 is None:
+            raise ValueError(
+                "nfft_adjoint_async: memory.precomp_psi is True but the "
+                "psi tables q1/q2/q3 are not allocated; call "
+                "memory.allocate_precomp_psi() (or memory.allocate())")
+        grid = (grid_size(memory.n0 + 2 * memory.m + 1), 1)
+        args = (grid, block, stream)
+        args += (memory.t_g.ptr,)
+        args += (memory.q1.ptr, memory.q2.ptr, memory.q3.ptr)
+        args += (np.int32(memory.n0), np.int32(memory.n),
+                 np.int32(memory.m), memory.real_type(memory.b))
+        args += (memory.real_type(memory.tmin),
+                 memory.real_type(memory.tmax),
+                 memory.real_type(samples_per_peak))
+        precompute_psi.prepared_async_call(*args)
 
         grid = (grid_size(memory.n0), 1)
         args = (grid, block, stream)
