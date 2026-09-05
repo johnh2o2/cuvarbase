@@ -121,6 +121,34 @@ the result transfers:
 Passing a different grid of the same length to ``run`` re-uploads it; a
 grid of a different length raises ``ValueError``.
 
+The shared-memory kernels (``use_fast=True``)
+---------------------------------------------
+
+``use_fast=True`` gives each trial frequency its own thread block and
+keeps that block's phase/magnitude histogram in shared memory. It
+returns the same periodogram as the default kernels to floating-point
+precision, and it has two practical advantages:
+
+* **No global histogram.** The default kernels accumulate into an
+  ``nfreq * phase_bins * mag_bins`` array in device memory -- 20 MB for
+  a 100,000-frequency 10 x 5 search, per lightcurve held on the GPU.
+  ``use_fast=True`` allocates none of it, which is often what decides
+  how large a batch fits.
+* **Speed.** The grid is sized from the device (SM count and per-SM
+  occupancy) rather than from the histogram's shared-memory footprint,
+  so the kernels actually fill the GPU. On one NVIDIA A40 shared with
+  other jobs -- treat these as ratios measured in a single session, not
+  as portable numbers -- ``use_fast=True`` was 1.2x faster than the
+  default kernels at ``(ndata, nfreq) = (300, 1e5)``, 1.9x at
+  ``(2000, 1e5)`` and 8x at ``(10000, 1e5)``, and within noise of them
+  for small grids.
+
+The size of the histogram is limited by the device's shared memory per
+block: ``phase_bins * mag_bins`` beyond roughly 6000 (single precision,
+48 KB per block) raises ``ValueError`` rather than failing inside the
+driver. ``weighted=True`` and ``balanced_magbins=True`` have no fast
+kernel (see below).
+
 Binning details
 ---------------
 

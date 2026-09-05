@@ -95,6 +95,62 @@ def _freq_grids(freqs, nlcs):
     return list(freqs)
 
 
+# ---------------------------------------------------------------------------
+# Grid sizing for the block-per-frequency fast kernels
+# ---------------------------------------------------------------------------
+# Hardware limit on resident thread blocks per SM: 16 on sm_5x/6x/7.5/8.6,
+# 32 on sm_70/8.0.  16 is the safe value -- a grid-stride kernel loses
+# nothing by launching fewer blocks than could be resident.
+_MAX_BLOCKS_PER_SM = 16
+
+
+def _device_occupancy_limits():
+    """``(num_SMs, shared_memory_per_SM, max_threads_per_SM)`` of the
+    active device, with conservative fallbacks for drivers that do not
+    report the per-SM attributes."""
+    dev = ensure_context().device
+    att = cuda.device_attribute
+    nsm = int(dev.get_attribute(att.MULTIPROCESSOR_COUNT))
+    try:
+        shmem_sm = int(dev.get_attribute(
+            att.MAX_SHARED_MEMORY_PER_MULTIPROCESSOR))
+    except Exception:
+        shmem_sm = int(dev.get_attribute(att.MAX_SHARED_MEMORY_PER_BLOCK))
+    try:
+        thr_sm = int(dev.get_attribute(att.MAX_THREADS_PER_MULTIPROCESSOR))
+    except Exception:
+        thr_sm = 1024
+    return nsm, shmem_sm, thr_sm
+
+
+def _fast_grid_size(shmem, block_size, nfreq):
+    """Number of thread blocks to launch for ``ce_classical_fast`` /
+    ``ce_classical_faster``.
+
+    Both kernels give one trial frequency to each *block* and stride by
+    ``gridDim.x``, so every ``ce[i]`` is computed by exactly one block
+    from the same data in the same order: the result does not depend on
+    the grid size at all, and the only question is how many blocks keep
+    the device busy.  Fill the device -- ``num_SMs`` times the number of
+    blocks that can be resident on an SM (shared memory, threads and the
+    hardware block limit) -- capped at the number of frequencies in the
+    launch.
+
+    The heuristic this replaced, ``floor(2 * shmem_lim / shmem)``, is a
+    per-block shared-memory ratio rather than a grid size: it launched
+    34 blocks at ``ndata = 300`` and 5 blocks at ``ndata = 2000`` no
+    matter how large the device or the frequency grid was, leaving an
+    84-SM A40 (or a 128-SM 4090) almost entirely idle (Sep 2026 audit,
+    ids 61 and 107).
+    """
+    nsm, shmem_sm, thr_sm = _device_occupancy_limits()
+    by_shmem = (shmem_sm // shmem) if shmem > 0 else _MAX_BLOCKS_PER_SM
+    by_threads = (thr_sm // block_size) if block_size > 0 else 1
+    blocks_per_sm = max(1, min(int(by_shmem), int(by_threads),
+                               _MAX_BLOCKS_PER_SM))
+    return max(1, min(int(nfreq), nsm * blocks_per_sm))
+
+
 def conditional_entropy(memory, functions, block_size=256,
                         transfer_to_host=True,
                         transfer_to_device=True,
@@ -106,6 +162,14 @@ def conditional_entropy(memory, functions, block_size=256,
 
     if transfer_to_device:
         memory.transfer_data_to_gpu()
+
+    if memory.bins_g is None:
+        raise ValueError(
+            "the standard conditional-entropy kernels accumulate into a "
+            "global histogram, but this memory was allocated with "
+            "use_fast=True, which skips it; allocate the memory from a "
+            "process with use_fast=False (or pass use_fast=False to "
+            "ConditionalEntropyMemory)")
 
     # The histogram kernels accumulate into ``bins_g``: it must start from
     # zero on EVERY call, not only when ``run(set_data=True)`` zeroed it
@@ -162,7 +226,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
                              freq_batch_size=None,
                              shmem_lc=True,
                              shmem_lim=None,
-                             max_nblocks=200,
+                             max_nblocks=None,
                              force_nblocks=None,
                              stream=None,
                              **kwargs):
@@ -233,12 +297,14 @@ def conditional_entropy_fast(memory, functions, block_size=256,
     while (i_freq < memory.nf):
         j_freq = min([i_freq + freq_batch_size, memory.nf])
 
-        grid = (min([int(np.ceil((j_freq - i_freq) / block_size)),
-                     max_nblocks]), 1)
-        if data_in_shared_mem:
-            grid = (int(np.floor(2 * float(shmem_lim) / shmem)), 1)
+        # One block per trial frequency, grid-stride: size the grid from
+        # the device, not from the shared-memory footprint (ids 61/107).
+        nblocks = _fast_grid_size(shmem, block_size, j_freq - i_freq)
+        if max_nblocks is not None:
+            nblocks = min(nblocks, int(max_nblocks))
         if force_nblocks is not None:
-            grid = (force_nblocks, 1)
+            nblocks = int(force_nblocks)
+        grid = (nblocks, 1)
 
         if not grid[0] > 0:
             raise RuntimeError(
@@ -290,11 +356,18 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     use_fast: bool, optional (default: False)
         Use the shared-memory kernels (one thread block per trial
         frequency, histogram kept in shared memory). Results match the
-        standard kernels to floating-point precision; they are not
-        generally faster on current GPUs. Incompatible with
-        ``weighted=True`` and ``balanced_magbins=True``. Works with
-        ``run``, ``large_run`` and the batched entry points, in single
-        or double precision.
+        standard kernels to floating-point precision. Since the grid is
+        sized from the device (Sep 2026; it used to be a few blocks
+        whatever the GPU) the fast kernels are the quicker of the two
+        for all but the smallest problems -- on one NVIDIA A40, shared
+        with other jobs, so read the ratios as indicative only: 1.3x at
+        (ndata, nfreq) = (1000, 1e5), 1.9x at (2000, 1e5) and 8x at
+        (1e4, 1e5), break-even below that -- and they need no global
+        histogram, saving ``nfreq * phase_bins * mag_bins`` uint32 of
+        device memory (20 MB for a 100k-frequency 10 x 5 search).
+        Incompatible with ``weighted=True`` and
+        ``balanced_magbins=True``. Works with ``run``, ``large_run``
+        and the batched entry points, in single or double precision.
     use_double: bool, optional (default: False)
         Use double precision on the GPU.
     balanced_magbins: bool, optional (default: False)
@@ -443,6 +516,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                   balanced_magbins=self.balanced_magbins,
                   widen_mag_range=self.widen_mag_range)
         kw.update(overrides)
+        # Not overridable per call: the memory layout has to match the
+        # kernels this process will actually launch (``call_func`` is
+        # chosen in the constructor), and the fast kernels skip the
+        # global histogram.
+        kw['use_fast'] = self.use_fast
         self._check_options(kw, use_fast=self.use_fast)
         return kw
 
@@ -503,6 +581,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         The histogram dominates: ``nf * phase_bins * mag_bins``
         entries (uint32, or ``real_type`` when ``weighted=True``).
+        With ``use_fast=True`` there is no global histogram (it lives in
+        shared memory), so only the data, the grid and the result count.
 
         Parameters
         ----------
@@ -519,8 +599,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         rsize = np.dtype(self.real_type).itemsize
         bin_size = rsize if self.weighted else np.dtype(np.uint32).itemsize
 
-        # histogram bins
-        mem = nf * self.phase_bins * self.mag_bins * bin_size
+        # histogram bins (the ``use_fast`` kernels keep the histogram in
+        # shared memory and allocate none)
+        mem = 0
+        if not getattr(self, 'use_fast', False):
+            mem = nf * self.phase_bins * self.mag_bins * bin_size
         # observation data: t, y (+ dy when weighted)
         mem += (3 if self.weighted else 2) * n0 * rsize
         # frequencies + CE result

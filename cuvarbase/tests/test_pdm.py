@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 import pytest
 from pycuda.tools import mark_cuda_test
 from ..utils import weights
@@ -387,3 +387,113 @@ def test_run_docstring_states_statistic_and_dphi_semantics():
     assert 'half-width' in doc
     assert 'standard deviation' in doc
     assert 'no degrees-of-freedom correction' in doc
+
+
+# ---------------------------------------------------------------------------
+# PDM-1 (audit id 161): run() reallocated five device arrays, a page-locked
+# host buffer and a synchronous frequency upload on every call.  The device
+# buffers are now kept and reused when the next call asks for the same
+# shapes; nothing about the returned numbers may change.
+# ---------------------------------------------------------------------------
+
+def _reuse_lc(ndata, seed, baseline=20.):
+    r = np.random.RandomState(seed)
+    t = np.sort(r.uniform(0, baseline, ndata))
+    y = 0.4 * np.sin(2 * np.pi * 1.7 * t) + 0.1 * r.randn(ndata)
+    return t, y, 0.1 * np.ones(ndata)
+
+
+class TestPDMAllocationReuse(object):
+
+    grid = np.linspace(0.2, 4.0, 257)
+
+    def test_same_shapes_reuse_the_device_buffers(self):
+        proc = PDMAsyncProcess()
+        t, y, dy = _reuse_lc(120, 1)
+        proc.run([(t, y, dy)], freqs=self.grid)
+        proc.finish()
+        first = proc._alloc_cache[1][0]
+        proc.run([(t, y, dy)], freqs=self.grid)
+        proc.finish()
+        second = proc._alloc_cache[1][0]
+        # t_g, y_g, w_g, freqs_g, pow_g: the same five device arrays
+        assert all(a is b for a, b in zip(first, second))
+
+    def test_new_shapes_replace_the_cache(self):
+        proc = PDMAsyncProcess()
+        t, y, dy = _reuse_lc(120, 2)
+        proc.run([(t, y, dy)], freqs=self.grid)
+        proc.finish()
+        first = proc._alloc_cache[1][0]
+        t2, y2, dy2 = _reuse_lc(200, 3)
+        proc.run([(t2, y2, dy2)], freqs=self.grid)
+        proc.finish()
+        assert proc._alloc_cache[0] == ((200, len(self.grid)),)
+        assert proc._alloc_cache[1][0][0] is not first[0]
+        # ... and a different grid length too
+        proc.run([(t2, y2, dy2)], freqs=self.grid[:64])
+        proc.finish()
+        assert proc._alloc_cache[0] == ((200, 64),)
+
+    def test_results_are_not_shared_between_calls(self):
+        """The reused buffers are on the device; each call still gets its
+        own host result array, so an earlier result is never clobbered."""
+        proc = PDMAsyncProcess()
+        a = _reuse_lc(150, 4)
+        b = _reuse_lc(150, 5)
+        r1 = proc.run([a], freqs=self.grid)
+        proc.finish()
+        keep = np.copy(r1[0][1])
+        r2 = proc.run([b], freqs=self.grid)
+        proc.finish()
+        assert r1[0][1] is not r2[0][1]
+        assert_array_equal(np.asarray(r1[0][1]), keep)
+        assert not np.array_equal(np.asarray(r2[0][1]), keep)
+
+    @pytest.mark.parametrize('kind', ['binned_linterp', 'binned_step',
+                                      'binned_linterp_fast',
+                                      'binless_tophat'])
+    def test_reused_buffers_give_identical_results(self, kind):
+        """Bit-for-bit: the same call through a fresh allocation and
+        through the reused one."""
+        warm = PDMAsyncProcess()
+        warm.run([_reuse_lc(150, 6)], freqs=self.grid, kind=kind)
+        warm.finish()
+        for seed in (7, 8, 9):
+            d = _reuse_lc(150, seed)
+            fresh = PDMAsyncProcess()
+            p_fresh = fresh.run([d], freqs=self.grid, kind=kind)
+            fresh.finish()
+            ref = np.copy(p_fresh[0][1])
+            p_warm = warm.run([d], freqs=self.grid, kind=kind)
+            warm.finish()
+            assert_array_equal(np.asarray(p_warm[0][1]), ref)
+
+    def test_changed_grid_of_the_same_length_is_reuploaded(self):
+        """The cache keys on shapes only, so a *different* grid with the
+        same length has to be pushed to the device again."""
+        proc = PDMAsyncProcess()
+        d = _reuse_lc(150, 10)
+        g1 = self.grid
+        g2 = self.grid + 0.37
+        proc.run([d], freqs=g1)
+        proc.finish()
+        got = proc.run([d], freqs=g2)
+        proc.finish()
+        clean = PDMAsyncProcess()
+        ref = clean.run([d], freqs=g2)
+        clean.finish()
+        assert_array_equal(np.asarray(got[0][1]), np.asarray(ref[0][1]))
+        assert_array_equal(np.asarray(got[0][0]), g2)
+
+    def test_batched_run_matches_single_runs(self):
+        data = [_reuse_lc(90 + 0 * i, 20 + i) for i in range(7)]
+        freqs = np.linspace(0.3, 3.0, 129)
+        proc = PDMAsyncProcess()
+        batched = proc.batched_run_const_nfreq(data, batch_size=3,
+                                               freqs=freqs)
+        for (t, y, dy), (_f, p) in zip(data, batched):
+            clean = PDMAsyncProcess()
+            single = clean.run([(t, y, dy)], freqs=freqs)
+            clean.finish()
+            assert_array_equal(np.asarray(p), np.asarray(single[0][1]))
