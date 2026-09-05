@@ -1,126 +1,406 @@
 # v1.0.0 Release Runbook
 
 **HOLD: nothing below executes until the explicit, @astrobatty-coordinated go
-(maintainer directive, Jul 4 2026).** Everything above the "Release day"
-line is preparation that is already done or safe to redo.
+(maintainer directive, Jul 4 2026, reaffirmed Sep 3 2026).** Phases 4 and 5
+(re-validation, freeze, gate, rehearsal) are preparation that needs no go and
+touches no shared ref; the "Release day" section is the only part that
+merges, tags, publishes or pushes anything other than a staging branch.
 
-## State as staged (Jul 10 2026)
+Plan of record: `analysis/audit-sep2026/EXECUTION_PLAN.md` (Phases 4-7) and
+`analysis/audit-sep2026/RELEASE_READINESS.md` (blockers 1, 2, 3, 6, 11, 12,
+14; section 8 Phases B-E). Decisions D1-D4 there stand and are not reopened
+here.
 
-- Release branch: `v1.0-fixes` (all of PRs #57–#68 + the July audit/docs/
-  release-content commits). CI: CPU suite green on every push.
-- Pre-release audit: `analysis/tls-audit-jul2026.md` (code) +
-  `analysis/claims-trace-jul2026.md` (performance claims) — no correctness
-  defects; claims corrected where the audit required.
-- GPU release gate on the merged tip: archived in
-  `analysis/v1.0-release-gate-jul2026/` (suite + `scripts/check_release_gate.py`
-  + docs-figure build, RTX A5000).
-- Old `v1.0.0` tag: annotated, points at 5553248 (Jun 11), exists on origin.
-  Never published to PyPI; no GitHub Release exists for it (the only GitHub
-  Release ever is v0.2.1 from 2021) — safe to delete and re-create.
-- Version string: `cuvarbase/__init__.py` `__version__ = "1.0.0"` (already set;
-  setup.py reads it). MANIFEST.in present; README.md is the PyPI long
-  description.
-- PyPI: latest published version is 0.2.5 (Oct 2023). Publishing needs the
-  maintainer's PyPI token — run the twine step yourself (e.g. type
-  `! twine upload dist/*` in the session so the token never enters the
-  transcript), or have it in `~/.pypirc`.
+## State as staged (Sep 2026)
 
-## Pre-flight checklist (verify on release day, before step 1)
+- Release branch: `v1.0-fixes`. It carries everything since 0.2.5 (PRs
+  #57-#68, the July audits) plus the September 2026 work: Phase 1 (25
+  confirmed correctness defects fixed, input validation that raises) and
+  Phase 2 (performance), GPU-gated at `000c299` on a shared NVIDIA A40
+  (1582 passed / 0 failed / 0 skipped), and the Phase 3 hygiene on top
+  (API freeze, packaging, test hygiene, docs consistency, repo prune,
+  this runbook). CI: CPU suite green on every push.
+- Audits of record for 1.0: `analysis/audit-sep2026/` (release readiness,
+  algorithm audit, execution plan, NUFFT-LRT campaign, repro scripts). The
+  July audits (`tls-audit-jul2026.md`, `claims-trace-jul2026.md`,
+  `nufft-lrt-audit-jul2026.md`) are reachable through the archive tag.
+- GPU gate: the September Phase 1-2 gate (`000c299`) is superseded by
+  Phase 3 and will be re-run in full on the frozen tree T (Phase 5). No
+  gate record for T exists yet; that record is commit T'.
+- Old `v1.0.0` tag: annotated object `afa9741` pointing at `5553248`
+  (Jun 11 2026), exists on origin, STALE (166+ commits behind; its message
+  says 0.2.6 was the last PyPI release and cites 568 tests, both wrong).
+  Never published to PyPI; no GitHub Release exists for it (the only
+  GitHub Release ever is v0.2.1 from 2021). It is deleted and re-created
+  on release day (step 5).
+- Archive tag: `archive/pre-1.0-process` exists LOCALLY only (annotated,
+  on the last pre-prune commit; created by the Phase 3 orchestrator). It is
+  pushed on release day together with `master` and `v1.0.0`; the
+  pre-prune history (July gate folders, `BENCHMARK_PROTOCOL_V1.md`, the
+  one-off scripts) is reachable through it, never through `master`.
+- Local `master` is stale: `ec53ae8` versus `origin/master` at `060d839`
+  (PR #26, `normalize_light_curves`). Every merge step below starts with
+  `git reset --hard origin/master`; never merge from the stale local ref.
+- Merge shape against `origin/master` (verified Sep 5 2026 with
+  `git merge-tree --write-tree origin/master v1.0-fixes`): exactly FOUR
+  content conflicts, `README.rst`, `cuvarbase/lombscargle.py`,
+  `cuvarbase/pdm.py`, `cuvarbase/utils.py`. All four are resolved by taking
+  the `v1.0-fixes` side (master's `README.rst` banner is obsolete because
+  the branch's `README.rst` is a pointer stub; PR #26's
+  `normalize_light_curves` already exists in the branch's `utils.py` with
+  tests and is wired into LS, PDM and CE). `origin/v1.0` (`89d5481`) is an
+  ancestor of `v1.0-fixes`, so it fast-forwards.
+- Version string: `cuvarbase/__init__.py` `__version__ = "1.0.0"`;
+  `pyproject.toml` is the packaging source of truth (`setup.cfg` gone, so
+  the wheel tag is `py3-none-any`; always address it by glob:
+  `dist/cuvarbase-1.0.0-*.whl`). README.md is the PyPI long description.
+- README flip: DONE on `v1.0-fixes` as the last Phase 3 content commit
+  (banner removed, `pip install cuvarbase`, absolute links,
+  `test_readme_consistency.py` inverted). There is no post-publish README
+  step any more; pre-flight only verifies it (the PKG-INFO grep).
+- PyPI: latest published version is 0.2.5 (Oct 2023); 0.2.6 was tagged
+  but never uploaded. Publishing needs the maintainer's PyPI token: type
+  `! twine upload dist/*` yourself in the session so the token never
+  enters a transcript, or keep it in `~/.pypirc`.
+- NUFFT-LRT (D1): importable as `cuvarbase.nufft_lrt`, quarantined (not in
+  the top-level namespace, EXPERIMENTAL warning at first construction).
+  Whether it ships "official" or "experimental" is decided by Phase 4
+  (below) BEFORE the freeze; either way the docs text is written from the
+  measured numbers before T is cut.
 
-- [ ] Explicit maintainer go, coordinated with @astrobatty (he's expecting
-      "some changes in BLS"; draft message in
-      `analysis/release-staging-v1.0.0/astrobatty-message.md`)
-- [ ] `git fetch`; release commit = `origin/v1.0-fixes` tip; CPU CI green there
-- [ ] GPU gate record in `analysis/v1.0-release-gate-jul2026/` is FROM that
-      commit (re-run the gate if anything landed after it)
-- [ ] `docs/RELEASE_NOTES_v1.0.0.md`: delete the leading `<!-- DRAFT -->`
-      comment; confirm the GPU test count matches the final gate log
-- [ ] CHANGELOG.rst top section is `1.0.0` (no "Unreleased" heading)
+## Pre-flight checklist (release day, before step 1; every box or stop)
 
-## Release day — execute top to bottom
+- [ ] Explicit maintainer go, coordinated with @astrobatty (draft in
+      `analysis/release-staging-v1.0.0/astrobatty-message.md`; he is
+      expecting "some changes in BLS" -- ask whether anything targets 1.0.0
+      before tagging). @xiaziyna has been told what ships for NUFFT-LRT
+      (`analysis/release-staging-v1.0.0/xiaziyna-message.md`).
+- [ ] `git fetch origin --prune`. The release tree T is the `origin/v1.0-fixes`
+      tip AFTER Phase 4 (NUFFT-LRT re-validation) and Phase 5 (freeze +
+      gate). `origin/v1.0-fixes` must equal the local branch.
+- [ ] CPU CI (GitHub Actions) is green at T and at T'.
+- [ ] Gate record commit T' is the ONLY commit after T and touches
+      `analysis/` only:
+      `git diff --quiet T T' -- . ':!analysis' && echo TREE-OK`
+      (T and T' are SHAs from `analysis/v1.0-release-gate-<date>/SUMMARY.md`).
+      Anything else after T means: go back to Phase 5.
+- [ ] `docs/RELEASE_NOTES_v1.0.0.md`: the leading `<!-- DRAFT ... -->`
+      comment is gone; the GPU test count is the collected count from the
+      gate log (`suite_full.log`: "N passed" with 0 skipped, 0 failed); the
+      "if you fetched the June v1.0.0 tag, run `git fetch --tags --force`"
+      line is present.
+- [ ] `CHANGELOG.rst` top section is `1.0.0` (no "Unreleased" heading).
+- [ ] `docs/source/nufft_lrt.rst` and the release notes say what Phase 4
+      decided (official or experimental) and quote its archived numbers.
+- [ ] PKG-INFO check on a fresh local build of T (`python -m build`):
+      ```
+      tar -xzOf dist/cuvarbase-1.0.0.tar.gz cuvarbase-1.0.0/PKG-INFO \
+        | grep -n "Until v1.0.0\|git+https"
+      ```
+      MUST print nothing (exit status 1). And
+      ```
+      tar -xzOf dist/cuvarbase-1.0.0.tar.gz cuvarbase-1.0.0/PKG-INFO \
+        | grep -n "0\.2\.5" | grep -v "since 0\.2\.5"
+      ```
+      MUST print nothing. Decision recorded here: the only permitted
+      mention of 0.2.5 in the long description is the release-notes-style
+      sentence "first release published to PyPI since 0.2.5" (or a line
+      that contains the words `since 0.2.5`). Any other 0.2.5 mention is a
+      leftover of the pre-flip README and stops the release.
+- [ ] `gh-pages-staging` was rebuilt from T (its orphan commit message
+      names T's SHA; `git ls-tree -r --name-only gh-pages-staging | grep
+      -c "\.doctrees\|\.buildinfo"` prints 0; `.nojekyll` present).
+- [ ] The merge rehearsal (Phase 5, last step) was done against the
+      current `origin/master` and recorded four conflicts.
+
+## Phase 4: NUFFT-LRT re-validation (pod; before the freeze; no go needed)
+
+Extends `scripts/nufft_lrt_validation.py` and decides D1. It changes
+`docs/`, so it precedes T.
+
+1. Pod: `scripts/runpod-create.sh "NVIDIA RTX A5000"` (unpiped; wait for
+   "SSH ready"), clone `v1.0-fixes` by SHA (below), `pip install -e '.[test]'
+   cufinufft`.
+2. Run all four existing configurations and all arms, plus (a) a
+   configuration with `t + 2457000.5`, (b) an arm using the public default
+   `epochs=None` (the automatic epoch grid), (c) a non-zero-mean basis, and
+   (d) at least 200 injections per depth. Keep the null-p95 calibration.
+3. Archive the JSON under `benchmarks/results/nufft_lrt_validation_<date>/`
+   and fill `docs/source/nufft_lrt.rst` from
+   `scripts/summarize_lrt_validation.py`.
+4. Decide: official only if the fixed default path passes and the docs
+   quote the measured numbers honestly (baseline text: `ALGORITHM_AUDIT.md`
+   section 6.4). Otherwise it stays quarantined-experimental with the
+   caveats. Either way the module stays out of the top-level namespace for
+   1.0 (D1). Update the release notes, CHANGELOG and `xiaziyna-message.md`
+   accordingly, commit, push `v1.0-fixes`.
+5. Terminate the pod (`scripts/runpod-stop.sh --terminate`, confirm with
+   the `myself{pods}` query that only that pod went away).
+
+## Phase 5: freeze + gate (pod, ~3 pod-hours; no go needed)
+
+T = `origin/v1.0-fixes` tip after Phase 4 and the last content commit. Once
+T is cut, nothing but `analysis/` changes may land on the branch; if
+anything else does, that commit is the new T and the gate is re-run.
 
 ```bash
-# 0. clean state
-git checkout v1.0-fixes && git pull --ff-only
-git status   # must be clean
+# --- local: freeze
+git checkout v1.0-fixes && git pull --ff-only && git status   # clean
+T=$(git rev-parse HEAD); echo "T=$T"; git rev-parse "$T^{tree}"
+DATE=$(date +%Y%m%d)
 
-# 1. merge to master (no-ff, preserves the branch point)
-git checkout master && git pull --ff-only
-git merge --no-ff v1.0-fixes -m "Merge v1.0-fixes: cuvarbase 1.0.0"
-# Dry-run (staging, Jul 10) found exactly ONE conflict: README.rst —
-# master's old full README vs the release branch's pointer stub.
-# Resolve by taking the release branch's version:
-#   git checkout --theirs README.rst && git add README.rst && git commit
+# --- pod: fresh RTX A5000 (A40/4090 acceptable; record which)
+scripts/runpod-create.sh "NVIDIA RTX A5000"        # writes .runpod.env
+# on the pod (via scripts/run-remote.sh or an ssh wrapper that exports the
+# CUDA env). Clone by SHA -- NEVER scripts/sync-to-runpod.sh (it rsyncs the
+# working tree without .git, which is why the July record could not name
+# its commit).
+git clone https://github.com/johnh2o2/cuvarbase.git /workspace/cuvarbase
+cd /workspace/cuvarbase && git checkout --detach "$T"
+git rev-parse HEAD "HEAD^{tree}"                    # must print T and its tree
+pip install -e '.[test]' cufinufft
+python -c "import pycuda.driver, batman, transitleastsquares, nfft, astropy, cufinufft; print('preflight ok')"
+python -c "import cuvarbase; print(cuvarbase.__version__, cuvarbase.__file__)"   # 1.0.0, /workspace/cuvarbase/...
 
-# 2. re-tag v1.0.0 at the release commit
-git tag -d v1.0.0
-git push origin :refs/tags/v1.0.0          # delete the stale remote tag
-git tag -a v1.0.0 -m "cuvarbase 1.0.0"
-git push origin master v1.0.0
+# 1. full suite: every test must run on the device (0 skipped)
+python -m pytest cuvarbase/tests -v -rs 2>&1 | tee suite_full.log
+tail -3 suite_full.log       # "<N> passed in ..." -- no skipped, no failed;
+                             # N is the collected count and goes into the notes
+# 2. release gate
+python scripts/check_release_gate.py 2>&1 | tee release_gate.log   # 14/14
+# 3. docs with every figure rendered (warnings are errors)
+SPHINXOPTS="-E -a -W --keep-going" make -C docs html 2>&1 | tee docs_build.log
+# 4. packaging
+python -m build 2>&1 | tee build.log && twine check dist/* | tee twine_check.log
+# 5. wheel smoke from OUTSIDE the tree (ci_wheel_smoke.py validates the
+#    installed package with pycuda absent, so --no-deps in a bare venv)
+python -m venv /tmp/wheelsmoke
+/tmp/wheelsmoke/bin/pip install --no-deps dist/cuvarbase-1.0.0-*.whl
+(cd /tmp && /tmp/wheelsmoke/bin/python /workspace/cuvarbase/scripts/ci_wheel_smoke.py) | tee wheel_smoke.log
+# 6. installed-wheel test run on the device, from outside the tree
+python -m venv --system-site-packages /tmp/wheeltest
+/tmp/wheeltest/bin/pip install "$(ls dist/cuvarbase-1.0.0-*.whl)[test]"
+(cd /tmp && /tmp/wheeltest/bin/python -c "import cuvarbase; print(cuvarbase.__file__)")   # /tmp/wheeltest/..., not the tree
+(cd /tmp && /tmp/wheeltest/bin/python -m pytest --pyargs cuvarbase -rs) 2>&1 | tee wheel_pyargs.log   # 0 failed, 0 skipped
+# 7. sdist smoke
+python -m venv --system-site-packages /tmp/sdisttest
+/tmp/sdisttest/bin/pip install "dist/cuvarbase-1.0.0.tar.gz[test]"
+(cd /tmp && /tmp/sdisttest/bin/python -c "import cuvarbase; print(cuvarbase.__version__)") | tee sdist_smoke.log
+# 8. one real run of each headline entry point from the installed wheel
+(cd /tmp && /tmp/wheeltest/bin/python - <<'PY' 2>&1 | tee wheel_run.log
+import numpy as np
+from cuvarbase.bls import eebls_transit
+from cuvarbase.tls import tls_search_batch
+from cuvarbase.lombscargle import lomb_scargle_simple
+rng = np.random.default_rng(1)
+t = np.sort(rng.uniform(0, 30, 2000)); dy = np.full(t.size, 1e-3)
+y = 1 - 0.01 * (((t - 3.0) % 2.5) < 0.1) + dy * rng.standard_normal(t.size)
+f, p, _ = eebls_transit(t, y, dy); print("eebls_transit best period:", 1 / f[p.argmax()])
+print("tls_search_batch:", tls_search_batch([(t, y, dy)])[0].get("period"))
+print("lomb_scargle_simple:", len(lomb_scargle_simple(t, y, dy)[1]))
+PY
+)
+# 9. environment record
+{ echo "commit $T"; echo "tree $(git rev-parse "$T^{tree}")"; date -u; nvidia-smi; pip freeze; } > env_record.txt
+```
 
-# 3. build + verify artifacts (clean venv)
+Docs site staging (still on the pod, from the step-3 build):
+
+```bash
+cd /workspace/cuvarbase
+rm -rf docs/build/html/.doctrees docs/build/html/.buildinfo
+touch docs/build/html/.nojekyll
+tar -C docs/build/html -czf /workspace/site-$T.tgz .
+```
+
+Back on the workstation:
+
+```bash
+# copy logs + site back (scp via the .runpod.env host/port; no rsync needed)
+REC=analysis/v1.0-release-gate-$DATE; mkdir -p "$REC"
+scp -P "$RUNPOD_PORT" "root@$RUNPOD_HOST:/workspace/cuvarbase/{suite_full,release_gate,docs_build,build,twine_check,wheel_smoke,wheel_pyargs,sdist_smoke,wheel_run}.log" "$REC"/
+scp -P "$RUNPOD_PORT" "root@$RUNPOD_HOST:/workspace/cuvarbase/env_record.txt" "$REC"/
+scp -P "$RUNPOD_PORT" "root@$RUNPOD_HOST:/workspace/site-$T.tgz" /tmp/
+scripts/runpod-stop.sh --terminate           # only the pod in .runpod.env; confirm with myself{pods}
+
+# commit T' = the gate record only (the logs are tracked through the
+# !analysis/**/*.log negation in .gitignore)
+cat > "$REC"/SUMMARY.md <<EOS
+# v1.0.0 release gate ($DATE)
+commit T: $T   tree: $(git rev-parse "$T^{tree}")
+GPU: <from env_record.txt>   suite: <N> passed, 0 skipped, 0 failed (suite_full.log)
+check_release_gate.py: 14/14   docs: -E -a -W clean, all figures   build/twine: ok
+wheel smoke + --pyargs from outside the tree: ok   sdist: ok   wheel run: ok
+EOS
+git add "$REC" && git commit -m "Release gate record for v1.0.0 at $T ($DATE)"
+TP=$(git rev-parse HEAD)
+git diff --quiet "$T" "$TP" -- . ':!analysis' && echo "T' is analysis-only"
+git push origin v1.0-fixes
+
+# rebuild gh-pages-staging as ONE orphan commit from T's docs build, in a
+# throwaway worktree so the main checkout is never cleaned
+git worktree add --detach /tmp/site-wt "$T" && pushd /tmp/site-wt
+git checkout --orphan gh-pages-staging-new && git rm -rfq .
+tar -xzf /tmp/site-$T.tgz -C .
+test -f .nojekyll && ! find . -name .buildinfo -o -name .doctrees | grep -q . && echo SITE-OK
+git add -A && git commit -qm "docs site built from v1.0-fixes @ $T (Sphinx -E -a -W, all figures)"
+git branch -M gh-pages-staging          # replaces the July staging branch
+popd && git worktree remove --force /tmp/site-wt
+git log -1 --format=%s gh-pages-staging  # names T
+```
+
+### Merge rehearsal (CPU, right after T'; no shared ref touched)
+
+```bash
+git fetch origin --prune
+git merge-tree --write-tree origin/master v1.0-fixes | grep -c '^CONFLICT'   # expect 4
+git merge-tree --write-tree origin/master v1.0-fixes | grep '^CONFLICT'
+#   README.rst, cuvarbase/lombscargle.py, cuvarbase/pdm.py, cuvarbase/utils.py
+#   -- any other count or file: STOP, the branch or origin/master moved; re-plan.
+git checkout -b rehearsal-1.0.0 origin/master
+git merge --no-ff v1.0-fixes -m "rehearsal" ; true          # stops on the 4 conflicts
+git checkout --theirs README.rst cuvarbase/lombscargle.py cuvarbase/pdm.py cuvarbase/utils.py
+git add README.rst cuvarbase/lombscargle.py cuvarbase/pdm.py cuvarbase/utils.py && git commit -qm "rehearsal"
+git diff --quiet v1.0-fixes rehearsal-1.0.0 && echo TREE-IDENTICAL       # must print
+rm -rf dist && python3 -m build && twine check dist/*
+tar -xzOf dist/cuvarbase-1.0.0.tar.gz cuvarbase-1.0.0/PKG-INFO | grep -n "Until v1.0.0\|git+https"   # nothing
+tar -xzOf dist/cuvarbase-1.0.0.tar.gz cuvarbase-1.0.0/PKG-INFO | grep -n "pip install cuvarbase"   # present
+git checkout v1.0-fixes && git branch -D rehearsal-1.0.0 && rm -rf dist
+```
+
+Record "rehearsal: 4 conflicts, tree identical, PKG-INFO flipped" in
+`$REC/SUMMARY.md` (an `analysis/`-only amendment is allowed; anything else
+re-opens Phase 5).
+
+## Release day (after the go) -- execute top to bottom, stop at any failure
+
+```bash
+# 0. clean state and provenance
+git fetch origin --prune --tags
+git checkout v1.0-fixes && git pull --ff-only && git status          # clean
+git rev-parse HEAD                                                   # == T'
+git merge-tree --write-tree origin/master v1.0-fixes | grep -c '^CONFLICT'   # 4
+
+# 1. master = origin/master (the local ref is stale: ec53ae8 vs 060d839)
+git checkout master && git reset --hard origin/master
+
+# 2. merge (no-ff, preserves the branch point); four known conflicts
+git merge --no-ff v1.0-fixes -m "Merge v1.0-fixes: cuvarbase 1.0.0" ; true
+git checkout --theirs README.rst cuvarbase/lombscargle.py cuvarbase/pdm.py cuvarbase/utils.py
+git add README.rst cuvarbase/lombscargle.py cuvarbase/pdm.py cuvarbase/utils.py
+git commit --no-edit
+git diff --quiet v1.0-fixes master && echo TREE-IDENTICAL               # must print; else STOP
+MERGE=$(git rev-parse HEAD)
+
+# 3. build from the merge commit in a clean venv (the tag comes after
+#    the build proves the tree, but the tree is identical to what the
+#    gate ran; N below = the gate's passed count)
 python3 -m venv /tmp/relbuild && source /tmp/relbuild/bin/activate
 pip install -q build twine
-python -m build                             # sdist + wheel into dist/
-twine check dist/*
-# wheel smoke (ci_wheel_smoke.py takes no args — it validates the
-# INSTALLED package, so install the wheel into a fresh venv and run the
-# script from outside the source tree):
-deactivate && python3 -m venv /tmp/wheelsmoke && source /tmp/wheelsmoke/bin/activate
-pip install dist/cuvarbase-1.0.0-py3-none-any.whl
-(cd /tmp && python "$OLDPWD"/scripts/ci_wheel_smoke.py)
+rm -rf dist && python -m build && twine check dist/*
+tar -xzOf dist/cuvarbase-1.0.0.tar.gz cuvarbase-1.0.0/PKG-INFO | grep -n "Until v1.0.0\|git+https"   # nothing
+ls dist/            # cuvarbase-1.0.0.tar.gz  cuvarbase-1.0.0-py3-none-any.whl
+deactivate
 
-# 4. publish to PyPI  (maintainer token — see note above)
-twine upload dist/*
+# 4. wheel smoke from outside the tree
+python3 -m venv /tmp/wheelsmoke && /tmp/wheelsmoke/bin/pip install --no-deps dist/cuvarbase-1.0.0-*.whl
+(cd /tmp && /tmp/wheelsmoke/bin/python "$OLDPWD"/scripts/ci_wheel_smoke.py)
 
-# 5. GitHub Release (strip the draft comment first — pre-flight item)
-gh release create v1.0.0 \
-  --title "cuvarbase 1.0.0" \
-  --notes-file docs/RELEASE_NOTES_v1.0.0.md
+# 5. re-tag v1.0.0 at the merge commit (delete the stale June tag first)
+git tag -d v1.0.0
+git push origin :refs/tags/v1.0.0
+git tag -a v1.0.0 "$MERGE" -m "cuvarbase 1.0.0: first release since 0.2.5; <N> GPU tests, 0 skipped"
+git tag -v v1.0.0 2>/dev/null || git cat-file -p v1.0.0 | head -8
 
-# 6. docs site: push the staged clean gh-pages commit
-#    (staged branch: gh-pages-staging, built on the release-gate pod WITH
-#     figures; contains .nojekyll; single clean orphan commit)
+# 6. push master, the tag, the archive tag
+git push origin master v1.0.0 archive/pre-1.0-process
+
+# 7. rebuild from the TAG (proves the pushed ref) and publish
+rm -rf dist /tmp/tagbuild && git worktree add /tmp/tagbuild v1.0.0
+(cd /tmp/tagbuild && source /tmp/relbuild/bin/activate && python -m build && twine check dist/*)
+cp /tmp/tagbuild/dist/* dist/ ; git worktree remove /tmp/tagbuild
+# maintainer's PyPI token: type this yourself, prefixed with '!' so it
+# never enters a transcript:
+#   ! twine upload dist/*
+
+# 8. post-publish smoke
+python3 -m venv /tmp/relverify && /tmp/relverify/bin/pip install "cuvarbase==1.0.0"
+/tmp/relverify/bin/python -c "import cuvarbase; print(cuvarbase.__version__)"   # 1.0.0
+# optional but cheap: on a GPU pod, pip install cuvarbase==1.0.0 and repeat
+# the Phase 5 step-8 snippet
+
+# 9. GitHub Release from the notes (DRAFT comment already stripped in
+#    pre-flight; the notes carry the 'git fetch --tags --force' line for
+#    anyone who fetched the June tag)
+gh release create v1.0.0 --title "cuvarbase 1.0.0" --notes-file docs/RELEASE_NOTES_v1.0.0.md
+
+# 10. docs site: the clean orphan commit built from T
 git push origin gh-pages-staging:gh-pages --force
+#     then check https://johnh2o2.github.io/cuvarbase/ (tls.html, nufft_lrt.html
+#     exist; whatsnew shows 1.0.0)
 
-# 7. issue sweep — comments drafted in
-#    analysis/release-staging-v1.0.0/issue-sweep.md:
-#    (a) open the "v1.1 roadmap" issue; note its number
-#    (b) replace #ROADMAP placeholders in the drafted comments with it
-#    (c) close #14 #15 #17 #19 #28 #29 #30 #32 #33 #63 with their comments
+# 11. fast-forward the v1.0 branch to the release commit (89d5481 is an ancestor)
+git push origin master:v1.0
 
-# 7b. post-publish README flip (single commit to master):
-#     - remove the top "current PyPI release is 0.2.5" banner
-#     - Installation: replace the git+ URL with `pip install cuvarbase`
-#     - update test_readme_consistency.py: the
-#       test_readme_install_not_pinned_to_stale_pypi guard inverts once
-#       1.0.0 is live (bare `pip install cuvarbase` becomes CORRECT) —
-#       repoint it at whatever claim should now be guarded
+# 12. contributor messages (maintainer sends; drafts in
+#     analysis/release-staging-v1.0.0/): astrobatty-message.md (comment on
+#     #63 or email) and xiaziyna-message.md.
 
-# 8. post-publish verification
-python3 -m venv /tmp/relverify && source /tmp/relverify/bin/activate
-pip install cuvarbase
-python -c "import cuvarbase; print(cuvarbase.__version__)"   # -> 1.0.0
-# on a GPU pod: pip install cuvarbase && a tiny eebls_transit run
-# docs: https://johnh2o2.github.io/cuvarbase/ serves the rebuilt site
-#       (tls.html exists; whatsnew shows 1.0.0)
+# 13. issue sweep -- analysis/release-staging-v1.0.0/issue-sweep.md:
+#     (a) open the "v1.1 roadmap" issue; note its number
+#     (b) replace #ROADMAP in the drafted comments; fill the test-count and
+#         NUFFT-LRT status placeholders from the gate record / Phase 4
+#     (c) close #14 #15 #17 #19 #28 #29 #30 #32 #33 #63 with their comments
 ```
 
 ## Post-release (maintainer actions, own timeline)
 
-- Announce to @astrobatty; co-maintainer invite
-- ASCL record update
-- JOSS paper (next project; needs the published release + Zenodo DOI —
-  see the v1.1 roadmap issue)
-- Update `pyproject.toml` Documentation URL if it doesn't already point at
-  the rebuilt site
+- Co-maintainer invite for @astrobatty (if he accepts); ASCL record update;
+  `pyproject.toml` Documentation URL check; JOSS paper + Zenodo DOI (needs
+  the published release; tracked in the roadmap issue).
+- Delete `analysis/release-staging-v1.0.0/` (one commit on `master` after
+  the messages are sent and the sweep is done).
+- Branch sweep, in this order, each verified with `git branch -r --merged
+  master` (or `--contains`) before deletion:
+  1. `origin/v1.0-fixes`: after a grace period (a week or two, once QLP and
+     the contributors have re-pointed anything that tracked it).
+  2. Local harness/merged branches: the four `worktree-*` branches (zero
+     unique commits), the seven `p3-*` Phase 3 branches, and the merged
+     feature/fix branches (`git branch --merged master` lists them; keep
+     `gh-pages-staging` until the site is confirmed live, keep
+     `feature/ffa-bls-experimental` -- it holds the only FFA code).
+  3. Obsolete remote branches -- BUT tell @astrobatty first before touching
+     `origin/fix/BLS-kernel` and `origin/bugfix/BLS-kernel` (his PR #65
+     history): `origin/devel`, `origin/hotfix` (2018), the merged
+     `origin/feature/{bls-survey-speed,tls-fast-survey,period-derivative-search}`,
+     `origin/fix/kernel-hygiene-jul2026`, `origin/tls-gpu-implementation`,
+     `origin/testing/runpod-benchmarks`, `origin/bugfix/{invalid-resource-handle-after-first-batch,swap-out-pycuda-autoinit}`,
+     `origin/copilot/add-search-for-pdot-in-algorithms`,
+     `origin/feature/nufft-lrt-experimental` (superseded by the module on
+     `master`). Keep `origin/feature/ffa-bls-experimental`, `origin/v1.0`,
+     `origin/gh-pages`, `origin/master`.
+- 1.0.1 / 1.1 queue (goes into the roadmap issue; from EXECUTION_PLAN.md
+  Phase 7 plus the audit's deferred items): TLS coarse-kernel rewrite
+  (band-of-periods-per-block; the 2-4x the audit measured as available),
+  PDM `_fast` kernel rewrite, Detector A (NUFFT-LRT `detector='marginal'`)
+  promotion after re-validation, Dockerfile rebuild (deleted in 1.0),
+  `_cufft.py` hardening, stellar-parameter overrides for the Keplerian
+  grids, CE float32 grids, float64 grid builders, thread-safety of the
+  process objects, multi-GPU dispatch.
 
 ## Rollback notes
 
-- PyPI: cannot re-upload the same version — if a bad artifact ships, yank
-  1.0.0 (`pip` will then skip it unless pinned) and publish 1.0.1. Yank is
+- PyPI: cannot re-upload the same version. If a bad artifact ships, yank
+  1.0.0 (`pip` then skips it unless pinned) and publish 1.0.1. Yank is
   reversible; deletion is not. Prefer yank + patch release.
-- GitHub Release/tag: `gh release delete v1.0.0` + delete tag is fine if
-  caught immediately; after announcement, prefer a 1.0.1.
-- gh-pages: previous content is the 2017 build (worthless) — no rollback
-  concern.
+- GitHub Release / tag: `gh release delete v1.0.0` plus deleting the tag is
+  fine if caught immediately (before the announcement); afterwards prefer
+  a 1.0.1. Anyone who fetched a deleted tag needs `git fetch --tags
+  --force`, which is why the notes say so.
+- `master`: the merge is a single `--no-ff` commit; `git revert -m 1
+  <merge>` restores the pre-1.0 tree if it ever has to happen, but a
+  published 1.0.0 must never be un-merged -- fix forward.
+- gh-pages: previous content is the 2017 build (worthless), no rollback
+  concern; `gh-pages-staging` stays until the site is confirmed live.
+- The archive tag and `origin/v1.0-fixes` are the only refs that hold the
+  pre-merge history; do not delete either until the release is confirmed.
