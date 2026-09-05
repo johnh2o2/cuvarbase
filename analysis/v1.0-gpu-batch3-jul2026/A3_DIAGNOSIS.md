@@ -1,5 +1,7 @@
 # A3: NFFT error-floor diagnosis — CAUSE FOUND AND FIXED
 
+> The probe scripts and raw JSON/txt named below were pruned before 1.0; see `analysis/README.md` (tag `archive/pre-1.0-process`).
+
 **Claim under investigation** (from the Jun punchlist work, enshrined in
 `estimate_m`'s docstring): the realized NFFT error "floors near ~1e-3
 absolute … independent of m, in both single and double precision" — an

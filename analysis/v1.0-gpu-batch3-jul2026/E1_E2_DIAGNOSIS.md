@@ -1,5 +1,7 @@
 # E1 + E2: batch-path diagnoses — both root-caused (batch-4 pod, Jul 2 2026)
 
+> The probe scripts and raw JSON/txt named below were pruned before 1.0; see `analysis/README.md` (tag `archive/pre-1.0-process`).
+
 Pod: RTX A5000 `tw642fncf2qsvu` (terminated + verified). Scripts:
 `e1_batch_profile.py`, `e2_ls_profile.py`.
 

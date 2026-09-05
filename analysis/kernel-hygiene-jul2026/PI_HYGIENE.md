@@ -1,5 +1,7 @@
 # Kernel hygiene (Jul 2026): the remaining float32 PI literals
 
+> The probe scripts and raw JSON/txt named below were pruned before 1.0; see `analysis/README.md` (tag `archive/pre-1.0-process`).
+
 Closes out the item flagged in the cunfft.cu A3 fix (commit 2699525;
 see `analysis/v1.0-gpu-batch3-jul2026/A3_DIAGNOSIS.md`): `lomb.cu`,
 `tls.cu` and `nufft_lrt.cu` carried the same float32 `PI` literal that

@@ -1,5 +1,7 @@
 # GPU batch 3 — RTX A5000, Jul 2 2026
 
+> The probe scripts and raw JSON/txt named below were pruned before 1.0; see `analysis/README.md` (tag `archive/pre-1.0-process`).
+
 Pod: RunPod `vma81x9ssaaf92` (runpod/pytorch:2.4.0-py3.11-cuda12.4.1,
 $0.27/hr, terminated + verified after the run). Branch under test:
 `v1.0-fixes` @ ed96347 (all Jul-2 audit fixes) unless noted. Extra deps
