@@ -2874,3 +2874,526 @@ class TestBLSMemoryKeywords(object):
             mem.setdata(t, y, dy, qmin=1e-2, qmax=0.5,
                         freqs=np.linspace(0.95, 1.05, 120),
                         transfer=True)
+
+
+class TestKernelCompileCaching(object):
+    """Sep 2026 audit, ids 3/7/43/60/126 (plan item BLS-1).
+
+    ``eebls_gpu``, ``eebls_gpu_custom``, ``hone_solution`` and
+    ``sparse_bls_gpu`` used to call ``compile_bls`` /
+    ``compile_sparse_bls`` directly whenever the caller did not supply
+    kernels, bypassing the LRU cache the fast/batch paths use. pycuda
+    runs an ``nvcc --preprocess`` subprocess on every ``SourceModule``
+    even when its own disk cache holds the cubin, so that cost ~0.4-0.5 s
+    (standard) and ~0.4-1.6 s (sparse) *per call*.
+
+    These tests assert compile *counts*, never wall times.
+    """
+
+    @staticmethod
+    def _data(ndata=100):
+        rand = np.random.RandomState(11)
+        t = np.sort(100. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    @staticmethod
+    def _counting(monkeypatch, name):
+        """Swap in a fresh kernel cache and count real compiles."""
+        from collections import OrderedDict
+        from .. import bls as B
+        monkeypatch.setattr(B, '_kernel_cache', OrderedDict())
+        calls = []
+        orig = getattr(B, name)
+
+        def counted(*args, **kwargs):
+            calls.append((args, tuple(sorted(kwargs.items()))))
+            return orig(*args, **kwargs)
+
+        monkeypatch.setattr(B, name, counted)
+        return calls
+
+    def test_sparse_bls_gpu_compiles_once_per_block_size(self, monkeypatch):
+        calls = self._counting(monkeypatch, 'compile_sparse_bls')
+        t, y, dy = self._data()
+        freqs = np.linspace(0.9, 1.1, 30)
+
+        p1, _ = sparse_bls_gpu(t, y, dy, freqs)
+        assert len(calls) == 1
+        p2, _ = sparse_bls_gpu(t, y, dy, freqs)
+        assert len(calls) == 1, "second call recompiled the sparse kernel"
+        # identical kernel, identical numbers
+        assert np.array_equal(p1, p2)
+
+        # a different block_size is a different kernel: compile again
+        sparse_bls_gpu(t, y, dy, freqs, block_size=32)
+        assert len(calls) == 2
+        sparse_bls_gpu(t, y, dy, freqs, block_size=32)
+        assert len(calls) == 2
+
+    def test_eebls_transit_sparse_path_shares_the_cached_kernel(
+            self, monkeypatch):
+        calls = self._counting(monkeypatch, 'compile_sparse_bls')
+        t, y, dy = self._data()
+        freqs = np.linspace(0.9, 1.1, 30)
+        qvals = q_transit(freqs)
+        for _ in range(3):
+            eebls_transit(t, y, dy, freqs=freqs, qvals=qvals,
+                          use_sparse=True)
+        assert len(calls) == 1
+
+    def test_eebls_gpu_compiles_once(self, monkeypatch):
+        calls = self._counting(monkeypatch, 'compile_bls')
+        t, y, dy = self._data()
+        freqs = np.linspace(0.9, 1.1, 20)
+
+        p1, _ = eebls_gpu(t, y, dy, freqs)
+        assert len(calls) == 1
+        p2, _ = eebls_gpu(t, y, dy, freqs)
+        assert len(calls) == 1, "second call recompiled the BLS kernels"
+        # same kernels, same numbers (eebls_gpu's multi-stream global
+        # atomics are not bit-reproducible run to run, hence allclose)
+        assert_allclose(p1, p2, rtol=1e-5, atol=1e-7)
+
+        # eebls_gpu_custom asks for the same (block_size, use_optimized,
+        # function_names) key: still one compile
+        eebls_gpu_custom(t, y, dy, freqs, np.array([0.05, 0.1]),
+                         np.array([0.0, 0.5]))
+        assert len(calls) == 1
+
+        # a different block_size must recompile
+        eebls_gpu(t, y, dy, freqs, block_size=128)
+        assert len(calls) == 2
+        eebls_gpu(t, y, dy, freqs, block_size=128)
+        assert len(calls) == 2
+
+    def test_prepare_false_bypasses_the_cache(self, monkeypatch):
+        # prepare=False returns unprepared functions, which the cache
+        # key does not model: it must fall through to a direct compile
+        # every time rather than hand back prepared kernels.
+        from .. import bls as B
+        calls = self._counting(monkeypatch, 'compile_bls')
+        fns1 = B._cached_compile_bls(prepare=False)
+        assert len(calls) == 1
+        fns2 = B._cached_compile_bls(prepare=False)
+        assert len(calls) == 2
+        assert fns1 is not fns2
+        # ... while the default (prepare=True) is cached and shared
+        c1 = B._cached_compile_bls()
+        c2 = B._cached_compile_bls()
+        assert c1 is c2
+        assert len(calls) == 3
+
+
+class TestAdaptiveUsesFusedKernel(object):
+    """Sep 2026 audit, ids 40/63 (plan item BLS-5).
+
+    ``eebls_gpu_fast_adaptive`` and ``eebls_transit(use_optimized=True)``
+    loaded a function dict without ``full_bls_no_sol_fused``, so the
+    shared implementation could only take the ``noverlap``-pass loop:
+    two launches and 1.7-2.3x the GPU time of ``eebls_gpu_fast`` on
+    identical inputs. They must now take the fused kernel wherever it is
+    valid (power-of-two ``noverlap``, ``dphi == 0``, shared memory
+    permitting) and keep the multi-pass fallback otherwise.
+    """
+
+    @staticmethod
+    def _data():
+        return data(snr=30, q=0.05, phi0=0.317, freq=1.0,
+                    baseline=365., ndata=300)
+
+    @staticmethod
+    def _launch_counter(monkeypatch):
+        """Count prepared launches by kernel name."""
+        from .. import bls as B
+        counts = {}
+
+        class Spy(object):
+            def __init__(self, name, func):
+                self._name, self._func = name, func
+
+            def prepared_call(self, *a, **k):
+                counts[self._name] = counts.get(self._name, 0) + 1
+                return self._func.prepared_call(*a, **k)
+
+            def prepared_async_call(self, *a, **k):
+                counts[self._name] = counts.get(self._name, 0) + 1
+                return self._func.prepared_async_call(*a, **k)
+
+            def __getattr__(self, k):
+                return getattr(self._func, k)
+
+        orig = B._get_cached_kernels
+
+        def spied(*a, **k):
+            return {name: Spy(name, f) for name, f in orig(*a, **k).items()}
+
+        monkeypatch.setattr(B, '_get_cached_kernels', spied)
+        return counts
+
+    def test_adaptive_launches_the_fused_kernel_once(self, monkeypatch):
+        from ..bls import eebls_gpu_fast_adaptive
+        counts = self._launch_counter(monkeypatch)
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+
+        eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                                noverlap=2)
+        assert counts == {'full_bls_no_sol_fused': 1}, counts
+
+    def test_transit_use_optimized_launches_the_fused_kernel_once(
+            self, monkeypatch):
+        counts = self._launch_counter(monkeypatch)
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+
+        eebls_transit(t, y, dy, freqs=freqs, qvals=q_transit(freqs),
+                      use_optimized=True, use_sparse=False, noverlap=2)
+        assert counts == {'full_bls_no_sol_fused': 1}, counts
+
+    @pytest.mark.parametrize("kw", [dict(noverlap=3), dict(dphi=0.25)])
+    def test_adaptive_falls_back_when_fused_is_invalid(self, kw,
+                                                       monkeypatch):
+        # non-power-of-two noverlap / a non-zero base phase offset are
+        # outside what the fused kernel implements
+        from ..bls import eebls_gpu_fast_adaptive
+        counts = self._launch_counter(monkeypatch)
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 200)
+
+        eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                                **kw)
+        assert 'full_bls_no_sol_fused' not in counts, counts
+        assert counts.get('full_bls_no_sol_optimized', 0) >= 2, counts
+
+    def test_fused_and_multipass_agree(self):
+        # Parity of the two paths at the default noverlap: hand the
+        # adaptive entry point a function dict WITHOUT the fused kernel
+        # to force the multi-pass loop.
+        from .. import bls as B
+        from ..bls import eebls_gpu_fast_adaptive, eebls_gpu_fast
+        t, y, dy = self._data()
+        freqs = np.linspace(0.95, 1.05, 500)
+        bs = B._choose_block_size(len(t))
+        multi = B._get_cached_kernels(bs, True,
+                                      ['full_bls_no_sol_optimized'])
+        assert 'full_bls_no_sol_fused' not in multi
+
+        kw = dict(qmin=0.01, qmax=0.1, block_size=bs)
+        p_fused = eebls_gpu_fast_adaptive(t, y, dy, freqs, **kw)
+        p_multi = eebls_gpu_fast_adaptive(t, y, dy, freqs,
+                                          functions=multi, **kw)
+        assert int(np.argmax(p_fused)) == int(np.argmax(p_multi))
+        assert_allclose(p_fused, p_multi, rtol=1e-4, atol=1e-5)
+
+        # and the adaptive path now returns what eebls_gpu_fast (fused
+        # since 1.0) returns, to float32 atomic-ordering noise
+        p_fast = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+        assert_allclose(p_fused, p_fast, rtol=1e-4, atol=1e-6)
+
+
+class TestBLSMemoryHostStaging(object):
+    """Sep 2026 audit, id 41 (plan item BLS-6).
+
+    ``BLSMemory.allocate_host_arrays`` page-locked all six host buffers,
+    three of which are never the source or destination of an async copy
+    (``nbins0``/``nbinsf`` are replaced by fresh pageable arrays in
+    ``setdata``; ``bls`` is only an async destination when a stream is
+    attached).  And the ``memory=None`` fast path allocated a whole
+    ``BLSMemory`` -- six host buffers plus four device buffers -- per
+    call, so back-to-back calls of the same shape re-paid it every time.
+    """
+
+    @staticmethod
+    def _data(ndata=200, seed=17):
+        rand = np.random.RandomState(seed)
+        t = np.sort(365. * rand.rand(ndata))
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    def test_only_transfer_buffers_are_page_locked(self):
+        import pycuda.driver as cuda
+        from ..bls import BLSMemory
+        mem = BLSMemory(64, 128)
+        pinned = cuda.pagelocked_empty(1, np.float32).base.__class__
+        for attr in ('t', 'yw', 'w'):
+            assert isinstance(getattr(mem, attr).base, pinned), attr
+        for attr in ('bls', 'nbins0', 'nbinsf'):
+            assert not isinstance(getattr(mem, attr).base, pinned), attr
+
+    def test_result_buffer_is_page_locked_with_a_stream(self):
+        # get_async into a pageable buffer is not asynchronous, and the
+        # normalization after it would race the DMA (see
+        # TestPinnedBufferStreamParity)
+        import pycuda.driver as cuda
+        from ..core import ensure_context
+        from ..bls import BLSMemory
+        ensure_context()
+        mem = BLSMemory(64, 128, stream=cuda.Stream())
+        pinned = cuda.pagelocked_empty(1, np.float32).base.__class__
+        assert isinstance(mem.bls.base, pinned)
+
+    def test_pooled_memory_stages_identical_bytes(self):
+        # The pool must never hand back another light curve's data: the
+        # staged host buffers, the uploaded device buffers and the
+        # normalization scalars have to equal what a freshly-allocated
+        # memory produces, bit for bit.
+        from .. import bls as B
+        from ..bls import BLSMemory
+        freqs = np.linspace(0.95, 1.05, 64)
+        B._memory_pool_tls.pool = None
+        for seed in (1, 2, 3):
+            t, y, dy = self._data(seed=seed)
+            pooled = B._pooled_bls_memory(t, y, dy, 1e-2, 0.5, freqs, {})
+            fresh = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                       freqs=freqs, transfer=True)
+            for attr in ('t', 'yw', 'w', 'freqs', 'nbins0', 'nbinsf'):
+                assert np.array_equal(np.asarray(getattr(pooled, attr)),
+                                      np.asarray(getattr(fresh, attr))), attr
+            for attr in ('t_g', 'yw_g', 'w_g', 'freqs_g', 'nbins0_g',
+                         'nbinsf_g'):
+                assert np.array_equal(getattr(pooled, attr).get(),
+                                      getattr(fresh, attr).get()), attr
+            for attr in ('yy', 'chi2_0', 'ybar', 'epoch'):
+                assert getattr(pooled, attr) == getattr(fresh, attr), attr
+        B._memory_pool_tls.pool = None
+
+    def test_pool_reuses_one_memory_per_shape(self):
+        from .. import bls as B
+        freqs = np.linspace(0.95, 1.05, 64)
+        B._memory_pool_tls.pool = None
+        t, y, dy = self._data()
+        m1 = B._pooled_bls_memory(t, y, dy, 1e-2, 0.5, freqs, {})
+        m2 = B._pooled_bls_memory(t, y, dy, 1e-2, 0.5, freqs, {})
+        assert m1 is m2
+        # a different ndata is a different entry
+        t2, y2, dy2 = self._data(ndata=100)
+        m3 = B._pooled_bls_memory(t2, y2, dy2, 1e-2, 0.5, freqs, {})
+        assert m3 is not m1
+        # ... and a different number of frequencies too (the device
+        # frequency arrays keep their first size)
+        f2 = np.linspace(0.95, 1.05, 128)
+        m4 = B._pooled_bls_memory(t, y, dy, 1e-2, 0.5, f2, {})
+        assert m4 is not m1
+        assert len(m4.freqs_g) == 128
+        B._memory_pool_tls.pool = None
+
+    def test_pooled_and_unpooled_results_agree(self):
+        # Interleave three different light curves through the pool and
+        # compare against the allocate-per-call path; also check that
+        # holding an earlier result across later calls is safe (the
+        # returned array must not alias a pooled buffer).
+        from .. import bls as B
+        freqs = np.linspace(0.95, 1.05, 300)
+        lcs = [data(snr=30, q=0.05, phi0=0.317, freq=1.0, baseline=365.,
+                    ndata=300, seed=s) for s in (11, 12, 13)]
+
+        old = B._MEMORY_POOL_MAX_SIZE
+        try:
+            B._MEMORY_POOL_MAX_SIZE = 0
+            B._memory_pool_tls.pool = None
+            ref = [eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+                   for (t, y, dy) in lcs]
+            B._MEMORY_POOL_MAX_SIZE = 2
+            B._memory_pool_tls.pool = None
+            got = [eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+                   for (t, y, dy) in lcs]
+        finally:
+            B._MEMORY_POOL_MAX_SIZE = old
+            B._memory_pool_tls.pool = None
+
+        for a, b in zip(got, ref):
+            assert int(np.argmax(a)) == int(np.argmax(b))
+            assert_allclose(a, b, rtol=1e-4, atol=1e-6)
+        # distinct light curves must give distinct periodograms (a pool
+        # bug that reused stale data would make these equal)
+        assert not np.allclose(got[0], got[1], rtol=1e-3)
+
+    def test_pool_is_skipped_when_it_would_be_visible(self):
+        # A stream-attached call hands back the pinned bls buffer, and
+        # transfer_to_host=False hands back the raw buffer: neither may
+        # come from the pool.
+        import pycuda.driver as cuda
+        from ..core import ensure_context
+        from .. import bls as B
+        ensure_context()
+        t, y, dy = self._data(ndata=300)
+        freqs = np.linspace(0.95, 1.05, 100)
+        B._memory_pool_tls.pool = None
+        eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                       stream=cuda.Stream())
+        assert not getattr(B._memory_pool_tls, 'pool', None)
+        eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                       transfer_to_host=False)
+        assert not getattr(B._memory_pool_tls, 'pool', None)
+        # the ordinary call does use it
+        eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+        assert len(B._memory_pool_tls.pool) == 1
+        B._memory_pool_tls.pool = None
+
+
+class TestNoBlasThreadpoolInPrologues(object):
+    """Sep 2026 audit, id 45 (plan item BLS-8).
+
+    ``np.dot`` on a long float vector goes to BLAS, which spawns a full
+    threadpool; on CPU-quota-limited containers (RunPod, Kubernetes) the
+    burst trips CFS throttling and stalls the process. The July 2026 work
+    moved ``BLSMemory.setdata`` and ``_chi2_null`` to ``np.einsum``; the
+    per-light-curve prologues of ``eebls_gpu``, ``eebls_gpu_custom``,
+    ``single_bls`` and ``sparse_bls_cpu`` were still on ``np.dot``.
+    Measured on the pod at ndata = 20000: the prologue's median went
+    0.60 -> 0.17 ms with a 98 ms tail and 12 CFS throttle events per 50
+    calls going to none, and ``single_bls`` 93.9 -> 0.7 ms.
+
+    Source-level guard (there is no timing assertion anywhere here) plus
+    a check that the change is a summation-order change only.
+    """
+
+    @pytest.mark.parametrize("name", ['eebls_gpu', 'eebls_gpu_custom',
+                                      'single_bls', 'sparse_bls_cpu'])
+    def test_prologue_does_not_call_np_dot(self, name):
+        import inspect
+        from .. import bls as B
+        src = inspect.getsource(getattr(B, name))
+        # comments mention np.dot on purpose; look at the code only
+        code = '\n'.join(line.split('#')[0] for line in src.splitlines())
+        assert 'np.dot' not in code, (
+            "%s reintroduced np.dot: use np.einsum('i,i->', ...) so the "
+            "per-light-curve prologue stays off the BLAS threadpool"
+            % name)
+        assert "np.einsum('i,i->'" in code
+
+    def test_einsum_and_dot_agree_to_rounding(self):
+        # The replacement is the same mathematical reduction in a
+        # different summation order: a few float64 ulps.
+        rand = np.random.RandomState(3)
+        for ndata in (150, 2000, 20000):
+            y = 1. + 0.01 * rand.randn(ndata)
+            dy = 0.01 * np.ones(ndata)
+            w = np.power(dy, -2.)
+            w /= np.sum(w)
+            ybar_dot = np.dot(w, y)
+            ybar_ein = float(np.einsum('i,i->', w, y))
+            assert abs(ybar_dot - ybar_ein) <= 64 * np.spacing(abs(ybar_ein))
+            yy_dot = np.dot(w, np.power(y - ybar_dot, 2))
+            yy_ein = float(np.einsum('i,i->', w, np.power(y - ybar_ein, 2)))
+            assert abs(yy_dot - yy_ein) <= 64 * np.spacing(abs(yy_ein))
+
+    def test_sparse_bls_cpu_still_matches_the_gpu_kernel(self):
+        # sparse_bls_cpu is the CPU reference for sparse_bls_gpu; the
+        # reordered sums must not move it away from the kernel.
+        t, y, dy = data(snr=30, q=0.05, phi0=0.317, freq=1.0,
+                        baseline=365., ndata=120)
+        freqs = np.linspace(0.95, 1.05, 60)
+        p_cpu, s_cpu = sparse_bls_cpu(t, y, dy, freqs)
+        p_gpu, s_gpu = sparse_bls_gpu(t, y, dy, freqs)
+        assert int(np.argmax(p_cpu)) == int(np.argmax(p_gpu))
+        assert_allclose(p_cpu, p_gpu, rtol=1e-4, atol=1e-6)
+
+
+class TestPerFrequencyHostWork(object):
+    """Sep 2026 audit, ids 136/137 (plan item BLS-9).
+
+    Three per-call host costs that were pure overhead:
+    the per-frequency solution re-phasing comprehension (39 ms at 60,121
+    frequencies, 74 ms at 117,403 -- more than the GPU work it followed),
+    ``_chi2_null``'s second full pass over the light curve in
+    ``BLSMemory.setdata`` when ``chi2_0`` follows from ``yy``, and
+    ``conflict_scatter_perm`` rebuilt on every ``setdata`` although it is
+    a pure function of ``ndata``.
+    """
+
+    @staticmethod
+    def _lc(ndata=300, seed=5):
+        rand = np.random.RandomState(seed)
+        t = np.sort(365. * rand.rand(ndata)) + 2455197.5
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    @pytest.mark.parametrize("freqs_kind",
+                             ['float64', 'float32', 'list', 'np_scalars'])
+    def test_rephasing_matches_the_per_frequency_loop(self, freqs_kind):
+        from ..bls import _rephase_solutions
+        rand = np.random.RandomState(4)
+        n = 500
+        q = rand.rand(n).astype(np.float32)
+        phi = rand.rand(n).astype(np.float32)
+        base = np.linspace(0.01, 2.0, n)
+        freqs = {'float64': base,
+                 'float32': base.astype(np.float32),
+                 'list': [float(x) for x in base],
+                 'np_scalars': list(base)}[freqs_kind]
+        # epoch is np.float64 everywhere in the package (subtract_epoch
+        # returns np.floor(np.min(t))), which is what keeps the
+        # expression in float64 for a float32 grid.
+        epoch = np.float64(2455197.0)
+
+        old = [(a, (b + (epoch * f)) % 1.0)
+               for (a, b), f in zip(list(zip(q, phi)), freqs)]
+        new = _rephase_solutions(q, phi, epoch, freqs)
+        assert len(new) == len(old)
+        assert np.array_equal(np.asarray(old, dtype=np.float64),
+                              np.asarray(new, dtype=np.float64))
+        # and it is the exact float64 answer
+        exact = (phi.astype(np.float64)
+                 + epoch * np.asarray(freqs, dtype=np.float64)) % 1.0
+        assert np.array_equal(np.array([x[1] for x in new]), exact)
+
+    def test_setdata_chi2_0_matches_the_two_pass_form(self):
+        from ..bls import BLSMemory, _chi2_null
+        freqs = np.linspace(0.95, 1.05, 64)
+        for ndata in (150, 2000):
+            t, y, dy = self._lc(ndata=ndata)
+            mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                     freqs=freqs, transfer=True)
+            # chi2_0 = yy * sum(dy**-2): the same weighted sum of
+            # squares with un-normalized weights
+            assert_allclose(mem.chi2_0, _chi2_null(y, dy), rtol=1e-12)
+            assert_allclose(mem.chi2_0,
+                            mem.yy * np.sum(np.power(dy, -2.)), rtol=1e-14)
+
+    def test_setdata_chi2_0_with_float32_inputs(self):
+        # float32 y/dy make yy (and hence chi2_0) a float32-accumulated
+        # sum where _chi2_null forced float64; the difference is ~1
+        # float32 ulp, well inside the data's own precision.
+        from ..bls import BLSMemory, _chi2_null
+        freqs = np.linspace(0.95, 1.05, 64)
+        t, y, dy = self._lc(ndata=2000)
+        y = y.astype(np.float32)
+        dy = dy.astype(np.float32)
+        mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                 freqs=freqs, transfer=True)
+        assert_allclose(mem.chi2_0, _chi2_null(y, dy), rtol=1e-5)
+
+    def test_scatter_perm_cache(self):
+        from ..bls import _cached_conflict_scatter_perm
+        from ..utils import conflict_scatter_perm
+        for n in (63, 64, 150, 2000):
+            cached = _cached_conflict_scatter_perm(n)
+            direct = conflict_scatter_perm(n)
+            if direct is None:
+                assert cached is None
+                continue
+            assert np.array_equal(cached, direct)
+            # same object on the second call, and read-only so a caller
+            # cannot corrupt the shared permutation
+            assert _cached_conflict_scatter_perm(n) is cached
+            assert not cached.flags.writeable
+
+    def test_conventions_still_consistent(self):
+        # chi2_0 feeds the 'snr'/'loglik' conversions
+        t, y, dy = self._lc(ndata=400)
+        freqs = np.linspace(0.95, 1.05, 120)
+        p = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+        p_snr = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                               convention='snr')
+        p_ll = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                              convention='loglik')
+        w = np.power(dy, -2.)
+        ybar = float(np.einsum('i,i->', w, y)) / np.sum(w)
+        chi2_0 = float(np.einsum('i,i->', w, (np.asarray(y) - ybar) ** 2))
+        assert_allclose(p_snr, np.sqrt(chi2_0 * p), rtol=1e-5, atol=1e-6)
+        assert_allclose(p_ll, 0.5 * chi2_0 * p, rtol=1e-5, atol=1e-6)

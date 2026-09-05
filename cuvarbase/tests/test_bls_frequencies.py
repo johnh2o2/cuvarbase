@@ -78,3 +78,112 @@ class TestBatchPerFrequencyQBounds:
         for power in results:
             best = freqs[int(np.argmax(power))]
             assert abs(best - freq_inj) / freq_inj < 0.02
+
+
+class TestVectorizedGridRecursion:
+    """Sep 2026 audit, ids 4/44 (plan item BLS-4).
+
+    ``keplerian_freq_grid`` and ``cuvarbase.bls.transit_autofreq`` built
+    the Ofir (2014) duty-cycle grid with a scalar Python ``while`` loop,
+    one ``q`` evaluation per frequency: 0.2-1.0 s per call at survey
+    grid sizes, which dwarfed the GPU search that followed. They now
+    solve the same recursion with numpy (``method='vectorized'``, the
+    default) and keep the loop as ``method='recursion'``.
+
+    The vectorized form converges to a fixed point of the *same*
+    recursion (seed from the continuum integral, then defect
+    correction), so these tests pin agreement, not a tolerance chosen to
+    accommodate a different grid.
+    """
+
+    CASES = [
+        dict(period_min=0.5, period_max=100., baseline=730.),
+        dict(period_min=0.5, period_max=13.5, baseline=27.),
+        dict(period_min=0.5, period_max=300., baseline=1400.),
+        dict(period_min=0.3, period_max=50., baseline=200.,
+             R_star=0.3, M_star=0.3),
+        dict(period_min=1.0, period_max=200., baseline=500., R_star=3.0),
+        dict(period_min=0.5, period_max=100., baseline=365.,
+             oversampling=10),
+        dict(period_min=0.5, period_max=100., baseline=365.,
+             oversampling=0.5),
+        dict(period_min=9.0, period_max=10., baseline=100.),
+        # degenerate: period_min > period_max
+        dict(period_min=100., period_max=0.5, baseline=100.),
+    ]
+
+    @pytest.mark.parametrize("case", CASES)
+    def test_keplerian_grid_matches_the_recursion(self, case):
+        rec = keplerian_freq_grid(method='recursion', **case)
+        vec = keplerian_freq_grid(method='vectorized', **case)
+        # float32 output: bit-identical
+        assert rec.shape == vec.shape
+        assert np.array_equal(rec, vec)
+
+    @pytest.mark.parametrize("case", CASES[:4])
+    def test_keplerian_qvals_match(self, case):
+        fr, qr = keplerian_freq_grid(method='recursion', return_qvals=True,
+                                     **case)
+        fv, qv = keplerian_freq_grid(method='vectorized', return_qvals=True,
+                                     **case)
+        assert np.array_equal(qr, qv)
+
+    def test_bad_method_raises(self):
+        with pytest.raises(ValueError, match="grid method"):
+            keplerian_freq_grid(1.0, 10.0, 365.0, method='euler')
+
+    def test_recursion_still_reproduces_its_own_definition(self):
+        # guard against the shared helper drifting from the scalar loop
+        # it replaced (this is the literal pre-1.0 body)
+        from ..bls_frequencies import _recursion_transit_grid
+        rho, oversampling, T = 1.0, 2, 365.0
+        f_min, f_max = 1. / 100., 1. / 0.5
+        freqs = [f_min]
+        while freqs[-1] < f_max:
+            q = float(_q_transit(freqs[-1], rho=rho))
+            q = max(q, 1e-6)
+            freqs.append(freqs[-1] + q / (oversampling * T))
+        ref = np.array(freqs)
+        got = _recursion_transit_grid(f_min, f_max, 1.0, oversampling * T,
+                                      rho=rho, q_floor=1e-6)
+        assert np.array_equal(ref, got)
+
+    @pytest.mark.parametrize("kw", [
+        {}, dict(samples_per_peak=5), dict(rho=5.), dict(rho=0.05),
+        dict(qmin_fac=0.5), dict(qmin_fac=0.1, qmax_fac=4.),
+    ])
+    def test_transit_autofreq_matches_the_recursion(self, kw):
+        from ..bls import transit_autofreq
+        rand = np.random.RandomState(21)
+        t = np.sort(180. * rand.rand(400))
+
+        fr, qr = transit_autofreq(t, method='recursion', **kw)
+        fv, qv = transit_autofreq(t, method='vectorized', **kw)
+        assert len(fr) == len(fv), "grid length changed"
+        # float64 output: the accumulated Euler sum agrees to rounding
+        np.testing.assert_allclose(fv, fr, rtol=1e-13, atol=0.)
+        # the trial frequencies the kernels actually search (float32)
+        # are bit-identical
+        assert np.array_equal(fr.astype(np.float32),
+                              fv.astype(np.float32))
+        np.testing.assert_allclose(qv, qr, rtol=1e-12, atol=0.)
+
+    def test_transit_autofreq_bad_method_raises(self):
+        from ..bls import transit_autofreq
+        rand = np.random.RandomState(3)
+        t = np.sort(180. * rand.rand(200))
+        with pytest.raises(ValueError, match="grid method"):
+            transit_autofreq(t, method='integral')
+
+    def test_vectorized_grid_satisfies_the_recursion(self):
+        # the defining property, checked directly on the returned grid
+        from ..bls import transit_autofreq, q_transit
+        rand = np.random.RandomState(5)
+        t = np.sort(365. * rand.rand(500))
+        T = float(np.max(t) - np.min(t))
+        freqs, _ = transit_autofreq(t, samples_per_peak=2, qmin_fac=0.2)
+        step = (0.2 * q_transit(freqs[:-1], rho=1.)) / (2 * T)
+        np.testing.assert_allclose(freqs[1:], freqs[:-1] + step,
+                                   rtol=1e-13, atol=0.)
+        # ... and it stops exactly where the loop would
+        assert freqs[-1] >= freqs[-2] or len(freqs) == 1
