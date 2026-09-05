@@ -567,7 +567,7 @@ class TLSMemory:
         return mem
 
 
-def tls_search_gpu(t, y, dy, periods=None,
+def tls_search_gpu(t, y, dy, periods=None, *,
                    qmin=None, qmax=None, n_durations=15,
                    R_star=1.0, M_star=1.0,
                    period_min=None, period_max=None, n_transits_min=2,
@@ -1096,7 +1096,7 @@ def tls_search(t, y, dy, **kwargs):
     return tls_search_gpu(t, y, dy, **kwargs)
 
 
-def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
+def tls_transit(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
                 qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
                 period_min=None, period_max=None, n_transits_min=2,
                 oversampling_factor=3, **kwargs):
@@ -1417,7 +1417,7 @@ def _preprocess_batch(lightcurves):
     return t_hi, t_lo, a_c, b_c, offs, lens, chi2_0, epochs, spans
 
 
-def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
+def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
                      periods=None, qmin=None, qmax=None,
                      period_min=None, period_max=None,
                      n_transits_min=2, oversampling_factor=3,

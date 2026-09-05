@@ -227,3 +227,43 @@ def test_removed_parameters_are_gone():
     # TLS never shipped, so the misnamed method is renamed without alias
     assert hasattr(tls.TLSMemory, 'allocate_host_arrays')
     assert not hasattr(tls.TLSMemory, 'allocate_pinned_arrays')
+
+
+# ---------------------------------------------------------------------
+# Keyword-only markers on the 1.0-new signatures (finding 136)
+# ---------------------------------------------------------------------
+
+def _kwonly_cases():
+    import numpy as np
+    from cuvarbase import bls, bls_frequencies, tls
+    t = np.linspace(0.0, 10.0, 50)
+    y = np.ones(50)
+    dy = np.full(50, 1e-3)
+    periods = np.array([1.0, 2.0])
+    freqs = np.array([0.5, 1.0])
+    return [
+        (tls.tls_search_gpu, (t, y, dy, periods), 'qmin'),
+        (tls.tls_search_batch, ([(t, y, dy)],), 'R_star'),
+        (tls.tls_transit, (t, y, dy), 'R_star'),
+        (bls.eebls_gpu_batch, ([(t, y, dy)], freqs), 'qmin'),
+        (bls_frequencies.keplerian_freq_grid, (1.0, 5.0, 100.0), 'R_star'),
+        (bls_frequencies.uniform_freq_grid, (1.0, 5.0, 100.0),
+         'oversampling'),
+        (bls.convert_bls_power, (y, y, dy), 'convention'),
+    ]
+
+
+@pytest.mark.parametrize('case', _kwonly_cases(),
+                         ids=lambda c: c[0].__name__)
+def test_keyword_only_after_data_arguments(case):
+    import inspect
+    func, positional, first_kw = case
+    params = inspect.signature(func).parameters
+    assert params[first_kw].kind is inspect.Parameter.KEYWORD_ONLY
+    n_pos = sum(p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+                for p in params.values())
+    assert n_pos == len(positional)
+    # one extra positional argument is a TypeError raised by the call
+    # machinery, before any body (and any GPU work) runs
+    with pytest.raises(TypeError):
+        func(*positional, None)
