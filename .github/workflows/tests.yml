@@ -4,18 +4,22 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  # CPU test suite: the root conftest stubs pycuda/skcuda, so the pure-CPU
-  # tests (sparse BLS ground truth, TLS grids/models/stats, NUFFT-LRT
-  # algorithm, frequency grids, lazy-import contract) run and GPU tests
-  # skip. GPU kernels are validated manually before releases (see
-  # scripts/gpu-test.sh and docs/RUNPOD_DEVELOPMENT.md).
+  # CPU test suite: cuvarbase/tests/conftest.py stubs pycuda when it is
+  # not installed, so the pure-CPU tests (sparse BLS ground truth, TLS
+  # grids/models/stats, NUFFT-LRT algorithm, frequency grids, kernel
+  # inventory, lazy-import contract, input validation) run and every
+  # test that touches a device skips. GPU kernels are validated on a
+  # CUDA pod before releases (see scripts/gpu-test.sh and scripts/README.md).
   test-cpu:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v4
@@ -25,18 +29,27 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    # The `test` extra of pyproject.toml is listed by hand here because
+    # installing `.[test]` would pull in the runtime dependency pycuda,
+    # which cannot build without a CUDA toolkit (no binary wheels), so
+    # the runners have no way to satisfy it. Keep this line in step with
+    # [project.optional-dependencies] test. batman-package is a small C
+    # extension that builds from sdist in well under a minute.
     - name: Install test dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install "numpy>=1.17" "scipy>=1.3" astropy pytest nfft
+        pip install "numpy>=1.22" "scipy>=1.8" pytest nfft astropy batman-package transitleastsquares
 
     - name: Run CPU test suite (GPU tests skip via stubbed pycuda)
       run: |
-        python -m pytest cuvarbase/tests -v --tb=short
+        # testpaths / -rs / --strict-markers come from [tool.pytest.ini_options]
+        python -m pytest -rs -v --tb=short
 
-  # Packaging smoke test: build the wheel, install it into a clean
-  # environment, and import it (with pycuda stubbed). This catches
-  # missing-subpackage and metadata bugs that source-tree testing hides.
+  # Packaging smoke test: build the sdist and wheel, check the metadata,
+  # install each artifact into a clean environment (pycuda absent) and
+  # import/run it from OUTSIDE the source tree. This catches
+  # missing-subpackage, missing-package-data and metadata bugs that
+  # source-tree testing hides.
   package-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -49,16 +62,89 @@ jobs:
 
     - name: Build sdist and wheel
       run: |
-        python -m pip install --upgrade pip build
+        python -m pip install --upgrade pip build twine
         python -m build
+        ls -l dist/
+        # setup.cfg's universal=1 once mis-tagged the wheel py2.py3
+        ls dist/cuvarbase-*-py3-none-any.whl
 
-    - name: Install wheel (no deps) and import
+    - name: Check metadata (twine)
       run: |
-        python -m venv /tmp/smoke
-        /tmp/smoke/bin/pip install --upgrade pip
-        /tmp/smoke/bin/pip install "numpy>=1.17" "scipy>=1.3"
-        /tmp/smoke/bin/pip install --no-deps dist/*.whl
-        /tmp/smoke/bin/python scripts/ci_wheel_smoke.py
+        python -m twine check --strict dist/*
+
+    - name: Install wheel (no deps), smoke-import, run the shipped tests
+      run: |
+        python -m venv /tmp/smoke-wheel
+        /tmp/smoke-wheel/bin/pip install --upgrade pip
+        /tmp/smoke-wheel/bin/pip install "numpy>=1.22" "scipy>=1.8" astropy nfft pytest
+        /tmp/smoke-wheel/bin/pip install --no-deps dist/*.whl
+        /tmp/smoke-wheel/bin/python scripts/ci_wheel_smoke.py
+        # The shipped test package must pass from the installed wheel,
+        # away from the checkout (the command INSTALL.rst advertises).
+        mkdir -p /tmp/pyargs-run && cd /tmp/pyargs-run
+        /tmp/smoke-wheel/bin/python -m pytest --pyargs cuvarbase -rs -p no:cacheprovider
+
+    - name: Install sdist (no deps) and smoke-import
+      run: |
+        python -m venv /tmp/smoke-sdist
+        /tmp/smoke-sdist/bin/pip install --upgrade pip
+        /tmp/smoke-sdist/bin/pip install "numpy>=1.22" "scipy>=1.8"
+        /tmp/smoke-sdist/bin/pip install --no-deps dist/*.tar.gz
+        /tmp/smoke-sdist/bin/python scripts/ci_wheel_smoke.py
+
+    - name: Upload dist/
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+        if-no-files-found: error
+
+  # Docs build: autodoc imports the package with pycuda mocked
+  # (conf.py autodoc_mock_imports), so the API pages build without a
+  # GPU. The plot-directive figures DO need a CUDA device; on the runner
+  # they fail as "Exception occurred in plotting ..." warnings and the
+  # pages keep their source listings. Those are the only warnings
+  # tolerated -- any other WARNING/ERROR (bad docstring markup, broken
+  # cross-references, missing toctree entries) fails the job.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install docs dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install "numpy>=1.22" "scipy>=1.8" -r docs/requirements.txt
+
+    - name: Build HTML docs
+      run: |
+        python -m sphinx -b html -E -a -w warnings.log docs/source docs/build/html
+
+    - name: Fail on any warning other than the expected plot-directive GPU failures
+      run: |
+        # -w logs each warning as "<file>:<line>: WARNING: <text>" (or
+        # ERROR:/CRITICAL:); the plot directive's traceback continuation
+        # lines carry no such prefix. Keep only the diagnostic lines that
+        # are not the GPU-less "Exception occurred in plotting <name>".
+        grep -E ': (WARNING|ERROR|CRITICAL): ' warnings.log \
+          | grep -v -E ': WARNING: Exception occurred in plotting ' > unexpected.log || true
+        if [ -s unexpected.log ]; then
+          echo "::error::unexpected Sphinx warnings:"
+          cat unexpected.log
+          exit 1
+        fi
+        echo "docs build clean (plot-directive GPU failures only)"
+
+    - name: Upload HTML
+      uses: actions/upload-artifact@v4
+      with:
+        name: docs-html
+        path: docs/build/html/
 
   lint:
     runs-on: ubuntu-latest
@@ -77,8 +163,9 @@ jobs:
 
     - name: Lint with flake8 (errors only)
       run: |
-        # Syntax errors and undefined names are real failures
-        flake8 cuvarbase --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Syntax errors, undefined names and invalid escape sequences
+        # (W605: a SyntaxError on future Pythons) are real failures
+        flake8 cuvarbase --count --select=E9,F63,F7,F82,W605 --show-source --statistics
 
     - name: Lint with flake8 (style, advisory)
       run: |
