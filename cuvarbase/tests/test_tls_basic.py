@@ -944,6 +944,196 @@ class TestDefaultDurationWindow:
         assert "kernels['keplerian']" in body
 
 
+class TestTransitDurationWindowBounds:
+    """Phase 2 TLS-1 (audit section 5, id 52): tls_transit built the
+    whole (nperiods x n_durations) Keplerian duration table with
+    duration_grid_keplerian and then threw it away -- only the q_values
+    it also returns were used. It now calls tls_grids.duration_window,
+    the shared window helper the other entry points use, which returns
+    exactly the same bounds. Bit-neutral: these tests pin the bounds
+    handed to tls_search_gpu to the legacy expression, bitwise."""
+
+    @staticmethod
+    def _capture_search(monkeypatch):
+        """Intercept tls_transit's tls_search_gpu call (no GPU)."""
+        from cuvarbase import tls
+        captured = {}
+
+        def fake_search(t, y, dy, **kw):
+            captured.update(kw)
+            n = len(kw['periods'])
+            return tls._null_result(n, 1.0, 'intercepted',
+                                    periods=kw['periods'], arrays=True)
+
+        monkeypatch.setattr(tls, 'tls_search_gpu', fake_search)
+        return captured
+
+    PARAMS = [dict(), dict(R_star=0.7, M_star=0.65, R_planet=2.3,
+                           qmin_fac=0.4, qmax_fac=2.5, n_durations=9),
+              dict(R_star=2.2, M_star=1.9, R_planet=11.0,
+                   qmin_fac=0.25, qmax_fac=3.0),
+              dict(R_star=0.3, M_star=0.3)]
+
+    def test_bounds_bitwise_match_duration_grid_keplerian(self, monkeypatch):
+        from cuvarbase import tls
+        t = np.linspace(0, 90.0, 1200)
+        y = np.ones(1200)
+        dy = np.full(1200, 1e-3)
+        for kw in self.PARAMS:
+            captured = self._capture_search(monkeypatch)
+            tls.tls_transit(t, y, dy, period_min=0.5, period_max=30.0, **kw)
+            periods = captured['periods']
+            # the pre-1.0 expression, verbatim
+            _, _, q_values = tls_grids.duration_grid_keplerian(
+                periods, R_star=kw.get('R_star', 1.0),
+                M_star=kw.get('M_star', 1.0),
+                R_planet=kw.get('R_planet', 1.0),
+                qmin_fac=kw.get('qmin_fac', 0.5),
+                qmax_fac=kw.get('qmax_fac', 2.0),
+                n_durations=kw.get('n_durations', 15))
+            assert len(periods) > 100
+            assert np.array_equal(captured['qmin'],
+                                  q_values * kw.get('qmin_fac', 0.5))
+            assert np.array_equal(captured['qmax'],
+                                  q_values * kw.get('qmax_fac', 2.0))
+            assert captured['n_durations'] == kw.get('n_durations', 15)
+
+    def test_duration_table_is_not_built(self, monkeypatch):
+        """The (nperiods x n_durations) table nothing reads: 59 ms of a
+        237 ms Kepler-4yr call (A40, shared)."""
+        from cuvarbase import tls
+        self._capture_search(monkeypatch)
+        calls = []
+        real = tls_grids.duration_grid_keplerian
+
+        def counting(*a, **kw):
+            calls.append(1)
+            return real(*a, **kw)
+
+        monkeypatch.setattr(tls_grids, 'duration_grid_keplerian', counting)
+        t = np.linspace(0, 90.0, 1200)
+        tls.tls_transit(t, np.ones(1200), np.full(1200, 1e-3),
+                        period_min=0.5, period_max=30.0)
+        assert calls == []
+
+    def test_bounds_match_the_other_entry_points(self, monkeypatch):
+        """tls_transit and tls_search_gpu must agree on the window."""
+        from cuvarbase import tls
+        captured = self._capture_search(monkeypatch)
+        t = np.linspace(0, 90.0, 1200)
+        tls.tls_transit(t, np.ones(1200), np.full(1200, 1e-3),
+                        R_star=0.8, M_star=0.9, period_min=0.5,
+                        period_max=30.0)
+        qmin, qmax = tls_grids.duration_window(
+            captured['periods'], R_star=0.8, M_star=0.9)
+        assert np.array_equal(captured['qmin'], qmin)
+        assert np.array_equal(captured['qmax'], qmax)
+
+
+class TestTemplateTableMemoization:
+    """Phase 2 TLS-3 (audit section 5, ids 95/152): every
+    single-lightcurve search rebuilt the batman reference model behind
+    the fast kernel's template tables. generate_template_tables now
+    memoizes on (n_table, limb_dark, u, oversample); it still returns
+    fresh, writable arrays, and a degraded (trapezoid-fallback) result
+    is never cached so its warning keeps firing."""
+
+    def setup_method(self):
+        tls_models._clear_template_table_cache()
+
+    teardown_method = setup_method
+
+    def test_repeat_call_is_bitwise_identical(self):
+        first = tls_models.generate_template_tables(n_table=128)
+        second = tls_models.generate_template_tables(n_table=128)
+        for a, b in zip(first, second):
+            assert np.array_equal(a, b)
+            assert a.dtype == np.float32
+
+    def test_returns_independent_arrays(self):
+        """A caller that writes to the tables must not poison the cache."""
+        first = tls_models.generate_template_tables(n_table=128)
+        for a in first:
+            a[:] = -12345.0
+        second = tls_models.generate_template_tables(n_table=128)
+        assert all(a is not b for a, b in zip(first, second))
+        assert not np.any(second[0] == -12345.0)
+        third = tls_models.generate_template_tables(n_table=128)
+        for b, c in zip(second, third):
+            assert np.array_equal(b, c)
+
+    def test_underlying_model_is_built_once_per_key(self):
+        calls = []
+        real = tls_models.generate_transit_template
+
+        def counting(**kw):
+            calls.append(kw.get('n_template'))
+            return real(**kw)
+
+        try:
+            tls_models.generate_transit_template = counting
+            tls_models.generate_template_tables(n_table=128)
+            tls_models.generate_template_tables(n_table=128)
+            tls_models.generate_template_tables(n_table=128)
+            assert len(calls) == 1
+        finally:
+            tls_models.generate_transit_template = real
+
+    def test_cache_does_not_leak_across_parameters(self):
+        base = tls_models.generate_template_tables(n_table=128)
+        variants = [
+            dict(n_table=128, limb_dark='linear', u=[0.5]),
+            dict(n_table=128, u=[0.1, 0.05]),
+            dict(n_table=128, oversample=4),
+            dict(n_table=256),
+        ]
+        for kw in variants:
+            got = tls_models.generate_template_tables(**kw)
+            assert len(got[0]) == kw.get('n_table', 128) + 1
+            if len(got[0]) == len(base[0]):
+                if tls_models.BATMAN_AVAILABLE or 'oversample' in kw:
+                    assert not np.array_equal(got[0], base[0]) or \
+                        not np.array_equal(got[1], base[1])
+        # the original key still returns the original tables
+        again = tls_models.generate_template_tables(n_table=128)
+        for a, b in zip(base, again):
+            assert np.array_equal(a, b)
+
+    def test_cache_is_bounded(self):
+        for i in range(2 * tls_models._TEMPLATE_TABLE_CACHE_MAX + 3):
+            tls_models.generate_template_tables(n_table=32 + i)
+        assert (len(tls_models._template_table_cache)
+                <= tls_models._TEMPLATE_TABLE_CACHE_MAX)
+
+    def test_fallback_result_is_not_cached(self, monkeypatch):
+        """The trapezoid fallback warns on every call, so it must not be
+        memoized away."""
+        monkeypatch.setattr(tls_models, 'BATMAN_AVAILABLE', True)
+
+        def _boom(**kwargs):
+            raise RuntimeError("batman exploded")
+
+        monkeypatch.setattr(tls_models, 'create_reference_transit', _boom)
+        for _ in range(2):
+            with pytest.warns(UserWarning, match="trapezoid"):
+                tls_models.generate_template_tables(n_table=128)
+        assert tls_models._template_table_cache == {}
+
+
+class TestBatchHasNoThreadPool:
+    """Phase 2 TLS-2 (audit section 5, id 53): tls_search_batch must not
+    reintroduce the per-light-curve ThreadPoolExecutor -- the work is
+    GIL-bound numpy/scipy and the pool made it 1.2-2.2x slower (A40,
+    shared) while randomizing the order of per-light-curve warnings."""
+
+    def test_module_does_not_import_a_thread_pool(self):
+        from cuvarbase import tls
+        assert not hasattr(tls, 'ThreadPoolExecutor')
+        body = _inspect.getsource(tls.tls_search_batch)
+        assert 'ThreadPoolExecutor(' not in body
+        assert 'cpu_count' not in body
+
+
 class TestReferenceSRDefinition:
     """ids 81/146: SR was 1 - chi2/max(chi2); the reference package uses
     chi2_min/chi2. Identical under the null but ~2x lower SDE for strong
