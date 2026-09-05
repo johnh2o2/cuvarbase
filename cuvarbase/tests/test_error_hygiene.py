@@ -110,11 +110,12 @@ def test_check_k0_raises_value_error():
 
 def test_check_k0_survives_python_O():
     # Under -O an assert-based check silently disappears; the
-    # validation must still raise.
-    repo_root = os.path.dirname(_PKG_DIR)
+    # validation must still raise. The subprocess imports the packaged
+    # conftest (cuvarbase/tests/conftest.py) for its pycuda stubs, so
+    # this works from an installed wheel as well as from the checkout.
     script = (
         "import numpy as np\n"
-        "import conftest  # install GPU stubs\n"
+        "import cuvarbase.tests.conftest  # install GPU stubs (if needed)\n"
         "from cuvarbase.lombscargle import check_k0\n"
         "bad = 0.05 + 0.1 * np.arange(10) + 0.033\n"
         "try:\n"
@@ -125,8 +126,8 @@ def test_check_k0_survives_python_O():
         "    raise SystemExit('check_k0 validated nothing under -O')\n"
     )
     result = subprocess.run([sys.executable, '-O', '-c', script],
-                            cwd=repo_root, capture_output=True,
-                            text=True, timeout=120)
+                            cwd=os.path.dirname(_PKG_DIR),
+                            capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stderr
     assert 'OK' in result.stdout
 

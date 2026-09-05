@@ -1,8 +1,8 @@
 """
 Test code examples from README.md to ensure they work correctly.
 
-These require a GPU; on CPU-only machines the root conftest converts
-them to skips. (An earlier version of this file was silently never
+These require a GPU; on CPU-only machines ``cuvarbase/tests/conftest.py``
+converts them to skips. (An earlier version of this file was silently never
 collected — @mark_cuda_test on the class turned it into a plain
 function — and unpacked eebls_gpu's tuple return incorrectly.)
 """
