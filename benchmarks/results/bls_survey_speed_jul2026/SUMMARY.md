@@ -138,6 +138,10 @@ and the recommended usage.
 
 Parity arrays: fast, fast+BJD (t+2455197.5), batch — for all four
 surveys (raw/parity/*.npz; comparator benchmarks/compare_parity.py).
+Only the two endpoint tags are tracked (base_envfix and opt4_chunk, 8
+files); `python benchmarks/compare_parity.py base_envfix opt4_chunk`
+still runs end to end on them. The intermediate opt1-opt3 and baseline
+dumps live in the archive/pre-1.0-process tag.
 Baseline suite on 89d5481: 752 passed / 7 skipped, gate 14/14.
 
 Flagged (non-silent) numerical notes:
