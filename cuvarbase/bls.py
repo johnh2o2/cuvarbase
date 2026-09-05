@@ -3712,7 +3712,6 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
     q = q0
     phi = phi0
     f = f0
-    nol = noverlap
 
     baseline = np.max(t) - np.min(t)
 
