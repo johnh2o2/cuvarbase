@@ -30,6 +30,18 @@ from . import tls_grids
 from . import tls_models
 from . import tls_stats
 
+
+__all__ = [
+    'compile_tls',
+    'TLSMemory',
+    'tls_search_gpu',
+    'tls_search',
+    'tls_transit',
+    'compile_tls_fast',
+    'tls_search_batch',
+]
+
+
 _default_block_size = 128  # Smaller default than BLS (TLS has more shared memory needs)
 _KERNEL_CACHE_MAX_SIZE = 10
 _kernel_cache = OrderedDict()

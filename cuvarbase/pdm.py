@@ -12,6 +12,19 @@ from .utils import weights, find_kernel, dphase, normalize_light_curves, autofre
 from .utils import check_lightcurve, check_freqs
 
 
+__all__ = [
+    'var_tophat',
+    'var_gauss',
+    'binned_pdm_model',
+    'var_binned',
+    'binless_pdm_cpu',
+    'pdm2_cpu',
+    'pdm2_single_freq',
+    'pdm_async',
+    'PDMAsyncProcess',
+]
+
+
 # Minimum number of observations the PDM entry points accept. The
 # statistic is 1 - sum(w (y - model)^2) / sum(w (y - ybar)^2); the
 # denominator is identically zero for a single point, and the whole

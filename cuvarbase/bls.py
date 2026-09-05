@@ -31,6 +31,37 @@ from .memory._host import host_array
 
 import numpy as np
 
+
+__all__ = [
+    'fmin_transit',
+    'fmax_transit0',
+    'q_transit',
+    'freq_transit',
+    'fmax_transit',
+    'transit_autofreq',
+    'compile_bls',
+    'BLSMemory',
+    'eebls_gpu_fast',
+    'eebls_gpu_fast_optimized',
+    'eebls_gpu_fast_adaptive',
+    'eebls_gpu_custom',
+    'dnbins',
+    'nbins_iter',
+    'count_tot_nbins',
+    'eebls_gpu',
+    'single_bls',
+    'convert_bls_power',
+    'sparse_bls_cpu',
+    'compile_sparse_bls',
+    'sparse_bls_gpu',
+    'eebls_transit',
+    'compile_bls_batch',
+    'eebls_gpu_batch',
+    'hone_solution',
+    'eebls_transit_gpu',
+]
+
+
 _default_block_size = 256
 
 # Minimum number of observations any BLS path accepts. Every BLS

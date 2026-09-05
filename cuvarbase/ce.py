@@ -27,6 +27,13 @@ import resource
 import warnings
 
 
+__all__ = [
+    'conditional_entropy',
+    'conditional_entropy_fast',
+    'ConditionalEntropyAsyncProcess',
+]
+
+
 # Every kernel the CE module compiles, in the (sorted) order in which
 # ``ConditionalEntropyAsyncProcess.function_tuple`` is unpacked by
 # :func:`conditional_entropy` / :func:`conditional_entropy_fast`.

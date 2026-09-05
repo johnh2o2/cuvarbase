@@ -69,6 +69,14 @@ from .memory import NFFTMemory
 from .utils import (find_kernel, _module_reader,
                     subtract_epoch, check_lightcurve)
 
+
+__all__ = [
+    'epoch_grid',
+    'NUFFTLRTMemory',
+    'NUFFTLRTAsyncProcess',
+]
+
+
 # Emitted once per NUFFTLRTAsyncProcess construction (not at import, so
 # ``from cuvarbase import *`` and the BLS/LS/PDM users never see it).
 # Keep the "cuvarbase.nufft_lrt is EXPERIMENTAL" prefix: filterwarnings

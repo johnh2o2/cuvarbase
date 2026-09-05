@@ -30,6 +30,18 @@ import numpy as np
 from scipy import ndimage, stats
 
 
+__all__ = [
+    'signal_residue',
+    'running_median',
+    'signal_detection_efficiency',
+    'signal_to_noise',
+    'false_alarm_probability',
+    'odd_even_mismatch',
+    'compute_all_statistics',
+    'compute_period_uncertainty',
+]
+
+
 def signal_residue(chi2, chi2_null=None):
     """
     Calculate the Signal Residue (SR) of a chi-squared spectrum.

@@ -4,6 +4,19 @@ import re
 import numpy as np
 
 
+__all__ = [
+    'check_lightcurve',
+    'check_freqs',
+    'weights',
+    'conflict_scatter_perm',
+    'subtract_epoch',
+    'find_kernel',
+    'autofrequency',
+    'dphase',
+    'normalize_light_curves',
+]
+
+
 # ---------------------------------------------------------------------
 # Input validation (shared by every public entry point)
 #
