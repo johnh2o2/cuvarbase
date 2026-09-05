@@ -1030,6 +1030,20 @@ class TestTransitDurationWindowBounds:
         assert np.array_equal(captured['qmax'], qmax)
 
 
+class TestBatchHasNoThreadPool:
+    """Phase 2 TLS-2 (audit section 5, id 53): tls_search_batch must not
+    reintroduce the per-light-curve ThreadPoolExecutor -- the work is
+    GIL-bound numpy/scipy and the pool made it 1.2-2.2x slower (A40,
+    shared) while randomizing the order of per-light-curve warnings."""
+
+    def test_module_does_not_import_a_thread_pool(self):
+        from cuvarbase import tls
+        assert not hasattr(tls, 'ThreadPoolExecutor')
+        body = _inspect.getsource(tls.tls_search_batch)
+        assert 'ThreadPoolExecutor(' not in body
+        assert 'cpu_count' not in body
+
+
 class TestReferenceSRDefinition:
     """ids 81/146: SR was 1 - chi2/max(chi2); the reference package uses
     chi2_min/chi2. Identical under the null but ~2x lower SDE for strong

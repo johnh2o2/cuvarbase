@@ -549,5 +549,45 @@ class TestDurationWindowDefault:
         assert abs(r['period'] - 3.3) / 3.3 < 0.02
 
 
+class TestBatchStatisticsAreSequential:
+    """Phase 2 TLS-2 (audit section 5, id 53): the per-light-curve
+    statistics ran on a ThreadPoolExecutor on the assumption that
+    scipy released the GIL in the running-median detrend. It does not:
+    measured on an A40 (shared), 64 tess-ffi light curves took 166 ms
+    with the pool and 77 ms without it, and the statistics alone cost
+    21.7 ms sequentially versus 40.3 ms on 8 threads. Bit-neutral --
+    only the executor changed -- and the light-curve order (and hence
+    the order of any per-light-curve warning) is now deterministic."""
+
+    def test_statistics_run_on_the_calling_thread_in_order(self, monkeypatch):
+        import threading
+        from cuvarbase import tls, tls_stats
+        seen = []
+        real = tls_stats.compute_all_statistics
+
+        def spy(*a, **k):
+            seen.append(threading.current_thread().name)
+            return real(*a, **k)
+
+        monkeypatch.setattr(tls_stats, 'compute_all_statistics', spy)
+        periods = shared_grid()
+        lcs = [make_transit_lc(2.5 + 0.7 * i, 0.03, 0.012, ndata=600,
+                               seed=30 + i) for i in range(6)]
+        results = tls.tls_search_batch(lcs, periods=periods)
+        assert len(seen) == len(lcs)
+        assert set(seen) == {threading.current_thread().name}
+        assert all(r is not None for r in results)
+
+    def test_results_are_returned_in_lightcurve_order(self):
+        from cuvarbase import tls
+        periods = shared_grid()
+        p_injs = [2.6, 4.1, 6.3, 9.5]
+        lcs = [make_transit_lc(p, 0.03, 0.015, ndata=900, seed=40 + i)
+               for i, p in enumerate(p_injs)]
+        results = tls.tls_search_batch(lcs, periods=periods)
+        for r, p in zip(results, p_injs):
+            assert abs(r['period'] - p) / p < 0.01
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
