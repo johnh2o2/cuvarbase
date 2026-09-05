@@ -3,19 +3,16 @@ import numpy as np
 from numpy.testing import assert_allclose
 from scipy import fftpack
 
-from pycuda.tools import mark_cuda_test
 from pycuda import gpuarray
 
 from .. import _cufft as cufft
-
-pytest.importorskip(
-    "nfft", reason="the optional 'nfft' package is the CPU reference "
-                   "for these tests")
-from nfft import nfft_adjoint as nfft_adjoint_cpu  # noqa: E402
-from nfft.utils import nfft_matrix  # noqa: E402
-from nfft.kernels import KERNELS  # noqa: E402
-
 from ..cunfft import NFFTAsyncProcess
+
+# The optional 'nfft' package is the CPU reference for exactly two tests
+# (the *_jvdp_nfft ones); they importorskip it themselves so that the
+# other GPU tests in this module cannot silently skip when it is absent.
+_NFFT_SKIP_REASON = ("the optional 'nfft' package is the CPU reference "
+                     "for this test")
 
 nfft_sigma = 5
 nfft_m = 8
@@ -100,6 +97,8 @@ def simple_gpu_nfft(t, y, nf, sigma=nfft_sigma, use_double=False,
 
 
 def get_cpu_grid(t, y, nf, sigma=nfft_sigma, m=nfft_m):
+    from nfft.utils import nfft_matrix
+    from nfft.kernels import KERNELS
     kernel = KERNELS.get('gaussian', 'gaussian')
     mat = nfft_matrix(t, int(nf * sigma), m, sigma, kernel, truncated=True)
     return mat.T.dot(y)
@@ -109,6 +108,7 @@ def get_cpu_grid(t, y, nf, sigma=nfft_sigma, m=nfft_m):
 class TestNFFT(object):
 
     def test_fast_gridding_with_jvdp_nfft(self):
+        pytest.importorskip("nfft", reason=_NFFT_SKIP_REASON)
         t, tsc, y, err = data()
 
         nf = int(nfft_sigma * len(t))
@@ -156,6 +156,7 @@ class TestNFFT(object):
         assert_allclose(gpu_grid, cpu_grid, **tols)
 
     def test_slow_gridding_against_jvdp_nfft(self):
+        pytest.importorskip("nfft", reason=_NFFT_SKIP_REASON)
         t, tsc, y, err = data()
 
         nf = int(nfft_sigma * len(t))

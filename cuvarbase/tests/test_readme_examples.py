@@ -7,7 +7,6 @@ collected — @mark_cuda_test on the class turned it into a plain
 function — and unpacked eebls_gpu's tuple return incorrectly.)
 """
 import numpy as np
-import pytest
 
 
 class TestReadmeExamples:
