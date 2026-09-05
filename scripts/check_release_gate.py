@@ -6,6 +6,10 @@ Run on a GPU machine:
     python scripts/check_release_gate.py
 
 Checks:
+  0. preflight -- every dependency the zero-skip suite run needs
+     (pycuda, batman, transitleastsquares, nfft, astropy, cufinufft)
+     imports; the gate FAILS if any is missing, so a "0 skipped" suite
+     run is actually possible on this environment
   1. reduction_max equivalence — eebls_gpu_fast with use_optimized=True
      (bls_optimized.cu) agrees with the standard kernel (validates the
      s >= 32 reduction fix end-to-end)
@@ -73,7 +77,53 @@ def ce_numpy_reference(t, y, freqs, phase_bins=10, mag_bins=5):
     return out
 
 
+# Every optional dependency a zero-skip run of cuvarbase/tests needs:
+# module name -> pip distribution name.
+PREFLIGHT_MODULES = [
+    ('pycuda', 'pycuda'),
+    ('batman', 'batman-package'),
+    ('transitleastsquares', 'transitleastsquares'),
+    ('nfft', 'nfft'),
+    ('astropy', 'astropy'),
+    ('cufinufft', 'cufinufft'),
+]
+
+
+def preflight():
+    """Import every dependency the zero-skip suite needs and print its
+    version; a missing one fails the gate (it would silently turn into
+    pytest skips otherwise)."""
+    import importlib
+    ok = True
+    for module, dist in PREFLIGHT_MODULES:
+        try:
+            mod = importlib.import_module(module)
+        except Exception as e:
+            check("preflight: import %s" % module, False,
+                  "%s: %s (pip install %s)" % (type(e).__name__, e, dist))
+            ok = False
+            continue
+        version = getattr(mod, '__version__', None)
+        if version is None:
+            try:
+                from importlib.metadata import version as _v
+                version = _v(dist)
+            except Exception:
+                version = '?'
+        check("preflight: import %s" % module, True,
+              "version %s" % version)
+    return ok
+
+
 def main():
+    # --- 0. preflight -------------------------------------------------
+    if not preflight():
+        print()
+        print("RELEASE GATE: preflight FAILED -- install the missing "
+              "dependencies above; a zero-skip suite run is not possible "
+              "without them")
+        return 1
+
     from cuvarbase.bls import eebls_gpu_fast, eebls_gpu_fast_optimized
 
     t, y, dy = fake_transit()

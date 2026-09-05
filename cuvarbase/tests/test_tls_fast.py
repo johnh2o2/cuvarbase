@@ -80,7 +80,18 @@ class TestBatchConsistency:
 class TestStatisticsSeparation:
     def test_spectrum_is_coarse_and_uniform(self):
         """Refinement must not touch the per-period spectrum: SDE
-        computed with refine on and off must agree."""
+        computed with refine on and off must agree.
+
+        Tolerances: the coarse spectrum is accumulated with float32
+        shared-memory atomics (one block per (lightcurve, period); see
+        kernels/tls_fast.cu), whose summation order is not deterministic
+        between launches, so two runs of the SAME configuration are not
+        bit-identical. rtol=1e-2 on chi2 and |dSDE| < 0.5 are the
+        run-to-run envelope observed on the Jul-2026 gate hardware (A5000)
+        with a wide margin -- NOT a statement that refinement may perturb
+        the spectrum by that much. Tightening to ~10x the measured
+        run-to-run floor is a device task (release finding 84).
+        """
         from cuvarbase import tls
         periods = shared_grid()
         lc = make_transit_lc(3.3, 0.03, 0.012, seed=5)
@@ -591,3 +602,79 @@ class TestBatchStatisticsAreSequential:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestFastLegacyParity:
+    """Fast (phase-binned scan + exact top-K refinement) versus legacy
+    (per-point template) kernel on ONE explicit trial grid -- the parity
+    check ported from ``scripts/tls_fast_smoke.py`` (section 2). The
+    smoke script's other sections already have suite equivalents:
+    batch-vs-single agreement (``TestBatchConsistency``), ndata beyond
+    the legacy 3,500-point cap and BJD-scale times
+    (``TestScalability``), and the auto-grid ``tls_transit`` recovery
+    (``TestDurationWindowDefault``, ``TestTlsTransitSmoke``)."""
+
+    P_INJ, DEPTH = 5.123, 0.01
+
+    def _grid_and_data(self):
+        from cuvarbase import tls_grids
+        t, y, dy = make_transit_lc(self.P_INJ,
+                                   0.0763 * self.P_INJ ** (-2.0 / 3.0),
+                                   self.DEPTH, ndata=1200, seed=42)
+        periods = tls_grids.period_grid_ofir(
+            t, R_star=1.0, M_star=1.0, oversampling_factor=3,
+            period_min=1.0, period_max=12.0).astype(np.float64)
+        _, _, qv = tls_grids.duration_grid_keplerian(
+            periods, R_star=1.0, M_star=1.0, R_planet=1.0,
+            qmin_fac=0.5, qmax_fac=2.0, n_durations=15)
+        return (t, y, dy), periods, 0.5 * qv, 2.0 * qv
+
+    def test_fast_matches_legacy_on_an_explicit_grid(self):
+        from cuvarbase import tls
+        lc, periods, qmin, qmax = self._grid_and_data()
+        kw = dict(periods=periods, qmin=qmin, qmax=qmax, n_durations=15)
+        r_old = tls.tls_search_gpu(*lc, use_fast=False, **kw)
+        r_new = tls.tls_search_gpu(*lc, use_fast=True, **kw)
+
+        c_old, c_new = r_old['chi2'], r_new['chi2']
+        both = np.isfinite(c_old) & np.isfinite(c_new)
+        assert both.sum() > 0.9 * len(periods)
+        corr = np.corrcoef(c_old[both], c_new[both])[0, 1]
+        assert corr > 0.99, corr
+        # same chi2 scale (the binned scan is not a different statistic)
+        med_old, med_new = np.median(c_old[both]), np.median(c_new[both])
+        assert abs(med_new / med_old - 1.0) < 0.05, (med_old, med_new)
+        # same best period, which is the injected one
+        assert abs(r_new['period'] - r_old['period']) / r_old['period'] < 0.01
+        assert abs(r_new['period'] - self.P_INJ) / self.P_INJ < 0.01
+        assert r_new['SDE'] > 0.8 * r_old['SDE'], (r_old['SDE'], r_new['SDE'])
+        assert abs(r_new['depth'] - self.DEPTH) / self.DEPTH < 0.5
+
+
+class TestTlsTransitSmoke:
+    """``tls.tls_transit`` end to end on an injected transit (release
+    finding 71/149: the Keplerian wrapper had no test of its own
+    result). Period within two steps of the grid it builds itself,
+    ``T0`` the first mid-transit at or after ``min(t)``, ``t0_phase`` a
+    fold phase in [0, 1)."""
+
+    def test_recovers_injected_transit(self):
+        from cuvarbase import tls
+        P, q, depth = 4.56, 0.025, 0.008
+        t, y, dy = make_transit_lc(P, q, depth, ndata=3000, seed=11,
+                                   t0_frac=0.3)
+        res = tls.tls_transit(t, y, dy, R_star=1.0, M_star=1.0,
+                              period_min=1.0, period_max=12.0)
+        grid = np.sort(np.asarray(res['periods'], dtype=np.float64))
+        i = int(np.argmin(np.abs(grid - P)))
+        step = grid[min(i + 1, len(grid) - 1)] - grid[max(i - 1, 0)]
+        assert abs(res['period'] - P) <= 2 * step + 1e-9, (res['period'], step)
+        assert res['SDE'] > 5.0
+        tmin = t.min()
+        assert tmin <= res['T0'] < tmin + res['period']
+        assert 0.0 <= res['t0_phase'] < 1.0
+        # T0 lands on the injected mid-transit (modulo whole periods)
+        t0_true = 0.3 * P
+        nearest = np.min(np.abs(res['T0'] - (t0_true + P * np.arange(-2, 20))))
+        assert nearest < 0.5 * q * P, nearest
+        assert abs(res['depth'] - depth) / depth < 0.5

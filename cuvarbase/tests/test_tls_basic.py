@@ -3,7 +3,9 @@ Basic tests for TLS GPU implementation.
 
 These tests verify the basic functionality of the TLS implementation,
 focusing on API correctness and basic execution rather than scientific
-accuracy (which will be tested in test_tls_consistency.py).
+accuracy (the golden-reference comparisons against transitleastsquares
+and batman live in test_tls_golden.py; the fast-path behaviour in
+test_tls_fast.py).
 """
 
 import pytest
@@ -1469,3 +1471,115 @@ class TestT0Convention:
         for fn in (tls.tls_search_gpu, tls.tls_search_batch, tls.tls_transit):
             assert 'at or after' in fn.__doc__, fn.__name__
             assert 't0_phase' in fn.__doc__, fn.__name__
+
+
+class TestTlsSearchDispatch:
+    """``tls.tls_search`` is a thin, validated forward to
+    ``tls_search_gpu`` (release finding 71/149: the documented "main
+    user-facing function" had no test). CPU: the GPU function is
+    replaced by a recorder."""
+
+    def test_forwards_all_kwargs_to_tls_search_gpu(self, monkeypatch):
+        from cuvarbase import tls
+        seen = {}
+        sentinel = object()
+
+        def fake_search_gpu(t, y, dy, **kwargs):
+            seen['args'] = (t, y, dy)
+            seen['kwargs'] = kwargs
+            return sentinel
+
+        monkeypatch.setattr(tls, 'tls_search_gpu', fake_search_gpu)
+        t = np.linspace(0, 30.0, 400)
+        y = np.ones(400)
+        dy = np.full(400, 1e-3)
+        periods = np.linspace(2.0, 5.0, 50)
+        out = tls.tls_search(t, y, dy, periods=periods, n_durations=7,
+                             use_fast=False, refine_top_k=3, R_star=0.8)
+        assert out is sentinel
+        assert seen['args'][0] is t and seen['args'][1] is y
+        assert seen['args'][2] is dy
+        assert seen['kwargs'] == dict(periods=periods, n_durations=7,
+                                      use_fast=False, refine_top_k=3,
+                                      R_star=0.8)
+
+    def test_validates_before_forwarding(self, monkeypatch):
+        from cuvarbase import tls
+        calls = []
+        monkeypatch.setattr(tls, 'tls_search_gpu',
+                            lambda *a, **k: calls.append(1))
+        t = np.linspace(0, 30.0, 400)
+        y = np.ones(400)
+        dy = np.full(400, 1e-3)
+        with pytest.raises(ValueError, match='tls_search'):
+            tls.tls_search(t[:-1], y, dy)
+        with pytest.raises(ValueError, match='tls_search'):
+            tls.tls_search(t, np.r_[y[:-1], np.nan], dy)
+        assert calls == []
+
+
+class TestDurationGridKeplerian:
+    """CPU tests for ``tls_grids.duration_grid_keplerian`` (release
+    finding 71/149: untested). Shapes, bounds consistent with
+    ``q_transit`` and the qmin_fac/qmax_fac factors, log spacing, and
+    monotonicity in period."""
+
+    PERIODS = np.array([1.0, 2.5, 5.0, 10.0, 30.0, 100.0])
+
+    def test_shapes_and_counts(self):
+        durations, counts, q = tls_grids.duration_grid_keplerian(
+            self.PERIODS, n_durations=11)
+        assert len(durations) == len(self.PERIODS)
+        assert all(d.shape == (11,) for d in durations)
+        assert all(d.dtype == np.float32 for d in durations)
+        assert counts.shape == (len(self.PERIODS),)
+        assert counts.dtype == np.int32 and np.all(counts == 11)
+        assert q.shape == (len(self.PERIODS),)
+
+    @pytest.mark.parametrize("kw", [
+        dict(), dict(R_star=0.7, M_star=0.65, R_planet=2.3,
+                     qmin_fac=0.4, qmax_fac=2.5, n_durations=9),
+        dict(R_star=2.2, M_star=1.9, R_planet=11.0,
+             qmin_fac=0.25, qmax_fac=3.0)])
+    def test_bounds_follow_q_transit_and_the_factors(self, kw):
+        stellar = {k: kw[k] for k in ('R_star', 'M_star', 'R_planet')
+                   if k in kw}
+        qmin_fac = kw.get('qmin_fac', 0.5)
+        qmax_fac = kw.get('qmax_fac', 2.0)
+        durations, _, q = tls_grids.duration_grid_keplerian(
+            self.PERIODS, **kw)
+        np.testing.assert_array_equal(
+            q, tls_grids.q_transit(self.PERIODS, **stellar))
+        dur = np.stack(durations)
+        # first/last duration = (qmin_fac, qmax_fac) * q * P (absolute
+        # days), to float32 rounding
+        np.testing.assert_allclose(dur[:, 0], qmin_fac * q * self.PERIODS,
+                                   rtol=1e-6)
+        np.testing.assert_allclose(dur[:, -1], qmax_fac * q * self.PERIODS,
+                                   rtol=1e-6)
+        assert np.all(dur[:, 0] <= dur[:, -1])
+        # every duration is inside the window, as a fraction of period
+        frac = dur / self.PERIODS[:, None]
+        assert np.all(frac >= qmin_fac * q[:, None] * (1 - 1e-6))
+        assert np.all(frac <= qmax_fac * q[:, None] * (1 + 1e-6))
+
+    def test_log_spaced_within_a_period_and_monotonic_in_period(self):
+        durations, _, q = tls_grids.duration_grid_keplerian(
+            self.PERIODS, n_durations=15)
+        dur = np.stack(durations).astype(np.float64)
+        # strictly increasing along the duration axis, constant ratio
+        assert np.all(np.diff(dur, axis=1) > 0)
+        ratios = dur[:, 1:] / dur[:, :-1]
+        np.testing.assert_allclose(
+            ratios, np.broadcast_to(ratios[:, :1], ratios.shape), rtol=1e-5)
+        # a Keplerian duration grows with period (~ P^(1/3)) while the
+        # fractional duration q shrinks (~ P^(-2/3))
+        assert np.all(np.diff(dur, axis=0) > 0)
+        assert np.all(np.diff(q) < 0)
+
+    def test_single_period_and_scalar_input(self):
+        durations, counts, q = tls_grids.duration_grid_keplerian(
+            [7.5], n_durations=3)
+        assert len(durations) == 1 and counts.tolist() == [3]
+        assert q.shape == (1,)
+        assert q[0] == pytest.approx(float(tls_grids.q_transit(7.5)))
