@@ -164,12 +164,23 @@ def conditional_entropy(memory, functions, block_size=256,
         memory.transfer_data_to_gpu()
 
     if memory.bins_g is None:
+        # bins_g is None both when the fast path deliberately skipped
+        # the histogram and when the memory was simply never allocated
+        # (__init__ leaves it None until allocate_bins runs); saying
+        # "use_fast=True" for the second case is a confident wrong
+        # explanation, so distinguish them.
+        if getattr(memory, 'use_fast', False):
+            raise ValueError(
+                "the standard conditional-entropy kernels accumulate "
+                "into a global histogram, but this memory was allocated "
+                "with use_fast=True, which skips it; allocate the "
+                "memory from a process with use_fast=False (or pass "
+                "use_fast=False to ConditionalEntropyMemory)")
         raise ValueError(
             "the standard conditional-entropy kernels accumulate into a "
-            "global histogram, but this memory was allocated with "
-            "use_fast=True, which skips it; allocate the memory from a "
-            "process with use_fast=False (or pass use_fast=False to "
-            "ConditionalEntropyMemory)")
+            "global histogram, but this memory has none: it was never "
+            "allocated. Call ConditionalEntropyMemory.fromdata(..., "
+            "allocate=True), or allocate_bins() on it, before running.")
 
     # The histogram kernels accumulate into ``bins_g``: it must start from
     # zero on EVERY call, not only when ``run(set_data=True)`` zeroed it
@@ -358,11 +369,14 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         frequency, histogram kept in shared memory). Results match the
         standard kernels to floating-point precision. Since the grid is
         sized from the device (Sep 2026; it used to be a few blocks
-        whatever the GPU) the fast kernels are the quicker of the two
-        for all but the smallest problems -- on one NVIDIA A40, shared
-        with other jobs, so read the ratios as indicative only: 1.3x at
-        (ndata, nfreq) = (1000, 1e5), 1.9x at (2000, 1e5) and 8x at
-        (1e4, 1e5), break-even below that -- and they need no global
+        whatever the GPU) the fast kernels are, IN SINGLE PRECISION,
+        the quicker of the two for all but the smallest problems -- on
+        one NVIDIA A40, shared with other jobs, so read the ratios as
+        indicative only: 1.3x at (ndata, nfreq) = (1000, 1e5), 1.9x at
+        (2000, 1e5) and 8x at (1e4, 1e5), break-even below that. With
+        ``use_double=True`` occupancy is shared-memory bound and the
+        fast kernels are roughly break-even, up to ~1.2x SLOWER around
+        ndata 1000-2000. They also need no global
         histogram, saving ``nfreq * phase_bins * mag_bins`` uint32 of
         device memory (20 MB for a 100k-frequency 10 x 5 search).
         Incompatible with ``weighted=True`` and

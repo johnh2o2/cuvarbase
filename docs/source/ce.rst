@@ -138,10 +138,13 @@ precision, and it has two practical advantages:
   occupancy) rather than from the histogram's shared-memory footprint,
   so the kernels actually fill the GPU. On one NVIDIA A40 shared with
   other jobs -- treat these as ratios measured in a single session, not
-  as portable numbers -- ``use_fast=True`` was 1.2x faster than the
-  default kernels at ``(ndata, nfreq) = (300, 1e5)``, 1.9x at
-  ``(2000, 1e5)`` and 8x at ``(10000, 1e5)``, and within noise of them
-  for small grids.
+  as portable numbers -- ``use_fast=True`` in single precision was 1.2x
+  faster than the default kernels at ``(ndata, nfreq) = (300, 1e5)``,
+  1.9x at ``(2000, 1e5)`` and 8x at ``(10000, 1e5)``, and within noise
+  of them for small grids. In double precision the picture is
+  different: occupancy is shared-memory bound, so the fast kernels are
+  roughly break-even and can be up to ~1.2x *slower* around
+  ``ndata`` 1000-2000.
 
 The size of the histogram is limited by the device's shared memory per
 block: ``phase_bins * mag_bins`` beyond roughly 6000 (single precision,

@@ -329,14 +329,22 @@ class PDMAsyncProcess(GPUAsyncProcess):
         freshly allocated, so arrays returned by an earlier ``run()``
         are never overwritten by a later one.
 
-        Peak device memory is unchanged (the same buffers, reused
-        rather than freed and reallocated); a call with different
-        shapes drops the cached set, which frees it.
+        Peak device memory is unchanged for repeated calls of the same
+        shape (the same buffers, reused rather than freed and
+        reallocated). A call with different shapes drops the cached set
+        *before* allocating the new one, so the two sets are never held
+        at once.
         """
         sig = tuple((len(t), len(f)) for (t, y, w, f) in norm_data)
         cache = self._alloc_cache
 
         if cache is None or cache[0] != sig:
+            # release the previous buffers BEFORE allocating the new
+            # ones, so a shape change never transiently holds both
+            # sets (the short final chunk of batched_run_const_nfreq /
+            # large_run is exactly that case)
+            self._alloc_cache = None
+            del cache
             gpu_data, pow_cpus = self.allocate(norm_data, freqs=frqs,
                                                **kwargs)
             grids = [np.asarray(f, dtype=np.float32)
