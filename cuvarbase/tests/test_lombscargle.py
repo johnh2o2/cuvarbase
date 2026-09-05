@@ -1371,3 +1371,171 @@ class TestWeightsUseNumpyReductions(object):
         assert mem.tmin == min(tc)
         assert mem.tmax == max(tc)
         assert isinstance(mem, LombScargleMemory)
+
+
+class TestBatchedMemoryReuse(object):
+    """``batched_run_const_nfreq`` rebuilt its ``LombScargleMemory``
+    set -- pinned host buffers, device arrays and two cuFFT plans -- on
+    every call, and built an ``np.array([True] * nf)`` mask whether or
+    not one was asked for (16 ms at nf = 365,000). It now reuses a
+    fitting memory set (``preallocate``'s first, then the one it built
+    last) and skips the mask entirely when ``ignore_freq_mask`` is None
+    (Sep-2026 algorithm audit, LS-4).
+    """
+
+    @staticmethod
+    def _lc(N=400, T=90.0, seed=2):
+        r = np.random.RandomState(seed)
+        t = np.sort(r.uniform(0, T, N))
+        y = 0.2 * np.sin(2 * np.pi * t / 1.9) + 0.05 * r.randn(N)
+        return t, y, 0.05 * np.ones(N)
+
+    @staticmethod
+    def _counting_memory(monkeypatch):
+        from .. import lombscargle as lsmod
+        built = []
+        original = lsmod.LombScargleMemory
+
+        class Counting(original):
+            def __init__(self, *args, **kwargs):
+                built.append(1)
+                super(Counting, self).__init__(*args, **kwargs)
+
+        monkeypatch.setattr(lsmod, 'LombScargleMemory', Counting)
+        return built
+
+    def test_memory_is_built_once_for_many_calls(self, monkeypatch):
+        freqs = 0.002 * (30 + np.arange(4000))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        built = self._counting_memory(monkeypatch)
+        proc.batched_run_const_nfreq(d, freqs=freqs)
+        assert sum(built) == 1
+        del built[:]
+        for _ in range(4):
+            proc.batched_run_const_nfreq(d, freqs=freqs)
+        assert sum(built) == 0
+
+    def test_reused_memory_gives_identical_powers(self):
+        freqs = 0.002 * (30 + np.arange(4000))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        proc.batched_run_const_nfreq(d, freqs=freqs)      # warm/compile
+        proc._batch_memory = None                          # force a rebuild
+        fresh = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        for _ in range(3):
+            again = np.copy(proc.batched_run_const_nfreq(d,
+                                                         freqs=freqs)[0][1])
+            assert np.array_equal(fresh, again)
+
+    def test_a_different_grid_is_not_reused(self, monkeypatch):
+        f1 = 0.002 * (30 + np.arange(4000))
+        f2 = 0.002 * (30 + np.arange(2500))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        proc.batched_run_const_nfreq(d, freqs=f1)
+        built = self._counting_memory(monkeypatch)
+        p2 = np.copy(proc.batched_run_const_nfreq(d, freqs=f2)[0][1])
+        assert sum(built) == 1
+        del built[:]
+        proc.batched_run_const_nfreq(d, freqs=f2)
+        assert sum(built) == 0
+        # and the shorter grid's powers are the head of the longer one
+        # (only to float32 NFFT accuracy: the two grids are padded to
+        # different 7-smooth lengths, so the spreading differs by ~2e-4
+        # relative near the top of the band)
+        p1 = np.copy(proc.batched_run_const_nfreq(d, freqs=f1)[0][1])
+        assert_allclose(np.asarray(p2[:len(f2)], dtype=np.float64),
+                        np.asarray(p1[:len(f2)], dtype=np.float64),
+                        rtol=1e-3, atol=1e-5)
+
+    def test_a_longer_lightcurve_forces_a_rebuild(self, monkeypatch):
+        freqs = 0.002 * (30 + np.arange(4000))
+        short, long_ = [self._lc(N=200, seed=3)], [self._lc(N=900, seed=4)]
+        proc = LombScargleAsyncProcess()
+        proc.batched_run_const_nfreq(short, freqs=freqs)
+        built = self._counting_memory(monkeypatch)
+        proc.batched_run_const_nfreq(long_, freqs=freqs)
+        assert sum(built) == 1
+        del built[:]
+        # the bigger buffers serve the short lightcurve too
+        proc.batched_run_const_nfreq(short, freqs=freqs)
+        assert sum(built) == 0
+
+    def test_padded_buffers_do_not_change_the_result(self):
+        # Two different device allocations, so this is the ~1e-8 float32
+        # tolerance of the NFFT gridding atomics, not bitwise (measured
+        # on the A40: same buffer 15/15 bitwise, fresh allocations up to
+        # 1.1e-8 on powers of order 1 -- true of the pre-1.0 code too).
+        freqs = 0.002 * (30 + np.arange(4000))
+        short = [self._lc(N=200, seed=3)]
+        proc = LombScargleAsyncProcess()
+        exact = np.asarray(proc.batched_run_const_nfreq(short,
+                                                        freqs=freqs)[0][1],
+                           dtype=np.float64)
+        # a run through buffers sized for 900 points
+        proc.batched_run_const_nfreq([self._lc(N=900, seed=4)], freqs=freqs)
+        padded = np.asarray(proc.batched_run_const_nfreq(short,
+                                                         freqs=freqs)[0][1],
+                            dtype=np.float64)
+        assert_allclose(padded, exact, rtol=1e-6, atol=1e-7)
+
+    def test_preallocated_memory_is_used(self, monkeypatch):
+        freqs = 0.002 * (30 + np.arange(4000))
+        d = [self._lc(N=400)]
+        proc = LombScargleAsyncProcess()
+        ref = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        proc._batch_memory = None
+        proc.preallocate(max_nobs=400, nlcs=1, freqs=freqs)
+        built = self._counting_memory(monkeypatch)
+        p = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        assert sum(built) == 0
+        assert proc._batch_memory is None      # preallocate's set was used
+        assert_allclose(np.asarray(p, dtype=np.float64),
+                        np.asarray(ref, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+
+    def test_amplitude_prior_change_is_not_reused(self, monkeypatch):
+        freqs = 0.002 * (30 + np.arange(2000))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        p0 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        built = self._counting_memory(monkeypatch)
+        p1 = np.copy(proc.batched_run_const_nfreq(
+            d, freqs=freqs, amplitude_prior=0.05)[0][1])
+        assert sum(built) == 1
+        # the prior really was applied (it is not the unregularized run)
+        assert not np.allclose(np.asarray(p0[:len(freqs)], dtype=np.float64),
+                               np.asarray(p1[:len(freqs)], dtype=np.float64))
+        del built[:]
+        p2 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        assert sum(built) == 1                 # back to no prior: rebuild
+        assert_allclose(np.asarray(p2, dtype=np.float64),
+                        np.asarray(p0, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+
+    def test_no_mask_matches_an_all_true_mask(self):
+        freqs = 0.002 * (30 + np.arange(3000))
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        bf0, fap0 = proc.batched_run_const_nfreq(
+            d, freqs=freqs, only_return_best_freqs=True)
+        bf1, fap1 = proc.batched_run_const_nfreq(
+            d, freqs=freqs, only_return_best_freqs=True,
+            ignore_freq_mask=np.zeros(len(freqs), dtype=bool))
+        assert bf0[0] == bf1[0]
+        assert fap0[0] == fap1[0]
+
+    def test_grid_validation_still_rejects_a_bad_grid(self):
+        """The batched path validates the shared grid once and tells
+        run() to skip the repeat; the error must survive."""
+        d = [self._lc()]
+        proc = LombScargleAsyncProcess()
+        bad = np.concatenate([0.002 * (30 + np.arange(500)),
+                              0.002 * (600 + np.arange(500))])
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=bad)
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=np.geomspace(0.1, 5.0, 500))
+        with pytest.raises(ValueError):
+            proc.run(d, freqs=[np.geomspace(0.1, 5.0, 500)])
