@@ -1657,3 +1657,60 @@ class TestBatchedMemoryReuse(object):
             proc.batched_run_const_nfreq(d, freqs=np.geomspace(0.1, 5.0, 500))
         with pytest.raises(ValueError):
             proc.run(d, freqs=[np.geomspace(0.1, 5.0, 500)])
+
+
+class TestBaluevDKUsesEffectiveNharmonics(object):
+    """``batched_run_const_nfreq(only_return_best_freqs=True)`` computed
+    the Baluev ``d_K`` from the *process* attribute even when the call
+    overrode ``nharmonics=`` (which the memory settings and the
+    periodogram do honour): a 2-harmonic peak got a ``d_K=3`` FAP
+    (Sep-2026 readiness audit; Phase 2 verification carry-over). The
+    choice is now a pure helper fed the effective per-call value."""
+
+    def test_helper_values(self):
+        from ..lombscargle import _baluev_d_K
+        assert _baluev_d_K(1) == 3
+        assert _baluev_d_K(2) == 5
+        assert _baluev_d_K(3) == 7
+        assert _baluev_d_K(np.int64(2)) == 5
+        with pytest.raises(ValueError):
+            _baluev_d_K(0)
+
+    def test_helper_tracks_the_memory_settings(self):
+        # the same resolution the memory settings use: a per-call
+        # nharmonics= written over the process default
+        from ..lombscargle import _baluev_d_K, _ls_memory_settings
+        kwargs_lsmem = dict(use_double=False, nharmonics=1, use_fft=True)
+        kwargs_lsmem.update(dict(nharmonics=2))
+        settings = _ls_memory_settings(1500, 50, 8, 5, False, 1, True,
+                                       kwargs_lsmem)
+        assert settings['nharmonics'] == 2
+        assert _baluev_d_K(kwargs_lsmem['nharmonics']) == 5
+        assert _baluev_d_K(settings['nharmonics']) == 5
+
+    def test_per_call_nharmonics_sets_d_K_on_device(self, monkeypatch):
+        from .. import lombscargle as lsmod
+        seen = []
+        real = lsmod.fap_baluev
+
+        def recording(t, dy, z, fmax, d_K=3, **kw):
+            seen.append(int(d_K))
+            return real(t, dy, z, fmax, d_K=d_K, **kw)
+
+        monkeypatch.setattr(lsmod, 'fap_baluev', recording)
+        r = np.random.RandomState(3)
+        t = np.sort(r.uniform(0, 100.0, 100))
+        y = 0.06 * np.sin(2 * np.pi * t / 1.7) + 0.05 * r.randn(100)
+        dy = 0.05 * np.ones(100)
+        freqs = 0.002 * (50 + np.arange(1500))
+
+        proc = LombScargleAsyncProcess()      # process default H = 1
+        assert proc.nharmonics == 1
+        proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs,
+                                     nharmonics=2,
+                                     only_return_best_freqs=True)
+        assert seen == [5]
+        # and the process default still gives d_K = 3 on the next call
+        proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs,
+                                     only_return_best_freqs=True)
+        assert seen == [5, 3]
