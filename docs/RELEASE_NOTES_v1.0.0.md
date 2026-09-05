@@ -1,9 +1,11 @@
 <!--
-DRAFT for review — not yet published.
-Pending before publishing: confirm final release commit and re-tag v1.0.0
-(currently points behind the release branch tip). GPU test count is from the
-Jul 10 release gate (analysis/v1.0-release-gate-jul2026/: 796 passed, 0
-skipped; 14/14 gate checks). PR #65-#68 merged 2026-07-07.
+DRAFT for review — not yet published (this comment is stripped at the final
+content commit). Pending before publishing: confirm the final release commit
+and re-tag v1.0.0 on it. The GPU test count and date quoted below are from
+the full on-device suite of 4 September 2026 (NVIDIA A40, Phase 1+2 tree:
+1582 passed / 0 failed / 0 skipped) and are refreshed from the Phase 5
+release gate on the frozen tree. PRs #57-#62 and #65-#68 are merged
+(#65-#68 on 2026-07-07); no further PRs are pending for 1.0.0.
 -->
 
 # cuvarbase 1.0.0
@@ -19,28 +21,28 @@ In production: cuvarbase's BLS has powered the TESS Quick-Look Pipeline's planet
 - **New: survey-scale GPU Transit Least Squares — the fastest TLS available.** A batch-native phase-binned kernel with exact top-K refinement searches a TESS-FFI-sector light curve in ~1.2 ms (a Kepler 4-year light curve, 65k points × 172k trial periods, in 0.17 s), with no cap on points per light curve and safe BJD-scale timestamps. Head-to-head on the *same* GPU at matched search settings and equal detection significance (SDE within 1–3%, 100% injected recovery), it is **30–171× faster than GTLS** (arXiv:2607.00348) — the only other GPU TLS — and thousands of times faster than the reference CPU `transitleastsquares` package, whose results it reproduces in golden tests.
 - **Standard BLS runs 257–354× faster than astropy's `BoxLeastSquares`** (measured across 7 GPU architectures, V100 through H200; 10,000 observations × 5,000 frequencies). At cloud spot prices that is roughly **$0.14–0.50 per million light curves** (RTX 4000 Ada / V100 / L40).
 - **Versus the previous cuvarbase:** the GPU kernels were already fast and their steady-state throughput is unchanged — the wins are in everything around them. 0.2.6 recompiled its CUDA kernels on **every single call** (~0.25–0.4 s, forever); 1.0.0 compiles once and caches, measuring **34× higher per-lightcurve throughput in a call-per-lightcurve loop** (10× over a 100-lightcurve run including the first compile). Survey-scale Lomb–Scargle is **2.9× faster**, the BLS survey path is a further **2.0–12.7× faster end-to-end** on realistic Keplerian grids (fused-`noverlap` kernels, conflict-scatter staging, occupancy-aware chunking — July 2026), and 0.2.6's LS/PDM paths segfault outright on modern pycuda (≥2025.1) — on a current software stack, 1.0.0 is effectively the only version that runs.
-- **Survey-scale Lomb–Scargle beats the fastest CPU package.** At realistic survey frequency grids, batched GPU LS is 1.5× (TESS-like) to 12.6× (Kepler-like) faster per light curve than nifty-ls, and >15–27× on ZTF/HAT-Net-scale grids where nifty-ls exceeded the benchmark timeout. (Honesty note: for a single light curve at small frequency grids, nifty-ls on CPU is still the better tool — see `docs/BENCHMARK_RESULTS.md`.)
+- **Survey-scale Lomb–Scargle beats the fastest CPU package.** At realistic survey frequency grids, batched GPU LS is 1.5× (TESS-like) to 12.6× (Kepler-like) faster per light curve than nifty-ls, and >15–27× on ZTF/HAT-Net-scale grids where nifty-ls exceeded the benchmark timeout. (Honesty note: for a single light curve at small frequency grids, nifty-ls on CPU is still the better tool — see [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).)
 - **Correct results on absolute (BJD-scale) timestamps.** Pre-1.0, feeding BLS raw BJD times (~2.45 million days) silently destroyed the phase fold in float32. Measured: an injected P=3.46 d transit recovered at power 0.30 on near-zero timestamps collapses to power 0.089 at the wrong frequency when the same data carries BJD timestamps in 0.2.6 — no error, no warning. 1.0.0 returns identical periodograms on both timescales (r=1.000000); all BLS paths epoch-subtract in float64 first.
 - **Deterministic periodograms.** A float32 guard bug let degenerate trial boxes produce run-to-run-varying spurious peaks on single-site ground-based data (reported by @astrobatty against HATPI light curves). Fixed at the root, with regression tests proving 500 ppm transits still survive.
 - **New algorithms and APIs**: sparse BLS for small datasets (Panahi & Zucker 2021), batched multi-lightcurve BLS, Keplerian frequency grids (4–37× fewer trial frequencies at survey baselines), multiharmonic generalized Lomb–Scargle on GPU, fast PDM kernels, CE log-probability periodograms, and an experimental NUFFT matched-filter transit search.
-- **Modern, lighter install**: Python 3.9–3.12, numpy 2.x, no more scikit-cuda or `future`; `import cuvarbase` works on GPU-less machines.
-- **Trustworthy by construction**: the GPU test suite grew from ~37 tests with no CI to **796 tests (0 skips) passing on-device** (v1.0.0 release gate, RTX A5000), plus a 14-check on-GPU release gate, CPU CI across Python 3.9–3.12, and a published benchmark methodology with archived raw results.
+- **Modern, lighter install**: Python 3.9–3.14, numpy 2.x, no more scikit-cuda or `future`; `import cuvarbase` works on GPU-less machines (the pure helpers need no pycuda at all; the method modules need the pycuda package but no device until the first GPU call).
+- **Trustworthy by construction**: the GPU test suite grew from 37 test functions with no CI (0.2.5) to **1,582 tests (0 skips) passing on-device** (full suite, NVIDIA A40, 4 September 2026; the release gate on the tagged tree refreshes this count), plus a 14-check on-GPU release gate, CPU CI across Python 3.9–3.14, and a published benchmark methodology with archived raw results.
 
 ## Performance
 
-All numbers are measured, with configs and raw JSON archived in `benchmarks/results/` and summarized in `docs/BENCHMARK_RESULTS.md`.
+All numbers are measured, with configs and raw JSON archived in [benchmarks/results/](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/benchmarks/results/) and summarized in [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).
 
 | Comparison | Result | Setup |
 |---|---|---|
 | BLS vs astropy `BoxLeastSquares` (CPU) | **257–354× faster** | 10k obs × 5k freqs, 7 GPUs (V100→H200), astropy 7.2.0 |
 | TLS vs GTLS (the only other GPU TLS), same GPU, equal SDE | **30–171× faster**, growing with baseline | 200–2000-d baselines, matched grids + epoch density, RTX A5000 |
 | TLS vs reference `transitleastsquares` (CPU, all cores) | **~10³× at matched SDE fidelity** | Same light curves and period grid, single RTX A5000 |
-| TLS survey throughput | **TESS-FFI 1.2 ms/LC; Kepler-4yr 0.17 s/LC** | 100% injected recovery; A5000 (V100/Ada within ~1.6×) |
+| TLS survey throughput | **TESS-FFI 1.2 ms/LC; Kepler-4yr 0.17 s/LC** | 100% injected recovery; RTX A5000. V100 within ~1.3× either way; the RTX 4000 Ada workstation card is 1.2–2.4× slower (2.4× on the TESS-FFI row) |
 | BLS survey path vs pre-optimization v1.0 | **2.0–12.7× end-to-end; 2.9–9.2× kernel-only** | ZTF/HAT-Net/TESS/Kepler-shaped Keplerian grids, RTX A5000 |
 | Lomb–Scargle vs nifty-ls (CPU), survey grids | **1.5× (TESS) → 12.6× (Kepler); >15–27× (HAT-Net/ZTF, timeout)** | Realistic per-survey frequency grids, batched, RTX A5000 |
 | Batched BLS vs looping single light curves | **2.2–10× faster** | 2–10 LCs/batch, ndata 200–20,000, RTX A5000 |
 | Keplerian vs uniform frequency grid | **4–37× fewer frequencies; 1.5–24× wall-time** | ZTF/HAT-Net/TESS/Kepler-shaped surveys, identical recovery |
-| Kernel caching (all BLS entry points) | **first call ~1.4 s → ~5 ms thereafter** | Previously *every* call paid CUDA compilation |
+| Kernel caching (all BLS entry points) | **first call 1.67 s → 7.6 ms thereafter** | Measured on the RTX A5000 (table below); previously *every* call paid CUDA compilation |
 | Estimated survey costs | ZTF 10M LCs ≈ $0.69 (3.5 h); LS+BLS on ZTF+HAT-Net+TESS+Kepler ≈ $33 | Projection from measured throughput, RTX A5000 @ $0.20/hr |
 
 ### Measured head-to-head vs cuvarbase 0.2.6 (RTX A5000, CUDA 12.4, July 2026)
@@ -92,8 +94,9 @@ Honesty notes: we claim **no** raw-kernel speedup — the kernel-only decomposit
 - **Statistics discipline**: SDE/FAP come from the uniform coarse spectrum while refinement sharpens only the reported parameters. At the default epoch grid the SDE lands within 1–3% of the reference package (within 1% at `t0_oversample=33`, ~5–13× cost), with 100% injected recovery in every tested regime.
 - Golden-tested against `transitleastsquares`; validated on RTX A5000 (sm86), RTX 4000 Ada (sm89), and V100 (sm70).
 
-### Experimental (import warns; not yet recommended for science use)
-- **NUFFT-LRT matched-filter transit search** (`cuvarbase.nufft_lrt`), contributed by Jamila Taaki (@xiaziyna).
+### Experimental (quarantined; not yet recommended for science use)
+- **NUFFT-LRT likelihood-ratio transit search** (`cuvarbase.nufft_lrt`), contributed by Jamila Taaki (@xiaziyna): a frequency-domain matched filter for box transits in correlated noise, whitened by a noise PSD that is supplied or estimated from the data. `NUFFTLRTAsyncProcess.run(t, y, periods, durations=..., epochs=None, detector='matched' | 'marginal' | 'sequential', systematics_basis=None, coeff_prior_mean=None, coeff_prior_cov=None, ...)` selects the stationary whitened filter (default), Detector A of Taaki, Kamalabadi & Kemball (2020) — systematics coefficients marginalized under a Gaussian prior, computed in the whitened frequency domain via the Woodbury identity — or the papers' sequential baseline (least-squares cotrend with an intercept, then the filter). With `epochs=None` an automatic epoch grid is scanned per (period, duration) cell and `(snr, best_epoch)` is returned; explicit `epochs` return the `(nP, nD, nE)` array.
+- **Status, honestly**: the module emits an `EXPERIMENTAL` `UserWarning` when `NUFFTLRTAsyncProcess` is first constructed (not at import) and is deliberately *not* exported from the top-level `cuvarbase` namespace (`import cuvarbase.nufft_lrt` explicitly). Its statistic is a whitened correlation, not an N(0,1) SNR, and thresholds must be calibrated per dataset. Test coverage: CPU tests of the Detector-A algebra (Woodbury path against a dense inverse) and of the pipeline, plus GPU behavioural tests (NFFT against the exact adjoint DFT, multi-season detection, BJD-scale invariance, the Sep-2026 regression tests). Its injection-recovery re-validation after the September 2026 fixes is still pending, so it sits **outside the 1.x API-stability promise** and may change incompatibly in a 1.x release. See the [NUFFT-LRT page](https://johnh2o2.github.io/cuvarbase/nufft_lrt.html) of the documentation.
 
 ### Usability & infrastructure
 - `import cuvarbase` no longer requires a GPU or creates a CUDA context; CPU-only helpers work on laptops.
@@ -114,6 +117,25 @@ Beyond the highlights above (BJD epoch handling, nondeterministic degenerate-box
 - PDM CPU reference functions no longer mutate caller arrays in place.
 - Wheels/sdists now include all subpackages; editable installs resolve kernel files correctly.
 
+## September 2026 audit fixes
+
+A read-only algorithm audit of the release candidate (September 2026, on-device) found a set of default-path defects that changed *results*, and a performance pass followed. Every item is reproduced on device before its fix and carries a regression test; the full per-item list with root causes is in the 1.0.0 section of [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/CHANGELOG.rst). The condensed list:
+
+**Correctness (result-changing):**
+- **Input validation (BREAKING)** — every entry point rejects non-finite `t`/`y`/`dy`, `dy <= 0`, mismatched lengths, too-short light curves, bad frequency grids and inverted duration bounds with `ValueError` on the host, before any GPU work (see the migration table below). Previously a NaN gave a finite-but-wrong periodogram, and a bad `q` bound crashed the kernel and destroyed the process's CUDA context.
+- **BLS**: 64-bit thread indexing in the phase-fold kernels (`eebls_gpu`/`eebls_transit` on > 2³¹ threads silently returned zeros, powers above 1 and the wrong peak); per-frequency `qmin`/`qmax` arrays are now honoured per frequency by `eebls_gpu` (they collapsed to one grid-wide window) and its bin buffers are sized correctly for Keplerian grids (out-of-bounds writes); the fast kernels evaluate the widest box allowed by `qmax` (the loop stopped one rung short); the sparse path centres the flux in float64; `eebls_transit` uses the fused fast kernel above the sparse threshold and recovers solutions at the top peaks; the Keplerian grid recursion of `transit_autofreq`/`keplerian_freq_grid` is solved with numpy — grids change at float64 rounding only.
+- **TLS**: the default duration window is the per-period Keplerian one (the old constant `[0.005, 0.15]` window excluded physical durations beyond P ≈ 60 d for a Sun-like star); `'T0'` is the absolute mid-transit time of the first transit at or after `min(t)` on every path, with `'t0_phase'` alongside; SDE/SNR use the reference package's definitions; the fixed SDE→FAP table is gone (opt-in null bootstrap instead); period grids in any order; flat light curves return SDE = 0.
+- **Lomb–Scargle / NFFT**: the w-spectrum was gridded with the psi tables of the differently sized yw grid; `floorf()` on the double-precision grid coordinate; aliased garbage for bands that do not start near zero (grid sizing); wrong NFFT magnitudes for absolute-time input; `nharmonics > 1` and `amplitude_prior` ignored on some paths; non-uniform frequency grids are now rejected instead of silently evaluated on the implied uniform grid; stale results after `preallocate()`; `only_return_best_freqs=True` returns the FAP itself (it returned `1 - FAP`); cuFINUFFT in double precision.
+- **Conditional entropy**: the brightest point fell into an out-of-range magnitude bin (clamped now); weighted-CE `max_phi` truncation; `use_double=True, use_fast=True` crash; constructor `balanced_magbins`/`widen_mag_range` ignored; `preallocate()` never uploaded the grid; recompilation on every call; histogram accumulation across `set_data=False` calls; float32 frequency arrays rejected.
+- **PDM**: out-of-bounds bin read in the `binned_step` kernel; the deprecated 4-tuple format returned a flat spectrum for unnormalized weights.
+- **NUFFT-LRT**: BJD-scale times; `epochs=None` is a real epoch search (returns a tuple — breaking); the sequential detector fits an intercept; Detector A estimates its PSD from the basis-projected residual; NFFT `sigma = 4`; PSD validation and flooring; singular priors handled in the correct limit.
+
+**Performance (measured on one shared NVIDIA A40 — read every ratio as indicative of that machine, not as a portable number; bit-neutral unless the CHANGELOG says otherwise):**
+- **BLS**: `eebls_gpu`, `eebls_gpu_custom`, `hone_solution` and `sparse_bls_gpu` take their kernels from the LRU cache instead of compiling per call; the adaptive/optimized paths run the fused-`noverlap` kernel; no per-call `BLSMemory` on the single-call paths; vectorized solution re-phasing and `einsum` prologues.
+- **Lomb–Scargle**: `batched_run_const_nfreq` reuses its memory set, cuFFT plans and pinned buffers across calls; the multiharmonic host solve is one stacked `numpy.linalg.solve`; numpy reductions on the host path (2.0× per light curve at N = 65,000).
+- **Conditional entropy / PDM**: `use_fast=True` sizes its grid from the device (it is now the faster single-precision path: 1.2×/1.9×/8× at 300/2,000/10,000 observations × 10⁵ frequencies) and no longer allocates the global histogram it never read; PDM `run()` reuses its device buffers across same-shape calls.
+- **TLS**: `tls_transit` builds only the duration bounds; `tls_search_batch` computes its statistics sequentially (the thread pool was GIL-bound and slower); memoized template tables — combined 1.44–1.62× for `tls_transit` and 2.41× for a 64-light-curve `tls_search_batch`.
+
 ## Breaking changes & migration
 
 | Change | Migration |
@@ -125,7 +147,7 @@ Beyond the highlights above (BJD epoch handling, nondeterministic degenerate-box
 | **Truly async results**: reading `run()` outputs before synchronizing is now a race | Call `proc.finish()` first (batched entry points synchronize internally); `pinned=False` opts out. |
 | **`import cuvarbase` no longer creates a CUDA context** | Call `cuvarbase.base.ensure_context()` (or any GPU function) before raw pycuda work; set `CUDA_DEVICE` before first GPU use, not import. |
 | **`sparse_bls_cpu`/`sparse_bls_gpu`: args after `freqs` are keyword-only**; q bounds validated | Pass `qmin=`, `qmax=`, etc. by keyword. Legacy positional calls now fail loudly instead of silently returning zeros. |
-| `batched_run_const_nfreq` default `batch_size` 10 → 1 (measured faster) | Pass `batch_size=10` to restore old chunking. |
+| `LombScargleAsyncProcess.batched_run_const_nfreq` default `batch_size` 10 → 1 (measured faster; the PDM and CE `batched_run_const_nfreq` keep 10) | Pass `batch_size=10` to restore old Lomb–Scargle chunking. |
 | PDM legacy `(t, y, w, freqs)` input deprecated (still works, warns) | Move to `(t, y, err)` tuples + `freqs=`. |
 | `BLSMemory.allocate_pinned_arrays` → `allocate_host_arrays` (alias warns) | Rename the call. |
 | scikit-cuda is no longer installed transitively | `pip install scikit-cuda` yourself if *your* code needs it. |
@@ -133,7 +155,7 @@ Beyond the highlights above (BJD epoch handling, nondeterministic degenerate-box
 
 ## Packaging
 
-- `pyproject.toml` (PEP 517/621), Python 3.9–3.12 classifiers, dynamic versioning.
+- `pyproject.toml` (PEP 517/621), Python 3.9–3.14 classifiers, dynamic versioning.
 - Dependencies removed: `scikit-cuda`, `future`. Pins: `pycuda>=2017.1.1,!=2024.1.2`.
 - New optional extras: `cuvarbase[cufinufft]`; batman-package enables limb-darkened TLS templates.
 - GitHub Actions CI (CPU suite, packaging smoke test, flake8). The repository's Dockerfile was removed: it never installed cuvarbase (a rebuilt image is queued for 1.1).
@@ -144,7 +166,7 @@ Major community contributions to this release from **Attila Bódi (@astrobatty)*
 
 ## Known limitations
 
-- NUFFT-LRT is experimental (import-time `UserWarning`); do not use it for publishable science yet.
+- NUFFT-LRT is experimental (`UserWarning` at first construction; not in the top-level namespace; outside the 1.x stability promise; injection-recovery re-validation pending); do not use it for publishable science yet.
 - No benchmark against CETRA (PLATO's GPU transit code, a different algorithm family) exists yet; the GPU-vs-GPU transit-search comparison published here covers GTLS.
 - float32 NFFT has a genuine ~1e-3 accuracy floor from single-precision trig on large phases; pass `use_double=True` for tight tolerances.
 - Conditional Entropy is maintained but not actively developed.
