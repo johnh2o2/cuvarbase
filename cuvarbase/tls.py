@@ -1201,7 +1201,7 @@ def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
     See Also
     --------
     tls_search_gpu : Lower-level GPU function
-    tls_grids.duration_grid_keplerian : Generate Keplerian duration grids
+    tls_grids.duration_window : Per-period duration bounds (used here)
     tls_grids.q_transit : Calculate Keplerian fractional duration
     """
     check_lightcurve(t, y, dy, min_n=_TLS_MIN_NDATA, name='tls_transit')
@@ -1214,15 +1214,20 @@ def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
         n_transits_min=n_transits_min
     )
 
-    # Generate Keplerian duration constraints
-    durations, dur_counts, q_values = tls_grids.duration_grid_keplerian(
+    # Per-period Keplerian duration bounds. These are the same bounds
+    # duration_grid_keplerian returns as ``q_values * (qmin_fac,
+    # qmax_fac)`` -- tls_grids.duration_window is the shared window
+    # helper every other TLS entry point uses -- but without building
+    # the (nperiods x n_durations) duration table, which nothing
+    # downstream reads: tls_search_gpu takes only qmin/qmax and
+    # n_durations. Measured on an A40 (shared), old and new bodies
+    # interleaved in one process: tls_transit 4.51 -> 3.71 ms at 2,486
+    # trial periods, 43.01 -> 24.70 at 42,001, 219.49 -> 159.75 at
+    # 171,688 (the table alone costs 0.80 / 13.92 / 58.95 ms).
+    qmin, qmax = tls_grids.duration_window(
         periods, R_star=R_star, M_star=M_star, R_planet=R_planet,
-        qmin_fac=qmin_fac, qmax_fac=qmax_fac, n_durations=n_durations
+        qmin_fac=qmin_fac, qmax_fac=qmax_fac
     )
-
-    # Calculate qmin and qmax arrays
-    qmin = q_values * qmin_fac
-    qmax = q_values * qmax_fac
 
     # Run TLS search with Keplerian constraints
     results = tls_search_gpu(
