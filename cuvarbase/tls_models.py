@@ -12,7 +12,9 @@ References
   Searches", ApJ 580, L171
 """
 
+import threading
 import warnings
+from collections import OrderedDict
 
 import numpy as np
 try:
@@ -22,10 +24,40 @@ except ImportError:
     BATMAN_AVAILABLE = False
     warnings.warn("batman package not available. Install with: pip install batman-package")
 
+# Set by _warn_template_fallback so generate_template_tables can tell a
+# batman template from a degraded trapezoid one and refuse to cache the
+# degraded result (the warning must keep firing on every call).
+# Thread-local: two concurrent searches must not clear each other's flag.
+_fallback_state = threading.local()
+
+# LRU of template tables keyed on everything that defines them. The
+# batman reference model behind them costs about 0.5-1.5 ms per call
+# and is rebuilt identically on every single-lightcurve search.
+_TEMPLATE_TABLE_CACHE_MAX = 8
+_template_table_cache = OrderedDict()
+_template_table_lock = threading.Lock()
+
 
 def _warn_template_fallback(reason):
+    _fallback_state.used = True
     warnings.warn("batman transit template generation failed (%s); "
                   "falling back to a trapezoid template" % (reason,))
+
+
+def _template_table_key(n_table, limb_dark, u, oversample):
+    """Hashable key, or None when the arguments cannot form one."""
+    try:
+        u_key = tuple(float(v) for v in np.atleast_1d(u).ravel())
+        return (int(n_table), str(limb_dark), u_key, int(oversample),
+                bool(BATMAN_AVAILABLE))
+    except (TypeError, ValueError):
+        return None
+
+
+def _clear_template_table_cache():
+    """Drop the memoized template tables (tests; parameter sweeps)."""
+    with _template_table_lock:
+        _template_table_cache.clear()
 
 
 def create_reference_transit(n_samples=1000, limb_dark='quadratic',
@@ -401,11 +433,29 @@ def generate_template_tables(n_table=1024, limb_dark='quadratic',
     Returns
     -------
     T, S1, S2 : ndarray
-        Float32 arrays of shape (n_table + 1,).
+        Float32 arrays of shape (n_table + 1,). Freshly-allocated,
+        writable copies: the tables are memoized on
+        ``(n_table, limb_dark, u, oversample)`` (a small LRU) because
+        the batman reference model behind them is rebuilt identically
+        on every search, but each call still returns its own arrays.
+        A trapezoid fallback (batman missing or failing) is never
+        cached, so its warning keeps firing.
     """
+    key = _template_table_key(n_table, limb_dark, u, oversample)
+    if key is not None:
+        with _template_table_lock:
+            hit = _template_table_cache.get(key)
+            if hit is not None:
+                _template_table_cache.move_to_end(key)
+        if hit is not None:
+            # fresh copies: the caller owns (and may write to) these
+            return tuple(a.copy() for a in hit)
+
     n_fine = n_table * oversample
+    _fallback_state.used = False
     fine = generate_transit_template(n_template=n_fine + 1,
                                      limb_dark=limb_dark, u=u)
+    degraded = getattr(_fallback_state, 'used', False)
     fine = np.asarray(fine, dtype=np.float64)
     dx = 2.0 / n_fine
 
@@ -419,9 +469,18 @@ def generate_template_tables(n_table=1024, limb_dark='quadratic',
     S2 = running_integral(fine ** 2)
     T = fine[::oversample]
 
-    return (T.astype(np.float32),
-            S1.astype(np.float32),
-            S2.astype(np.float32))
+    tables = (T.astype(np.float32),
+              S1.astype(np.float32),
+              S2.astype(np.float32))
+    # Never cache a trapezoid fallback: generate_transit_template warns
+    # once per failed call and that warning must not be memoized away.
+    if key is not None and not degraded:
+        with _template_table_lock:
+            _template_table_cache[key] = tuple(a.copy() for a in tables)
+            _template_table_cache.move_to_end(key)
+            while len(_template_table_cache) > _TEMPLATE_TABLE_CACHE_MAX:
+                _template_table_cache.popitem(last=False)
+    return tables
 
 
 def _trapezoid_template(n_template=1000, ingress_fraction=0.1):
