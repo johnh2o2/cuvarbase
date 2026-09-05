@@ -1604,6 +1604,46 @@ class TestBatchedMemoryReuse(object):
         proc.batched_run_const_nfreq(d, freqs=freqs)
         assert sum(built) == 0                 # the plain cache survived
 
+    @pytest.mark.parametrize("kw", ['sigma', 'm', 'stream'])
+    def test_constructor_positional_kwargs_raise_cold_and_warm(self, kw):
+        """``LombScargleMemory`` takes sigma/m/stream positionally, so
+        passing them as keywords has always raised TypeError. They must
+        opt out of the memory cache too: on a cache hit the constructor
+        is never called, so the call would otherwise succeed silently
+        and IGNORE the keyword, returning the process-default result."""
+        freqs = 0.002 * (30 + np.arange(1500))
+        d = [self._lc(N=400)]
+        value = {'sigma': 4, 'm': 10, 'stream': None}[kw]
+        proc = LombScargleAsyncProcess()
+
+        # cold cache
+        with pytest.raises(TypeError):
+            proc.batched_run_const_nfreq(d, freqs=freqs, **{kw: value})
+
+        # warm the cache with a plain call, then the same request must
+        # still raise rather than quietly returning the default
+        proc.batched_run_const_nfreq(d, freqs=freqs)
+        assert proc._batch_memory is not None
+        with pytest.raises(TypeError):
+            proc.batched_run_const_nfreq(d, freqs=freqs, **{kw: value})
+
+    def test_grid_validation_cannot_be_switched_off_from_run(self):
+        """``_grid_prechecked`` is private to the batched path and may
+        suppress only the O(nf) uniformity check. ``check_freqs`` (the
+        defect-23 guard against non-finite / non-positive grids) runs
+        unconditionally, so no keyword reachable from a public entry
+        point can turn it off."""
+        proc = LombScargleAsyncProcess()
+        d = [self._lc(N=400)]
+        bad = 0.002 * (30 + np.arange(1500))
+        bad[7] = np.nan
+        with pytest.raises(ValueError):
+            proc.run(d, freqs=[bad], _grid_prechecked=True)
+
+        negative = np.linspace(-1.0, 5.0, 500)
+        with pytest.raises(ValueError):
+            proc.run(d, freqs=[negative], _grid_prechecked=True)
+
     def test_grid_validation_still_rejects_a_bad_grid(self):
         """The batched path validates the shared grid once and tells
         run() to skip the repeat; the error must survive."""

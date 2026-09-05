@@ -538,7 +538,14 @@ _LS_MEMORY_OVERRIDE_KWARGS = frozenset((
     't_g', 'yw_g', 'w_g', 'lsp_g', 'lsp_c', 't', 'yw', 'w',
     'nfft_mem_yw', 'nfft_mem_w', 'n0', 'nf', 'k0',
     'buffered_transfer', 'n0_buffer',
-    'y_g', 'ghat_g', 'ghat_c', 'q1', 'q2', 'q3', 'cu_plan'))
+    'y_g', 'ghat_g', 'ghat_c', 'q1', 'q2', 'q3', 'cu_plan',
+    # LombScargleMemory takes these POSITIONALLY, so passing them as
+    # keywords has always raised TypeError("got multiple values for
+    # argument ..."). They must opt out of the cache too: on a cache
+    # hit the constructor is never called, so the call would silently
+    # succeed and silently ignore the keyword, returning the
+    # process-default result. Loud error beats wrong configuration.
+    'sigma', 'm', 'stream'))
 
 
 def _amplitude_prior_key(prior):
@@ -1280,8 +1287,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         """
 
         # Private: set by batched_run_const_nfreq, which has already
-        # run check_freqs/check_k0 on the single shared grid. Popped
-        # here so it never reaches the memory constructors below.
+        # run check_freqs/check_k0 on the single shared grid it shares
+        # across every light curve. Popped here so it never reaches the
+        # memory constructors below. It suppresses only the O(nf)
+        # uniformity/first-mode check: check_freqs itself always runs,
+        # so the Phase 1 validation (defect 23) cannot be switched off
+        # from a public entry point, however this keyword is reached.
         grid_prechecked = kwargs.pop('_grid_prechecked', False)
 
         # Validate before any device work (kernel compile included):
@@ -1298,7 +1309,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                              name='LombScargleAsyncProcess.run '
                                   'lightcurve %d' % i)
 
-        if freqs is not None and not grid_prechecked:
+        # check_freqs is O(nf) but cheap and is the Phase 1 guard
+        # against non-finite / non-positive grids: run it ALWAYS, so
+        # no keyword can turn defect 23's validation off.
+        if freqs is not None:
             for frq in (freqs if isinstance(freqs, list) else [freqs]):
                 check_freqs(frq, name='LombScargleAsyncProcess.run')
 
