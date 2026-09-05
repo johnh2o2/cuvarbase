@@ -52,7 +52,10 @@ python3 scripts/benchmark_new_features.py --output benchmarks/results/benchmark_
 | `../benchmarks/bench_bls_survey.py`, `profile_bls_survey.py`, `sweep_bls_attrib.py`, `compare_parity.py` | `benchmarks/results/bls_survey_speed_jul2026/` |
 
 `nufft_lrt_validation.py` / `summarize_lrt_validation.py` belong to the
-experimental NUFFT-LRT detector and have no committed run yet.
+experimental NUFFT-LRT detector; the Sep-2026 audit run is
+`analysis/audit-sep2026/campaign/nufft_lrt_validation_sep2026.json` (see
+`analysis/audit-sep2026/ALGORITHM_AUDIT.md` section 6.1); re-validation is
+pending Phase 4.
 
 ### Release tooling
 
