@@ -3291,3 +3291,109 @@ class TestNoBlasThreadpoolInPrologues(object):
         p_gpu, s_gpu = sparse_bls_gpu(t, y, dy, freqs)
         assert int(np.argmax(p_cpu)) == int(np.argmax(p_gpu))
         assert_allclose(p_cpu, p_gpu, rtol=1e-4, atol=1e-6)
+
+
+class TestPerFrequencyHostWork(object):
+    """Sep 2026 audit, ids 136/137 (plan item BLS-9).
+
+    Three per-call host costs that were pure overhead:
+    the per-frequency solution re-phasing comprehension (39 ms at 60,121
+    frequencies, 74 ms at 117,403 -- more than the GPU work it followed),
+    ``_chi2_null``'s second full pass over the light curve in
+    ``BLSMemory.setdata`` when ``chi2_0`` follows from ``yy``, and
+    ``conflict_scatter_perm`` rebuilt on every ``setdata`` although it is
+    a pure function of ``ndata``.
+    """
+
+    @staticmethod
+    def _lc(ndata=300, seed=5):
+        rand = np.random.RandomState(seed)
+        t = np.sort(365. * rand.rand(ndata)) + 2455197.5
+        y = 1. + 0.01 * rand.randn(ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    @pytest.mark.parametrize("freqs_kind",
+                             ['float64', 'float32', 'list', 'np_scalars'])
+    def test_rephasing_matches_the_per_frequency_loop(self, freqs_kind):
+        from ..bls import _rephase_solutions
+        rand = np.random.RandomState(4)
+        n = 500
+        q = rand.rand(n).astype(np.float32)
+        phi = rand.rand(n).astype(np.float32)
+        base = np.linspace(0.01, 2.0, n)
+        freqs = {'float64': base,
+                 'float32': base.astype(np.float32),
+                 'list': [float(x) for x in base],
+                 'np_scalars': list(base)}[freqs_kind]
+        # epoch is np.float64 everywhere in the package (subtract_epoch
+        # returns np.floor(np.min(t))), which is what keeps the
+        # expression in float64 for a float32 grid.
+        epoch = np.float64(2455197.0)
+
+        old = [(a, (b + (epoch * f)) % 1.0)
+               for (a, b), f in zip(list(zip(q, phi)), freqs)]
+        new = _rephase_solutions(q, phi, epoch, freqs)
+        assert len(new) == len(old)
+        assert np.array_equal(np.asarray(old, dtype=np.float64),
+                              np.asarray(new, dtype=np.float64))
+        # and it is the exact float64 answer
+        exact = (phi.astype(np.float64)
+                 + epoch * np.asarray(freqs, dtype=np.float64)) % 1.0
+        assert np.array_equal(np.array([x[1] for x in new]), exact)
+
+    def test_setdata_chi2_0_matches_the_two_pass_form(self):
+        from ..bls import BLSMemory, _chi2_null
+        freqs = np.linspace(0.95, 1.05, 64)
+        for ndata in (150, 2000):
+            t, y, dy = self._lc(ndata=ndata)
+            mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                     freqs=freqs, transfer=True)
+            # chi2_0 = yy * sum(dy**-2): the same weighted sum of
+            # squares with un-normalized weights
+            assert_allclose(mem.chi2_0, _chi2_null(y, dy), rtol=1e-12)
+            assert_allclose(mem.chi2_0,
+                            mem.yy * np.sum(np.power(dy, -2.)), rtol=1e-14)
+
+    def test_setdata_chi2_0_with_float32_inputs(self):
+        # float32 y/dy make yy (and hence chi2_0) a float32-accumulated
+        # sum where _chi2_null forced float64; the difference is ~1
+        # float32 ulp, well inside the data's own precision.
+        from ..bls import BLSMemory, _chi2_null
+        freqs = np.linspace(0.95, 1.05, 64)
+        t, y, dy = self._lc(ndata=2000)
+        y = y.astype(np.float32)
+        dy = dy.astype(np.float32)
+        mem = BLSMemory.fromdata(t, y, dy, qmin=1e-2, qmax=0.5,
+                                 freqs=freqs, transfer=True)
+        assert_allclose(mem.chi2_0, _chi2_null(y, dy), rtol=1e-5)
+
+    def test_scatter_perm_cache(self):
+        from ..bls import _cached_conflict_scatter_perm
+        from ..utils import conflict_scatter_perm
+        for n in (63, 64, 150, 2000):
+            cached = _cached_conflict_scatter_perm(n)
+            direct = conflict_scatter_perm(n)
+            if direct is None:
+                assert cached is None
+                continue
+            assert np.array_equal(cached, direct)
+            # same object on the second call, and read-only so a caller
+            # cannot corrupt the shared permutation
+            assert _cached_conflict_scatter_perm(n) is cached
+            assert not cached.flags.writeable
+
+    def test_conventions_still_consistent(self):
+        # chi2_0 feeds the 'snr'/'loglik' conversions
+        t, y, dy = self._lc(ndata=400)
+        freqs = np.linspace(0.95, 1.05, 120)
+        p = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1)
+        p_snr = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                               convention='snr')
+        p_ll = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.1,
+                              convention='loglik')
+        w = np.power(dy, -2.)
+        ybar = float(np.einsum('i,i->', w, y)) / np.sum(w)
+        chi2_0 = float(np.einsum('i,i->', w, (np.asarray(y) - ybar) ** 2))
+        assert_allclose(p_snr, np.sqrt(chi2_0 * p), rtol=1e-5, atol=1e-6)
+        assert_allclose(p_ll, 0.5 * chi2_0 * p, rtol=1e-5, atol=1e-6)
