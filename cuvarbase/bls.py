@@ -542,6 +542,62 @@ def compile_bls(block_size=_default_block_size,
     return functions
 
 
+def _rephase_solutions(best_q, best_phi, epoch, freqs):
+    """``(q, phi)`` pairs with the transit phases moved back to the
+    caller's original timescale.
+
+    The kernels report ``phi`` relative to the subtracted epoch; the
+    public convention is ``(t * f) mod 1`` on the input times, so
+    ``phi -> (phi + epoch * f) mod 1``.  Vectorized: the per-frequency
+    Python comprehension this replaces cost 39 ms at 60,121 frequencies
+    and 74 ms at 117,403 -- more than the GPU work it followed (Sep 2026
+    audit, id 136).
+
+    The arithmetic is float64 throughout and bit-identical to the
+    comprehension it replaces: ``epoch`` comes from
+    :func:`~cuvarbase.utils.subtract_epoch` as a ``np.float64``, so
+    ``epoch * f`` was already promoted to float64 even for the float32
+    grids :func:`~cuvarbase.bls_frequencies.keplerian_freq_grid`
+    returns.  The explicit cast keeps it that way if a caller ever
+    supplies a plain Python ``epoch`` (NumPy 2's weak-scalar promotion
+    would evaluate the whole expression in float32, which destroys the
+    phase at BJD-scale epochs).
+    """
+    phi = (np.asarray(best_phi, dtype=np.float64)
+           + epoch * np.asarray(freqs, dtype=np.float64)) % 1.0
+    return list(zip(best_q, phi))
+
+
+# conflict_scatter_perm(n) is a pure function of n (a golden-ratio
+# stride), and setdata used to rebuild it on every call: 0.09 ms of a
+# 1.15 ms TESS-scale setdata, more at Kepler lengths.  Small: one int64
+# array per distinct ndata, evicted oldest-first.
+_SCATTER_PERM_CACHE_MAX_SIZE = 8
+_scatter_perm_cache = OrderedDict()
+_scatter_perm_lock = threading.Lock()
+
+
+def _cached_conflict_scatter_perm(n):
+    """:func:`cuvarbase.utils.conflict_scatter_perm` memoized on ``n``.
+
+    The returned array is shared between callers and must be treated as
+    read-only (it is only ever used as a fancy index)."""
+    n = int(n)
+    with _scatter_perm_lock:
+        if n in _scatter_perm_cache:
+            _scatter_perm_cache.move_to_end(n)
+            return _scatter_perm_cache[n]
+    perm = conflict_scatter_perm(n)
+    if perm is not None:
+        perm.flags.writeable = False
+    with _scatter_perm_lock:
+        _scatter_perm_cache[n] = perm
+        _scatter_perm_cache.move_to_end(n)
+        if len(_scatter_perm_cache) > _SCATTER_PERM_CACHE_MAX_SIZE:
+            _scatter_perm_cache.popitem(last=False)
+    return perm
+
+
 class BLSMemory:
     def __init__(self, max_ndata, max_nfreqs, stream=None, **kwargs):
         # Constructing GPU memory is a "first GPU use" -- retain the CUDA
@@ -683,7 +739,10 @@ class BLSMemory:
         t, self.epoch = subtract_epoch(t)
 
         w = np.power(dy, -2)
-        w /= np.sum(w)
+        # kept before the in-place normalization: chi2_0 below is the
+        # un-normalized weighted sum of squares, i.e. yy * sum(dy**-2)
+        wsum = np.sum(w)
+        w /= wsum
 
         self.ybar = np.sum(y * w)
         # einsum, not np.dot: BLAS ddot spawns a full threadpool for
@@ -695,8 +754,13 @@ class BLSMemory:
                                   np.power(y - self.ybar, 2)))
         # chi2 of the constant model for the data actually loaded here;
         # convert_bls_power scalings must use this rather than whatever
-        # y/dy a later (memory-reuse) call happens to pass.
-        self.chi2_0 = _chi2_null(y, dy)
+        # y/dy a later (memory-reuse) call happens to pass.  Derived
+        # from yy instead of a second pass over the light curve
+        # (_chi2_null): chi2_0 = sum_i w_i (y_i - ybar)^2 with the raw
+        # weights, and yy is the same sum with the normalized ones, so
+        # chi2_0 = yy * sum(dy**-2) to float64 rounding (Sep 2026
+        # audit, id 137).
+        self.chi2_0 = float(self.yy * np.float64(wsum))
 
         u = (y - self.ybar) * w
 
@@ -706,7 +770,7 @@ class BLSMemory:
         # atomics (3.1x on a TESS-like cadence). Binning is a sum, so
         # the order is semantically free. See
         # utils.conflict_scatter_perm.
-        perm = conflict_scatter_perm(len(t))
+        perm = _cached_conflict_scatter_perm(len(t))
         if perm is None:
             self.t[:len(t)] = t.astype(self.rtype)[:]
             self.w[:len(t)] = np.asarray(w).astype(self.rtype)[:]
@@ -2113,9 +2177,9 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     best_q = bls_best_q.get()
     best_phi = bls_best_phi.get()
 
-    qphi_sols = list(zip(best_q, best_phi))
-    # Adjust phases to original timescale
-    qphi_sols = [(q, (phi + (epoch * freq)) % 1.0) for (q, phi), freq in zip(qphi_sols, freqs)]
+    # Adjust phases to original timescale (vectorized; see
+    # _rephase_solutions)
+    qphi_sols = _rephase_solutions(best_q, best_phi, epoch, freqs)
 
     return (convert_bls_power(bls_g.get() / YY, y, dy,
                               convention=convention),
@@ -2541,11 +2605,10 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
             best_q[i_freq] = q_best
             best_phi[i_freq] = phi_s[ii]
 
-    solutions = list(zip(best_q, best_phi))
     # Adjust phases to original timescale (float64 frequencies: the
-    # inverse conversion in single_bls uses the caller's float64 freq)
-    solutions = [(q, (phi + (epoch * freq)) % 1.0)
-                 for (q, phi), freq in zip(solutions, freqs64)]
+    # inverse conversion in single_bls uses the caller's float64 freq).
+    # Vectorized; see _rephase_solutions.
+    solutions = _rephase_solutions(best_q, best_phi, epoch, freqs64)
 
     return (convert_bls_power(bls_powers, y_orig, dy_orig,
                               convention=convention),
@@ -2776,11 +2839,10 @@ def sparse_bls_gpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     best_q = best_q_g.get()
     best_phi = best_phi_g.get()
 
-    solutions = list(zip(best_q, best_phi))
     # Adjust phases to original timescale (float64 frequencies: the
-    # inverse conversion in single_bls uses the caller's float64 freq)
-    solutions = [(q, (phi + (epoch * freq)) % 1.0)
-                 for (q, phi), freq in zip(solutions, freqs64)]
+    # inverse conversion in single_bls uses the caller's float64 freq).
+    # Vectorized; see _rephase_solutions.
+    solutions = _rephase_solutions(best_q, best_phi, epoch, freqs64)
 
     return (convert_bls_power(bls_powers, y_orig, dy_orig,
                               convention=convention),
