@@ -34,26 +34,6 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # ---------------------------------------------------------------------------
-# numpy 2.x compatibility for scikit-cuda
-# ---------------------------------------------------------------------------
-if not hasattr(np, 'float'):
-    np.float = np.float64
-if not hasattr(np, 'int'):
-    np.int = np.int64
-if not hasattr(np, 'complex'):
-    np.complex = np.complex128
-if not hasattr(np, 'typeDict'):
-    np.typeDict = np.sctypeDict
-if not hasattr(np, 'sctypes'):
-    np.sctypes = {
-        'int': [np.int8, np.int16, np.int32, np.int64],
-        'uint': [np.uint8, np.uint16, np.uint32, np.uint64],
-        'float': [np.float16, np.float32, np.float64],
-        'complex': [np.complex64, np.complex128],
-        'others': [bool, object, bytes, str, np.void],
-    }
-
-# ---------------------------------------------------------------------------
 # GPU imports
 # ---------------------------------------------------------------------------
 try:
