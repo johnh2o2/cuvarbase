@@ -39,6 +39,12 @@ except ImportError:
 _LS_MIN_NDATA = 4
 
 
+# Frequencies per stacked multiharmonic solve in
+# :func:`_mh_power_from_spectra` (bounds the (chunk, 2H, 2H)
+# temporary; results do not depend on it).
+_MH_SOLVE_CHUNK = 1 << 16
+
+
 def _grid_spacing(freqs):
     """``(f, df)``: the frequency grid as a 1-d float64 array and its
     spacing estimated from the full span, ``(f[-1] - f[0]) / (nf - 1)``.
@@ -412,6 +418,13 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
     tested :func:`_mh_assemble_from_centered` + :func:`mhgls_from_sums`
     (the small 2H x 2H solve runs in float64 on the host -- cheap, and
     numerically safer than a float32 in-kernel solve).
+
+    The systems for all ``nf`` frequencies are assembled and solved as
+    one stacked ``(nf, 2H, 2H)`` problem (in chunks of
+    ``_MH_SOLVE_CHUNK``) rather than one at a time in Python; the
+    arithmetic per frequency is the same as
+    ``mhgls_from_sums(add_regularization(_mh_assemble_from_centered(...)))``
+    and agrees with it to ~1e-16 relative.
     """
     H = int(nharms)
     i = np.arange(nf)
@@ -436,13 +449,81 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
         YC[h - 1] = vals.real
         YS[h - 1] = vals.imag
 
+    # The 2H x 2H systems are assembled and solved for all frequencies
+    # at once (np.linalg.solve broadcasts over a leading axis, calling
+    # the same LAPACK dgesv per matrix): the per-frequency Python loop
+    # this replaces cost 60-90 us per frequency (1.6 s at nf = 20,000,
+    # H = 2). Chunked so the (nf, 2H, 2H) stack stays small.
+    hs = np.arange(1, H + 1)
+    n_idx = hs[:, np.newaxis]
+    m_idx = hs[np.newaxis, :]
+    isum = n_idx + m_idx
+    idiff = np.abs(n_idx - m_idx)
+    # sgn(0) = 1 (see _mh_assemble_from_centered)
+    sgn = np.where(n_idx == m_idx, 1.0,
+                   np.sign(n_idx - m_idx)).astype(np.float64)
+
+    # regularization: a ridge 1/prior**2 on the diagonal of CC and SS
+    # and a shift of YC/YS toward the prior centroid (add_regularization)
+    D = cn0 = sn0 = None
+    if reg_kwargs:
+        priors = reg_kwargs.get('amplitude_priors', None)
+        if priors is not None:
+            D = np.ones(H, dtype=np.float64) * np.power(priors, -2)
+            c0 = reg_kwargs.get('cn0', None)
+            s0 = reg_kwargs.get('sn0', None)
+            cn0 = np.zeros(H) if c0 is None else np.asarray(c0, np.float64)
+            sn0 = np.zeros(H) if s0 is None else np.asarray(s0, np.float64)
+
     power = np.empty(nf, dtype=np.float64)
-    for j in range(nf):
-        sums = _mh_assemble_from_centered(cm[:, j], sm[:, j],
-                                          YC[:, j], YS[:, j], H)
-        if reg_kwargs:
-            sums = add_regularization(sums, **reg_kwargs)
-        power[j] = mhgls_from_sums(sums, YY, 0.0)
+    chunk = max(1, int(_MH_SOLVE_CHUNK))
+    for start in range(0, nf, chunk):
+        sl = slice(start, min(start + chunk, nf))
+        c = cm[:, sl]
+        s = sm[:, sl]
+        nc = c.shape[1]
+
+        C = c[1:H + 1]
+        S = s[1:H + 1]
+
+        cc = 0.5 * (c[isum] + c[idiff])
+        cs = 0.5 * (s[isum] - sgn[:, :, np.newaxis] * s[idiff])
+        ss = 0.5 * (c[idiff] - c[isum])
+
+        CC = cc - C[:, np.newaxis, :] * C[np.newaxis, :, :]
+        CS = cs - C[:, np.newaxis, :] * S[np.newaxis, :, :]
+        SS = ss - S[:, np.newaxis, :] * S[np.newaxis, :, :]
+
+        YCc = YC[:, sl]
+        YSc = YS[:, sl]
+        if D is not None:
+            dg = np.diag(D)[:, :, np.newaxis]
+            CC = CC + dg
+            SS = SS + dg
+            YCc = YCc + (D * cn0)[:, np.newaxis]
+            YSc = YSc + (D * sn0)[:, np.newaxis]
+
+        A = np.empty((nc, 2 * H, 2 * H), dtype=np.float64)
+        A[:, :H, :H] = CC.transpose(2, 0, 1)
+        A[:, :H, H:] = CS.transpose(2, 0, 1)
+        A[:, H:, :H] = CS.transpose(2, 1, 0)
+        A[:, H:, H:] = SS.transpose(2, 0, 1)
+
+        b = np.empty((nc, 2 * H, 1), dtype=np.float64)
+        b[:, :H, 0] = YCc.T
+        b[:, H:, 0] = YSc.T
+
+        theta = np.linalg.solve(A, b)[:, :, 0]
+        cn = theta[:, :H]
+        sn = theta[:, H:]
+
+        XX = (cn[:, :, np.newaxis] * cn[:, np.newaxis, :]) * A[:, :H, :H]
+        XX += 2 * (cn[:, :, np.newaxis] * sn[:, np.newaxis, :]) \
+            * A[:, :H, H:]
+        XX += (sn[:, :, np.newaxis] * sn[:, np.newaxis, :]) * A[:, H:, H:]
+
+        YX = 2 * ((cn * YCc.T).sum(axis=1) + (sn * YSc.T).sum(axis=1))
+        power[sl] = (YX - XX.sum(axis=(1, 2))) / YY
     return power
 
 
