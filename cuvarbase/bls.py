@@ -361,6 +361,9 @@ def q_transit(freq, rho=1., **kwargs):
     duration is :math:`q = \\arcsin[(f / f_{\\max,0})^{2/3}] / \\pi`.
     This is Seager & Mallen-Ornelas (2003) eq. (3) reduced to ``b = 0``
     [SM03]_, with ``fmax0`` from :func:`fmax_transit0`.
+
+    Not to be confused with :func:`cuvarbase.tls_grids.q_transit`, the
+    TLS helper that takes a *period* and stellar/planet parameters.
     """
     fmax0 = fmax_transit0(rho=rho)
 

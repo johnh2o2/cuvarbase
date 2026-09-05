@@ -375,9 +375,9 @@ class TLSMemory:
         self.best_depth_g = None
         self.template_g = None
 
-        self.allocate_pinned_arrays()
+        self.allocate_host_arrays()
 
-    def allocate_pinned_arrays(self):
+    def allocate_host_arrays(self):
         """Allocate host transfer buffers (page-locked by default, with a
         page-aligned fallback if pinning fails)."""
         p = self.pinned
@@ -567,7 +567,7 @@ class TLSMemory:
         return mem
 
 
-def tls_search_gpu(t, y, dy, periods=None, durations=None,
+def tls_search_gpu(t, y, dy, periods=None,
                    qmin=None, qmax=None, n_durations=15,
                    R_star=1.0, M_star=1.0,
                    period_min=None, period_max=None, n_transits_min=2,
@@ -606,11 +606,6 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         Custom period grid (any order; sorted internally, and every
         per-period output array is returned in the caller's order). If
         None, generated automatically (Ofir 2014 grid).
-    durations : array_like, optional
-        Unused; accepted for backward compatibility only (a warning is
-        raised if passed). Trial durations are derived from the
-        per-period duration window (see ``qmin``/``qmax`` and
-        ``duration_window``).
     qmin, qmax : array_like, optional
         Explicit per-period fractional duration bounds (aligned with
         ``periods``; give both or neither). When omitted the window is
@@ -771,13 +766,6 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
 
     # Validate limb darkening
     tls_models.validate_limb_darkening_coeffs(u, limb_dark)
-
-    if durations is not None:
-        warnings.warn(
-            "tls_search_gpu: the `durations` parameter has never been "
-            "used by any TLS path and is ignored; trial durations are "
-            "derived from the per-period duration window (qmin/qmax, "
-            "or the Keplerian window built from R_star/M_star)")
 
     # Generate period grid if not provided
     if periods is None:
@@ -1265,13 +1253,6 @@ _TLS_FAST_DEFAULT_BLOCK = 256
 _TLS_FAST_MAX_OUT_FLOATS = 32 * 1024 * 1024   # per output array
 _TLS_FAST_MAX_POINTS = 16 * 1024 * 1024       # concatenated data points
 _TLS_FAST_MAX_GRID_Y = 65535
-
-
-def _next_pow2(n):
-    p = 1
-    while p < n:
-        p *= 2
-    return p
 
 
 def _device_max_shared():

@@ -309,17 +309,6 @@ def _module_reader(fname, cpp_defs=None):
     return txt
 
 
-def tophat_window(t, t0, d):
-    w_window = np.zeros_like(t)
-    w_window[np.absolute(t - t0) < d] += 1.
-    return w_window / np.max(w_window)
-
-
-def gaussian_window(t, t0, d):
-    w_window = np.exp(-0.5 * np.power(t - t0, 2) / (d * d))
-    return w_window / (1. if len(w_window) == 0 else np.max(w_window))
-
-
 def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
                   minimum_frequency=None,
                   maximum_frequency=None, **kwargs):
@@ -380,13 +369,6 @@ def dphase(dt, freq):
     dph = dt * freq - np.floor(dt * freq)
     dph_final = dph if dph < 0.5 else 1 - dph
     return dph_final
-
-
-def get_autofreqs(t, **kwargs):
-    autofreqs_kwargs = {var: value for var, value in kwargs.items()
-                        if var in ['minimum_frequency', 'maximum_frequency',
-                                   'nyquist_factor', 'samples_per_peak']}
-    return autofrequency(t, **autofreqs_kwargs)
 
 
 def normalize_light_curves(data: list[tuple[np.array, ...]]):
