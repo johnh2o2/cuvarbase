@@ -1030,6 +1030,96 @@ class TestTransitDurationWindowBounds:
         assert np.array_equal(captured['qmax'], qmax)
 
 
+class TestTemplateTableMemoization:
+    """Phase 2 TLS-3 (audit section 5, ids 95/152): every
+    single-lightcurve search rebuilt the batman reference model behind
+    the fast kernel's template tables. generate_template_tables now
+    memoizes on (n_table, limb_dark, u, oversample); it still returns
+    fresh, writable arrays, and a degraded (trapezoid-fallback) result
+    is never cached so its warning keeps firing."""
+
+    def setup_method(self):
+        tls_models._clear_template_table_cache()
+
+    teardown_method = setup_method
+
+    def test_repeat_call_is_bitwise_identical(self):
+        first = tls_models.generate_template_tables(n_table=128)
+        second = tls_models.generate_template_tables(n_table=128)
+        for a, b in zip(first, second):
+            assert np.array_equal(a, b)
+            assert a.dtype == np.float32
+
+    def test_returns_independent_arrays(self):
+        """A caller that writes to the tables must not poison the cache."""
+        first = tls_models.generate_template_tables(n_table=128)
+        for a in first:
+            a[:] = -12345.0
+        second = tls_models.generate_template_tables(n_table=128)
+        assert all(a is not b for a, b in zip(first, second))
+        assert not np.any(second[0] == -12345.0)
+        third = tls_models.generate_template_tables(n_table=128)
+        for b, c in zip(second, third):
+            assert np.array_equal(b, c)
+
+    def test_underlying_model_is_built_once_per_key(self):
+        calls = []
+        real = tls_models.generate_transit_template
+
+        def counting(**kw):
+            calls.append(kw.get('n_template'))
+            return real(**kw)
+
+        try:
+            tls_models.generate_transit_template = counting
+            tls_models.generate_template_tables(n_table=128)
+            tls_models.generate_template_tables(n_table=128)
+            tls_models.generate_template_tables(n_table=128)
+            assert len(calls) == 1
+        finally:
+            tls_models.generate_transit_template = real
+
+    def test_cache_does_not_leak_across_parameters(self):
+        base = tls_models.generate_template_tables(n_table=128)
+        variants = [
+            dict(n_table=128, limb_dark='linear', u=[0.5]),
+            dict(n_table=128, u=[0.1, 0.05]),
+            dict(n_table=128, oversample=4),
+            dict(n_table=256),
+        ]
+        for kw in variants:
+            got = tls_models.generate_template_tables(**kw)
+            assert len(got[0]) == kw.get('n_table', 128) + 1
+            if len(got[0]) == len(base[0]):
+                if tls_models.BATMAN_AVAILABLE or 'oversample' in kw:
+                    assert not np.array_equal(got[0], base[0]) or \
+                        not np.array_equal(got[1], base[1])
+        # the original key still returns the original tables
+        again = tls_models.generate_template_tables(n_table=128)
+        for a, b in zip(base, again):
+            assert np.array_equal(a, b)
+
+    def test_cache_is_bounded(self):
+        for i in range(2 * tls_models._TEMPLATE_TABLE_CACHE_MAX + 3):
+            tls_models.generate_template_tables(n_table=32 + i)
+        assert (len(tls_models._template_table_cache)
+                <= tls_models._TEMPLATE_TABLE_CACHE_MAX)
+
+    def test_fallback_result_is_not_cached(self, monkeypatch):
+        """The trapezoid fallback warns on every call, so it must not be
+        memoized away."""
+        monkeypatch.setattr(tls_models, 'BATMAN_AVAILABLE', True)
+
+        def _boom(**kwargs):
+            raise RuntimeError("batman exploded")
+
+        monkeypatch.setattr(tls_models, 'create_reference_transit', _boom)
+        for _ in range(2):
+            with pytest.warns(UserWarning, match="trapezoid"):
+                tls_models.generate_template_tables(n_table=128)
+        assert tls_models._template_table_cache == {}
+
+
 class TestBatchHasNoThreadPool:
     """Phase 2 TLS-2 (audit section 5, id 53): tls_search_batch must not
     reintroduce the per-light-curve ThreadPoolExecutor -- the work is
