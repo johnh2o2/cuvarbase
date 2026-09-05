@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 NUFFT-based Likelihood Ratio Test for transit detection.
 
@@ -60,26 +59,28 @@ import warnings
 
 import numpy as np
 
-warnings.warn(
-    "cuvarbase.nufft_lrt is EXPERIMENTAL. The Sep-2026 correctness fixes "
-    "(float64 epoch subtraction, automatic epoch grid for epochs=None, "
-    "Detector A PSD from the cotrended residual, centred sequential "
-    "cotrend, full-band NFFT accuracy) are awaiting injection-recovery "
-    "re-validation; the statistic is not N(0, 1) and thresholds must be "
-    "calibrated empirically (see docs/NUFFT_LRT_README.md).",
-    UserWarning)
+import pycuda.driver as cuda
+import pycuda.gpuarray as gpuarray
+from pycuda.compiler import SourceModule
 
-# The EXPERIMENTAL warning above must fire before the GPU imports, so
-# every import below is deliberately not at the top of the file.
-import pycuda.driver as cuda  # noqa: E402
-import pycuda.gpuarray as gpuarray  # noqa: E402
-from pycuda.compiler import SourceModule  # noqa: E402
-
-from .base import GPUAsyncProcess, ensure_context  # noqa: E402
-from .cunfft import NFFTAsyncProcess  # noqa: E402
-from .memory import NFFTMemory  # noqa: E402
-from .utils import (find_kernel, _module_reader,  # noqa: E402
+from .base import GPUAsyncProcess, ensure_context
+from .cunfft import NFFTAsyncProcess
+from .memory import NFFTMemory
+from .utils import (find_kernel, _module_reader,
                     subtract_epoch, check_lightcurve)
+
+# Emitted once per NUFFTLRTAsyncProcess construction (not at import, so
+# ``from cuvarbase import *`` and the BLS/LS/PDM users never see it).
+# Keep the "cuvarbase.nufft_lrt is EXPERIMENTAL" prefix: filterwarnings
+# entries match on it.
+_EXPERIMENTAL_MSG = (
+    "cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability "
+    "promise. The Sep-2026 correctness fixes (float64 epoch subtraction, "
+    "automatic epoch grid for epochs=None, Detector A PSD from the "
+    "cotrended residual, centred sequential cotrend, full-band NFFT "
+    "accuracy) are awaiting injection-recovery re-validation; the "
+    "statistic is not N(0, 1) and thresholds must be calibrated "
+    "empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).")
 
 
 def _whitened_inner(A, B, psd, weights):
@@ -307,7 +308,8 @@ class NUFFTLRTMemory:
         # Power spectrum estimate
         self.power_spectrum_g = gpuarray.zeros(nf, dtype=self.real_type)
 
-        # Frequency weights for one-sided spectrum
+        # Per-mode weights (all ones: every mode k = 0..nf-1 is a distinct
+        # positive-frequency coefficient; see NUFFTLRTAsyncProcess.run)
         self.weights_g = gpuarray.zeros(nf, dtype=self.real_type)
 
         # Results: [numerator, denominator]
@@ -338,7 +340,18 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     - Y_k is the NUFFT of the lightcurve
     - T_k is the NUFFT of the transit template
     - P_s(k) is the power spectrum (adaptively estimated or provided)
-    - w_k are frequency weights for one-sided spectrum
+    - w_k are per-mode weights; they are all 1 (every returned mode
+      ``k = 0..nf-1`` is a distinct positive-frequency coefficient, so
+      the 1/2/1 weighting of a packed one-sided RFFT does not apply)
+
+    .. warning:: **Experimental.** This module and the :meth:`run`
+        signature are outside the 1.x API-stability promise: the
+        Sep-2026 correctness fixes are pending injection-recovery
+        re-validation (release-plan Phase 4), after which the API may
+        change without a deprecation cycle. Constructing this class
+        emits a ``UserWarning`` saying so. The class is importable as
+        ``cuvarbase.nufft_lrt.NUFFTLRTAsyncProcess`` only; it is not in
+        the top-level ``cuvarbase`` namespace.
 
     The value is a whitened correlation, not an N(0, 1) SNR: see the
     module docstring for the PSD convention and the calibration caveat.
@@ -404,6 +417,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
     def __init__(self, sigma=4.0, m=None, use_double=False,
                  use_fast_math=True, block_size=256, autoset_m=True,
                  **kwargs):
+        warnings.warn(_EXPERIMENTAL_MSG, UserWarning, stacklevel=2)
         super(NUFFTLRTAsyncProcess, self).__init__(**kwargs)
 
         self.sigma = sigma
@@ -949,7 +963,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         P_s : np.ndarray
             Power spectrum
         weights : np.ndarray
-            Frequency weights
+            Per-mode weights (``run`` passes all ones)
         eps_floor : float
             Floor for power spectrum
 

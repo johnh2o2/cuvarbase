@@ -8,11 +8,19 @@
 # Version
 __version__ = "1.0.0"
 
-# Public attributes are resolved lazily (PEP 562) so that importing the
-# package does not drag in every backend. In particular, `import cuvarbase`
-# must not require scikit-cuda (only the NFFT/Lomb-Scargle modules need
-# cufft) — BLS/CE/PDM users can run on environments where scikit-cuda is
-# broken (e.g. numpy >= 1.24 without the compat shim).
+# The public top-level names are resolved lazily (PEP 562): importing
+# the package imports none of the method modules, so `import cuvarbase`
+# costs nothing and never fails because one backend (libcufft for the
+# NFFT-based methods, batman for TLS templates, cufinufft) is missing.
+# Each name below is fetched from its module on first access and is the
+# same object as the module attribute (``cuvarbase.BLSMemory is
+# cuvarbase.bls.BLSMemory``).
+#
+# This mapping IS the frozen 1.x top-level API: ``__all__`` is exactly
+# its keys (``cuvarbase/tests/test_api_freeze.py`` asserts that) and
+# nothing else resolves as ``cuvarbase.<name>`` except the submodules in
+# ``_SUBMODULES``. Everything else lives in its module
+# (``cuvarbase.bls.eebls_gpu``, ``cuvarbase.tls.tls_search_gpu``, ...).
 _LAZY_ATTRS = {
     'GPUAsyncProcess': '.base',
     'NFFTMemory': '.memory',
@@ -28,10 +36,14 @@ _LAZY_ATTRS = {
     'LombScargleAsyncProcess': '.lombscargle',
     'lomb_scargle_async': '.lombscargle',
     'PDMAsyncProcess': '.pdm',
-    'NUFFTLRTAsyncProcess': '.nufft_lrt',
-    'NUFFTLRTMemory': '.nufft_lrt',
 }
 
+# Submodules reachable as attributes (``cuvarbase.bls``) without an
+# explicit ``import cuvarbase.bls``. ``nufft_lrt`` is deliberately here
+# and NOT in ``_LAZY_ATTRS``: the NUFFT likelihood-ratio test is
+# quarantined as EXPERIMENTAL for 1.0 (importable as
+# ``cuvarbase.nufft_lrt``, outside the 1.x API-stability promise, warns
+# at construction) pending its injection-recovery re-validation.
 _SUBMODULES = {
     'base', 'memory', 'core', 'utils',
     'bls', 'bls_frequencies', 'ce', 'cunfft', 'lombscargle', 'pdm',
@@ -39,18 +51,7 @@ _SUBMODULES = {
     'tls', 'tls_grids', 'tls_models', 'tls_stats',
 }
 
-__all__ = [
-    'GPUAsyncProcess',
-    'NFFTMemory',
-    'ConditionalEntropyMemory',
-    'LombScargleMemory',
-    'NFFTAsyncProcess',
-    'ConditionalEntropyAsyncProcess',
-    'LombScargleAsyncProcess',
-    'PDMAsyncProcess',
-    'NUFFTLRTAsyncProcess',
-    'NUFFTLRTMemory',
-]
+__all__ = list(_LAZY_ATTRS)
 
 
 def __getattr__(name):
@@ -63,19 +64,9 @@ def __getattr__(name):
     if name in _SUBMODULES:
         return importlib.import_module('.' + name, __name__)
 
-    # Backward compatibility with the old eager `from .bls import *`:
-    # any public name bls exposes is reachable as cuvarbase.<name>.
-    if not name.startswith('_'):
-        try:
-            bls = importlib.import_module('.bls', __name__)
-        except ImportError:
-            raise AttributeError(
-                "module %r has no attribute %r" % (__name__, name))
-        if hasattr(bls, name):
-            return getattr(bls, name)
-
     raise AttributeError("module %r has no attribute %r" % (__name__, name))
 
 
 def __dir__():
-    return sorted(set(list(globals()) + __all__ + list(_SUBMODULES)))
+    return sorted(set(list(globals()) + list(_LAZY_ATTRS)
+                      + list(_SUBMODULES)))
