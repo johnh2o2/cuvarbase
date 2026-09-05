@@ -1274,6 +1274,116 @@ class TestCEFastGridSize(object):
                                   freq_batch_size=97), ref)
 
 
+class TestCEFastSkipsGlobalHistogram(object):
+    """CE-3 (audit id 161): ``allocate_bins`` allocated an
+    ``nf * phase_bins * mag_bins`` histogram -- 20 MB for a
+    100k-frequency 10 x 5 search -- that ``ce_classical_fast`` /
+    ``_faster`` never read, and ``run(memory=...)`` zero-filled it on
+    every call.  The fast memory now skips it entirely; the returned
+    numbers must not move."""
+
+    @staticmethod
+    def _memory(proc, t, y, dy, freqs, use_fast):
+        """A memory object for ``proc`` with ``bins_g`` forced on or off."""
+        kw = proc._memory_kwargs()
+        kw['use_fast'] = use_fast
+        if not proc.streams:
+            proc._create_streams(1)
+        kw['stream'] = proc.streams[0]
+        mem = ConditionalEntropyMemory(**kw)
+        tn, yn, dyn = normalize_light_curves([(t, y, dy)])[0]
+        mem.fromdata(tn, yn, dy=dyn, freqs=freqs, allocate=True)
+        mem.transfer_freqs_to_gpu()
+        return mem
+
+    def test_fast_memory_has_no_global_histogram(self):
+        t, y, dy = lightcurve(300, seed=2)
+        freqs = np.linspace(0.5, 3.0, 2000)
+        fast = ConditionalEntropyAsyncProcess(use_fast=True)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        mf = fast.allocate(normalize_light_curves([(t, y, dy)]),
+                           freqs=[freqs])[0]
+        ms = std.allocate(normalize_light_curves([(t, y, dy)]),
+                          freqs=[freqs])[0]
+        assert mf.bins_g is None
+        assert ms.bins_g is not None
+        assert ms.bins_g.size == len(freqs) * 10 * 5
+        # nbins is still reported (it describes the histogram shape)
+        assert mf.nbins == len(freqs) * 10 * 5
+
+    def test_memory_requirement_drops_the_histogram(self):
+        fast = ConditionalEntropyAsyncProcess(use_fast=True)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        n0, nf = 1000, 100000
+        hist = nf * 10 * 5 * 4
+        assert (std.memory_requirement(n0, nf)
+                - fast.memory_requirement(n0, nf)) == hist
+        assert fast.memory_requirement(n0, nf) > 0
+
+    @pytest.mark.parametrize('use_double', [False, True])
+    @pytest.mark.parametrize('ndata,nfreq', [(300, 1013), (2000, 4001)])
+    def test_results_identical_with_and_without_the_histogram(
+            self, ndata, nfreq, use_double):
+        t, y, dy = lightcurve(ndata, seed=4)
+        freqs = np.linspace(0.5, 4.0, nfreq)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              use_double=use_double)
+        with_bins = self._memory(proc, t, y, dy, freqs, use_fast=False)
+        assert with_bins.bins_g is not None
+        res = proc.run([(t, y, dy)], memory=[with_bins], freqs=freqs)
+        proc.finish()
+        old = np.copy(res[0][1])
+        new = run_ce(proc, t, y, dy, freqs)     # default: no bins_g
+        assert np.all(np.isfinite(old))
+        assert_array_equal(new, old)
+
+    def test_standard_kernels_reject_a_fast_memory(self):
+        t, y, dy = lightcurve(200, seed=5)
+        freqs = np.linspace(0.5, 3.0, 128)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        mem = self._memory(std, t, y, dy, freqs, use_fast=True)
+        with pytest.raises(ValueError, match="use_fast=True"):
+            std.run([(t, y, dy)], memory=[mem], freqs=freqs)
+
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_set_data_false_repeat_is_still_idempotent(self, use_fast):
+        """``set_gpu_arrays_to_zero`` must keep zeroing ``bins_g`` when
+        there is one (id 112) and must not trip over its absence."""
+        t, y, dy = lightcurve(80, seed=6)
+        freqs = np.linspace(0.3, 3.0, 64)
+        proc = ConditionalEntropyAsyncProcess(use_fast=use_fast)
+        mems = proc.allocate(normalize_light_curves([(t, y, dy)]),
+                             freqs=[freqs])
+        mems[0].transfer_freqs_to_gpu()
+        first = None
+        for k in range(3):
+            res = proc.run([(t, y, dy)], memory=mems, freqs=[freqs],
+                           set_data=(k == 0))
+            proc.finish()
+            p = np.copy(res[0][1])
+            if mems[0].bins_g is not None:
+                assert mems[0].bins_g.get().sum() == 80 * len(freqs)
+            if first is None:
+                first = p
+            else:
+                assert_array_equal(p, first)
+
+    def test_preallocate_and_large_run_still_work(self):
+        t, y, dy = lightcurve(150, seed=7)
+        freqs = np.linspace(0.4, 3.0, 500)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        mems = proc.preallocate(150, freqs, nlcs=1)
+        assert mems[0].bins_g is None
+        res = proc.run([(t, y, dy)], freqs=freqs)
+        proc.finish()
+        prealloc = np.copy(res[0][1])
+        big = proc.large_run([(t, y, dy)], freqs=freqs, max_memory=2e5)
+        ref = run_ce(ConditionalEntropyAsyncProcess(use_fast=True),
+                     t, y, dy, freqs)
+        assert_array_equal(prealloc, ref)
+        assert_allclose(big[0][1], ref, rtol=0, atol=1e-6)
+
+
 class TestCEFrequencyInput(object):
     """ids 108/163: float32 (or any non-Python-float) frequency arrays
     were rejected with a misleading 'number of frequency grids' error."""

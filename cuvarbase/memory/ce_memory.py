@@ -31,6 +31,14 @@ class ConditionalEntropyMemory:
         CUDA stream for asynchronous operations
     weighted : bool, optional (default: False)
         Use weighted binning
+    use_fast : bool, optional (default: False)
+        The memory will only ever be used by the shared-memory
+        (``use_fast=True``) kernels, which keep their histogram in
+        shared memory: skip the ``nf * phase_bins * mag_bins`` global
+        histogram (``bins_g``) they never read.  That array is 20 MB
+        for a 100k-frequency 10 x 5 search, and it was allocated -- and
+        zero-filled on every ``run`` -- for nothing.  The standard
+        kernels need it, so they refuse a memory allocated this way.
     **kwargs : dict
         Additional parameters
     """
@@ -47,6 +55,7 @@ class ConditionalEntropyMemory:
         self.max_phi = kwargs.get('max_phi', 3.)
         self.stream = kwargs.get('stream', None)
         self.weighted = kwargs.get('weighted', False)
+        self.use_fast = kwargs.get('use_fast', False)
         self.widen_mag_range = kwargs.get('widen_mag_range', False)
         self.n0 = kwargs.get('n0', None)
         self.nf = kwargs.get('nf', None)
@@ -153,7 +162,14 @@ class ConditionalEntropyMemory:
             self.dy_g = gpuarray.zeros(n0, dtype=self.real_type)
 
     def allocate_bins(self, **kwargs):
-        """Allocate GPU memory for histogram bins."""
+        """Allocate GPU memory for histogram bins.
+
+        The global ``bins_g`` histogram belongs to the standard kernels;
+        ``ce_classical_fast``/``_faster`` build theirs in shared memory
+        and never touch it, so ``use_fast=True`` skips it (``bins_g``
+        stays ``None``).  The per-magnitude-bin side arrays are small
+        and are still allocated when the corresponding option is on.
+        """
         nf = kwargs.get('nf', self.nf)
         if not (nf is not None):
             raise RuntimeError(
@@ -162,7 +178,9 @@ class ConditionalEntropyMemory:
 
         self.nbins = nf * self.phase_bins * self.mag_bins
 
-        if self.weighted:
+        if self.use_fast:
+            self.bins_g = None
+        elif self.weighted:
             self.bins_g = gpuarray.zeros(self.nbins, dtype=self.real_type)
         else:
             self.bins_g = gpuarray.zeros(self.nbins, dtype=np.uint32)
@@ -416,14 +434,14 @@ class ConditionalEntropyMemory:
         return self
 
     def set_gpu_arrays_to_zero(self, **kwargs):
-        """Zero out GPU arrays."""
+        """Zero out GPU arrays (``bins_g`` only when it exists: the
+        fast kernels do not allocate it)."""
         self.t_g.fill(self.real_type(0), stream=self.stream)
         self.y_g.fill(self.ytype(0), stream=self.stream)
         if self.weighted:
-            self.bins_g.fill(self.real_type(0), stream=self.stream)
             self.dy_g.fill(self.real_type(0), stream=self.stream)
-        else:
-            self.bins_g.fill(np.uint32(0), stream=self.stream)
+        if self.bins_g is not None:
+            self.bins_g.fill(self.bins_g.dtype.type(0), stream=self.stream)
 
     def fromdata(self, t, y, **kwargs):
         """

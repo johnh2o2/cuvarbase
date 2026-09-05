@@ -163,6 +163,14 @@ def conditional_entropy(memory, functions, block_size=256,
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
+    if memory.bins_g is None:
+        raise ValueError(
+            "the standard conditional-entropy kernels accumulate into a "
+            "global histogram, but this memory was allocated with "
+            "use_fast=True, which skips it; allocate the memory from a "
+            "process with use_fast=False (or pass use_fast=False to "
+            "ConditionalEntropyMemory)")
+
     # The histogram kernels accumulate into ``bins_g``: it must start from
     # zero on EVERY call, not only when ``run(set_data=True)`` zeroed it
     # (``run(memory=..., set_data=False)`` used to accumulate counts
@@ -348,11 +356,18 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
     use_fast: bool, optional (default: False)
         Use the shared-memory kernels (one thread block per trial
         frequency, histogram kept in shared memory). Results match the
-        standard kernels to floating-point precision; they are not
-        generally faster on current GPUs. Incompatible with
-        ``weighted=True`` and ``balanced_magbins=True``. Works with
-        ``run``, ``large_run`` and the batched entry points, in single
-        or double precision.
+        standard kernels to floating-point precision. Since the grid is
+        sized from the device (Sep 2026; it used to be a few blocks
+        whatever the GPU) the fast kernels are the quicker of the two
+        for all but the smallest problems -- on one NVIDIA A40, shared
+        with other jobs, so read the ratios as indicative only: 1.3x at
+        (ndata, nfreq) = (1000, 1e5), 1.9x at (2000, 1e5) and 8x at
+        (1e4, 1e5), break-even below that -- and they need no global
+        histogram, saving ``nfreq * phase_bins * mag_bins`` uint32 of
+        device memory (20 MB for a 100k-frequency 10 x 5 search).
+        Incompatible with ``weighted=True`` and
+        ``balanced_magbins=True``. Works with ``run``, ``large_run``
+        and the batched entry points, in single or double precision.
     use_double: bool, optional (default: False)
         Use double precision on the GPU.
     balanced_magbins: bool, optional (default: False)
@@ -501,6 +516,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                   balanced_magbins=self.balanced_magbins,
                   widen_mag_range=self.widen_mag_range)
         kw.update(overrides)
+        # Not overridable per call: the memory layout has to match the
+        # kernels this process will actually launch (``call_func`` is
+        # chosen in the constructor), and the fast kernels skip the
+        # global histogram.
+        kw['use_fast'] = self.use_fast
         self._check_options(kw, use_fast=self.use_fast)
         return kw
 
@@ -561,6 +581,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         The histogram dominates: ``nf * phase_bins * mag_bins``
         entries (uint32, or ``real_type`` when ``weighted=True``).
+        With ``use_fast=True`` there is no global histogram (it lives in
+        shared memory), so only the data, the grid and the result count.
 
         Parameters
         ----------
@@ -577,8 +599,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         rsize = np.dtype(self.real_type).itemsize
         bin_size = rsize if self.weighted else np.dtype(np.uint32).itemsize
 
-        # histogram bins
-        mem = nf * self.phase_bins * self.mag_bins * bin_size
+        # histogram bins (the ``use_fast`` kernels keep the histogram in
+        # shared memory and allocate none)
+        mem = 0
+        if not getattr(self, 'use_fast', False):
+            mem = nf * self.phase_bins * self.mag_bins * bin_size
         # observation data: t, y (+ dy when weighted)
         mem += (3 if self.weighted else 2) * n0 * rsize
         # frequencies + CE result
