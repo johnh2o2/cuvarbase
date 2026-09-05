@@ -327,35 +327,6 @@ echo ""
 echo "Installing cuvarbase..."
 pip install --break-system-packages -q -e .[test] 2>&1 | tail -3
 
-# Patch scikit-cuda for numpy 2.x
-python3 << 'ENDPYTHON'
-import re, os, glob
-for filepath in glob.glob('/usr/local/lib/python*/dist-packages/skcuda/*.py'):
-    with open(filepath, 'r') as f:
-        content = f.read()
-    original = content
-    content = re.sub(
-        r'num_types\s*=\s*\[np\.(?:type|sctype)Dict\[t\]\s+for\s+t\s+in\s*\\\\?\s*\n\s*np\.typecodes\[.AllInteger.\]\+np\.typecodes\[.AllFloat.\]\]',
-        'num_types = [np.int8, np.int16, np.int32, np.int64,\n'
-        '             np.uint8, np.uint16, np.uint32, np.uint64,\n'
-        '             np.float16, np.float32, np.float64]',
-        content
-    )
-    content = re.sub(r'np\.sctypes\[(["\047])float\1\]', '[np.float16, np.float32, np.float64]', content)
-    content = re.sub(r'np\.sctypes\[(["\047])int\1\]', '[np.int8, np.int16, np.int32, np.int64]', content)
-    content = re.sub(r'np\.sctypes\[(["\047])uint\1\]', '[np.uint8, np.uint16, np.uint32, np.uint64]', content)
-    content = re.sub(r'np\.sctypes\[(["\047])complex\1\]', '[np.complex64, np.complex128]', content)
-    # Fix np.float, np.int, np.complex removed in numpy 2.x
-    # Only replace standalone np.float( calls, not np.float32/64 etc.
-    content = re.sub(r'\bnp\.float\b(?!16|32|64|128|_)', 'float', content)
-    content = re.sub(r'\bnp\.int\b(?!8|16|32|64|_)', 'int', content)
-    content = re.sub(r'\bnp\.complex\b(?!64|128|_)', 'complex', content)
-    if content != original:
-        with open(filepath, 'w') as f:
-            f.write(content)
-        print(f"  Patched {os.path.basename(filepath)}")
-ENDPYTHON
-
 # Install CPU baselines
 echo ""
 echo "Installing CPU baselines..."

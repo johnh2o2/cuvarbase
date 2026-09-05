@@ -58,50 +58,6 @@ fi
 echo ""
 echo "Installing cuvarbase and dependencies..."
 pip install --break-system-packages -e .[test]
-
-# Patch scikit-cuda for numpy 2.x compatibility
-echo ""
-echo "Patching scikit-cuda for numpy 2.x compatibility..."
-python << 'ENDPYTHON'
-import re
-import os
-import glob
-
-skcuda_files = glob.glob('/usr/local/lib/python*/dist-packages/skcuda/*.py')
-if not skcuda_files:
-    print("Warning: skcuda not found, skipping patch")
-    exit(0)
-
-for filepath in skcuda_files:
-    with open(filepath, 'r') as f:
-        content = f.read()
-
-    original = content
-
-    # Replace num_types list comprehension using typeDict or sctypeDict
-    # This handles both np.typeDict and np.sctypeDict variants
-    content = re.sub(
-        r'num_types\s*=\s*\[np\.(?:type|sctype)Dict\[t\]\s+for\s+t\s+in\s*\\?\s*\n\s*np\.typecodes\[.AllInteger.\]\+np\.typecodes\[.AllFloat.\]\]',
-        'num_types = [np.int8, np.int16, np.int32, np.int64,\n'
-        '             np.uint8, np.uint16, np.uint32, np.uint64,\n'
-        '             np.float16, np.float32, np.float64]',
-        content
-    )
-
-    # Replace np.sctypes with explicit types
-    content = re.sub(r'np\.sctypes\[(["\'])float\1\]', '[np.float16, np.float32, np.float64]', content)
-    content = re.sub(r'np\.sctypes\[(["\'])int\1\]', '[np.int8, np.int16, np.int32, np.int64]', content)
-    content = re.sub(r'np\.sctypes\[(["\'])uint\1\]', '[np.uint8, np.uint16, np.uint32, np.uint64]', content)
-    content = re.sub(r'np\.sctypes\[(["\'])complex\1\]', '[np.complex64, np.complex128]', content)
-
-    if content != original:
-        with open(filepath, 'w') as f:
-            f.write(content)
-        print(f"  Patched {os.path.basename(filepath)}")
-
-print("All scikit-cuda files patched for numpy 2.x compatibility")
-ENDPYTHON
-
 echo ""
 echo "Verifying installation..."
 python -c "import cuvarbase; print(f'✓ cuvarbase version: {cuvarbase.__version__}')"
