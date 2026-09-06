@@ -27,7 +27,7 @@ sys.meta_path.insert(0, _BrokenSkcudaFinder())
 
 import cuvarbase
 from cuvarbase import bls
-assert callable(cuvarbase.eebls_gpu)
+assert callable(bls.eebls_gpu)
 from cuvarbase import ConditionalEntropyAsyncProcess
 assert cuvarbase.BLSMemory is bls.BLSMemory
 # Since v1.0 the cuFFT binding is in-house, so Lomb-Scargle no longer
@@ -128,11 +128,20 @@ def test_no_cuda_context_until_first_gpu_use():
     assert 'OK' in result.stdout
 
 
-def test_nufft_lrt_restored_to_package():
-    # NUFFT-LRT (contributed by Jamila Taaki / @xiaziyna) is reinstated in
-    # v1.0 with the GPU NFFT rewire; the package must expose it again.
+def test_nufft_lrt_quarantined():
+    # NUFFT-LRT (contributed by Jamila Taaki / @xiaziyna) ships in v1.0
+    # QUARANTINED (release decision D1): importable as
+    # ``cuvarbase.nufft_lrt`` but outside the frozen top-level namespace
+    # and the 1.x stability promise until its re-validation (Phase 4).
     import cuvarbase
-    assert 'NUFFTLRTAsyncProcess' in cuvarbase.__all__
-    assert callable(cuvarbase.NUFFTLRTAsyncProcess)
-    assert callable(cuvarbase.NUFFTLRTMemory)
-    import cuvarbase.nufft_lrt  # noqa: F401
+    import cuvarbase.nufft_lrt as nufft_lrt
+    assert 'NUFFTLRTAsyncProcess' not in cuvarbase.__all__
+    assert 'NUFFTLRTMemory' not in cuvarbase.__all__
+    assert 'NUFFTLRTAsyncProcess' not in cuvarbase._LAZY_ATTRS
+    with pytest.raises(AttributeError):
+        cuvarbase.NUFFTLRTAsyncProcess
+    with pytest.raises(AttributeError):
+        cuvarbase.NUFFTLRTMemory
+    assert cuvarbase.nufft_lrt is nufft_lrt
+    assert callable(nufft_lrt.NUFFTLRTAsyncProcess)
+    assert callable(nufft_lrt.NUFFTLRTMemory)

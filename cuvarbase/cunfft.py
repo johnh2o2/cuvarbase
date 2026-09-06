@@ -1,23 +1,24 @@
-#!/usr/bin/env python
 """
 NFFT (Non-equispaced Fast Fourier Transform) implementation.
 
 This module provides GPU-accelerated NFFT functionality for periodogram computation.
 """
-import sys
-import resource
 import numpy as np
 
 import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-# import pycuda.autoinit
 
 from . import _cufft as cufft
 
-from .core import GPUAsyncProcess
+from .base import GPUAsyncProcess
 from .utils import find_kernel, _module_reader, check_lightcurve
 from .memory import NFFTMemory
+
+
+__all__ = [
+    'nfft_adjoint_async',
+    'NFFTAsyncProcess',
+]
 
 
 def nfft_adjoint_async(memory, functions,

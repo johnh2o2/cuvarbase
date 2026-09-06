@@ -16,6 +16,19 @@ import warnings
 import numpy as np
 
 
+__all__ = [
+    'q_transit',
+    'transit_duration_max',
+    'period_grid_ofir',
+    'duration_grid',
+    'duration_grid_keplerian',
+    'duration_window',
+    't0_grid',
+    't0_grid_size',
+    'validate_stellar_parameters',
+]
+
+
 # Physical constants
 G = 6.67430e-11  # Gravitational constant (m^3 kg^-1 s^-2)
 R_sun = 6.95700e8  # Solar radius (m)
@@ -26,6 +39,10 @@ R_earth = 6.371e6  # Earth radius (m)
 def q_transit(period, R_star=1.0, M_star=1.0, R_planet=1.0):
     """
     Calculate fractional transit duration (q = duration/period) for Keplerian orbit.
+
+    Not to be confused with :func:`cuvarbase.bls.q_transit`, which takes
+    a *frequency* and a stellar density ``rho`` (the 0.2.5-era BLS
+    helper); this one takes a period and stellar/planet radii and mass.
 
     This is the TLS analog of the BLS q parameter. For a circular, edge-on orbit,
     the transit duration scales with stellar density and planet/star size ratio.
@@ -540,31 +557,3 @@ def validate_stellar_parameters(R_star=1.0, M_star=1.0,
     if not (M_star_min <= M_star <= M_star_max):
         raise ValueError(f"M_star={M_star} outside allowed range "
                         f"[{M_star_min}, {M_star_max}] solar masses")
-
-
-def estimate_n_evaluations(periods, durations, t0_oversampling=5):
-    """
-    Estimate total number of chi-squared evaluations.
-
-    Parameters
-    ----------
-    periods : array_like
-        Trial periods
-    durations : list of array_like
-        Duration grids for each period
-    t0_oversampling : int
-        T0 grid oversampling factor
-
-    Returns
-    -------
-    n_total : int
-        Total number of evaluations (P × D × T0)
-    """
-    n_total = 0
-    for i, period in enumerate(periods):
-        n_durations = len(durations[i])
-        for duration in durations[i]:
-            t0_vals = t0_grid(period, duration, oversampling=t0_oversampling)
-            n_total += len(t0_vals)
-
-    return n_total

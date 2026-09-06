@@ -6,10 +6,23 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess
+from .base import GPUAsyncProcess
 from .memory._host import host_array
 from .utils import weights, find_kernel, dphase, normalize_light_curves, autofrequency
 from .utils import check_lightcurve, check_freqs
+
+
+__all__ = [
+    'var_tophat',
+    'var_gauss',
+    'binned_pdm_model',
+    'var_binned',
+    'binless_pdm_cpu',
+    'pdm2_cpu',
+    'pdm2_single_freq',
+    'pdm_async',
+    'PDMAsyncProcess',
+]
 
 
 # Minimum number of observations the PDM entry points accept. The
@@ -454,8 +467,11 @@ class PDMAsyncProcess(GPUAsyncProcess):
         is_deprecated = len(data) > 0 and len(data[0]) == 4
         if is_deprecated:
             warnings.warn("The (t, y, w, freqs) format is deprecated "
-                          "and will be removed in the future. "
-                          "Please use the (t, y, err) format "
+                          "and will be removed in 2.0. Note that its "
+                          "third element is the NORMALIZED WEIGHTS "
+                          "(cuvarbase.utils.weights(err), summing to 1), "
+                          "not the uncertainties. Please use the "
+                          "(t, y, err) format with the uncertainties "
                           "and pass freqs as a separate argument "
                           "or pass optional keyword arguments "
                           "passed to ``autofrequency``.",

@@ -14,17 +14,20 @@ period finding algorithm
 import numpy as np
 
 import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess, ensure_context
+from .base import GPUAsyncProcess, ensure_context
 from .utils import _module_reader, find_kernel, normalize_light_curves
 from .utils import check_lightcurve, check_freqs
 from .utils import autofrequency as utils_autofreq
 from .memory import ConditionalEntropyMemory
 
-import resource
-import warnings
+
+__all__ = [
+    'conditional_entropy',
+    'conditional_entropy_fast',
+    'ConditionalEntropyAsyncProcess',
+]
 
 
 # Every kernel the CE module compiles, in the (sorted) order in which
@@ -1060,9 +1063,6 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             data_with_max_baseline = max(data,
                                          key=lambda d: np.max(d[0]) - np.min(d[0]))
             freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
-
-        df = freqs[1] - freqs[0]
-        nf = len(freqs)
 
         ces = []
 

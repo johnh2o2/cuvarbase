@@ -1,0 +1,413 @@
+"""The 1.0 API freeze (Sep 2026): the frozen top-level namespace, the
+NUFFT-LRT quarantine, the keyword-only markers on the 1.0-new
+signatures and the per-module ``__all__`` lists. Everything here runs
+on CPU (under the pycuda stub of ``conftest.py`` when no GPU is
+present)."""
+import importlib
+import os
+import re
+import subprocess
+import sys
+import warnings
+
+import pytest
+
+import cuvarbase
+
+
+# ---------------------------------------------------------------------
+# Top-level namespace (blocker 13)
+# ---------------------------------------------------------------------
+
+def test_all_equals_lazy_attrs():
+    assert set(cuvarbase.__all__) == set(cuvarbase._LAZY_ATTRS)
+    assert len(cuvarbase.__all__) == len(set(cuvarbase.__all__))
+
+
+@pytest.mark.parametrize('name', sorted(cuvarbase._LAZY_ATTRS))
+def test_public_name_resolves(name):
+    obj = getattr(cuvarbase, name)
+    module = importlib.import_module(cuvarbase._LAZY_ATTRS[name],
+                                     'cuvarbase')
+    assert obj is getattr(module, name)
+    assert name in dir(cuvarbase)
+
+
+def test_no_accidental_bls_names():
+    # the unpublished v1.0 branch resolved any public name of
+    # cuvarbase.bls (np, cuda, compile_bls, ...) as cuvarbase.<name>
+    assert not hasattr(cuvarbase, 'np')
+    assert not hasattr(cuvarbase, 'cuda')
+    with pytest.raises(AttributeError):
+        cuvarbase.eebls_gpu
+    with pytest.raises(AttributeError):
+        cuvarbase.compile_bls
+    assert 'np' not in dir(cuvarbase)
+
+
+def test_submodules_reachable_as_attributes():
+    for name in cuvarbase._SUBMODULES:
+        mod = getattr(cuvarbase, name)
+        assert mod.__name__ == 'cuvarbase.' + name
+        assert name in dir(cuvarbase)
+
+
+# ---------------------------------------------------------------------
+# NUFFT-LRT quarantine (decision D1)
+# ---------------------------------------------------------------------
+
+def test_nufft_lrt_not_top_level():
+    assert 'NUFFTLRTAsyncProcess' not in cuvarbase.__all__
+    assert 'NUFFTLRTMemory' not in cuvarbase.__all__
+    assert 'nufft_lrt' in cuvarbase._SUBMODULES
+    import cuvarbase.nufft_lrt as nufft_lrt
+    assert callable(nufft_lrt.NUFFTLRTAsyncProcess)
+    assert callable(nufft_lrt.NUFFTLRTMemory)
+
+
+_STAR_IMPORT_SCRIPT = r"""
+import sys, types
+# Harmless pycuda stubs so the GPU modules import without a real GPU
+# (the star-import resolves every lazy name, which imports every
+# method module).
+for name in ['pycuda', 'pycuda.driver', 'pycuda.gpuarray',
+             'pycuda.compiler', 'pycuda.tools']:
+    sys.modules[name] = types.ModuleType(name)
+sys.modules['pycuda.compiler'].SourceModule = object
+_autoctx = types.ModuleType('pycuda.autoprimaryctx')
+_autoctx.device = object()
+_autoctx.context = object()
+sys.modules['pycuda.autoprimaryctx'] = _autoctx
+
+import warnings
+warnings.simplefilter('always')
+with warnings.catch_warnings(record=True) as rec:
+    warnings.simplefilter('always')
+    from cuvarbase import *
+    import cuvarbase.nufft_lrt
+exp = [w for w in rec if 'EXPERIMENTAL' in str(w.message)]
+assert not exp, [str(w.message) for w in exp]
+names = sorted(n for n in dir() if not n.startswith('_')
+               and n not in ('warnings', 'rec', 'exp', 'cuvarbase',
+                             'sys', 'types', 'name'))
+import cuvarbase
+assert names == sorted(cuvarbase.__all__), (names, cuvarbase.__all__)
+print('OK')
+"""
+
+
+def test_star_import_emits_no_experimental_warning():
+    # star-import must not import nufft_lrt, and importing nufft_lrt
+    # must not warn either: the warning is emitted at construction.
+    repo_root = os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))))
+    result = subprocess.run(
+        [sys.executable, '-c', _STAR_IMPORT_SCRIPT],
+        cwd=repo_root, capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stderr
+    assert 'OK' in result.stdout
+
+
+def test_nufft_lrt_warns_at_construction():
+    from cuvarbase import nufft_lrt
+
+    class _Proc(nufft_lrt.NUFFTLRTAsyncProcess):
+        # GPUAsyncProcess.__init__ retains the CUDA context; skip it
+        # (and the NFFT process) so the warning is testable on CPU.
+        def __init__(self):
+            warnings.warn(nufft_lrt._EXPERIMENTAL_MSG, UserWarning,
+                          stacklevel=2)
+
+    with pytest.warns(UserWarning,
+                      match='cuvarbase.nufft_lrt is EXPERIMENTAL'):
+        _Proc()
+    # the real constructor's first statement is the same warning
+    import inspect
+    src = inspect.getsource(nufft_lrt.NUFFTLRTAsyncProcess.__init__)
+    body = src.split('):', 1)[1].lstrip()
+    assert body.startswith('warnings.warn(_EXPERIMENTAL_MSG')
+
+
+# ---------------------------------------------------------------------
+# Compatibility shims kept for 1.x (decision D3: shipped in 0.2.5)
+# ---------------------------------------------------------------------
+
+def test_core_module_is_deprecated_alias():
+    sys.modules.pop('cuvarbase.core', None)
+    with pytest.warns(DeprecationWarning, match='removed in 2.0'):
+        import cuvarbase.core as core
+    from cuvarbase import base
+    assert core.GPUAsyncProcess is base.GPUAsyncProcess
+    assert core.ensure_context is base.ensure_context
+
+
+def test_no_internal_import_of_core():
+    pkg = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    offenders = []
+    for dirpath, _, files in os.walk(pkg):
+        if os.path.basename(dirpath) == 'tests':
+            continue
+        for f in files:
+            if f.endswith('.py') and f != 'core.py':
+                src = open(os.path.join(dirpath, f)).read()
+                if 'from .core import' in src or 'cuvarbase.core' in src:
+                    offenders.append(f)
+    assert offenders == []
+
+
+def test_bls_allocate_pinned_arrays_warns(monkeypatch):
+    from cuvarbase.bls import BLSMemory
+    mem = BLSMemory.__new__(BLSMemory)
+    calls = []
+    monkeypatch.setattr(mem, 'allocate_host_arrays',
+                        lambda **kw: calls.append(kw) or 'ok',
+                        raising=False)
+    with pytest.warns(DeprecationWarning, match='removed in 2.0'):
+        assert mem.allocate_pinned_arrays(nfreqs=3, ndata=4) == 'ok'
+    assert calls == [{'nfreqs': 3, 'ndata': 4}]
+
+
+def test_pdm_four_tuple_warning_wording():
+    import inspect
+    from cuvarbase import pdm
+    src = inspect.getsource(pdm.PDMAsyncProcess.run)
+    assert 'removed in 2.0' in src
+    assert 'NORMALIZED WEIGHTS' in src
+
+
+def test_gpu_async_process_device_keyword():
+    from cuvarbase.base import GPUAsyncProcess
+    # device=0 (the default) and the other legacy keywords are silent
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        proc = GPUAsyncProcess(reader=None, function_kwargs={}, device=0)
+    assert proc.device == 0
+    with pytest.warns(UserWarning, match='CUDA_DEVICE'):
+        proc = GPUAsyncProcess(device=1)
+    assert proc.device == 1
+
+
+def test_utils_weights_is_canonical():
+    import numpy as np
+    from cuvarbase import utils
+    from cuvarbase.memory import lombscargle_memory
+    import cuvarbase.memory as memory
+    assert lombscargle_memory.weights is utils.weights
+    assert memory.weights is utils.weights
+    err = np.array([0.1, 0.2, 0.4])
+    w = utils.weights(err)
+    assert w.dtype == np.float64
+    assert w.sum() == pytest.approx(1.0)
+
+
+# ---------------------------------------------------------------------
+# Removed (decision D3): never on PyPI, or the three 0.2.5-era helpers
+# ---------------------------------------------------------------------
+
+@pytest.mark.parametrize('module, name', [
+    ('cuvarbase.tls_stats', 'pink_noise_correction'),
+    ('cuvarbase.tls_grids', 'estimate_n_evaluations'),
+    ('cuvarbase.tls', '_next_pow2'),
+    ('cuvarbase.utils', 'tophat_window'),
+    ('cuvarbase.utils', 'gaussian_window'),
+    ('cuvarbase.utils', 'get_autofreqs'),
+])
+def test_removed_names_are_gone(module, name):
+    mod = importlib.import_module(module)
+    assert not hasattr(mod, name)
+
+
+def test_removed_parameters_are_gone():
+    import inspect
+    from cuvarbase import tls, tls_stats
+    assert 'durations' not in inspect.signature(tls.tls_search_gpu).parameters
+    assert 'n_transits' not in inspect.signature(
+        tls_stats.signal_to_noise).parameters
+    assert 'window_length' not in inspect.signature(
+        tls_stats.signal_detection_efficiency).parameters
+    # TLS never shipped, so the misnamed method is renamed without alias
+    assert hasattr(tls.TLSMemory, 'allocate_host_arrays')
+    assert not hasattr(tls.TLSMemory, 'allocate_pinned_arrays')
+
+
+# ---------------------------------------------------------------------
+# Keyword-only markers on the 1.0-new signatures (finding 136)
+# ---------------------------------------------------------------------
+
+def _kwonly_cases():
+    import numpy as np
+    from cuvarbase import bls, bls_frequencies, tls
+    t = np.linspace(0.0, 10.0, 50)
+    y = np.ones(50)
+    dy = np.full(50, 1e-3)
+    periods = np.array([1.0, 2.0])
+    freqs = np.array([0.5, 1.0])
+    return [
+        (tls.tls_search_gpu, (t, y, dy, periods), 'qmin'),
+        (tls.tls_search_batch, ([(t, y, dy)],), 'R_star'),
+        (tls.tls_transit, (t, y, dy), 'R_star'),
+        (bls.eebls_gpu_batch, ([(t, y, dy)], freqs), 'qmin'),
+        (bls_frequencies.keplerian_freq_grid, (1.0, 5.0, 100.0), 'R_star'),
+        (bls_frequencies.uniform_freq_grid, (1.0, 5.0, 100.0),
+         'oversampling'),
+        (bls.convert_bls_power, (y, y, dy), 'convention'),
+    ]
+
+
+@pytest.mark.parametrize('case', _kwonly_cases(),
+                         ids=lambda c: c[0].__name__)
+def test_keyword_only_after_data_arguments(case):
+    import inspect
+    func, positional, first_kw = case
+    params = inspect.signature(func).parameters
+    assert params[first_kw].kind is inspect.Parameter.KEYWORD_ONLY
+    n_pos = sum(p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+                for p in params.values())
+    assert n_pos == len(positional)
+    # one extra positional argument is a TypeError raised by the call
+    # machinery, before any body (and any GPU work) runs
+    with pytest.raises(TypeError):
+        func(*positional, None)
+
+
+# ---------------------------------------------------------------------
+# Explicit __all__ per user-facing module (finding 135)
+# ---------------------------------------------------------------------
+
+_MODULES_WITH_ALL = ['bls', 'bls_frequencies', 'ce', 'cunfft', 'lombscargle',
+                     'pdm', 'tls', 'tls_grids', 'tls_models', 'tls_stats',
+                     'utils', 'cufinufft_backend', 'nufft_lrt']
+
+
+@pytest.mark.parametrize('modname', _MODULES_WITH_ALL)
+def test_module_all_is_explicit_and_resolvable(modname):
+    import inspect
+    mod = importlib.import_module('cuvarbase.' + modname)
+    names = mod.__all__
+    assert isinstance(names, list) and names
+    assert len(names) == len(set(names))
+    for name in names:
+        assert not name.startswith('_'), name
+        obj = getattr(mod, name)   # AttributeError == a stale entry
+        assert not inspect.ismodule(obj), name
+        if inspect.isfunction(obj) or inspect.isclass(obj):
+            assert obj.__module__ == mod.__name__, (name, obj.__module__)
+    # star-imports and autodoc must not publish the imported modules
+    for leaked in ('np', 'cuda', 'gpuarray', 'warnings', 'threading',
+                   'os', 'sys', 'SourceModule'):
+        assert leaked not in names
+
+
+def _docs_dir():
+    repo_root = os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(repo_root, 'docs', 'source')
+
+
+def test_documented_names_are_in_module_all():
+    # Sphinx autodoc ``:members:`` honours ``__all__``: a documented
+    # name missing from it silently drops off the API page.
+    import glob
+    import inspect
+    import re
+    docs = _docs_dir()
+    if not os.path.isdir(docs):
+        pytest.skip('docs/source not present (installed wheel)')
+    pattern = re.compile(r'cuvarbase\.([a-z_]+)\.([A-Za-z_][A-Za-z0-9_]*)')
+    referenced = set()
+    for path in glob.glob(os.path.join(docs, '*.rst')):
+        with open(path) as fh:
+            for m in pattern.finditer(fh.read()):
+                if m.group(1) in _MODULES_WITH_ALL:
+                    referenced.add((m.group(1), m.group(2)))
+    assert referenced, 'no cuvarbase.<module>.<name> references found'
+    missing = []
+    for modname, name in sorted(referenced):
+        mod = importlib.import_module('cuvarbase.' + modname)
+        obj = getattr(mod, name, None)
+        if obj is None or inspect.ismodule(obj) or name.startswith('_'):
+            continue   # a typo in the docs is the docs' problem
+        if name not in mod.__all__:
+            missing.append('cuvarbase.%s.%s' % (modname, name))
+    assert missing == []
+
+
+# ---------------------------------------------------------------------
+# Docstring defaults match the code (finding 134)
+# ---------------------------------------------------------------------
+
+_DEFAULT_RE = re.compile(
+    r'^\s{4}([A-Za-z_][A-Za-z0-9_]*)\s*(?:,\s*[A-Za-z_][A-Za-z0-9_]*)*\s*:'
+    r'[^\n]*?\(default:?\s*(.+?)\)\s*$', re.M)
+
+
+def _doc_targets():
+    import inspect
+    out = []
+    for modname in _MODULES_WITH_ALL:
+        mod = importlib.import_module('cuvarbase.' + modname)
+        for name in mod.__all__:
+            obj = getattr(mod, name)
+            if inspect.isclass(obj):
+                out.append(('%s.%s.__init__' % (modname, name),
+                            obj.__init__, obj.__doc__))
+                for k, v in vars(obj).items():
+                    if inspect.isfunction(v) and not k.startswith('_'):
+                        out.append(('%s.%s.%s' % (modname, name, k), v,
+                                    v.__doc__))
+            elif inspect.isfunction(obj):
+                out.append(('%s.%s' % (modname, name), obj, obj.__doc__))
+    return out
+
+
+def test_docstring_defaults_match_signatures():
+    import ast
+    import inspect
+    bad = []
+    for qualname, func, doc in _doc_targets():
+        if not doc:
+            continue
+        try:
+            params = inspect.signature(func).parameters
+        except (TypeError, ValueError):
+            continue
+        for m in _DEFAULT_RE.finditer(doc):
+            pname, stated = m.group(1), m.group(2).strip().rstrip('.')
+            if pname not in params:
+                continue
+            real = params[pname].default
+            if real is inspect.Parameter.empty:
+                continue
+            try:
+                val = ast.literal_eval(stated.strip('`'))
+            except Exception:
+                continue   # prose defaults ("None -> 0.1 * periods")
+            numeric = (isinstance(val, (int, float))
+                       and isinstance(real, (int, float)))
+            if not (val == real or (numeric and float(val) == float(real))):
+                bad.append('%s(%s): doc %r vs code %r'
+                           % (qualname, pname, stated, real))
+    assert bad == []
+
+
+def test_finding_134_sites():
+    import inspect
+    from cuvarbase import bls, ce, cunfft
+    assert inspect.signature(bls.eebls_gpu).parameters['dlogq'].default == 0.2
+    assert '(default: 0.2)' in bls.eebls_gpu.__doc__.split('dlogq:')[1][:40]
+    assert inspect.signature(
+        bls.eebls_gpu_fast).parameters['max_nblocks'].default == 5000
+    assert '(default: 5000)' in \
+        bls.eebls_gpu_fast.__doc__.split('max_nblocks:')[1][:40]
+    # kwargs.get defaults: compare the constructor source with the doc
+    src = inspect.getsource(ce.ConditionalEntropyAsyncProcess.__init__)
+    assert "kwargs.get('mag_bins', 5)" in src
+    assert 'mag_bins: int, optional (default: 5)' in \
+        ce.ConditionalEntropyAsyncProcess.__doc__
+    src = inspect.getsource(cunfft.NFFTAsyncProcess.__init__)
+    assert "kwargs.get('sigma', 4)" in src
+    assert "kwargs.get('autoset_m', False)" in src
+    assert 'sigma: float, optional (default: 4)' in \
+        cunfft.NFFTAsyncProcess.__doc__
+    assert 'autoset_m: bool, optional (default: False)' in \
+        cunfft.NFFTAsyncProcess.__doc__
