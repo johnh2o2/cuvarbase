@@ -424,6 +424,10 @@ class TestPDMTupleShape(object):
             # the bad lightcurve is named when it is not the first one
             with pytest.raises(ValueError, match='1'):
                 entry([(t, y, dy), (t, y)])
+        # stub-independent: the validator itself raises
+        from ..pdm import _check_pdm_data
+        with pytest.raises(ValueError, match=r'\(t, y, err\) tuple'):
+            _check_pdm_data([(t, y)], self.grid, 'x', False)
 
     def test_mixed_deprecated_batch_is_rejected(self):
         t, y, dy = _reuse_lc(40, 22)
@@ -454,6 +458,10 @@ class TestPDMConstantY(object):
             with pytest.raises(ValueError, match='lightcurve 1: y is '
                                                  'constant'):
                 entry([(t, y, dy), (t, const, dy)])
+        # stub-independent: the validator itself raises
+        from ..pdm import _check_pdm_data
+        with pytest.raises(ValueError, match='y is constant'):
+            _check_pdm_data([(t, const, dy)], self.grid, 'x', False)
         with pytest.warns(DeprecationWarning):
             with pytest.raises(ValueError, match='y is constant'):
                 proc.run([(t, const, weights(dy), self.grid)])

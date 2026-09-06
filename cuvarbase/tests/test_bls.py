@@ -3534,8 +3534,12 @@ class TestHostLadderMirrorsDevice(object):
 
     def test_fast_box_widths_matches_the_device_ladder(self):
         from ..bls import _fast_box_widths
-        for dlogq in (0.35, 0.65, 0.7, 0.3):
-            for nb0, nbf in [(1, 180), (1, 340), (2, 360), (1, 90)]:
+        # (1, 6000, 0.53) is a pair where the old float64 host ladder
+        # and the device's float32 ladder differ, so this test fails on
+        # the pre-fix code (the smaller pairs happen to agree there)
+        for dlogq in (0.35, 0.65, 0.7, 0.3, 0.53):
+            for nb0, nbf in [(1, 180), (1, 340), (2, 360), (1, 90),
+                             (1, 6000)]:
                 widths = _fast_box_widths(nbf, nb0, dlogq)
                 m, expect = 1, []
                 while m <= nbf // nb0:

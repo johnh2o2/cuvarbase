@@ -11,7 +11,7 @@ cuvarbase is built for processing millions of lightcurves, and it is proven in p
 The headline numbers, all traceable to archived benchmark data in this repository:
 
 - **Standard BLS is 257-354x faster than astropy's `BoxLeastSquares`**, measured consistently across all 7 GPU architectures tested (V100 through H200)
-- **Transit Least Squares is 30-171x faster than GTLS** — the only other GPU TLS — on the same GPU at matched search settings and equal (1-3%) detection significance, and thousands of times faster than the reference CPU `transitleastsquares` (methodology and the reproduced GTLS-paper figure: [docs/GTLS_COMPARISON.md](docs/GTLS_COMPARISON.md))
+- **Transit Least Squares is 30-171x faster than GTLS** — the only other GPU TLS — on the same GPU at matched search settings and equal detection significance (SDE within 1-3% under the pre-1.0 SDE definition), and thousands of times faster than the reference CPU `transitleastsquares` (methodology and the reproduced GTLS-paper figure: [docs/GTLS_COMPARISON.md](docs/GTLS_COMPARISON.md))
 - **Survey-scale Lomb-Scargle beats [nifty-ls](https://github.com/flatironinstitute/nifty-ls)**, the fastest CPU implementation, by 1.5-12.6x per lightcurve at realistic survey frequency grids (>15x where nifty-ls exceeded the benchmark timeout). Honest caveat: for one-off small searches (< ~100K frequencies), nifty-ls on CPU is the better tool
 - **Keplerian frequency grids search 4-37x fewer frequencies** than uniform grids at survey baselines by exploiting the orbital-mechanics link between period and transit duration
 - **All four major surveys for ~$33 of GPU time**: Lomb-Scargle + BLS over ZTF + HAT-Net + TESS + Kepler scale collections, on a rented RTX A5000 at $0.20/hr

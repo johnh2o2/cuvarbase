@@ -1,5 +1,7 @@
 # cuvarbase vs GTLS — apples-to-apples reproduction of the GTLS Fig. 7 benchmark
 
+> **Note (September 2026):** every SDE figure in this document was computed with the July-2026 `tls_stats` (signal residue SR = 1 - chi2/max(chi2)). cuvarbase 1.0 defines SR = chi2_min/chi2 (see CHANGELOG.rst), which moves every SDE value; the timing, cost and recovery results are unaffected.
+
 **What this is.** GTLS (Hu, Ge, Jin & Willis, arXiv:2607.00348, submitted 1 Jul 2026)
 is the first and only *other* GPU implementation of Transit Least Squares — a CuPy
 reimplementation of Hippke & Heller's (2019) TLS (`pip install gputls`, v0.5.1).

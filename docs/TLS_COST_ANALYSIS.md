@@ -1,5 +1,7 @@
 # TLS fidelity, throughput, and cost: cuvarbase vs CPU vs GTLS
 
+> **Note (September 2026):** every SDE figure in this document was computed with the July-2026 `tls_stats` (signal residue SR = 1 - chi2/max(chi2)). cuvarbase 1.0 defines SR = chi2_min/chi2 (see CHANGELOG.rst), which moves every SDE value; the timing, cost and recovery results are unaffected.
+
 Three questions, answered with measurements (RTX A5000, `scripts/tls_fidelity_experiment.py`,
 `scripts/tls_matched_timing.py`, `scripts/benchmark_tls_survey.py`; raw in
 `benchmarks/results/tls_survey_jul2026/`):

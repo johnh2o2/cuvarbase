@@ -1,4 +1,8 @@
-"""Independent verification of 'bls-sparse-uncentered':
+"""ARCHIVED as run at 7d55ea2 (the pre-fix tree): this script no longer runs at
+the tip -- the 'sparse_bls_simple' kernel it selects with use_simple=True was
+removed in Phase 1 (398cd60, defect 20). Kept unedited as the audit record.
+
+Independent verification of 'bls-sparse-uncentered':
 A. default public path eebls_transit (auto sparse, N<500) on mag-12 data vs float64 reference
 B. patched kernel (center sh_y in-kernel) and wrapper-level float64 centering as fixes
 C. bit-neutrality of the patched kernel on already-centered input
