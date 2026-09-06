@@ -1465,6 +1465,26 @@ class TestBatchedMemoryReuse(object):
         assert sum(built) == 0
 
     def test_reused_memory_gives_identical_powers(self):
+        # Deliberately bitwise, and deliberately in float32. The
+        # *Reproducibility* paragraph of docs/source/lomb.rst says the
+        # float32 NFFT "need not be bitwise identical" in general
+        # because the gridding accumulates with atomicAdd in an
+        # unspecified order -- and then carves out this regime: "sparse
+        # light curves on coarse grids are often bitwise stable". Here
+        # N = 400 points are spread onto a grid of ~16,000 cells with
+        # m = 8, so no two observations' Gaussian footprints contend for
+        # a cell in a way that changes the float32 sum with the order
+        # (the same-buffer runs measured 15/15 bitwise on the A40, see
+        # test_padded_buffers_do_not_change_the_result), and the three
+        # repeats go through the SAME buffers with the same launch
+        # sequence. That is exactly the LS-4 property under test: the
+        # reused set is zeroed and overwritten before every run, so it
+        # cannot leak anything from the previous call -- a tolerance
+        # would also pass a stale-buffer bug of order 1e-7. Dense
+        # configurations (N = 65,000, nf = 210,000) are NOT bitwise
+        # stable and must be compared with assert_allclose, as the
+        # sibling tests do. If this ever fails by ~1e-8 on some GPU,
+        # that is the documented atomic noise, not a reuse bug.
         freqs = 0.002 * (30 + np.arange(4000))
         d = [self._lc()]
         proc = LombScargleAsyncProcess()
