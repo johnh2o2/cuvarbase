@@ -3461,3 +3461,82 @@ class TestAdaptiveBlockSize(object):
         assert np.all(np.isfinite(p_adaptive))
         assert_allclose(p_adaptive, p_fixed, rtol=1e-5, atol=1e-6)
         assert np.argmax(p_adaptive) == np.argmax(p_fixed)
+
+
+class TestHostLadderMirrorsDevice(object):
+    """The host q ladder (``dnbins`` and everything built on it:
+    ``count_tot_nbins`` sizing ``eebls_gpu``'s bin rows, and
+    ``_fast_box_widths`` replicating the fast kernels' box grid) must
+    agree with the device ladder rung for rung. The kernels form
+    ``floorf(dlogq * nbins)`` in float32 (``dlogq`` is a ``float``
+    kernel argument), and the old float64 host arithmetic disagreed for
+    e.g. ``dlogq = 0.65, nbins = 180`` (117.0 vs floorf(116.99999) =
+    116), so ``eebls_gpu(dlogq=0.65)`` could under-size a frequency's
+    row (host 180 cells, device 476) and the fold kernel's atomics ran
+    into the next row (Sep 2026 fresh-eyes review, finding 26)."""
+
+    DLOGQS = [round(0.05 * k, 2) for k in range(2, 21)]   # 0.1 .. 1.0
+
+    @staticmethod
+    def _device_dnbins(nbins, dlogq):
+        # bls_common.cuh: `unsigned int n = (unsigned int) floorf(dlogq
+        # * nbins); return (n == 0) ? 1 : n;` with float dlogq and
+        # unsigned int nbins (exact in float32 below 2^24)
+        if dlogq < 0:
+            return 1
+        n = int(np.floor(np.float32(dlogq) * np.float32(nbins)))
+        return n if n > 0 else 1
+
+    @pytest.mark.parametrize("dlogq", DLOGQS)
+    def test_dnbins_matches_the_float32_device_arithmetic(self, dlogq):
+        from ..bls import dnbins
+        nb = np.arange(1, 200001)
+        f32 = np.floor(np.float32(dlogq) * nb.astype(np.float32))
+        f64 = np.floor(dlogq * nb.astype(np.float64))
+        # every nbins where float32 and float64 disagree, plus a sample
+        # of those where they agree (the whole range would be 200000
+        # scalar calls per dlogq)
+        differ = nb[f32 != f64]
+        same = nb[f32 == f64][::997]
+        for n in np.concatenate([differ, same]):
+            assert dnbins(int(n), dlogq) == self._device_dnbins(int(n),
+                                                                dlogq)
+        if dlogq in (0.2, 0.3):
+            # the defaults of eebls_gpu / the fast paths: the fix must
+            # not move a single rung there
+            assert len(differ) == 0
+        elif dlogq in (0.35, 0.65, 0.7):
+            # the values where the review found the divergence
+            assert len(differ) > 0
+
+    def test_count_tot_nbins_matches_the_device_count(self):
+        # the review's cases: (nbins0, nbinsf, dlogq) -> device count
+        from ..bls import count_tot_nbins
+
+        def device_count(nb0, nbf, dlogq):
+            tot, nb = 0, nb0
+            while nb <= nbf:
+                tot += nb
+                nb += self._device_dnbins(nb, dlogq)
+            return tot
+
+        for nb0, nbf, dlogq, expect in [(180, 296, 0.65, 476),
+                                        (180, 243, 0.35, 423),
+                                        (90, 153, 0.7, 243)]:
+            assert device_count(nb0, nbf, dlogq) == expect
+            assert count_tot_nbins(nb0, nbf, dlogq) == expect
+        # and the defaults are what they always were
+        assert count_tot_nbins(2, 100, 0.2) == 2 + 3 + 4 + 5 + 6 + 7 + \
+            8 + 9 + 10 + 12 + 14 + 16 + 19 + 22 + 26 + 31 + 37 + 44 + \
+            52 + 62 + 74 + 88
+
+    def test_fast_box_widths_matches_the_device_ladder(self):
+        from ..bls import _fast_box_widths
+        for dlogq in (0.35, 0.65, 0.7, 0.3):
+            for nb0, nbf in [(1, 180), (1, 340), (2, 360), (1, 90)]:
+                widths = _fast_box_widths(nbf, nb0, dlogq)
+                m, expect = 1, []
+                while m <= nbf // nb0:
+                    expect.append(m)
+                    m += self._device_dnbins(m, dlogq)
+                assert widths == expect

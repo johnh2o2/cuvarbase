@@ -1840,10 +1840,24 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
 
 def dnbins(nbins, dlogq):
+    """Host mirror of the device ``dnbins`` in ``bls_common.cuh``: the
+    number of bins the q ladder grows by at ``nbins``.
+
+    The kernels take ``dlogq`` as a ``float`` argument and form
+    ``floorf(dlogq * nbins)`` in float32, and for some ``(dlogq,
+    nbins)`` pairs that product lands on the other side of an integer
+    than the float64 one (``0.65 * 180`` is 117.0 in float64 but
+    116.99999 in float32). The host ladder sizes ``eebls_gpu``'s device
+    bin rows (:func:`count_tot_nbins`) and replicates the fast kernels'
+    box grid (:func:`_fast_box_widths`), so it has to agree with the
+    device rung for rung: the product is formed in float32 here too.
+    Bit-identical to the old float64 arithmetic at the default
+    ``dlogq`` values (0.2, 0.3) for every ``nbins <= 200000``.
+    """
     if (dlogq < 0):
         return 1
 
-    n = int(np.floor(dlogq * nbins))
+    n = int(np.floor(np.float32(dlogq) * np.float32(nbins)))
 
     return n if n > 0 else 1
 
