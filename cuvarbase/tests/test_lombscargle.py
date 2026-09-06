@@ -1706,6 +1706,30 @@ class TestBatchedMemoryReuse(object):
         with pytest.raises(ValueError):
             proc.run(d, freqs=[np.geomspace(0.1, 5.0, 500)])
 
+    def test_a_bad_grid_is_rejected_before_any_device_work(self, monkeypatch):
+        """The shared grid is validated ahead of the kernel compile and
+        the stream creation (Sep-2026 readiness review): a rejected
+        grid must leave the CUDA context untouched, exactly like a
+        rejected light curve. Until then the compile came first, which
+        is also why this case could only be exercised on a GPU. Runs
+        without one because nothing below the validation is reached."""
+        proc = LombScargleAsyncProcess()
+        touched = []
+        monkeypatch.setattr(proc, '_compile_and_prepare_functions',
+                            lambda **kw: touched.append('compile'))
+        monkeypatch.setattr(proc, '_create_streams',
+                            lambda n: touched.append('streams'))
+        d = [self._lc()]
+        bad = 0.002 * (30 + np.arange(1500))
+        bad[7] = np.nan
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=bad)
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=np.geomspace(0.1, 5.0, 500))
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=-bad)
+        assert touched == []
+
 
 class TestBaluevDKUsesEffectiveNharmonics(object):
     """``batched_run_const_nfreq(only_return_best_freqs=True)`` computed

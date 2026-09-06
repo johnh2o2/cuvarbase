@@ -1491,6 +1491,26 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                              name='batched_run_const_nfreq '
                                   'lightcurve %d' % i)
 
+        if freqs is None:
+            data_with_max_baseline = max(data,
+                                         key=lambda d: np.max(d[0]) - np.min(d[0]))
+            # autofrequency already returns df * (k0 + arange(nf)); the
+            # old "correction" nf = round(max / df) - k0 dropped its last
+            # point (id 147)
+            freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
+
+        freqs = np.asarray(freqs)
+        # one grid shared by every lightcurve: validate it once here and
+        # tell run() not to repeat the O(nf) checks per lightcurve. This
+        # runs BEFORE the kernel compile and the stream creation below,
+        # so a rejected grid, like a rejected light curve, leaves the
+        # device untouched (the "before any device work" promise of the
+        # Sep-2026 validation; until Sep 2026 the compile came first).
+        check_freqs(freqs, name='batched_run_const_nfreq')
+        check_k0(freqs)
+        k0 = get_k0(freqs)
+        nf = len(freqs)
+
         # compile and prepare module functions if not already done
         if not hasattr(self, 'prepared_functions') or \
             not all([func in self.prepared_functions for func in
@@ -1504,22 +1524,6 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
 
         streams = [self.streams[i] for i in range(bsize)]
         max_ndata = max([len(t) for t, y, dy in data])
-
-        if freqs is None:
-            data_with_max_baseline = max(data,
-                                         key=lambda d: np.max(d[0]) - np.min(d[0]))
-            # autofrequency already returns df * (k0 + arange(nf)); the
-            # old "correction" nf = round(max / df) - k0 dropped its last
-            # point (id 147)
-            freqs = self.autofrequency(data_with_max_baseline[0], **kwargs)
-
-        freqs = np.asarray(freqs)
-        # one grid shared by every lightcurve: validate it once here and
-        # tell run() not to repeat the O(nf) checks per lightcurve
-        check_freqs(freqs, name='batched_run_const_nfreq')
-        check_k0(freqs)
-        k0 = get_k0(freqs)
-        nf = len(freqs)
 
         lsps = []
 
