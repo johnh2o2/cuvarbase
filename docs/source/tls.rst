@@ -191,6 +191,9 @@ bootstrap of :func:`cuvarbase.tls.tls_search_batch`:
     r['FAP']       # (1 + #null SDE >= observed) / (fap_null_draws + 1)
     r['SDE_null']  # the null SDEs, for choosing your own threshold
 
+The bootstrap is batch-only: ``tls_search``, ``tls_search_gpu`` and
+``tls_transit`` raise ``TypeError`` on ``fap_null_draws``/``fap_seed``
+(or any other unknown keyword) rather than silently ignoring them.
 Each draw permutes a lightcurve's (y, dy) pairs over its times (a
 white-noise null: same sampling and noise distribution, no coherent
 signal, no red noise) and searches the identical grid with the same
