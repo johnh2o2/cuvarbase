@@ -181,3 +181,32 @@ class TestNUFFTLRTAlgorithm:
         # SNR should be positive and finite
         assert snr > 0
         assert np.isfinite(snr)
+
+
+def test_empty_basis_is_rejected_before_device_work(proc):
+    """A (n, 0) systematics basis with detector='marginal' used to fall
+    through to the plain matched filter; after the Detector A
+    precompute was hoisted out of the template loop it raised a raw
+    numpy 'cannot reshape array of size 0' AFTER the data transforms
+    had run. Both basis detectors now reject K = 0 with a ValueError
+    before touching the device (so this runs under the CPU stub)."""
+    from ..nufft_lrt import _marginal_precompute
+    rng = np.random.RandomState(0)
+    n = 60
+    t = np.sort(rng.rand(n) * 20.0)
+    y = 1.0 + 1e-3 * rng.randn(n)
+    empty = np.zeros((n, 0))
+    with pytest.raises(ValueError, match="at least one column"):
+        proc.run(t, y, np.array([3.0]), durations=np.array([0.2]),
+                 epochs=np.array([0.0]), detector='marginal',
+                 systematics_basis=empty, coeff_prior_cov=np.zeros((0, 0)))
+    with pytest.raises(ValueError, match="at least one column"):
+        proc.run(t, y, np.array([3.0]), durations=np.array([0.2]),
+                 epochs=np.array([0.0]), detector='sequential',
+                 systematics_basis=empty)
+    # the hoisted precompute mirrors the guard
+    nf = 16
+    Y = rng.randn(nf) + 1j * rng.randn(nf)
+    with pytest.raises(ValueError, match="K >= 1"):
+        _marginal_precompute(Y, [], np.ones(nf), np.ones(nf),
+                             np.zeros((0, 0)))
