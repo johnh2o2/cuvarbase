@@ -3540,3 +3540,130 @@ class TestHostLadderMirrorsDevice(object):
                     expect.append(m)
                     m += self._device_dnbins(m, dlogq)
                 assert widths == expect
+
+
+class TestFastSolutionLadderMatchesKernel(object):
+    """``eebls_transit``'s top-K ``(q, phi)`` re-scan must walk the SAME
+    bin ladder the kernel searched. ``BLSMemory.setdata`` computes the
+    kernel's ``nbins0`` / ``nbinsf`` with ``_fast_path_nbins`` on the
+    bounds as passed (their own dtype); ``_fast_bls_solutions`` used to
+    promote them to float64 first, so for float32 ``qvals`` (the
+    documented override, e.g. ``keplerian_freq_grid(return_qvals=True)``
+    output) the two ladders were one bin apart at some frequencies and
+    the reported box was one the kernel never evaluated (Sep 2026
+    fresh-eyes review, finding 18)."""
+
+    ROUND_Q32 = np.float32([0.025, 0.05, 1. / 7., 0.1, 0.2, 1. / 9.,
+                            0.03, 0.07])
+
+    @staticmethod
+    def _kernel_ladder(freqs, qmin, qmax):
+        # exactly BLSMemory.setdata: `self.freqs = np.asarray(freqs)
+        # .astype(self.rtype)`; `_fast_path_nbins(self.freqs, qmin, qmax)`
+        return _fast_path_nbins(np.asarray(freqs).astype(np.float32),
+                                qmin, qmax)
+
+    @staticmethod
+    def _record_solution_ladder(monkeypatch, *args, **kwargs):
+        """Run _fast_bls_solutions and return the (nbins0, nbinsf) it
+        derived, captured from its _fast_path_nbins call."""
+        import cuvarbase.bls as bls_mod
+        seen = []
+        real = bls_mod._fast_path_nbins
+
+        def recorder(freqs32, qmin, qmax):
+            out = real(freqs32, qmin, qmax)
+            seen.append(out)
+            return out
+
+        monkeypatch.setattr(bls_mod, '_fast_path_nbins', recorder)
+        sols = bls_mod._fast_bls_solutions(*args, **kwargs)
+        assert len(seen) == 1
+        return sols, seen[0]
+
+    @staticmethod
+    def _lc(n=300, seed=4):
+        rand = np.random.RandomState(seed)
+        t = np.sort(30. * rand.rand(n))
+        y = 1. + 1e-3 * rand.randn(n)
+        dy = 1e-3 * np.ones(n)
+        return t, y, dy
+
+    def test_float32_bounds_use_the_uploaded_ladder(self, monkeypatch):
+        from ..bls import _broadcast_q_bound
+        t, y, dy = self._lc()
+        q32 = self.ROUND_Q32
+        freqs = np.linspace(0.5, 1.5, len(q32))
+        qmins, qmaxes = q32 * 0.5, q32 * 2.0      # as eebls_transit forms them
+        assert qmins.dtype == np.float32 and qmaxes.dtype == np.float32
+
+        nb0_k, nbf_k = self._kernel_ladder(freqs, qmins, qmaxes)
+        _, (nb0_s, nbf_s) = self._record_solution_ladder(
+            monkeypatch, t, y, dy, freqs, np.ones(len(freqs)),
+            qmins, qmaxes, len(freqs))
+        assert np.array_equal(nb0_s, nb0_k)
+        assert np.array_equal(nbf_s, nbf_k)
+
+        # ... and the test bites: the float64-promoted ladder the old
+        # code walked differs at some of these 'round' float32 values
+        nb0_p, nbf_p = _fast_path_nbins(
+            freqs.astype(np.float32),
+            _broadcast_q_bound(qmins, len(freqs), 1e-2, 'qmin'),
+            _broadcast_q_bound(qmaxes, len(freqs), 0.5, 'qmax'))
+        assert np.any(nbf_p != nbf_k) and np.any(nb0_p != nb0_k)
+
+    def test_float64_default_path_is_unchanged(self, monkeypatch):
+        # the default eebls_transit path (float64 qvals from
+        # transit_autofreq): promoting to float64 was the identity, so
+        # the ladder is bit-identical before and after the fix, and
+        # identical to the kernel's
+        from ..bls import _broadcast_q_bound
+        t, y, dy = self._lc()
+        freqs, q0 = transit_autofreq(t, fmin=0.2, fmax=2.0)
+        freqs, q0 = freqs[::50], q0[::50]
+        qmins, qmaxes = q0 * 0.5, q0 * 2.0
+        assert qmins.dtype == np.float64
+        nb0_k, nbf_k = self._kernel_ladder(freqs, qmins, qmaxes)
+        nb0_old, nbf_old = _fast_path_nbins(
+            freqs.astype(np.float32),
+            _broadcast_q_bound(qmins, len(freqs), 1e-2, 'qmin'),
+            _broadcast_q_bound(qmaxes, len(freqs), 0.5, 'qmax'))
+        _, (nb0_s, nbf_s) = self._record_solution_ladder(
+            monkeypatch, t, y, dy, freqs, np.ones(len(freqs)),
+            qmins, qmaxes, len(freqs))
+        for a in (nb0_old, nb0_s):
+            assert np.array_equal(a, nb0_k)
+        for a in (nbf_old, nbf_s):
+            assert np.array_equal(a, nbf_k)
+
+    def test_scalar_and_none_bounds_match_the_fast_path_defaults(
+            self, monkeypatch):
+        t, y, dy = self._lc()
+        freqs = np.linspace(0.5, 1.5, 5)
+        _, (nb0_s, nbf_s) = self._record_solution_ladder(
+            monkeypatch, t, y, dy, freqs, np.ones(5), None, None, 5)
+        nb0_k, nbf_k = self._kernel_ladder(freqs, 1e-2, 0.5)
+        assert np.array_equal(nb0_s, nb0_k) and np.array_equal(nbf_s,
+                                                                 nbf_k)
+        _, (nb0_s, nbf_s) = self._record_solution_ladder(
+            monkeypatch, t, y, dy, freqs, np.ones(5), 0.05, 0.25, 5)
+        nb0_k, nbf_k = self._kernel_ladder(freqs, 0.05, 0.25)
+        assert np.array_equal(nb0_s, nb0_k) and np.array_equal(nbf_s,
+                                                                 nbf_k)
+
+    def test_reported_box_is_on_the_kernel_grid_for_float32_bounds(self):
+        # an on-grid q = 4/40 box at phi0 = 0.25; float32 bounds
+        # qmin = 0.025, qmax = 0.2 give the kernel nbinsf = 40 and
+        # nbins0 = 5, while the float64-promoted ladder is 39 / 4, on
+        # which no q = m/39 box is the kernel's
+        t, y, dy = TestFastPathQmaxBox._on_grid_box(nbf=40, m=4, n0=10)
+        qmin, qmax = np.float32([0.025]), np.float32([0.2])
+        nb0_k, nbf_k = self._kernel_ladder([1.0], qmin, qmax)
+        assert (int(nb0_k[0]), int(nbf_k[0])) == (5, 40)
+        sols = _fast_bls_solutions(t, y, dy, np.array([1.0]),
+                                   np.array([1.0]), qmin, qmax, 1)
+        q, phi0 = sols[0]
+        assert q == pytest.approx(4. / 40., abs=1e-9)
+        assert phi0 == pytest.approx(0.25, abs=1e-6)
+        # a q = m/39 (the old ladder) is never within 1e-9 of m/40
+        assert np.min(np.abs(q - np.arange(1, 40) / 39.)) > 1e-4
