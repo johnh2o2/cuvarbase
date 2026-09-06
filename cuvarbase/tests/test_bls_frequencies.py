@@ -57,7 +57,6 @@ class TestBatchPerFrequencyQBounds:
         # GPU only: skipped on CPU machines via the conftest stub.
         from ..bls import eebls_gpu_batch
 
-        rand = np.random.RandomState(8)
         freq_inj, q_inj, delta = 0.5, 0.03, 0.05
         ndata, baseline = 300, 365.0
 
