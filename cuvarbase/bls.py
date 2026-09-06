@@ -2273,7 +2273,8 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     freq: float
         Frequency of the signal
     q: float
-        Transit duration in phase
+        Transit duration in phase, in ``[0, 1]`` (``q = 0``, the
+        sparse paths' no-solution sentinel, evaluates to a power of 0)
     phi0: float
         Phase offset of transit, in the ORIGINAL input timescale
         (internally re-referenced to the subtracted epoch, consistent
@@ -2292,6 +2293,14 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
                          "got freq=%r, q=%r, phi0=%r" % (freq, q, phi0))
     if freq <= 0:
         raise ValueError("single_bls: freq must be > 0; got %r" % (freq,))
+    # q is a fractional transit duration. A negative q, or one wider
+    # than a full phase cycle, used to return a silent power of 0 (an
+    # empty box / an all-weight box). q = 0 is the sparse paths'
+    # "no valid box" sentinel and still evaluates to 0; phi0 is any
+    # finite phase (negative values wrap, like the reported solutions).
+    if q < 0 or q > 1:
+        raise ValueError("single_bls: q must be in [0, 1] (a fractional "
+                         "transit duration); got %r" % (q,))
 
     # Epoch-subtract before the float32 cast
     t, epoch = subtract_epoch(t)

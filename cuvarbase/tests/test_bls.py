@@ -3669,3 +3669,52 @@ class TestFastSolutionLadderMatchesKernel(object):
         assert phi0 == pytest.approx(0.25, abs=1e-6)
         # a q = m/39 (the old ladder) is never within 1e-9 of m/40
         assert np.min(np.abs(q - np.arange(1, 40) / 39.)) > 1e-4
+
+
+class TestSingleBlsQDomain(object):
+    """``single_bls`` input domain: ``freq > 0``, ``q`` in ``[0, 1]``,
+    ``phi0`` any finite phase. A negative or > 1 ``q`` used to return
+    a silent power of 0 (Sep 2026 fresh-eyes review, finding 38)."""
+
+    @staticmethod
+    def _lc(n=200, seed=9):
+        rand = np.random.RandomState(seed)
+        t = np.sort(20. * rand.rand(n))
+        y = 1. - 0.01 * (((t * 0.7) % 1.) < 0.1) + 1e-3 * rand.randn(n)
+        dy = 1e-3 * np.ones(n)
+        return t, y, dy
+
+    @pytest.mark.parametrize("q", [-0.1, -1e-9, 1.0000001, 1.5, 7.])
+    def test_q_outside_unit_interval_raises(self, q):
+        t, y, dy = self._lc()
+        with pytest.raises(ValueError, match=r"q must be in \[0, 1\]"):
+            single_bls(t, y, dy, 0.7, q, 0.1)
+
+    @pytest.mark.parametrize("freq", [0., -0.7])
+    def test_non_positive_freq_raises(self, freq):
+        t, y, dy = self._lc()
+        with pytest.raises(ValueError, match="freq must be > 0"):
+            single_bls(t, y, dy, freq, 0.1, 0.1)
+
+    @pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+    def test_non_finite_parameters_raise(self, bad):
+        t, y, dy = self._lc()
+        for args in [(bad, 0.1, 0.1), (0.7, bad, 0.1), (0.7, 0.1, bad)]:
+            with pytest.raises(ValueError, match="must be finite"):
+                single_bls(t, y, dy, *args)
+
+    def test_q_endpoints_evaluate_to_zero_power(self):
+        # q = 0 (the sparse paths' no-solution sentinel) is an empty
+        # box; q = 1 is an all-weight box: both are power 0, not errors
+        t, y, dy = self._lc()
+        assert single_bls(t, y, dy, 0.7, 0.0, 0.1) == 0
+        assert single_bls(t, y, dy, 0.7, 1.0, 0.1) == 0
+
+    def test_phi0_is_any_finite_phase(self):
+        # phi0 = 0 and negative phases are valid and wrap mod 1
+        t, y, dy = self._lc()
+        p0 = single_bls(t, y, dy, 0.7, 0.1, 0.0)
+        assert np.isfinite(p0) and p0 > 0.5
+        assert single_bls(t, y, dy, 0.7, 0.1, -0.3) == \
+            single_bls(t, y, dy, 0.7, 0.1, 0.7)
+        assert single_bls(t, y, dy, 0.7, 0.1, -1.0) == p0
