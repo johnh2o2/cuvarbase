@@ -30,6 +30,18 @@ import numpy as np
 from scipy import ndimage, stats
 
 
+__all__ = [
+    'signal_residue',
+    'running_median',
+    'signal_detection_efficiency',
+    'signal_to_noise',
+    'false_alarm_probability',
+    'odd_even_mismatch',
+    'compute_all_statistics',
+    'compute_period_uncertainty',
+]
+
+
 def signal_residue(chi2, chi2_null=None):
     """
     Calculate the Signal Residue (SR) of a chi-squared spectrum.
@@ -125,7 +137,7 @@ def running_median(x, kernel):
 
 
 def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
-                                kernel_size=None, window_length=None):
+                                kernel_size=None):
     """
     Calculate Signal Detection Efficiency (SDE).
 
@@ -152,9 +164,6 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
         3 x SDE_MEDIAN_KERNEL_SIZE 30, forced odd). Passing an explicit
         value overrides the automatic choice (even values are rounded
         up to the next odd integer, as required by the median filter).
-    window_length : int, optional
-        Deprecated alias for ``kernel_size``; ignored when
-        ``kernel_size`` is given.
 
     Returns
     -------
@@ -208,8 +217,6 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
     # Detrend with a running median if requested
     if detrend:
         if kernel_size is None:
-            kernel_size = window_length  # deprecated alias
-        if kernel_size is None:
             kernel_size = max(len(SR) // 10, 3)
             # Ensure odd window
             if kernel_size % 2 == 0:
@@ -254,7 +261,7 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
     return SDE, SDE_raw, power
 
 
-def signal_to_noise(depth, depth_err=None, n_transits=1,
+def signal_to_noise(depth, depth_err=None,
                     chi2_null=None, chi2_best=None):
     """
     Calculate signal-to-noise ratio.
@@ -266,11 +273,6 @@ def signal_to_noise(depth, depth_err=None, n_transits=1,
     depth_err : float, optional
         Uncertainty in depth. If None, estimated from chi2 values or
         Poisson statistics as a last resort.
-    n_transits : int, optional
-        Deprecated and unused. Earlier versions multiplied the SNR by
-        ``sqrt(n_transits)``, which double-counted transits whenever
-        ``depth_err`` reflected the full dataset (the only case this
-        function ever computes); retained for backward compatibility.
     chi2_null : float, optional
         Null hypothesis chi-squared (no transit). Used to estimate
         depth_err when depth_err is not provided.
@@ -491,8 +493,7 @@ def compute_all_statistics(chi2, periods, best_period_idx,
         chi2_null = np.max(chi2)
     if chi2_best is None:
         chi2_best = chi2[best_period_idx]
-    SNR = signal_to_noise(depth, n_transits=n_transits,
-                          chi2_null=chi2_null, chi2_best=chi2_best)
+    SNR = signal_to_noise(depth, chi2_null=chi2_null, chi2_best=chi2_best)
 
     # Compile statistics
     stats = {
@@ -582,38 +583,3 @@ def compute_period_uncertainty(periods, chi2, best_idx, threshold=1.0):
     uncertainty = width / 2.0
 
     return uncertainty
-
-
-def pink_noise_correction(snr, n_transits, correlation_length=1):
-    """
-    Correct SNR for correlated (pink) noise.
-
-    Parameters
-    ----------
-    snr : float
-        White noise SNR
-    n_transits : int
-        Number of transits
-    correlation_length : float, optional
-        Correlation length in transit durations (default: 1)
-
-    Returns
-    -------
-    snr_pink : float
-        Pink noise corrected SNR
-
-    Notes
-    -----
-    Pink noise (correlated noise) reduces effective SNR because
-    neighboring points are not independent.
-
-    Correction factor ≈ sqrt(correlation_length / n_points_per_transit)
-    """
-    if correlation_length <= 0:
-        return snr
-
-    # Approximate correction
-    correction = np.sqrt(correlation_length)
-    snr_pink = snr / correction
-
-    return snr_pink

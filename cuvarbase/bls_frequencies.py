@@ -15,6 +15,13 @@ Consistent with :func:`cuvarbase.bls.transit_autofreq`.
 import numpy as np
 
 
+__all__ = [
+    'keplerian_freq_grid',
+    'uniform_freq_grid',
+    'freq_grid_stats',
+]
+
+
 def _q_transit(freq, rho=1.0):
     """
     Keplerian transit duration fraction q = T_dur / P.
@@ -180,7 +187,7 @@ def _recursion_transit_grid(fmin, fmax, num_fac, denom, rho=1.0,
     return np.array(freqs, dtype=np.float64)
 
 
-def keplerian_freq_grid(period_min, period_max, baseline,
+def keplerian_freq_grid(period_min, period_max, baseline, *,
                         R_star=1.0, M_star=1.0, oversampling=2,
                         return_qvals=False, method='vectorized'):
     """
@@ -264,8 +271,8 @@ def keplerian_freq_grid(period_min, period_max, baseline,
     return freqs
 
 
-def uniform_freq_grid(period_min, period_max, baseline, oversampling=2,
-                       R_star=1.0, M_star=1.0):
+def uniform_freq_grid(period_min, period_max, baseline, *, oversampling=2,
+                      R_star=1.0, M_star=1.0):
     """
     Generate a uniform frequency grid matched to Keplerian sensitivity.
 

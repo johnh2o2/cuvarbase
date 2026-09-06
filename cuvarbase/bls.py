@@ -20,7 +20,7 @@ import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
 
-from .core import ensure_context
+from .base import ensure_context
 from .utils import (find_kernel, _module_reader, subtract_epoch,
                     conflict_scatter_perm, check_lightcurve, check_freqs)
 from .bls_frequencies import (_euler_transit_grid,
@@ -30,6 +30,37 @@ from .memory.bls_memory import BLSBatchMemory
 from .memory._host import host_array
 
 import numpy as np
+
+
+__all__ = [
+    'fmin_transit',
+    'fmax_transit0',
+    'q_transit',
+    'freq_transit',
+    'fmax_transit',
+    'transit_autofreq',
+    'compile_bls',
+    'BLSMemory',
+    'eebls_gpu_fast',
+    'eebls_gpu_fast_optimized',
+    'eebls_gpu_fast_adaptive',
+    'eebls_gpu_custom',
+    'dnbins',
+    'nbins_iter',
+    'count_tot_nbins',
+    'eebls_gpu',
+    'single_bls',
+    'convert_bls_power',
+    'sparse_bls_cpu',
+    'compile_sparse_bls',
+    'sparse_bls_gpu',
+    'eebls_transit',
+    'compile_bls_batch',
+    'eebls_gpu_batch',
+    'hone_solution',
+    'eebls_transit_gpu',
+]
+
 
 _default_block_size = 256
 
@@ -361,6 +392,9 @@ def q_transit(freq, rho=1., **kwargs):
     duration is :math:`q = \\arcsin[(f / f_{\\max,0})^{2/3}] / \\pi`.
     This is Seager & Mallen-Ornelas (2003) eq. (3) reduced to ``b = 0``
     [SM03]_, with ``fmax0`` from :func:`fmax_transit0`.
+
+    Not to be confused with :func:`cuvarbase.tls_grids.q_transit`, the
+    TLS helper that takes a *period* and stellar/planet parameters.
     """
     fmax0 = fmax_transit0(rho=rho)
 
@@ -662,9 +696,11 @@ class BLSMemory:
         self.allocate_host_arrays(nfreqs=max_nfreqs, ndata=max_ndata)
 
     def allocate_pinned_arrays(self, nfreqs=None, ndata=None):
-        """Deprecated alias for :meth:`allocate_host_arrays`."""
-        warnings.warn("allocate_pinned_arrays is deprecated; use "
-                      "allocate_host_arrays", DeprecationWarning)
+        """Deprecated alias for :meth:`allocate_host_arrays` (shipped in
+        0.2.5; kept for 1.x, removed in 2.0)."""
+        warnings.warn("BLSMemory.allocate_pinned_arrays is deprecated; use "
+                      "allocate_host_arrays. It will be removed in 2.0",
+                      DeprecationWarning, stacklevel=2)
         return self.allocate_host_arrays(nfreqs=nfreqs, ndata=ndata)
 
     def allocate_host_arrays(self, nfreqs=None, ndata=None):
@@ -1469,7 +1505,7 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     cache) puts the block-size effect at ~1.0-1.3x vs the fixed
     256-thread default (earlier 1.4-5.3x figures were dominated by
     per-call kernel handling that the kernel cache now amortizes; see
-    ``benchmark_results_by_gpu/block_size_a5000.json``).
+    ``benchmarks/results/block_size_a5000.json``).
 
     All other parameters identical to eebls_gpu_fast.
 
@@ -2318,7 +2354,7 @@ def _validate_convention(convention):
                          % (_BLS_POWER_CONVENTIONS, convention))
 
 
-def convert_bls_power(power, y, dy, convention='chi2ratio'):
+def convert_bls_power(power, y, dy, *, convention='chi2ratio'):
     """
     Convert the native BLS power to another power-spectrum convention.
 
@@ -3350,7 +3386,7 @@ def _get_cached_batch_kernels(block_size):
         return compiled
 
 
-def eebls_gpu_batch(lightcurves, freqs, qmin=1e-2, qmax=0.5,
+def eebls_gpu_batch(lightcurves, freqs, *, qmin=1e-2, qmax=0.5,
                     noverlap=2, dlogq=0.3, dphi=0.0,
                     ignore_negative_delta_sols=False,
                     max_batch_lcs=256, block_size=None,
@@ -3676,7 +3712,6 @@ def hone_solution(t, y, dy, f0, df0, q0, dlogq0, phi0, stop=1e-5,
     q = q0
     phi = phi0
     f = f0
-    nol = noverlap
 
     baseline = np.max(t) - np.min(t)
 

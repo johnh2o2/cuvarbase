@@ -17,6 +17,21 @@ import warnings
 from collections import OrderedDict
 
 import numpy as np
+
+
+__all__ = [
+    'BATMAN_AVAILABLE',
+    'create_reference_transit',
+    'create_transit_model_cache',
+    'simple_trapezoid_transit',
+    'interpolate_transit_model',
+    'generate_transit_template',
+    'generate_template_tables',
+    'get_default_limb_darkening',
+    'validate_limb_darkening_coeffs',
+]
+
+
 try:
     import batman
     BATMAN_AVAILABLE = True
@@ -61,7 +76,7 @@ def _clear_template_table_cache():
 
 
 def create_reference_transit(n_samples=1000, limb_dark='quadratic',
-                             u=[0.4804, 0.1867]):
+                             u=None):
     """
     Create a reference transit model normalized to Earth-like transit.
 
@@ -93,6 +108,8 @@ def create_reference_transit(n_samples=1000, limb_dark='quadratic',
     - Semi-major axis = 1.0 (normalized)
     - Planet-to-star radius ratio scaled to produce unit depth
     """
+    if u is None:
+        u = [0.4804, 0.1867]
     if not BATMAN_AVAILABLE:
         raise ImportError("batman package required for transit models. "
                          "Install with: pip install batman-package")
@@ -136,7 +153,7 @@ def create_reference_transit(n_samples=1000, limb_dark='quadratic',
 
 
 def create_transit_model_cache(durations, period=1.0, n_samples=1000,
-                               limb_dark='quadratic', u=[0.4804, 0.1867],
+                               limb_dark='quadratic', u=None,
                                R_star=1.0, M_star=1.0):
     """
     Create cache of transit models for different durations.
@@ -170,6 +187,8 @@ def create_transit_model_cache(durations, period=1.0, n_samples=1000,
     This creates models at different durations by adjusting the semi-major
     axis in the batman model to produce the desired transit duration.
     """
+    if u is None:
+        u = [0.4804, 0.1867]
     if not BATMAN_AVAILABLE:
         raise ImportError("batman package required for transit models")
 
@@ -316,7 +335,7 @@ def interpolate_transit_model(model_phases, model_flux, target_phases,
 
 
 def generate_transit_template(n_template=1000, limb_dark='quadratic',
-                              u=[0.4804, 0.1867]):
+                              u=None):
     """
     Generate a 1D transit template for use in the GPU TLS kernel.
 
@@ -340,6 +359,8 @@ def generate_transit_template(n_template=1000, limb_dark='quadratic',
         Index 0 corresponds to transit_coord = -1 (leading edge),
         index n_template-1 corresponds to transit_coord = +1 (trailing edge).
     """
+    if u is None:
+        u = [0.4804, 0.1867]
     transit_coords = np.linspace(-1.0, 1.0, n_template)
 
     if BATMAN_AVAILABLE:
@@ -401,7 +422,7 @@ def generate_transit_template(n_template=1000, limb_dark='quadratic',
 
 
 def generate_template_tables(n_table=1024, limb_dark='quadratic',
-                             u=[0.4804, 0.1867], oversample=8):
+                             u=None, oversample=8):
     """
     Generate the template lookup tables used by the fast TLS kernel.
 
@@ -441,6 +462,8 @@ def generate_template_tables(n_table=1024, limb_dark='quadratic',
         A trapezoid fallback (batman missing or failing) is never
         cached, so its warning keeps firing.
     """
+    if u is None:
+        u = [0.4804, 0.1867]
     key = _template_table_key(n_table, limb_dark, u, oversample)
     if key is not None:
         with _template_table_lock:

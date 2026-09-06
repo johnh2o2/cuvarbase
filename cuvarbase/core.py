@@ -1,11 +1,17 @@
 """
-Core classes for cuvarbase.
+Deprecated alias of :mod:`cuvarbase.base`.
 
-This module maintains backward compatibility by importing from the new
-base module. New code should import from cuvarbase.base instead.
+``cuvarbase.core`` shipped in 0.2.5 and is kept for the 1.x series so
+old imports keep working; importing it emits a ``DeprecationWarning``.
+It will be removed in 2.0. Import ``GPUAsyncProcess`` and
+``ensure_context`` from :mod:`cuvarbase.base` instead.
 """
+import warnings
 
-# Import from new location for backward compatibility
 from .base import GPUAsyncProcess, ensure_context
+
+warnings.warn("cuvarbase.core is deprecated; import from cuvarbase.base. "
+              "It will be removed in 2.0", DeprecationWarning,
+              stacklevel=2)
 
 __all__ = ['GPUAsyncProcess', 'ensure_context']

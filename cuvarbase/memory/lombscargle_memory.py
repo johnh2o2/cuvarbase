@@ -7,6 +7,7 @@ import pycuda.driver as cuda  # noqa: F401  (used by transfer methods)
 import pycuda.gpuarray as gpuarray
 
 from ..base import ensure_context
+from ..utils import weights
 from ._host import host_array
 from .nfft_memory import NFFTMemory, next_fast_len
 
@@ -47,31 +48,8 @@ def nfft_grid_sizes(nf, k0, nharmonics=1, sigma=4):
     return nf_yw, n_yw, nf_w, n_w
 
 
-def weights(err):
-    """
-    Generate observation weights from uncertainties.
-    
-    Note: This function is also available in cuvarbase.utils for backward compatibility.
-    
-    Parameters
-    ----------
-    err : array-like
-        Observation uncertainties
-        
-    Returns
-    -------
-    weights : ndarray
-        Normalized weights (inverse square of errors, normalized to sum to 1)
-
-    Notes
-    -----
-    Uses ``np.sum`` (not the Python builtin ``sum``, which iterates the
-    array element by element): identical to
-    :func:`cuvarbase.utils.weights` bit for bit, and 70x cheaper at
-    N = 65,000.
-    """
-    w = np.power(err, -2)
-    return w/np.sum(w)
+# ``weights`` is re-exported here (and as ``cuvarbase.memory.weights``)
+# for backward compatibility; :func:`cuvarbase.utils.weights` is canonical.
 
 
 class LombScargleMemory:

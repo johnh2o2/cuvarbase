@@ -10,7 +10,6 @@ References
 - Kovács et al. (2002), "Box Least Squares", A&A 391, 369
 """
 
-import sys
 import threading
 import warnings
 import operator
@@ -29,6 +28,18 @@ from .utils import (find_kernel, _module_reader,
 from . import tls_grids
 from . import tls_models
 from . import tls_stats
+
+
+__all__ = [
+    'compile_tls',
+    'TLSMemory',
+    'tls_search_gpu',
+    'tls_search',
+    'tls_transit',
+    'compile_tls_fast',
+    'tls_search_batch',
+]
+
 
 _default_block_size = 128  # Smaller default than BLS (TLS has more shared memory needs)
 _KERNEL_CACHE_MAX_SIZE = 10
@@ -375,9 +386,9 @@ class TLSMemory:
         self.best_depth_g = None
         self.template_g = None
 
-        self.allocate_pinned_arrays()
+        self.allocate_host_arrays()
 
-    def allocate_pinned_arrays(self):
+    def allocate_host_arrays(self):
         """Allocate host transfer buffers (page-locked by default, with a
         page-aligned fallback if pinning fails)."""
         p = self.pinned
@@ -567,13 +578,13 @@ class TLSMemory:
         return mem
 
 
-def tls_search_gpu(t, y, dy, periods=None, durations=None,
+def tls_search_gpu(t, y, dy, periods=None, *,
                    qmin=None, qmax=None, n_durations=15,
                    R_star=1.0, M_star=1.0,
                    period_min=None, period_max=None, n_transits_min=2,
                    oversampling_factor=3, duration_grid_step=1.1,
                    R_planet_min=0.5, R_planet_max=5.0,
-                   limb_dark='quadratic', u=[0.4804, 0.1867],
+                   limb_dark='quadratic', u=None,
                    block_size=None, t0_oversample=3.0,
                    kernel=None, memory=None, stream=None,
                    transfer_to_device=True, transfer_to_host=True,
@@ -606,11 +617,6 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
         Custom period grid (any order; sorted internally, and every
         per-period output array is returned in the caller's order). If
         None, generated automatically (Ofir 2014 grid).
-    durations : array_like, optional
-        Unused; accepted for backward compatibility only (a warning is
-        raised if passed). Trial durations are derived from the
-        per-period duration window (see ``qmin``/``qmax`` and
-        ``duration_window``).
     qmin, qmax : array_like, optional
         Explicit per-period fractional duration bounds (aligned with
         ``periods``; give both or neither). When omitted the window is
@@ -760,6 +766,8 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
     the wrong period). Normalize to a median (not mean) out-of-transit
     level of 1 to ~0.1 sigma per point before searching.
     """
+    if u is None:
+        u = [0.4804, 0.1867]
     # Validate the light curve before anything else: the automatic
     # period grid is built from t, and a NaN sample or dy = 0 used to
     # travel all the way to the kernel (chi2 off by a factor ~1e3 on
@@ -771,13 +779,6 @@ def tls_search_gpu(t, y, dy, periods=None, durations=None,
 
     # Validate limb darkening
     tls_models.validate_limb_darkening_coeffs(u, limb_dark)
-
-    if durations is not None:
-        warnings.warn(
-            "tls_search_gpu: the `durations` parameter has never been "
-            "used by any TLS path and is ignored; trial durations are "
-            "derived from the per-period duration window (qmin/qmax, "
-            "or the Keplerian window built from R_star/M_star)")
 
     # Generate period grid if not provided
     if periods is None:
@@ -1108,7 +1109,7 @@ def tls_search(t, y, dy, **kwargs):
     return tls_search_gpu(t, y, dy, **kwargs)
 
 
-def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
+def tls_transit(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
                 qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
                 period_min=None, period_max=None, n_transits_min=2,
                 oversampling_factor=3, **kwargs):
@@ -1126,11 +1127,16 @@ def tls_transit(t, y, dy, R_star=1.0, M_star=1.0, R_planet=1.0,
     Parameters
     ----------
     t : array_like
-        Observation times (days)
+        Observation times (days). Absolute BJD-scale times are safe:
+        ``floor(min(t))`` is subtracted in float64 before any float32
+        cast (see :func:`tls_search_gpu`).
     y : array_like
-        Flux measurements (arbitrary units)
+        Fluxes, normalized so the out-of-transit baseline is ~1.0
+        (NOT arbitrary units: the model is ``1 - depth * T`` with a
+        fixed baseline of 1 and no path rescales the input, so raw
+        counts give meaningless depths; see :func:`tls_search_gpu`).
     dy : array_like
-        Flux uncertainties
+        Flux uncertainties, in the same (normalized) units as ``y``
     R_star : float, optional
         Stellar radius in solar radii (default: 1.0)
     M_star : float, optional
@@ -1265,13 +1271,6 @@ _TLS_FAST_DEFAULT_BLOCK = 256
 _TLS_FAST_MAX_OUT_FLOATS = 32 * 1024 * 1024   # per output array
 _TLS_FAST_MAX_POINTS = 16 * 1024 * 1024       # concatenated data points
 _TLS_FAST_MAX_GRID_Y = 65535
-
-
-def _next_pow2(n):
-    p = 1
-    while p < n:
-        p *= 2
-    return p
 
 
 def _device_max_shared():
@@ -1436,7 +1435,7 @@ def _preprocess_batch(lightcurves):
     return t_hi, t_lo, a_c, b_c, offs, lens, chi2_0, epochs, spans
 
 
-def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
+def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
                      periods=None, qmin=None, qmax=None,
                      period_min=None, period_max=None,
                      n_transits_min=2, oversampling_factor=3,
@@ -1444,7 +1443,7 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
                      t0_oversample=3.0,
                      refine_top_k=50, refine_oversample=33.0,
                      block_size=None, nbins=None,
-                     limb_dark='quadratic', u=[0.4804, 0.1867],
+                     limb_dark='quadratic', u=None,
                      return_arrays=False, sde_kernel_size=None,
                      fap_null_draws=0, fap_seed=None,
                      _warn_failed=False):
@@ -1502,7 +1501,8 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
         the narrowest trial duration / t0_oversample, within the
         device's shared-memory limit.
     limb_dark, u : optional
-        Limb-darkening law/coefficients for the transit template.
+        Limb-darkening law/coefficients for the transit template
+        (defaults: ``'quadratic'``, ``[0.4804, 0.1867]``).
     return_arrays : bool
         Also return the per-period chi2/t0/duration/depth arrays and
         derived spectra for each lightcurve (adds D2H transfer time).
@@ -1556,6 +1556,8 @@ def tls_search_batch(lightcurves, R_star=1.0, M_star=1.0, R_planet=1.0,
         only, keeping the detection statistic's scale consistent
         across periods.
     """
+    if u is None:
+        u = [0.4804, 0.1867]
     tls_grids.validate_stellar_parameters(R_star, M_star)
     tls_models.validate_limb_darkening_coeffs(u, limb_dark)
 
