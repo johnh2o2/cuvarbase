@@ -93,8 +93,29 @@ _EXPERIMENTAL_MSG = (
 
 def _whitened_inner(A, B, psd, weights):
     """Whitened frequency-domain inner product Re sum_k A_k B_k* w_k / P_k
-    -- the metric of the stationary matched filter."""
+    -- the metric of the stationary matched filter.
+
+    Reference helper, not on the :meth:`NUFFTLRTAsyncProcess.run` path
+    (which precomputes ``Y w / P`` once per run and evaluates
+    :func:`_matched_filter_statistic` per template); the CPU tests use
+    it as the independent algebra for the K = 0 limit of Detector A."""
     return float(np.real(np.sum(A * np.conj(B) * weights / psd)))
+
+
+def _matched_filter_statistic(Yw, wp, T):
+    """The stationary whitened matched filter of the module docstring,
+    ``Re <Y, T>_W / sqrt(<T, T>_W)``, with the data side precomputed:
+    ``Yw = Y w / P`` and ``wp = w / P`` (float64), ``T`` the template
+    transform. This is the per-template reduction
+    :meth:`NUFFTLRTAsyncProcess.run` evaluates for ``detector='matched'``
+    and ``'sequential'``; Detector A's K = 0 limit and the reference
+    wrapper :meth:`NUFFTLRTAsyncProcess._compute_matched_filter_snr`
+    call it too, so the tests of the latter cover the shipped
+    arithmetic. Returns 0.0 for a template with no whitened power."""
+    T = np.asarray(T)
+    num = float(np.real(np.sum(Yw * np.conj(T))))
+    den = float(np.sum((np.abs(T) ** 2) * wp))
+    return num / np.sqrt(den) if den > 0 else 0.0
 
 
 def _prior_response_matrix(G, prior_cov):
@@ -195,9 +216,7 @@ def _marginal_statistic(Y, T, V_ks, psd, weights, prior_cov,
     wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd, np.float64)
     Y = np.asarray(Y)
     if K == 0:
-        num = float(np.real(np.sum(Y * np.conj(T) * wp)))
-        den = float(np.sum((np.abs(T) ** 2) * wp))
-        return num / np.sqrt(den) if den > 0 else 0.0
+        return _matched_filter_statistic(Y * wp, wp, T)
     Vw, M, w_y = _marginal_precompute(Y, V_ks, psd, weights, prior_cov)
     return _marginal_evaluate(Y * wp, wp, T, Vw, M, w_y, eps_floor)
 
@@ -899,10 +918,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
                 return _marginal_evaluate(Yw, wp, T_nufft, Vw, M, w_y)
         else:
             def _statistic(T_nufft):
-                T_nufft = np.asarray(T_nufft)
-                num = float(np.real(np.sum(Yw * np.conj(T_nufft))))
-                den = float(np.sum((np.abs(T_nufft) ** 2) * wp))
-                return num / np.sqrt(den) if den > 0 else 0.0
+                return _matched_filter_statistic(Yw, wp, T_nufft)
 
         def _template_statistic(period, epoch, duration):
             template = self._generate_template(t, period, epoch, duration,
@@ -976,7 +992,16 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
 
     def _compute_matched_filter_snr(self, Y, T, P_s, weights, eps_floor):
         """
-        Compute matched filter SNR.
+        Matched-filter statistic of one template from the raw transforms.
+
+        Reference wrapper: floor the PSD (:func:`_floor_psd`), form the
+        float64 whitening weights and evaluate
+        :func:`_matched_filter_statistic` -- the same three steps
+        :meth:`run` performs (the first two once per run, the last per
+        template). :meth:`run` does not call this method; it is the
+        single-template entry point the tests use, and shares
+        ``run``'s helpers so that it cannot drift from the shipped
+        arithmetic.
 
         Parameters
         ----------
@@ -996,24 +1021,10 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         snr : float
             Signal-to-noise ratio
         """
-        # Ensure proper types
-        Y = np.asarray(Y, dtype=self.complex_type)
-        T = np.asarray(T, dtype=self.complex_type)
-        P_s = np.asarray(P_s, dtype=self.real_type)
-        weights = np.asarray(weights, dtype=self.real_type)
-
-        # Apply floor to power spectrum
-        P_s = _floor_psd(P_s, eps_floor, self.real_type)
-
-        # Compute numerator: sum(Y * conj(T) * weights / P_s)
-        numerator = np.real(np.sum((Y * np.conj(T)) * weights / P_s))
-
-        # Compute denominator: sqrt(sum(|T|^2 * weights / P_s))
-        denominator = np.sqrt(np.real(np.sum((np.abs(T) ** 2)
-                                             * weights / P_s)))
-
-        # Return SNR
-        if denominator > 0:
-            return numerator / denominator
-        else:
-            return 0.0
+        # Exactly run()'s sequence: PSD floored in the device precision,
+        # whitening weights and the reduction in float64.
+        psd = _floor_psd(P_s, eps_floor, self.real_type)
+        wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd,
+                                                                np.float64)
+        Yw = np.asarray(Y) * wp
+        return _matched_filter_statistic(Yw, wp, T)
