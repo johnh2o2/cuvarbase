@@ -1126,6 +1126,33 @@ class TestTemplateTableMemoization:
                 tls_models.generate_template_tables(n_table=128)
         assert tls_models._template_table_cache == {}
 
+    def test_missing_batman_tables_are_cached_under_their_own_key(
+            self, monkeypatch):
+        """Release review (findings 0/12): with batman not installed
+        the trapezoid IS the template -- deterministic, warned about
+        once at import rather than per call -- so its tables are
+        memoized like any other, under a key that records batman's
+        absence so a batman-backed table can never collide with it."""
+        monkeypatch.setattr(tls_models, 'BATMAN_AVAILABLE', False)
+        with _w.catch_warnings():
+            _w.simplefilter("error")
+            first = tls_models.generate_template_tables(n_table=128)
+            second = tls_models.generate_template_tables(n_table=128)
+        for a, b in zip(first, second):
+            assert np.array_equal(a, b)
+        keys = list(tls_models._template_table_cache)
+        assert len(keys) == 1 and keys[0][-1] is False
+        assert keys[0] == tls_models._template_table_key(
+            128, 'quadratic', [0.4804, 0.1867], 8)
+        # the cached tables are the trapezoid's
+        expect = tls_models._trapezoid_template(128 * 8 + 1)[::8]
+        assert np.array_equal(first[0], expect.astype(np.float32))
+        # a batman-backed table lives under a different key
+        monkeypatch.setattr(tls_models, 'BATMAN_AVAILABLE', True)
+        assert tls_models._template_table_key(
+            128, 'quadratic', [0.4804, 0.1867], 8) not in \
+            tls_models._template_table_cache
+
 
 class TestBatchHasNoThreadPool:
     """Phase 2 TLS-2 (audit section 5, id 53): tls_search_batch must not
