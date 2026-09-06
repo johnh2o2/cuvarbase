@@ -1000,6 +1000,10 @@ class TestCEConstantY(object):
             with pytest.raises(ValueError, match='lightcurve 1: y is '
                                                  'constant'):
                 entry([(t, y, dy), (t, const, dy)])
+        # stub-independent: the validator itself raises (a regression
+        # would otherwise reach the pycuda stub and skip, not fail)
+        with pytest.raises(ValueError, match='y is constant'):
+            ce_module._check_ce_data([(t, const, dy)], 'x')
         # two distinct values are enough to build the magnitude bins
         two = np.where(np.arange(60) % 2 == 0, 12.0, 12.5)
         ce_module._check_ce_data([(t, two, dy)], 'x')
@@ -1058,6 +1062,9 @@ class TestCEMemoryOptionMismatch(object):
         proc.memory = [mem]     # what preallocate() would have set
         with pytest.raises(ValueError, match='do not match the memory'):
             proc.run([(t, y, dy)], freqs=freqs, weighted=True)
+        # stub-independent: the guard itself raises
+        with pytest.raises(ValueError, match='do not match the memory'):
+            proc._check_memory_options(mem, {'balanced_magbins': True})
 
     def test_fast_process_rejects_a_weighted_memory(self):
         # conditional_entropy_fast ignores ``weighted`` and would read

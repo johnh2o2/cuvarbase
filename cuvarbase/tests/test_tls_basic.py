@@ -1689,5 +1689,5 @@ class TestTlsInputGuards:
         with pytest.raises(TypeError, match="'bogus_kwarg'") as excinfo:
             tls.tls_search_gpu(t, y, dy, periods=periods, bogus_kwarg=42)
         assert 'tls_search_batch' not in str(excinfo.value)
-        # the one legitimate extra keyword is still consumed
-        assert tls._TLS_SEARCH_GPU_EXTRA_KWARGS == frozenset(['n_template'])
+        # (n_template, the one legitimate extra keyword, is exercised by
+        # the legacy-path GPU tests)
