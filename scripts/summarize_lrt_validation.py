@@ -11,10 +11,16 @@ def main(path):
         r = json.load(f)
 
     cal = r['snr_calibration']
-    print('### LRT statistic calibration (white noise, fixed template)\n')
-    print('mean = %.3f, std = %.3f over %d realizations '
-          '(nominal N(0,1) — the excess dispersion is why thresholds '
-          'must be empirical)\n' % (cal['mean'], cal['std'], cal['n']))
+    print('### LRT statistic null calibration (white noise, fixed '
+          'template)\n')
+    print('mean = %.3f, std = %.3f over %d realizations. Calibration '
+          'constant of this configuration, not a pass/fail check: the '
+          'statistic is a whitened correlation, not N(0,1) -- its null '
+          'std is expected to be well above 1 (~1.8-2.7 for the '
+          'harness\'s ground sampling at nf = 2n) because the NFFT '
+          'modes of irregular sampling are not orthogonal. This is why '
+          'the thresholds below are empirical null percentiles.\n'
+          % (cal['mean'], cal['std'], cal['n']))
 
     meta = r['meta']
     print('Protocol: %d-point ground-like irregular sampling over %.0f d; '
