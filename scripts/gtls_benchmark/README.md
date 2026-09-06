@@ -3,7 +3,7 @@
 Reproduces Figure 7 of the GTLS paper (Hu, Ge, Jin & Willis, arXiv:2607.00348) —
 single-light-curve search time vs light-curve baseline — with the search held
 **fair** across implementations, on one GPU. Full analysis and results:
-`analysis/GTLS_COMPARISON.md`.
+`docs/GTLS_COMPARISON.md`.
 
 ## Files
 - `bench_core.py` — GPU-independent core: light-curve injection (batman, Keplerian
@@ -14,14 +14,13 @@ single-light-curve search time vs light-curve baseline — with the search held
 - `plot_fig7.py` — merges result JSONs and renders the reproduced figure + tables.
 
 ## Requirements (GPU host)
-`cupy`, `pycuda`, `scikit-cuda`, `batman-package`, `numpy<2` (numba/gtls pin),
-plus **both** cuvarbase feature branches merged:
-- `feature/tls-fast-survey` — the improved TLS (`tls_search_batch`);
-- `feature/bls-survey-speed` — the improved BLS (`eebls_gpu_batch`).
-
-The TLS-vs-GTLS curves run on `feature/tls-fast-survey` alone; the **BLS** curves
-require `feature/bls-survey-speed` (otherwise stock BLS is timed and the numbers
-will differ from the writeup). GTLS = `pip install gputls` (v0.5.1) + cupy.
+`cupy`, `pycuda`, `batman-package`, `numpy<2` (numba/gtls pin), and cuvarbase
+>= 1.0. The improved TLS (`tls_search_batch`) and batched BLS (`eebls_gpu_batch`)
+that the writeup times both ship in 1.0; they were developed on the
+`feature/tls-fast-survey` and `feature/bls-survey-speed` branches, which are
+merged and no longer needed. Timing an older cuvarbase (0.2.x) uses the stock
+kernels and will not reproduce the writeup. GTLS = `pip install gputls` (v0.5.1)
++ cupy.
 
 ## Run
 ```bash
