@@ -740,7 +740,10 @@ def lomb_scargle_async(memory, functions, freqs,
         If False, uses direct sums.
     python_dir_sums: bool, optional (default: False)
         If True, performs direct sums with Python on the CPU
-        (``lomb_scargle_direct_sums``, float64, all harmonics; slow)
+        (``lomb_scargle_direct_sums``, computed in float64, all
+        harmonics; slow). Like every other path the result is written
+        into ``memory.lsp_c`` (the memory's precision and length,
+        ``memory.nf``) and that pinned buffer is returned.
     transfer_to_device: bool, optional, (default: True)
         If the data is already on the gpu, set as False
     transfer_to_host: bool, optional, (default: True)
