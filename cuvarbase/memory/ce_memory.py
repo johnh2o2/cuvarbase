@@ -264,13 +264,19 @@ class ConditionalEntropyMemory:
 
         Uses ``freqs`` if given (it then becomes the memory's grid),
         otherwise ``self.freqs``; the grid is cast to ``real_type``.
+        ``self.freqs`` is a private copy: ``run(memory=...)`` compares
+        it with the grid of the next call to decide whether to upload
+        again, and for a caller's float32 grid ``np.ascontiguousarray``
+        returned the caller's own array, so a grid modified in place
+        between two calls compared equal to itself and stayed stale on
+        the device.
         """
         freqs = kwargs.get('freqs', self.freqs)
         if not (freqs is not None):
             raise ValueError(
                 "ConditionalEntropyMemory: requirement "
                 "`freqs is not None` not satisfied")
-        freqs = np.ascontiguousarray(freqs, dtype=self.real_type)
+        freqs = np.array(freqs, dtype=self.real_type, copy=True)
         if self.freqs_g is None or self.freqs_g.size != len(freqs):
             raise ValueError(
                 "ConditionalEntropyMemory: freqs_g holds %s frequencies "

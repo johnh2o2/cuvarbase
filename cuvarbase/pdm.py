@@ -360,7 +360,13 @@ class PDMAsyncProcess(GPUAsyncProcess):
             del cache
             gpu_data, pow_cpus = self.allocate(norm_data, freqs=frqs,
                                                **kwargs)
-            grids = [np.asarray(f, dtype=np.float32)
+            # a private copy: ``np.asarray`` returns the caller's own
+            # array for a float32 grid, and the change detection below
+            # then compared the caller's grid with itself -- a grid
+            # modified in place between two same-shape calls was never
+            # re-uploaded (the powers came back labelled with the new
+            # grid but computed on the old one)
+            grids = [np.array(f, dtype=np.float32, copy=True)
                      for (t, y, w, f) in norm_data]
             self._alloc_cache = (sig, gpu_data, grids)
             return gpu_data, pow_cpus

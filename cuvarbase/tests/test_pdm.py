@@ -3,6 +3,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 import pytest
 from pycuda.tools import mark_cuda_test
 from ..utils import weights
+from .. import pdm as pdm_module
 from ..pdm import pdm2_cpu, binless_pdm_cpu, PDMAsyncProcess
 
 pytest.nbins = 10
@@ -485,6 +486,63 @@ class TestPDMAllocationReuse(object):
         clean.finish()
         assert_array_equal(np.asarray(got[0][1]), np.asarray(ref[0][1]))
         assert_array_equal(np.asarray(got[0][0]), g2)
+
+    def test_in_place_mutated_float32_grid_is_reuploaded_cpu(self,
+                                                             monkeypatch):
+        """Sep 2026 review (idx 15): the cache stored ``np.asarray(f,
+        float32)`` -- the caller's own array for a float32 grid -- so a
+        grid modified in place compared equal to itself and the device
+        kept the old one. CPU-runnable with recording fake device
+        arrays."""
+        class FakeDevice(object):
+            def __init__(self):
+                self.sets = []
+
+            def set(self, a):
+                self.sets.append(np.array(a, copy=True))
+
+        proc = PDMAsyncProcess()
+
+        def fake_allocate(norm_data, freqs=None, **kw):
+            gpu = [(None, None, None, FakeDevice(), None) for _ in norm_data]
+            return gpu, [np.zeros(len(f), np.float32)
+                         for (t, y, w, f) in norm_data]
+
+        monkeypatch.setattr(proc, 'allocate', fake_allocate)
+        monkeypatch.setattr(pdm_module, 'host_array',
+                            lambda shape, dtype: np.zeros(shape, dtype))
+        t, y, dy = _reuse_lc(40, 11)
+        w = weights(dy)
+        f = np.linspace(0.2, 4.0, 33).astype(np.float32)
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        assert proc._alloc_cache[2][0] is not f
+        f *= 2.0
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        dev = gpu_data[0][3]
+        assert len(dev.sets) == 1
+        assert_array_equal(dev.sets[0], f)
+        assert_array_equal(proc._alloc_cache[2][0], f)
+        # the stored grid is still private: a later mutation is seen too
+        f += 0.5
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        assert len(dev.sets) == 2
+        assert_array_equal(dev.sets[1], f)
+
+    def test_in_place_mutated_float32_grid_is_reuploaded(self):
+        """GPU counterpart: the powers of the second call must be those
+        of the mutated grid, not of the grid the first call uploaded."""
+        proc = PDMAsyncProcess()
+        d = _reuse_lc(150, 12)
+        g = np.asarray(self.grid, dtype=np.float32)
+        proc.run([d], freqs=g)
+        proc.finish()
+        g += np.float32(0.37)          # in place: same object, new grid
+        got = proc.run([d], freqs=g)
+        proc.finish()
+        clean = PDMAsyncProcess()
+        ref = clean.run([d], freqs=np.array(g, copy=True))
+        clean.finish()
+        assert_array_equal(np.asarray(got[0][1]), np.asarray(ref[0][1]))
 
     def test_batched_run_matches_single_runs(self):
         data = [_reuse_lc(90 + 0 * i, 20 + i) for i in range(7)]
