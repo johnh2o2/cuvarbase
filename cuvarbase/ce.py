@@ -60,7 +60,10 @@ def _check_ce_data(data, where):
     ``dy = 0`` or a NaN in ``y`` used to give a finite but wrong
     spectrum (the NaN point was counted in magnitude bin 0; 3% relative
     error with a different argmax), and a NaN in ``t`` moved the argmax
-    without any warning (Sep 2026 audit, defect 23).
+    without any warning (Sep 2026 audit, defect 23). A constant ``y``
+    (audit id 115) made ``setdata``'s ``(y - min) / (max - min)`` 0/0
+    for every point: the NaN bin indices were cast to uint32 (a
+    platform-defined value) and the spectrum was flat garbage.
     """
     for i, lc in enumerate(data):
         # exactly (t, y, dy): normalize_light_curves unpacks three
@@ -71,8 +74,16 @@ def _check_ce_data(data, where):
                              "tuple; got %d elements"
                              % (where, i, len(lc)))
         dy = lc[2]
-        check_lightcurve(lc[0], lc[1], dy, min_n=_CE_MIN_NDATA,
-                         name='%s lightcurve %d' % (where, i))
+        name = '%s lightcurve %d' % (where, i)
+        _t, y, _dy = check_lightcurve(lc[0], lc[1], dy,
+                                      min_n=_CE_MIN_NDATA, name=name)
+        if np.all(y == y[0]):
+            raise ValueError(
+                "%s: y is constant (all %d values equal %r); the "
+                "conditional entropy bins y over its range max - min, "
+                "which is zero, so there are no magnitude bins to build. "
+                "Remove constant lightcurves before searching"
+                % (name, y.size, y[0]))
 
 
 def _needs_compile(prepared_functions):

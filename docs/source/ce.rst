@@ -54,7 +54,11 @@ where :math:`p(m, \phi)` is the density of points that fall within the bin locat
    lengths, too-short light curves and non-finite or non-positive
    frequency grids with a ``ValueError`` raised on the host, before
    any GPU work. See :ref:`Input validation <input-validation>` for
-   the full rules and the pre-1.0 behaviour they replace.
+   the full rules and the pre-1.0 behaviour they replace. The
+   conditional entropy additionally rejects a *constant* ``y``: the
+   magnitudes are binned over their range ``max - min``, which is
+   then zero (before 1.0 every point's bin index was a NaN cast to an
+   integer and the spectrum was flat garbage).
 
 An example with ``cuvarbase``
 -----------------------------

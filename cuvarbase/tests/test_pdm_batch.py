@@ -43,8 +43,10 @@ def test_batched_run_const_nfreq_chunks_and_reuses_freqs(monkeypatch):
     monkeypatch.setattr(proc, 'run', fake_run)
     monkeypatch.setattr(proc, 'finish', lambda: None)
 
+    # (a non-constant y: the validator now rejects a constant one)
     data = [(np.linspace(0, 10, 50 + i),
-             np.zeros(50 + i), np.ones(50 + i)) for i in range(5)]
+             np.sin(np.linspace(0, 10, 50 + i)), np.ones(50 + i))
+            for i in range(5)]
     freqs = np.linspace(0.1, 1.0, 20)
 
     res = proc.batched_run_const_nfreq(data, batch_size=2, freqs=freqs)
@@ -107,8 +109,8 @@ def test_large_run_uses_memory_capped_batch_size(monkeypatch):
     monkeypatch.setattr(proc, 'batched_run_const_nfreq', fake_batched)
 
     # 6 LCs, max_ndata=1000, nf=5000 -> per_lc=52000; budget fits 4
-    data = [(np.linspace(0, 10, 1000), np.zeros(1000), np.ones(1000))
-            for _ in range(6)]
+    data = [(np.linspace(0, 10, 1000), np.sin(np.linspace(0, 10, 1000)),
+             np.ones(1000)) for _ in range(6)]
     freqs = np.linspace(0.1, 1.0, 5000)
     res = proc.large_run(data, freqs=freqs, max_memory=4 * 52000)
 
