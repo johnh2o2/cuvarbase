@@ -367,17 +367,18 @@ class TestBatchPreprocessValidation:
         with pytest.raises(ValueError, match="int32"):
             tls._preprocess_batch([(fake, fake, fake)])
 
-    def test_durations_param_warns(self):
+    def test_durations_param_removed(self):
+        # The never-released ``durations=`` no-op was removed in the
+        # Sep-2026 API freeze: it is rejected by the signature (keyword-
+        # only parameters after ``periods``) before any validation or
+        # GPU work.
         from cuvarbase import tls
         t = np.linspace(0, 10, 100)
         y = np.ones(100)
         dy = np.full(100, 1e-3)
-        with pytest.warns(UserWarning, match="durations"):
-            with pytest.raises(ValueError):
-                # empty period grid aborts (ValueError) before any GPU
-                # work, on CPU-only and GPU machines alike
-                tls.tls_search_gpu(t, y, dy, periods=np.array([]),
-                                   durations=np.array([0.1]))
+        with pytest.raises(TypeError, match="durations"):
+            tls.tls_search_gpu(t, y, dy, periods=np.array([1.0]),
+                               durations=np.array([0.1]))
 
 
 @pytest.mark.skipif(not PYCUDA_AVAILABLE,
@@ -677,20 +678,24 @@ class TestFailedPeriodMasking:
 
 
 class TestSnrNotInflated:
-    """signal_to_noise must not multiply by sqrt(n_transits): the
-    chi2-based depth_err already includes every in-transit point."""
+    """signal_to_noise is the chi2-based delta-chi-squared significance:
+    the depth_err already includes every in-transit point, so there is
+    no per-transit inflation (the pre-1.0 ``n_transits`` factor, which
+    multiplied by ``sqrt(n_transits)``, was removed in the Sep-2026 API
+    freeze together with the ignored parameter)."""
 
-    def test_n_transits_does_not_inflate(self):
-        snr1 = tls_stats.signal_to_noise(
-            0.01, chi2_null=200.0, chi2_best=100.0, n_transits=1)
-        snr9 = tls_stats.signal_to_noise(
-            0.01, chi2_null=200.0, chi2_best=100.0, n_transits=9)
-        assert snr1 == pytest.approx(np.sqrt(100.0))
-        assert snr9 == pytest.approx(snr1)
+    def test_chi2_based_value(self):
+        snr = tls_stats.signal_to_noise(
+            0.01, chi2_null=200.0, chi2_best=100.0)
+        assert snr == pytest.approx(np.sqrt(100.0))
+
+    def test_n_transits_parameter_is_gone(self):
+        with pytest.raises(TypeError, match="n_transits"):
+            tls_stats.signal_to_noise(
+                0.01, chi2_null=200.0, chi2_best=100.0, n_transits=9)
 
     def test_explicit_depth_err(self):
-        snr = tls_stats.signal_to_noise(0.01, depth_err=0.002,
-                                        n_transits=16)
+        snr = tls_stats.signal_to_noise(0.01, depth_err=0.002)
         assert snr == pytest.approx(5.0)
 
 

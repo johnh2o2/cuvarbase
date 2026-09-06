@@ -1219,10 +1219,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         ----------
         data: list of tuples
             list of [(t, y, dy), ...] containing
+
             * ``t``: observation times
             * ``y``: observations
             * ``dy``: observation uncertainties, or ``None`` for unit
               weights (an unweighted periodogram)
+
         freqs: optional, list of ``np.ndarray`` frequencies
             List of custom frequency grids (one per lightcurve; a single
             array is used for all). Each grid **must** be uniform,
