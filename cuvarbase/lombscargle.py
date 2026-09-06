@@ -17,6 +17,7 @@ from .utils import autofrequency as utils_autofreq
 from .memory import LombScargleMemory
 from .memory.lombscargle_memory import nfft_grid_sizes
 from .cunfft import NFFTAsyncProcess, nfft_adjoint_async
+from .cunfft import _reject_precision_override, _check_memory_precision
 
 
 __all__ = [
@@ -577,15 +578,23 @@ def _ls_memory_settings(nf, k0, m, sigma, use_double, nharmonics, use_fft,
     handed, so EVERY setting is read from it (with the constructor's
     own default) and the ``use_double``/``nharmonics`` arguments are
     only the fallback for a dict that does not carry them. Reading
-    either from the process instead would make a per-call
-    ``nharmonics=``/``use_double=`` silently reuse a set built for the
-    process-level value.
+    ``nharmonics`` from the process instead would make a per-call
+    ``nharmonics=`` (a legitimate override: the harmonic count is read
+    off the memory object) silently reuse a set built for the
+    process-level value. ``use_double`` is keyed the same way for
+    consistency, but it is not a per-call option -- the entry points
+    reject a value that differs from the process precision before any
+    device work (:func:`~cuvarbase.cunfft._reject_precision_override`),
+    so the dict always carries the process value here.
 
-    ``precomp_psi=False`` is keyed for completeness; that path in fact
-    raises ``AttributeError`` inside
-    :func:`~cuvarbase.cunfft.nfft_adjoint_async` (which dereferences
-    ``memory.q1.ptr``) on 1.0 and on every earlier release, so no
-    memory set with ``precomp_psi=False`` ever reaches a second call.
+    ``precomp_psi=False`` is keyed because it selects a different
+    gridding kernel: with tables (the default) the data is spread by
+    ``fast_gaussian_grid`` from the ``q1``/``q2``/``q3`` tables that
+    ``precompute_psi`` fills; without them
+    :func:`~cuvarbase.cunfft.nfft_adjoint_async` routes to the
+    inline-psi ``slow_gaussian_grid`` kernel (before 1.0 that path
+    raised ``AttributeError``). A set built without tables cannot
+    serve a request for them, and vice versa.
     """
     return dict(nf=int(nf), k0=int(k0), m=int(m), sigma=float(sigma),
                 use_double=bool(kwargs.get('use_double', use_double)),
@@ -1067,6 +1076,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         mem: ~cuvarbase.memory.lombscargle_memory.LombScargleMemory
             Memory object.
         """
+        # a per-call use_double is not an option (the kernels are
+        # compiled in the process precision): reject a disagreeing
+        # value before any device work, drop an equal one
+        kwargs = _reject_precision_override(
+            self, kwargs, 'LombScargleAsyncProcess.allocate_for_single_lc')
+
         m = self.nfft_proc.get_m(nf)
 
         sigma = self.nfft_proc.sigma
@@ -1110,8 +1125,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             ``self.streams`` are appended to it so ``finish()`` covers
             them.
         **kwargs
-            Passed to :class:`LombScargleMemory`.
+            Passed to :class:`LombScargleMemory` (``use_double`` is not
+            accepted per call: the process precision is used, and a
+            different value raises ``ValueError``).
         """
+        kwargs = _reject_precision_override(
+            self, kwargs, 'LombScargleAsyncProcess.preallocate')
         if freqs is not None:
             check_k0(freqs)
             k0 = get_k0(freqs)
@@ -1182,6 +1201,8 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             list of allocated memory objects for each lightcurve
 
         """
+        kwargs = _reject_precision_override(
+            self, kwargs, 'LombScargleAsyncProcess.allocate')
 
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
@@ -1295,6 +1316,18 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
           false-alarm probability is exponentially sensitive to the peak
           power (``d ln FAP / dP ~ -N / 2``), use ``use_double=True`` for
           FAP-grade work on large ``f * T`` grids; it reaches ~1e-7.
+        * ``use_double`` is a property of the process object
+          (``LombScargleAsyncProcess(use_double=True)``): the kernels
+          are compiled once, at construction, in that precision. It is
+          **not** a per-call keyword -- a ``use_double=`` in ``**kwargs``
+          that differs from the process precision raises ``ValueError``
+          before any device work (an equal value is accepted and
+          ignored), and a ``memory`` allocated at the other precision
+          raises too. Before 1.0 the keyword silently reached the
+          memory constructor, so ``run(..., use_double=True)`` on a
+          default process paired float64 buffers with float32 kernels
+          and returned a wrong periodogram with a float64 dtype.
+          ``nharmonics=`` **is** a legitimate per-call override.
 
         """
 
@@ -1306,6 +1339,16 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # so the Phase 1 validation (defect 23) cannot be switched off
         # from a public entry point, however this keyword is reached.
         grid_prechecked = kwargs.pop('_grid_prechecked', False)
+
+        # Precision is fixed at construction: a per-call use_double that
+        # disagrees with it, or a memory allocated at the other
+        # precision, is rejected here, before any device work (an equal
+        # use_double is dropped from kwargs).
+        kwargs = _reject_precision_override(self, kwargs,
+                                            'LombScargleAsyncProcess.run')
+        if memory is not None:
+            _check_memory_precision(self, memory,
+                                    'LombScargleAsyncProcess.run')
 
         # Validate before any device work (kernel compile included):
         # dy = 0 or a non-finite y used to come back as an
@@ -1470,18 +1513,25 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         memory is held until the process object is dropped; set
         ``proc._batch_memory = None`` to release it early. Results are
         unchanged: the reused buffers are zeroed and overwritten before
-        every run, exactly as on the ``preallocate`` path. A keyword
-        that overrides a process-level setting for one call
-        (``nharmonics=``, ``use_double=``) is part of the key, so such
-        a call allocates and caches its own set rather than matching
-        one built for the process default. Passing a
+        every run, exactly as on the ``preallocate`` path. A per-call
+        ``nharmonics=`` (which overrides the process attribute for one
+        call) is part of the key, so such a call allocates and caches
+        its own set rather than matching one built for the process
+        default. ``use_double`` is not a per-call option: the kernels
+        are compiled at construction in the process precision, so a
+        ``use_double=`` that differs from it raises ``ValueError``
+        before any device work (see :meth:`run`). Passing a
         ``LombScargleMemory`` buffer directly, or fixing its size
         (``t_g=``, ``lsp_c=``, ``nfft_mem_yw=``, ``n0_buffer=``,
         ``nf=``, ``k0=``, ...), opts the call out of both reuse and
         caching.
         """
 
-        # Validate before any device work (see run()).
+        # Validate before any device work (see run()). A per-call
+        # use_double that disagrees with the process precision is
+        # rejected first (an equal one is dropped).
+        kwargs = _reject_precision_override(self, kwargs,
+                                            'batched_run_const_nfreq')
         for i, lc in enumerate(data):
             if len(lc) != 3:
                 raise ValueError(
@@ -1561,10 +1611,12 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         # and two cuFFT plans -- tens of ms per call at survey nf).
         # kwargs that hand LombScargleMemory its own buffers opt out.
         # The key is built from kwargs_lsmem -- the dict the constructor
-        # below is actually handed -- so a per-call nharmonics=/
-        # use_double= (which kwargs_lsmem.update(kwargs) has already
-        # written over the process-level value) keys and builds its own
-        # set instead of matching one built for the process default.
+        # below is actually handed -- so a per-call nharmonics= (which
+        # kwargs_lsmem.update(kwargs) has already written over the
+        # process-level value) keys and builds its own set instead of
+        # matching one built for the process default. (use_double
+        # cannot differ from the process value here: it was rejected or
+        # dropped at the top of this method.)
         memory = None
         cacheable = not (_LS_MEMORY_OVERRIDE_KWARGS & set(kwargs))
         if cacheable:
@@ -1746,18 +1798,26 @@ def lomb_scargle_simple(t, y, dy, **kwargs):
     things work on the GPU. Note: This will be
     substantially slower than working with the
     ``LombScargleAsyncProcess`` interface.
+
+    ``use_double=True`` builds the process in double precision; the
+    remaining keywords are passed to
+    :meth:`LombScargleAsyncProcess.run` (``freqs=``, ``nharmonics=``,
+    ``floating_mean=``, ...). Before 1.0 ``use_double`` reached the
+    memory constructor of a single-precision process instead and the
+    result was wrong (float64 buffers read by float32 kernels).
     """
     # Validated here as well as in run(): this wrapper constructs a
     # process (and so a CUDA context) before it forwards the data.
     check_lightcurve(t, y, dy, min_n=_LS_MIN_NDATA,
                      name='lomb_scargle_simple')
+    use_double = bool(kwargs.pop('use_double', False))
 
     # Pass dy straight through: LombScargleMemory.setdata converts
     # uncertainties to normalized inverse-variance weights itself.
     # (Pre-normalizing here double-applied the conversion, effectively
     # weighting by dy^4 and giving the *largest*-error points the most
     # weight.)
-    proc = LombScargleAsyncProcess()
+    proc = LombScargleAsyncProcess(use_double=use_double)
     results = proc.run([(t, y, dy)], **kwargs)
 
     freqs, powers = results[0]

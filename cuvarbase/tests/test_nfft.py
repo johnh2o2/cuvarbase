@@ -646,3 +646,61 @@ class TestPrecompPsiFalseOnDevice(object):
                                        samples_per_peak=spp,
                                        precomp_psi=False))
         assert np.max(np.abs(got - ref)) / np.max(np.abs(ref)) < 1e-4
+
+
+class TestPerCallUseDoubleIsRejected(object):
+    """``use_double`` is fixed when the process is constructed (the
+    kernels are compiled in that precision). A per-call value that
+    differs raises ``ValueError`` before any device work -- before 1.0
+    it raised ``TypeError`` through ``allocate`` and, with a
+    user-supplied ``memory``, silently ran float32 kernels on float64
+    buffers -- and a memory allocated at the other precision is
+    rejected the same way (Sep-2026 readiness review, idx 23). CPU
+    tests: nothing below the check is reached."""
+
+    @staticmethod
+    def _no_device_work(proc, monkeypatch):
+        touched = []
+        monkeypatch.setattr(proc, '_compile_and_prepare_functions',
+                            lambda **kw: touched.append('compile'))
+        monkeypatch.setattr(proc, '_create_streams',
+                            lambda n: touched.append('streams'))
+        return touched
+
+    @pytest.mark.parametrize('process_double', [False, True])
+    def test_run_raises_before_device_work(self, process_double,
+                                           monkeypatch):
+        proc = NFFTAsyncProcess(use_double=process_double)
+        touched = self._no_device_work(proc, monkeypatch)
+        t = np.sort(np.random.RandomState(1).rand(50))
+        y = np.random.RandomState(2).randn(50)
+        with pytest.raises(ValueError,
+                           match=r'NFFTAsyncProcess\(use_double='):
+            proc.run([(t, y, 100)], use_double=not process_double)
+        with pytest.raises(ValueError, match='use_double'):
+            proc.allocate([(t, y, 100)], use_double=not process_double)
+        assert touched == []
+
+    def test_memory_at_the_other_precision_raises(self, monkeypatch):
+        proc = NFFTAsyncProcess()
+        touched = self._no_device_work(proc, monkeypatch)
+
+        class Mem(object):
+            use_double = True
+
+        with pytest.raises(ValueError, match='use_double'):
+            proc.run(None, memory=[Mem()])
+        assert touched == []
+
+    def test_matching_use_double_is_accepted(self):
+        # equal to the process precision: dropped, and the transform is
+        # the one the plain call gives (bitwise: same buffers, same
+        # launches -- the NFFT of a single light curve is deterministic
+        # apart from the gridding atomics, which a 50-point light curve
+        # on a 400-point grid does not exercise)
+        t = np.sort(np.random.RandomState(1).rand(50))
+        y = np.random.RandomState(2).randn(50)
+        proc = NFFTAsyncProcess(sigma=nfft_sigma, m=nfft_m, autoset_m=False)
+        g0 = np.array(proc.run([(t, y, 100)])[0])
+        g1 = np.array(proc.run([(t, y, 100)], use_double=False)[0])
+        assert_allclose(g1, g0, rtol=1e-6, atol=1e-6)
