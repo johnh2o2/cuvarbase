@@ -100,12 +100,14 @@ cuvarbase\.nufft\_lrt module (experimental)
 
    ``cuvarbase.nufft_lrt`` is **experimental** and outside the 1.x
    API-stability promise. It is importable only by name (it is not
-   exported from the top-level ``cuvarbase`` namespace), it emits an
+   exported from the top-level ``cuvarbase`` namespace) and it emits an
    ``EXPERIMENTAL`` ``UserWarning`` when
    :class:`~cuvarbase.nufft_lrt.NUFFTLRTAsyncProcess` is first
-   constructed, and its injection-recovery re-validation after the
-   September 2026 fixes is still pending; do not use it for publishable
-   science yet. The user guide is :doc:`nufft_lrt`.
+   constructed. Its September 2026 fixes were re-validated by
+   injection-recovery; it stays experimental because that campaign
+   showed its defaults and ``run()`` conventions should still change
+   before the API is frozen. Calibrate thresholds empirically. The
+   user guide, with the measured numbers, is :doc:`nufft_lrt`.
 
 .. automodule:: cuvarbase.nufft_lrt
     :members:

@@ -83,12 +83,15 @@ __all__ = [
 # entries match on it.
 _EXPERIMENTAL_MSG = (
     "cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability "
-    "promise. The Sep-2026 correctness fixes (float64 epoch subtraction, "
-    "automatic epoch grid for epochs=None, Detector A PSD from the "
-    "cotrended residual, centred sequential cotrend, full-band NFFT "
-    "accuracy) are awaiting injection-recovery re-validation; the "
-    "statistic is not N(0, 1) and thresholds must be calibrated "
-    "empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).")
+    "promise. Its Sep-2026 correctness fixes were re-validated by "
+    "injection-recovery (the default path is correct on BJD-scale times "
+    "and recovers random-epoch transits), but that campaign also showed "
+    "that its defaults and return conventions should still change "
+    "(automatic epoch grid resolution, PSD whitening without measurable "
+    "gain, tuple-or-array return), so run() may change incompatibly in a "
+    "1.x release; the statistic is not N(0, 1) and thresholds must be "
+    "calibrated empirically (see "
+    "https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).")
 
 
 def _whitened_inner(A, B, psd, weights):
@@ -377,11 +380,18 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
       the 1/2/1 weighting of a packed one-sided RFFT does not apply)
 
     .. warning:: **Experimental.** This module and the :meth:`run`
-        signature are outside the 1.x API-stability promise: the
-        Sep-2026 correctness fixes are pending injection-recovery
-        re-validation (release-plan Phase 4), after which the API may
-        change without a deprecation cycle. Constructing this class
-        emits a ``UserWarning`` saying so. The class is importable as
+        signature are outside the 1.x API-stability promise. The
+        Sep-2026 correctness fixes were re-validated by the
+        injection-recovery campaign of 2026-09-06 (the default path is
+        correct on BJD-scale times and recovers random-epoch transits;
+        ``benchmarks/results/nufft_lrt_validation_2026-09-06/``), but
+        that campaign also showed that the defaults a 1.x freeze would
+        lock in should still change -- the automatic epoch grid costs
+        4-9 % of completeness against a finer one, PSD whitening gave
+        no gain over a flat PSD, and :meth:`run` returns a tuple or an
+        array depending on ``epochs`` -- so the API may change without
+        a deprecation cycle. Constructing this class emits a
+        ``UserWarning`` saying so. The class is importable as
         ``cuvarbase.nufft_lrt.NUFFTLRTAsyncProcess`` only; it is not in
         the top-level ``cuvarbase`` namespace.
 
