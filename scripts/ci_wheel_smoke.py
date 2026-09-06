@@ -34,8 +34,13 @@ assert 'pycuda' not in sys.modules, \
     "import cuvarbase pulled in pycuda -- the CUDA context is no longer " \
     "supposed to be created at import time"
 pkg_dir = os.path.dirname(os.path.abspath(cuvarbase.__file__))
-assert os.getcwd() not in pkg_dir, \
-    "cuvarbase imported from the working tree, not the installed package"
+# The package must come from the venv's site-packages, not from the
+# source checkout this script lives in (a plain substring test against
+# the cwd misfires whenever the venv happens to sit below the cwd).
+_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+assert not pkg_dir.startswith(_repo_root + os.sep), \
+    "cuvarbase imported from the source checkout %s, not the installed " \
+    "package" % _repo_root
 print('GPU-less import OK:', cuvarbase.__version__, 'from', pkg_dir)
 
 # --- Part 2: stubbed-pycuda deep import of every submodule -----------------
