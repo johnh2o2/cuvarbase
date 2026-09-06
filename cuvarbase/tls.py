@@ -1127,11 +1127,16 @@ def tls_transit(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
     Parameters
     ----------
     t : array_like
-        Observation times (days)
+        Observation times (days). Absolute BJD-scale times are safe:
+        ``floor(min(t))`` is subtracted in float64 before any float32
+        cast (see :func:`tls_search_gpu`).
     y : array_like
-        Flux measurements (arbitrary units)
+        Fluxes, normalized so the out-of-transit baseline is ~1.0
+        (NOT arbitrary units: the model is ``1 - depth * T`` with a
+        fixed baseline of 1 and no path rescales the input, so raw
+        counts give meaningless depths; see :func:`tls_search_gpu`).
     dy : array_like
-        Flux uncertainties
+        Flux uncertainties, in the same (normalized) units as ``y``
     R_star : float, optional
         Stellar radius in solar radii (default: 1.0)
     M_star : float, optional
