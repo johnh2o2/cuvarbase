@@ -382,8 +382,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         ndata 1000-2000. They also need no global
         histogram, saving ``nfreq * phase_bins * mag_bins`` uint32 of
         device memory (20 MB for a 100k-frequency 10 x 5 search).
-        Incompatible with ``weighted=True`` and
-        ``balanced_magbins=True``. Works with ``run``, ``large_run``
+        Incompatible with ``weighted=True``, ``balanced_magbins=True``
+        and ``compute_log_prob=True`` (the fast kernels compute only the
+        conditional entropy). Works with ``run``, ``large_run``
         and the batched entry points, in single or double precision.
     use_double: bool, optional (default: False)
         Use double precision on the GPU.
@@ -405,7 +406,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         phase-independent null model (``sum_{phi, m} [N log Nexp - Nexp
         - lgamma(N + 1)]`` with ``Nexp = N_phi * p(m)``). Like the CE it
         is *minimized* at the true frequency. Incompatible with
-        ``weighted`` and ``balanced_magbins``.
+        ``weighted``, ``balanced_magbins`` and ``use_fast`` (there is
+        no shared-memory log-probability kernel).
 
     Notes
     -----
@@ -498,6 +500,14 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         if weighted and use_fast:
             raise ValueError("use_fast must be False if weighted is True")
+        if log_prob and use_fast:
+            # conditional_entropy_fast only launches the shared-memory
+            # CE kernels: this combination used to return the plain
+            # conditional entropy instead of the log-probability
+            raise ValueError("use_fast must be False if compute_log_prob "
+                             "is True (the fast kernels compute only the "
+                             "conditional entropy; there is no "
+                             "shared-memory log-probability kernel)")
         if weighted and balanced:
             raise ValueError("simultaneous balanced_magbins and weighted"
                              " options is not currently supported")
@@ -856,13 +866,17 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 check_freqs(frq,
                             name='ConditionalEntropyAsyncProcess.run')
 
+        memory = memory if memory is not None else self.memory
+        if memory is None:
+            # per-call option kwargs: reject an unsupported combination
+            # on the host, before the kernels are compiled
+            self._memory_kwargs(**kwargs)
+
         # compile module if not compiled already
         self._ensure_compiled(**kwargs)
 
         # Prepare data
         data = normalize_light_curves(data)
-
-        memory = memory if memory is not None else self.memory
 
         # create and/or check frequencies
         frqs = freqs
@@ -960,6 +974,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             for frq in _freq_grids(freqs, len(data)):
                 check_freqs(
                     frq, name='ConditionalEntropyAsyncProcess.large_run')
+        # per-call option kwargs: validated before any device work
+        self._memory_kwargs(**kwargs)
 
         # compile module if not compiled already
         self._ensure_compiled(**kwargs)
@@ -1050,6 +1066,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         _check_ce_data(data, 'batched_run_const_nfreq')
         if freqs is not None:
             check_freqs(freqs, name='batched_run_const_nfreq')
+        # per-call option kwargs: validated before any device work
+        self._memory_kwargs(**kwargs)
 
         # create streams if needed
         bsize = min([len(data), batch_size])

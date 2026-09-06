@@ -187,6 +187,10 @@ misbehaving:
   kernels have no weighted variant.
 * ``use_fast=True`` with ``balanced_magbins=True`` — the fast kernels
   only implement uniform magnitude bins.
+* ``use_fast=True`` with ``compute_log_prob=True`` — the fast kernels
+  compute only the conditional entropy; there is no shared-memory
+  log-probability kernel (before 1.0 this combination silently
+  returned the plain conditional entropy).
 * ``balanced_magbins=True`` with ``compute_log_prob=True``.
 * ``mag_overlap > 0`` with ``balanced_magbins=True`` — overlapping
   magnitude bins are incompatible with the balanced-bin layout.
