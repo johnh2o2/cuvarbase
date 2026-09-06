@@ -1417,7 +1417,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             periodograms: for each lightcurve the frequency of the highest
             power (within ``ignore_freq_mask``) and the Baluev (2008)
             false-alarm probability of that peak, :func:`fap_baluev`
-            with ``d_K = 2 * nharmonics + 1`` and ``fmax = max(freqs)``.
+            with ``d_K = 2 * nharmonics + 1`` (the ``nharmonics`` in
+            effect for this call: a per-call ``nharmonics=`` keyword
+            overrides the process attribute, as it does for the
+            periodogram itself) and ``fmax = max(freqs)``.
             **Changed in 1.0:** the second element is the FAP itself
             (small is significant; it can underflow to exactly 0 for
             overwhelming peaks). Before 1.0 it was ``1 - FAP``, which
@@ -1536,6 +1539,16 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                             use_fft=use_fft)
         kwargs_lsmem.update(kwargs)
 
+        # The harmonic count the powers are computed with is the one the
+        # memory constructor is handed (kwargs_lsmem: a per-call
+        # nharmonics= written over the process attribute). The Baluev
+        # d_K below must use the same value -- until Sep 2026 it read
+        # self.nharmonics, so batched_run_const_nfreq(nharmonics=2,
+        # only_return_best_freqs=True) on a default process returned a
+        # FAP with d_K=3 for a 2-harmonic peak (Phase 2 verification
+        # carry-over, readiness audit).
+        nharmonics_eff = int(kwargs_lsmem['nharmonics'])
+
         # Reuse an already-allocated memory set when one fits this
         # problem: the one preallocate() built, else the one the last
         # call to this method built (pinned host buffers, device arrays
@@ -1601,10 +1614,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
                     best_index = int(np.argmax(pm))
                     # FAP of the best peak only (identical value, and
                     # the log-space fap_baluev is the CPU-bound part of
-                    # this option); d_K = 2H + 1 for H harmonics
+                    # this option); d_K = 2H + 1 for the effective H
                     fap = fap_baluev(batch[i][0], batch[i][2],
                                      pm[best_index], np.max(fm),
-                                     d_K=2 * self.nharmonics + 1)
+                                     d_K=_baluev_d_K(nharmonics_eff))
                     best_freqs.append(fm[best_index])
                     best_freq_faps.append(float(fap))
                 else:
@@ -1614,6 +1627,18 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             return best_freqs, best_freq_faps
         else:
             return [(freqs, lsp) for lsp in lsps]
+
+
+def _baluev_d_K(nharmonics):
+    """Baluev (2008) ``d_K`` for an ``nharmonics``-harmonic floating-mean
+    model: ``2 * nharmonics + 1`` (a sine/cosine pair per harmonic plus
+    the mean). ``nharmonics`` must be the harmonic count the periodogram
+    was actually computed with -- see
+    :meth:`LombScargleAsyncProcess.batched_run_const_nfreq`."""
+    H = int(nharmonics)
+    if H < 1:
+        raise ValueError("nharmonics must be >= 1, got %r" % (nharmonics,))
+    return 2 * H + 1
 
 
 def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
