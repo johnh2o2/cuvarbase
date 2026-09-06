@@ -119,7 +119,7 @@ Beyond the highlights above (BJD epoch handling, nondeterministic degenerate-box
 | Change | Migration |
 |---|---|
 | **Every entry point now validates its input and raises `ValueError`** — non-finite `t`/`y`/`dy`, `dy <= 0`, mismatched lengths, an empty or too-short light curve (4 points for Lomb–Scargle, 3 for NUFFT-LRT, 2 elsewhere), non-finite/non-positive frequencies, and transit-duration bounds outside `0 < qmin <= qmax <= 1`. These used to be accepted silently: a NaN timestamp gave a finite BLS/CE periodogram with the wrong peak, `dy = 0` gave an all-NaN PDM spectrum or a Lomb–Scargle power of `-1` everywhere, and a NaN q bound or an under-populated Keplerian grid crashed the kernel and killed the process's CUDA context. Checks run on the host before any GPU work, so a rejected call leaves the context usable. Valid finite input is bit-identical. | Filter first: `m = np.isfinite(t) & np.isfinite(y) & (dy > 0)`. Pipelines that read an all-zero or `-1` periodogram as “no detection” must now catch `ValueError`. Helpers: `cuvarbase.utils.check_lightcurve` / `check_freqs`. |
-| **Python ≥ 3.9 required** (was 2.7–3.6); numpy ≥ 1.17, scipy ≥ 1.3 | Upgrade the interpreter; numpy 2.x is supported. |
+| **Python ≥ 3.9 required** (was 2.7–3.6); numpy ≥ 1.22, scipy ≥ 1.8 (the oldest releases that install on 3.9; the previously declared 1.17/1.3 could not be installed on any supported interpreter) | Upgrade the interpreter; numpy 2.x is supported. |
 | **BLS results on absolute (BJD-scale) timestamps change** — they were silently wrong before. Reported `phi0` stays referenced to your original input timescale (no convention change; internally times are epoch-subtracted in float64 for precision — thanks @astrobatty, #65) | Re-baseline stored results from absolute-timestamp runs; data starting near t=0 is numerically unaffected. |
 | **`noverlap` now works** on fast BLS paths (default 2): peaks can rise, runtime ~doubles at defaults | Pass `noverlap=1` for old behavior/timing. |
 | **Truly async results**: reading `run()` outputs before synchronizing is now a race | Call `proc.finish()` first (batched entry points synchronize internally); `pinned=False` opts out. |
@@ -133,9 +133,10 @@ Beyond the highlights above (BJD epoch handling, nondeterministic degenerate-box
 
 ## Packaging
 
-- `pyproject.toml` (PEP 517/621), Python 3.9–3.12 classifiers, dynamic versioning.
-- Dependencies removed: `scikit-cuda`, `future`. Pins: `pycuda>=2017.1.1,!=2024.1.2`.
-- New optional extras: `cuvarbase[cufinufft]`; batman-package enables limb-darkened TLS templates.
+- `pyproject.toml` (PEP 517/621) is the only packaging file (`setup.py`, `setup.cfg`, `requirements*.txt` removed); `setuptools>=77` backend with PEP 639 license metadata (`License-Expression: GPL-3.0-only`, `LICENSE.txt` shipped); Python 3.9–3.14 classifiers; dynamic versioning; wheel tag `py3-none-any`.
+- Dependencies removed: `scikit-cuda`, `future`. Floors: `numpy>=1.22`, `scipy>=1.8`. Pins: `pycuda>=2017.1.1,!=2024.1.2`.
+- Optional extras: `cuvarbase[test]` (pytest, nfft, astropy, batman-package, transitleastsquares — matplotlib is no longer required for the tests), `cuvarbase[cufinufft]`, `cuvarbase[docs]` (sphinx, matplotlib); batman-package enables limb-darkened TLS templates.
+- pytest is configured in `pyproject.toml` (`testpaths`, `-rs --strict-markers`, `gpu` marker); `cuvarbase/kernels/wavelet.cu` (never loaded) no longer ships, guarded by an orphan-kernel test.
 - Dockerfile (CUDA 11.8 base) and GitHub Actions CI (CPU suite, packaging smoke test, flake8).
 
 ## Credits
