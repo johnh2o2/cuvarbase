@@ -404,6 +404,38 @@ def _reuse_lc(ndata, seed, baseline=20.):
     return t, y, 0.1 * np.ones(ndata)
 
 
+class TestPDMTupleShape(object):
+    """Sep 2026 review (idx 46): a (t, y) 2-tuple passed the validator
+    (``lc[2] if len(lc) > 2 else None``) and died in ``run()`` with a
+    raw "not enough values to unpack (expected 3, got 2)". CPU-runnable:
+    the validator raises before any GPU work."""
+
+    grid = np.linspace(0.2, 4.0, 65)
+
+    def test_two_tuple_is_rejected_with_a_clear_message(self):
+        t, y, dy = _reuse_lc(40, 21)
+        proc = PDMAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=self.grid),
+                      lambda d: proc.large_run(d, freqs=self.grid),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=self.grid)):
+            with pytest.raises(ValueError, match=r'\(t, y, err\) tuple'):
+                entry([(t, y)])
+            # the bad lightcurve is named when it is not the first one
+            with pytest.raises(ValueError, match='1'):
+                entry([(t, y, dy), (t, y)])
+
+    def test_mixed_deprecated_batch_is_rejected(self):
+        t, y, dy = _reuse_lc(40, 22)
+        w = weights(dy)
+        proc = PDMAsyncProcess()
+        with pytest.warns(DeprecationWarning):
+            with pytest.raises(ValueError,
+                               match=r'lightcurve 1: must be a \(t, y, w, '
+                                     r'freqs\) tuple'):
+                proc.run([(t, y, w, self.grid), (t, y, dy)])
+
+
 class TestPDMAllocationReuse(object):
 
     grid = np.linspace(0.2, 4.0, 257)
