@@ -89,7 +89,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'cuvarbase'
-copyright = u'2017, John Hoffman'
+copyright = u'2017-2026, John Hoffman'
 author = u'John Hoffman'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -207,6 +207,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'cuvarbase', u'cuvarbase Documentation',
-     author, 'cuvarbase', 'One line description of project.',
+     author, 'cuvarbase',
+     'GPU-accelerated period-finding and transit-detection algorithms.',
      'Miscellaneous'),
 ]

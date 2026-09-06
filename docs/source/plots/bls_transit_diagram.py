@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import cuvarbase.bls as bls
 
 
 def transit_model(phi0, q, delta, q1=0.):
