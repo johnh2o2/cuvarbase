@@ -105,8 +105,8 @@ def _euler_transit_grid(fmin, fmax, num_fac, denom, fmax0, rho=1.0,
     This converges to a fixed point of the same recursion, not to an
     approximation of it: measured against the scalar loop over
     ZTF/HAT/TESS/Kepler baselines and ``rho`` in [0.05, 5], it
-    reproduces the grid length exactly and every frequency to <= 4e-15
-    relative -- and bitwise once cast to the float32
+    reproduces the grid length exactly and every frequency to ~1e-15
+    relative (one to two float64 ulps) -- and bitwise once cast to the float32
     :func:`keplerian_freq_grid` returns.
     """
     fmin = float(fmin)
@@ -225,8 +225,10 @@ def keplerian_freq_grid(period_min, period_max, baseline, *,
         q bounds).
     method : str, optional (default: ``'vectorized'``)
         How to evaluate the spacing recursion. ``'vectorized'`` solves
-        it with numpy (10-30x faster; agrees with the loop to <= 4e-15
-        relative in float64 and bitwise in the float32 returned here).
+        it with numpy (5.2-13.6x faster on the audit host, a shared
+        NVIDIA A40 machine -- see the CHANGELOG; agrees with the loop
+        to ~1e-15 relative, one to two float64 ulps, in float64 and
+        bitwise in the float32 returned here).
         ``'recursion'`` runs the original scalar Python loop, one
         ``q`` evaluation per frequency.
 

@@ -100,7 +100,7 @@ The grid is defined by the recursion :math:`f_{n+1} = f_n + \delta f(f_n)`
 from :math:`f_{\rm min}` up to the first point at or above
 :math:`f_{\rm max}`. Both functions solve that recursion with numpy
 (``method='vectorized'``, the default) rather than a Python loop with one
-:math:`q` evaluation per frequency, which cost 0.2-4 s per call at survey
+:math:`q` evaluation per frequency, which cost 0.2-10 s per call at survey
 grid sizes -- more than the GPU search that followed. The vectorized
 solver converges to a fixed point of the *same* recursion (a continuum
 seed followed by defect correction), so it reproduces the grid length
@@ -432,9 +432,12 @@ is invariant to 5e-4.
 accumulate through float32 atomics, whose summation order is not fixed,
 so two identical calls differ by ~1e-8 to 1e-7 in power. Compare
 periodograms with a tolerance at that level, not with
-``array_equal``. Sparse BLS (:func:`~cuvarbase.bls.sparse_bls_gpu`) and
-the conditional-entropy and PDM kernels use no such accumulation and are
-bitwise reproducible.
+``array_equal``. Sparse BLS (:func:`~cuvarbase.bls.sparse_bls_gpu`), the
+PDM kernels and the default (unweighted) conditional-entropy kernels use
+no such accumulation -- CE's histograms are integer atomics, whose sum
+does not depend on order -- and are bitwise reproducible. Weighted CE
+(``weighted=True``) deposits each point's Gaussian mass with floating-
+point atomics and carries the same caveat as the fast BLS kernels.
 
 
 References

@@ -176,7 +176,7 @@ class TestVectorizedGridRecursion:
 
     def test_vectorized_grid_satisfies_the_recursion(self):
         # the defining property, checked directly on the returned grid
-        from ..bls import transit_autofreq, q_transit
+        from ..bls import transit_autofreq, q_transit, fmax_transit
         rand = np.random.RandomState(5)
         t = np.sort(365. * rand.rand(500))
         T = float(np.max(t) - np.min(t))
@@ -184,5 +184,10 @@ class TestVectorizedGridRecursion:
         step = (0.2 * q_transit(freqs[:-1], rho=1.)) / (2 * T)
         np.testing.assert_allclose(freqs[1:], freqs[:-1] + step,
                                    rtol=1e-13, atol=0.)
-        # ... and it stops exactly where the loop would
-        assert freqs[-1] >= freqs[-2] or len(freqs) == 1
+        # ... and it stops exactly where the loop would: the recursion
+        # runs `while freqs[-1] < fmax`, so the grid ends at the FIRST
+        # point at or above fmax (with fmax as transit_autofreq derives
+        # it: qmax_fac defaults to 1/qmin_fac)
+        fmax = fmax_transit(rho=1., qmax=0.5 / (1. / 0.2))
+        assert len(freqs) >= 2
+        assert freqs[-2] < fmax <= freqs[-1]
