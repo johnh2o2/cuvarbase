@@ -1660,7 +1660,13 @@ class TestBatchedMemoryReuse(object):
         q2 = np.copy(dbl.batched_run_const_nfreq(d, freqs=freqs,
                                                  use_double=True)[0][1])
         assert np.asarray(q1).dtype == np.float64
-        assert np.array_equal(q1, q2)
+        # same cached buffer set, but the NFFT gridding accumulates with
+        # atomicAdd, whose order varies run to run: double-precision
+        # repeats differ too (5 of 19 on an A40, max RELATIVE difference
+        # over all 1500 bins 6.7e-15, max absolute 1e-17), so equality
+        # holds to rounding, not bitwise (docs/source/lomb.rst,
+        # 'Reproducibility').
+        assert_allclose(q2, q1, rtol=1e-12, atol=1e-13)
 
     def test_a_buffer_sizing_kwarg_opts_out_of_the_cache(self, monkeypatch):
         """``n0_buffer`` (like every other key that hands the memory a
