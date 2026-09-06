@@ -2297,9 +2297,11 @@ class TestPerFrequencyQBounds(object):
 
         for i in filled:
             q, phi = sols[i]
-            # inside this frequency's own window
+            # inside this frequency's own window: the ladder ends at
+            # floor(nbf / nb0) fine bins (_fast_box_widths), so no
+            # reported box may be wider than that
             assert q >= 1. / nbf[i] - 1e-6
-            assert q <= (-(-int(nbf[i]) // int(nb0[i]))) / float(nbf[i]) + 1e-6
+            assert q <= (int(nbf[i]) // int(nb0[i])) / float(nbf[i]) + 1e-6
             assert q <= 2.0 * q0[i] * (1 + 1. / nb0[i]) + 1e-6
             # and it is the box that produced the power: single_bls
             # re-evaluates it exactly (float32 accumulation and, at a
