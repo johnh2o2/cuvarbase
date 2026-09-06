@@ -1101,6 +1101,62 @@ class TestCEPreallocate(object):
         with pytest.raises(ValueError):
             proc.run([lc], freqs=F3)
 
+    def test_sync_memory_freqs_sees_in_place_mutation_cpu(self):
+        """Sep 2026 review (idx 15): ``transfer_freqs_to_gpu`` stored
+        ``np.ascontiguousarray(freqs, real_type)`` -- the caller's own
+        array for a float32 grid -- so ``_sync_memory_freqs`` compared a
+        grid modified in place with itself and skipped the upload.
+        CPU-runnable with a recording fake device array."""
+        class FakeDevice(object):
+            def __init__(self, n):
+                self.size = n
+                self.uploads = []
+
+            def set_async(self, a, stream=None):
+                self.uploads.append(np.array(a, copy=True))
+
+        n = 16
+        mem = ConditionalEntropyMemory()
+        mem.freqs_g = FakeDevice(n)
+        mem.nf = n
+        g = np.linspace(0.1, 2.0, n).astype(np.float32)
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert mem.freqs is not g
+        assert len(mem.freqs_g.uploads) == 1
+        # unchanged grid: no second upload
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert len(mem.freqs_g.uploads) == 1
+        g *= 2.0
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert len(mem.freqs_g.uploads) == 2
+        assert_array_equal(mem.freqs_g.uploads[-1], g)
+        # the float64 control case (a cast copy) was never affected
+        g64 = np.linspace(0.1, 2.0, n)
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g64)
+        g64 *= 2.0
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g64)
+        assert len(mem.freqs_g.uploads) == 4
+
+    def test_run_reuploads_in_place_mutated_float32_grid(self):
+        """GPU counterpart: preallocate, run, mutate the same float32
+        grid object in place, run again -- the second spectrum must be
+        the one of the mutated grid."""
+        F = np.linspace(0.05, 5.0, 2000).astype(np.float32)
+        lc = self._lc(500, 3)
+        proc = ConditionalEntropyAsyncProcess()
+        proc.preallocate(max_nobs=500, freqs=F, nlcs=1)
+        r = proc.run([lc], freqs=F)
+        proc.finish()
+        first = np.copy(r[0][1])
+        F += np.float32(0.25)          # in place: same object, new grid
+        r = proc.run([lc], freqs=F)
+        proc.finish()
+        second = np.copy(r[0][1])
+        ref = run_ce(ConditionalEntropyAsyncProcess(), *lc,
+                     np.array(F, copy=True))
+        assert_array_equal(second, ref)
+        assert not np.array_equal(second, first)
+        assert_allclose(proc.memory[0].freqs_g.get(), F, rtol=0, atol=0)
 
     def test_preallocate_then_large_run(self):
         # large_run slices the grid into batches, so a preallocated
