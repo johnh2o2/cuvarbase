@@ -849,11 +849,37 @@ class TestCEBalanced(object):
                dict(weighted=True, balanced_magbins=True),
                dict(weighted=True, compute_log_prob=True),
                dict(use_fast=True, balanced_magbins=True),
+               dict(use_fast=True, compute_log_prob=True),
                dict(balanced_magbins=True, compute_log_prob=True),
                dict(mag_overlap=1, balanced_magbins=True)]
         for kw in bad:
             with pytest.raises(ValueError):
                 ConditionalEntropyAsyncProcess(**kw)
+
+    def test_use_fast_with_log_prob_raises_everywhere(self):
+        # CPU-runnable: conditional_entropy_fast only launches the CE
+        # kernels, so this combination used to return the plain CE
+        # instead of the log-probability, without a word (Sep 2026
+        # review). The constructor, the memory class and the per-call
+        # kwargs of run/preallocate all reject it now, before any GPU
+        # work.
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 100)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            ConditionalEntropyAsyncProcess(use_fast=True,
+                                           compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            ConditionalEntropyMemory(use_fast=True, compute_log_prob=True)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.run([(t, y, dy)], freqs=freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.preallocate(len(t), freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.large_run([(t, y, dy)], freqs=freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs,
+                                         compute_log_prob=True)
 
     @pytest.mark.parametrize('ctor', [dict(weighted=True), dict(use_fast=True),
                                       dict(compute_log_prob=True),
@@ -955,6 +981,95 @@ class TestCEBalanced(object):
                         rtol=0, atol=1e-5)
 
 
+class TestCEConstantY(object):
+    """Sep 2026 review (idx 17, audit id 115): a constant ``y`` passed
+    the validator; ``setdata`` then computed ``(y - min) / (max - min)``
+    = 0/0 and cast the NaN bin indices to uint32 (platform-defined),
+    so the spectrum was flat garbage. CPU-runnable: the validator
+    raises before any GPU work."""
+
+    def test_constant_y_is_rejected(self):
+        t, y, dy = lightcurve(60, seed=0)
+        const = np.full_like(y, 12.5)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=freqs),
+                      lambda d: proc.large_run(d, freqs=freqs),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=freqs)):
+            with pytest.raises(ValueError, match='lightcurve 1: y is '
+                                                 'constant'):
+                entry([(t, y, dy), (t, const, dy)])
+        # two distinct values are enough to build the magnitude bins
+        two = np.where(np.arange(60) % 2 == 0, 12.0, 12.5)
+        ce_module._check_ce_data([(t, two, dy)], 'x')
+
+    def test_setdata_on_constant_y_was_the_failure(self):
+        # the defect the validator now prevents: NaN bin indices
+        mem = ConditionalEntropyMemory()
+        t = np.linspace(0, 10, 20)
+        with np.errstate(invalid='ignore'):
+            mem.setdata(t, np.full(20, 12.0))
+        assert mem.y.dtype == np.uint32
+        assert len(set(mem.y.tolist())) == 1     # every point in one bin
+
+
+class TestCEMemoryOptionMismatch(object):
+    """Sep 2026 review (idx 8): ``run(memory=...)`` dispatches on the
+    memory's flags, so a per-call option kwarg that disagreed with the
+    memory was silently ignored (the docs claimed it raised). All
+    CPU-runnable: the checks run before the kernels are compiled."""
+
+    @staticmethod
+    def _proc_and_mem(**kw):
+        proc = ConditionalEntropyAsyncProcess(**kw)
+        # no allocation: the option check needs only the flags
+        return proc, ConditionalEntropyMemory(**proc._memory_kwargs())
+
+    def test_matching_and_unrelated_kwargs_pass(self):
+        proc, mem = self._proc_and_mem(weighted=True, max_phi=2.5)
+        proc._check_memory_options(mem, {})
+        proc._check_memory_options(mem, dict(weighted=True, max_phi=2.5,
+                                             block_size=128,
+                                             samples_per_peak=5))
+
+    @pytest.mark.parametrize('kw', [dict(weighted=True),
+                                    dict(compute_log_prob=True),
+                                    dict(balanced_magbins=True),
+                                    dict(mag_bins=7), dict(phase_bins=20),
+                                    dict(mag_overlap=1),
+                                    dict(phase_overlap=1),
+                                    dict(max_phi=1.0),
+                                    dict(use_double=True),
+                                    dict(widen_mag_range=True)])
+    def test_mismatched_kwarg_raises(self, kw):
+        proc, mem = self._proc_and_mem()
+        key = list(kw)[0]
+        with pytest.raises(ValueError, match=key):
+            proc._check_memory_options(mem, kw)
+
+    def test_run_raises_before_any_gpu_work(self):
+        t, y, dy = lightcurve(60, seed=0)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc, mem = self._proc_and_mem()
+        with pytest.raises(ValueError, match='do not match the memory'):
+            proc.run([(t, y, dy)], memory=[mem], freqs=freqs,
+                     balanced_magbins=True)
+        proc.memory = [mem]     # what preallocate() would have set
+        with pytest.raises(ValueError, match='do not match the memory'):
+            proc.run([(t, y, dy)], freqs=freqs, weighted=True)
+
+    def test_fast_process_rejects_a_weighted_memory(self):
+        # conditional_entropy_fast ignores ``weighted`` and would read
+        # the weighted memory's float magnitudes as uint32 bin indices
+        t, y, dy = lightcurve(60, seed=0)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        mem = ConditionalEntropyMemory(weighted=True)
+        with pytest.raises(ValueError, match='use_fast must be False'):
+            proc.run([(t, y, dy)], memory=[mem], freqs=freqs)
+
+
 class TestCEPreallocate(object):
     """Defect 19 (ce-preallocate): ``preallocate()`` never uploaded the
     frequency grid (every frequency evaluated at f = 0) and left
@@ -1019,6 +1134,62 @@ class TestCEPreallocate(object):
         with pytest.raises(ValueError):
             proc.run([lc], freqs=F3)
 
+    def test_sync_memory_freqs_sees_in_place_mutation_cpu(self):
+        """Sep 2026 review (idx 15): ``transfer_freqs_to_gpu`` stored
+        ``np.ascontiguousarray(freqs, real_type)`` -- the caller's own
+        array for a float32 grid -- so ``_sync_memory_freqs`` compared a
+        grid modified in place with itself and skipped the upload.
+        CPU-runnable with a recording fake device array."""
+        class FakeDevice(object):
+            def __init__(self, n):
+                self.size = n
+                self.uploads = []
+
+            def set_async(self, a, stream=None):
+                self.uploads.append(np.array(a, copy=True))
+
+        n = 16
+        mem = ConditionalEntropyMemory()
+        mem.freqs_g = FakeDevice(n)
+        mem.nf = n
+        g = np.linspace(0.1, 2.0, n).astype(np.float32)
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert mem.freqs is not g
+        assert len(mem.freqs_g.uploads) == 1
+        # unchanged grid: no second upload
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert len(mem.freqs_g.uploads) == 1
+        g *= 2.0
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert len(mem.freqs_g.uploads) == 2
+        assert_array_equal(mem.freqs_g.uploads[-1], g)
+        # the float64 control case (a cast copy) was never affected
+        g64 = np.linspace(0.1, 2.0, n)
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g64)
+        g64 *= 2.0
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g64)
+        assert len(mem.freqs_g.uploads) == 4
+
+    def test_run_reuploads_in_place_mutated_float32_grid(self):
+        """GPU counterpart: preallocate, run, mutate the same float32
+        grid object in place, run again -- the second spectrum must be
+        the one of the mutated grid."""
+        F = np.linspace(0.05, 5.0, 2000).astype(np.float32)
+        lc = self._lc(500, 3)
+        proc = ConditionalEntropyAsyncProcess()
+        proc.preallocate(max_nobs=500, freqs=F, nlcs=1)
+        r = proc.run([lc], freqs=F)
+        proc.finish()
+        first = np.copy(r[0][1])
+        F += np.float32(0.25)          # in place: same object, new grid
+        r = proc.run([lc], freqs=F)
+        proc.finish()
+        second = np.copy(r[0][1])
+        ref = run_ce(ConditionalEntropyAsyncProcess(), *lc,
+                     np.array(F, copy=True))
+        assert_array_equal(second, ref)
+        assert not np.array_equal(second, first)
+        assert_allclose(proc.memory[0].freqs_g.get(), F, rtol=0, atol=0)
 
     def test_preallocate_then_large_run(self):
         # large_run slices the grid into batches, so a preallocated

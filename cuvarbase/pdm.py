@@ -41,13 +41,34 @@ def _check_pdm_data(data, freqs, where, is_deprecated):
     uncertainty -- it must still be finite and strictly positive, and
     its own frequency grid is validated per light curve. A NaN sample,
     ``dy = 0`` or a negative weight used to give an all-NaN spectrum
-    with no warning at all (Sep 2026 audit, defect 23).
+    with no warning at all (Sep 2026 audit, defect 23), and so did a
+    constant ``y`` (audit id 115): the statistic divides by the
+    variance of ``y``, which is then zero.
     """
+    def _check_not_constant(y, name):
+        if np.all(y == y[0]):
+            raise ValueError(
+                "%s: y is constant (all %d values equal %r); the PDM "
+                "statistic divides by the variance of y, which is zero "
+                "(the spectrum was all NaN). Remove constant lightcurves "
+                "before searching" % (name, y.size, y[0]))
+
     for i, lc in enumerate(data):
         name = '%s lightcurve %d' % (where, i)
+        # exactly (t, y, err) -- or (t, y, w, freqs) for the deprecated
+        # format, which is detected from the FIRST lightcurve: run()
+        # unpacks the tuples downstream, so a 2-tuple died there with a
+        # raw "not enough values to unpack" instead of this message
         if is_deprecated:
+            if len(lc) != 4:
+                raise ValueError(
+                    "%s: must be a (t, y, w, freqs) tuple like the first "
+                    "lightcurve (deprecated format); got %d elements"
+                    % (name, len(lc)))
             t, y, w, frqs = lc
-            check_lightcurve(t, y, min_n=_PDM_MIN_NDATA, name=name)
+            _t, y, _dy = check_lightcurve(t, y, min_n=_PDM_MIN_NDATA,
+                                          name=name)
+            _check_not_constant(y, name)
             w = np.asarray(w)
             if w.shape != np.asarray(t).shape:
                 raise ValueError("%s: t and w must have the same length; "
@@ -59,8 +80,15 @@ def _check_pdm_data(data, freqs, where, is_deprecated):
                     "they are normalized to sum to one internally)" % name)
             check_freqs(frqs, name=name)
         else:
-            check_lightcurve(lc[0], lc[1], lc[2] if len(lc) > 2 else None,
-                             min_n=_PDM_MIN_NDATA, name=name)
+            if len(lc) != 3:
+                raise ValueError(
+                    "%s: must be a (t, y, err) tuple; got %d elements "
+                    "(the deprecated (t, y, w, freqs) format is accepted "
+                    "only when every lightcurve, the first included, "
+                    "uses it)" % (name, len(lc)))
+            _t, y, _dy = check_lightcurve(lc[0], lc[1], lc[2],
+                                          min_n=_PDM_MIN_NDATA, name=name)
+            _check_not_constant(y, name)
     if not is_deprecated and freqs is not None:
         # ``freqs`` is either one shared grid or one per light curve
         # (the same test run() makes)
@@ -360,7 +388,13 @@ class PDMAsyncProcess(GPUAsyncProcess):
             del cache
             gpu_data, pow_cpus = self.allocate(norm_data, freqs=frqs,
                                                **kwargs)
-            grids = [np.asarray(f, dtype=np.float32)
+            # a private copy: ``np.asarray`` returns the caller's own
+            # array for a float32 grid, and the change detection below
+            # then compared the caller's grid with itself -- a grid
+            # modified in place between two same-shape calls was never
+            # re-uploaded (the powers came back labelled with the new
+            # grid but computed on the old one)
+            grids = [np.array(f, dtype=np.float32, copy=True)
                      for (t, y, w, f) in norm_data]
             self._alloc_cache = (sig, gpu_data, grids)
             return gpu_data, pow_cpus
@@ -394,7 +428,10 @@ class PDMAsyncProcess(GPUAsyncProcess):
             * ``err``: observation uncertainties
             Alternatively, [(t, y, w, freqs), ...] for backward compatibility
             (deprecated). ``w`` are observation weights of any scale (they
-            are normalized to sum to one internally).
+            are normalized to sum to one internally); like ``err`` they
+            must be finite and strictly positive -- a zero weight (used
+            before 1.0 to mask a point) is rejected, so drop masked
+            points from the arrays instead.
         gpu_data: list, optional
             list of GPU arrays from ``allocate``
         pow_cpus: list, optional
@@ -580,10 +617,13 @@ class PDMAsyncProcess(GPUAsyncProcess):
         batch_size = int(batch_size)
         if batch_size < 1:
             raise ValueError("batch_size must be >= 1; got %d" % batch_size)
-        if any(len(d) != 3 for d in data):
-            raise ValueError("batched_run_const_nfreq expects (t, y, err) "
-                             "tuples; the deprecated (t, y, w, freqs) "
-                             "run() format is not supported here")
+        for i, d in enumerate(data):
+            if len(d) != 3:
+                raise ValueError(
+                    "batched_run_const_nfreq lightcurve %d: must be a "
+                    "(t, y, err) tuple; got %d elements (the deprecated "
+                    "(t, y, w, freqs) run() format is not supported here)"
+                    % (i, len(d)))
         if len(data) == 0:
             return []
         _check_pdm_data(data, freqs, 'batched_run_const_nfreq', False)

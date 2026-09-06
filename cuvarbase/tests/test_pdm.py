@@ -3,6 +3,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 import pytest
 from pycuda.tools import mark_cuda_test
 from ..utils import weights
+from .. import pdm as pdm_module
 from ..pdm import pdm2_cpu, binless_pdm_cpu, PDMAsyncProcess
 
 pytest.nbins = 10
@@ -403,6 +404,65 @@ def _reuse_lc(ndata, seed, baseline=20.):
     return t, y, 0.1 * np.ones(ndata)
 
 
+class TestPDMTupleShape(object):
+    """Sep 2026 review (idx 46): a (t, y) 2-tuple passed the validator
+    (``lc[2] if len(lc) > 2 else None``) and died in ``run()`` with a
+    raw "not enough values to unpack (expected 3, got 2)". CPU-runnable:
+    the validator raises before any GPU work."""
+
+    grid = np.linspace(0.2, 4.0, 65)
+
+    def test_two_tuple_is_rejected_with_a_clear_message(self):
+        t, y, dy = _reuse_lc(40, 21)
+        proc = PDMAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=self.grid),
+                      lambda d: proc.large_run(d, freqs=self.grid),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=self.grid)):
+            with pytest.raises(ValueError, match=r'\(t, y, err\) tuple'):
+                entry([(t, y)])
+            # the bad lightcurve is named when it is not the first one
+            with pytest.raises(ValueError, match='1'):
+                entry([(t, y, dy), (t, y)])
+
+    def test_mixed_deprecated_batch_is_rejected(self):
+        t, y, dy = _reuse_lc(40, 22)
+        w = weights(dy)
+        proc = PDMAsyncProcess()
+        with pytest.warns(DeprecationWarning):
+            with pytest.raises(ValueError,
+                               match=r'lightcurve 1: must be a \(t, y, w, '
+                                     r'freqs\) tuple'):
+                proc.run([(t, y, w, self.grid), (t, y, dy)])
+
+
+class TestPDMConstantY(object):
+    """Sep 2026 review (idx 17, audit id 115): a constant ``y`` passed
+    the validator and the kernels returned ``1 - x / 0`` = NaN at every
+    frequency. CPU-runnable: the validator raises before any GPU work."""
+
+    grid = np.linspace(0.2, 4.0, 65)
+
+    def test_constant_y_is_rejected(self):
+        t, y, dy = _reuse_lc(40, 31)
+        const = np.full_like(y, 12.5)
+        proc = PDMAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=self.grid),
+                      lambda d: proc.large_run(d, freqs=self.grid),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=self.grid)):
+            with pytest.raises(ValueError, match='lightcurve 1: y is '
+                                                 'constant'):
+                entry([(t, y, dy), (t, const, dy)])
+        with pytest.warns(DeprecationWarning):
+            with pytest.raises(ValueError, match='y is constant'):
+                proc.run([(t, const, weights(dy), self.grid)])
+        # the host-side variance the kernels divide by really is zero
+        w = weights(dy)
+        yc = const - np.mean(const)
+        assert np.dot(w, (yc - np.dot(w, yc)) ** 2) == 0.0
+
+
 class TestPDMAllocationReuse(object):
 
     grid = np.linspace(0.2, 4.0, 257)
@@ -485,6 +545,63 @@ class TestPDMAllocationReuse(object):
         clean.finish()
         assert_array_equal(np.asarray(got[0][1]), np.asarray(ref[0][1]))
         assert_array_equal(np.asarray(got[0][0]), g2)
+
+    def test_in_place_mutated_float32_grid_is_reuploaded_cpu(self,
+                                                             monkeypatch):
+        """Sep 2026 review (idx 15): the cache stored ``np.asarray(f,
+        float32)`` -- the caller's own array for a float32 grid -- so a
+        grid modified in place compared equal to itself and the device
+        kept the old one. CPU-runnable with recording fake device
+        arrays."""
+        class FakeDevice(object):
+            def __init__(self):
+                self.sets = []
+
+            def set(self, a):
+                self.sets.append(np.array(a, copy=True))
+
+        proc = PDMAsyncProcess()
+
+        def fake_allocate(norm_data, freqs=None, **kw):
+            gpu = [(None, None, None, FakeDevice(), None) for _ in norm_data]
+            return gpu, [np.zeros(len(f), np.float32)
+                         for (t, y, w, f) in norm_data]
+
+        monkeypatch.setattr(proc, 'allocate', fake_allocate)
+        monkeypatch.setattr(pdm_module, 'host_array',
+                            lambda shape, dtype: np.zeros(shape, dtype))
+        t, y, dy = _reuse_lc(40, 11)
+        w = weights(dy)
+        f = np.linspace(0.2, 4.0, 33).astype(np.float32)
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        assert proc._alloc_cache[2][0] is not f
+        f *= 2.0
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        dev = gpu_data[0][3]
+        assert len(dev.sets) == 1
+        assert_array_equal(dev.sets[0], f)
+        assert_array_equal(proc._alloc_cache[2][0], f)
+        # the stored grid is still private: a later mutation is seen too
+        f += 0.5
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        assert len(dev.sets) == 2
+        assert_array_equal(dev.sets[1], f)
+
+    def test_in_place_mutated_float32_grid_is_reuploaded(self):
+        """GPU counterpart: the powers of the second call must be those
+        of the mutated grid, not of the grid the first call uploaded."""
+        proc = PDMAsyncProcess()
+        d = _reuse_lc(150, 12)
+        g = np.asarray(self.grid, dtype=np.float32)
+        proc.run([d], freqs=g)
+        proc.finish()
+        g += np.float32(0.37)          # in place: same object, new grid
+        got = proc.run([d], freqs=g)
+        proc.finish()
+        clean = PDMAsyncProcess()
+        ref = clean.run([d], freqs=np.array(g, copy=True))
+        clean.finish()
+        assert_array_equal(np.asarray(got[0][1]), np.asarray(ref[0][1]))
 
     def test_batched_run_matches_single_runs(self):
         data = [_reuse_lc(90 + 0 * i, 20 + i) for i in range(7)]

@@ -54,7 +54,11 @@ where :math:`p(m, \phi)` is the density of points that fall within the bin locat
    lengths, too-short light curves and non-finite or non-positive
    frequency grids with a ``ValueError`` raised on the host, before
    any GPU work. See :ref:`Input validation <input-validation>` for
-   the full rules and the pre-1.0 behaviour they replace.
+   the full rules and the pre-1.0 behaviour they replace. The
+   conditional entropy additionally rejects a *constant* ``y``: the
+   magnitudes are binned over their range ``max - min``, which is
+   then zero (before 1.0 every point's bin index was a NaN cast to an
+   integer and the spectrum was flat garbage).
 
 An example with ``cuvarbase``
 -----------------------------
@@ -187,6 +191,10 @@ misbehaving:
   kernels have no weighted variant.
 * ``use_fast=True`` with ``balanced_magbins=True`` — the fast kernels
   only implement uniform magnitude bins.
+* ``use_fast=True`` with ``compute_log_prob=True`` — the fast kernels
+  compute only the conditional entropy; there is no shared-memory
+  log-probability kernel (before 1.0 this combination silently
+  returned the plain conditional entropy).
 * ``balanced_magbins=True`` with ``compute_log_prob=True``.
 * ``mag_overlap > 0`` with ``balanced_magbins=True`` — overlapping
   magnitude bins are incompatible with the balanced-bin layout.
@@ -195,6 +203,16 @@ misbehaving:
 
 ``use_fast=True`` with ``use_double=True`` is supported (in single and
 double precision, for any ``phase_bins``/``mag_bins``).
+
+When ``run`` uses an existing memory object -- ``memory=...`` or the
+memory :meth:`~cuvarbase.ce.ConditionalEntropyAsyncProcess.preallocate`
+created -- the kernels dispatch on *that memory's* settings, so a
+per-call option keyword argument (``weighted``, ``compute_log_prob``,
+``balanced_magbins``, ``mag_bins``, ...) must match the options the
+memory was allocated with; a mismatch raises ``ValueError`` instead of
+being silently ignored, and the memory's own option combination is
+checked against the process's ``use_fast``. All of these checks run on
+the host before the kernels are compiled.
 
 For an actively developed GPU conditional-entropy implementation, see
 `periodfind <https://github.com/scope-ml/periodfind>`_.
