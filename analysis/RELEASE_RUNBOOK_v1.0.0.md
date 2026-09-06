@@ -136,6 +136,80 @@ here.
 - [ ] The merge rehearsal (Phase 5, last step) was done against the
       current `origin/master` and recorded four conflicts.
 
+## Phase 3 GPU follow-ups (run on the Phase 5 pod, before the freeze)
+
+Phase 3 was CPU-only. The following changes were verified by reading and
+by CPU tests; each has a device-side check that Phase 5 must run (the
+full suite covers most of them, the named tests/spot checks are the
+ones to look at if anything fails). Result-changing items are marked
+(R); everything else adds validation or changes only non-default paths.
+
+- (R) BLS `eebls_transit` top-K solution re-scan now walks the kernel's own
+  bin ladder for float32 `qvals` (commit 1bbc08d): run `eebls_transit` with
+  `keplerian_freq_grid(..., return_qvals=True)` output and with
+  `qvals=np.float32([0.025]*n)`; every returned `(q, phi)` must be a box the
+  kernel evaluated (`q * nbinsf` integral). Default float64 path unchanged.
+- (R) BLS host `dnbins` mirrors the device's float32 `floorf(dlogq*nbins)`
+  (commit 4e1a69c): at the default `dlogq` (0.2/0.3) results must be
+  bit-identical to 000c299; at `dlogq=0.65` with per-frequency bounds giving
+  `nbins0=180, nbinsf=296` the host and device counts now agree (476).
+- BLS `single_bls` rejects `q` outside `[0, 1]` (47c8a26): the GPU tests that
+  evaluate `single_bls` over every returned solution must still pass.
+- LS/NFFT: a per-call `use_double` that differs from the process precision
+  raises `ValueError` before compile/allocation (c95a7f7); equal values are
+  still accepted (`TestBatchedMemoryReuse::test_per_call_use_double_matching_the_process_is_accepted`).
+- (R, kernel) NFFT first mode `k0` is computed on the host and passed to the
+  `nfft_shift`/`normalize` kernels as an integer (df87ad1, `cunfft.cu` +
+  prepared dtypes): nvcc must compile in both precisions; LS periodograms and
+  raw NFFT outputs must be bit-identical to 000c299 on the default grids;
+  `test_nfft.py::TestFirstModeIsExactOnTheHost::test_large_k0_band_in_double_matches_exact_dft`
+  (two ~280 MB complex128 grids) must pass.
+- LS: `batched_run_const_nfreq` validates the shared grid before compiling
+  (b91c43c) -- `TestEntryPointsRaiseBeforeDeviceWork` on device.
+- NFFT `precomp_psi=False` routes to `slow_gaussian_grid` instead of raising
+  (4fbed72): `test_nfft.py::TestPrecompPsiFalseOnDevice` (2 tests; tolerance
+  1e-4 normalised vs the default path, 5e-3 vs direct sums -- relax toward
+  the file's nfft_rtol if float32 atomics on the pod exceed it).
+- LS Baluev `d_K` follows the per-call `nharmonics` (b67d969):
+  `test_lombscargle.py::TestBaluevDKUsesEffectiveNharmonics::test_per_call_nharmonics_sets_d_K_on_device`.
+- CE `use_fast=True` + `compute_log_prob=True` raises (56566c9); `run(memory=...)`
+  with a mismatching per-call option raises (ec54fe3): run all of
+  `test_ce.py` to confirm no legitimate reuse pattern is rejected.
+- (R) PDM/CE keep a private copy of the grid used for re-upload detection
+  (db94455): `test_ce.py::TestCEPreallocate::test_run_reuploads_in_place_mutated_float32_grid`
+  and `test_pdm.py::TestPDMAllocationReuse::test_in_place_mutated_float32_grid_is_reuploaded`.
+- CE/PDM reject a constant `y`; PDM rejects a `(t, y)` 2-tuple and zero legacy
+  weights (f67a9cc, 0b6077b, 97c14b3): validation only, before device work.
+- TLS: `dy` is required, `n_durations` validated on both paths, unknown
+  keywords rejected with a FAP hint (0d5cc65); template-table cache keyed on
+  whether batman was actually used (377bb71): run `test_tls_basic.py::TestTlsInputGuards`,
+  `::TestTemplateTableMemoization`, `::TestBatchPreprocessValidation::test_durations_param_removed`
+  (this one only skipped under the stub), and the golden/fast/t0-oversample
+  suites for no numerical change on the default path; spot-check that
+  `tls_search_gpu(..., n_durations=1, use_fast=False)` raises.
+- TLS `tls_transit` smoke, `tls_search` dispatch, fast-vs-legacy parity and
+  adaptive-BLS block-size parity tests ported from `scripts/` (72002a7):
+  `test_tls_fast.py::TestFastLegacyParity`, `::TestTlsTransitSmoke`,
+  `test_bls.py::TestAdaptiveBlockSize`.
+- cuFINUFFT on-device cross-check `test_lombscargle.py::TestCufinufftBackendOnDevice`
+  (needs `pip install cufinufft`); the zero-skip gate now depends on it.
+- NUFFT-LRT: EXPERIMENTAL warning at construction, not import
+  (`python -W error::UserWarning -c "import cuvarbase.nufft_lrt"` must succeed;
+  `NUFFTLRTAsyncProcess()` must warn once); empty basis raises before device
+  work (0ec98b8); `test_nufft_lrt.py` in full; Phase 4 harness prints the null
+  std as a calibration constant (8ed2246) instead of a pass/fail against 1.
+- Input validation: `test_input_validation.py::test_valid_input_is_unaffected_by_the_validators`
+  (rewritten, GPU: validators on vs monkeypatched off, `np.array_equal`).
+- Packaging/CI on the pod: `python -m pytest -p no:cacheprovider` with no
+  path from the repo root (pyproject testpaths/-rs/--strict-markers with real
+  pycuda); `pip install <wheel>[test]` resolves batman-package and
+  transitleastsquares; `test_kernel_inventory.py` passes with `wavelet.cu`
+  gone; `scripts/setup-remote.sh` and `scripts/benchmark_new_features.py --tests-only`
+  still work without the stripped scikit-cuda patch blocks; the docs build with
+  `-W` renders the five plot-directive figures.
+- Counts to refresh from the gate log: `docs/RELEASE_NOTES_v1.0.0.md` (the
+  1,582 / 1,786 sentence) and `README.md` ('1,582 tests').
+
 ## Phase 4: NUFFT-LRT re-validation (pod; before the freeze; no go needed)
 
 Extends `scripts/nufft_lrt_validation.py` and decides D1. It changes
