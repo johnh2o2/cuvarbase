@@ -2,7 +2,8 @@
 """Head-to-head benchmark: cuvarbase v1.0.0 (RC 2cc1f96) vs PyPI cuvarbase==0.2.6.
 
 Version-agnostic: run the SAME script under each version's venv.
-Implements the fairness rules of analysis/BENCHMARK_PROTOCOL_V1.md (section 4):
+Implements the fairness rules of BENCHMARK_PROTOCOL_V1.md (section 4), archived at
+https://github.com/johnh2o2/cuvarbase/blob/archive/pre-1.0-process/analysis/BENCHMARK_PROTOCOL_V1.md:
 
 * identical seeded inputs (float64 host arrays; each version does its own cast)
 * warm = steady-state with compile excluded on BOTH sides:

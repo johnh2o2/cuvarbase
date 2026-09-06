@@ -19,7 +19,7 @@ Usage:
     # Tag with GPU model for cost calculations
     python scripts/benchmark_algorithms.py --gpu-model H100
 
-See docs/BENCHMARKING.md for full instructions.
+See scripts/README.md for full instructions.
 """
 
 import numpy as np

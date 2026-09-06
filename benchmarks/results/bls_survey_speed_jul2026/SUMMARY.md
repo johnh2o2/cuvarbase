@@ -14,7 +14,7 @@ before/after in the same pod session; Keplerian frequency grids
 | TESS    | 20,000 | 1,788   |
 | Kepler  | 65,000 | 130,597 |
 
-Method + bottleneck ranking: `analysis/bls_survey_speed_jul2026/PROFILE_RANKING.md`
+Method + bottleneck ranking: `PROFILE_RANKING.md` (this directory)
 (ncu blocked by RunPod -> nsys + event decomposition + one-axis sweeps).
 
 ## Changes (each fully gated: full GPU suite + release gate 14/14 + parity)
@@ -138,6 +138,10 @@ and the recommended usage.
 
 Parity arrays: fast, fast+BJD (t+2455197.5), batch — for all four
 surveys (raw/parity/*.npz; comparator benchmarks/compare_parity.py).
+Only the two endpoint tags are tracked (base_envfix and opt4_chunk, 8
+files); `python benchmarks/compare_parity.py base_envfix opt4_chunk`
+still runs end to end on them. The intermediate opt1-opt3 and baseline
+dumps live in the archive/pre-1.0-process tag.
 Baseline suite on 89d5481: 752 passed / 7 skipped, gate 14/14.
 
 Flagged (non-silent) numerical notes:

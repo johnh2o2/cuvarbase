@@ -1,5 +1,7 @@
 # GPU batch 3 — RTX A5000, Jul 2 2026
 
+> The probe scripts and raw JSON/txt named below were pruned before 1.0; see `analysis/README.md` (tag `archive/pre-1.0-process`).
+
 Pod: RunPod `vma81x9ssaaf92` (runpod/pytorch:2.4.0-py3.11-cuda12.4.1,
 $0.27/hr, terminated + verified after the run). Branch under test:
 `v1.0-fixes` @ ed96347 (all Jul-2 audit fixes) unless noted. Extra deps
@@ -85,7 +87,8 @@ PSD, which absorbs this; noted in `compute_nufft`.
 ALL PASS. The batch-2 "PDM sparse-bin high-frequency artifact" recovery
 failure was entirely the benchmark's argmin-on-maximize-convention bug
 (C1 audit finding); PDM itself recovers the injected signal at every
-config. `benchmark_results_by_gpu/pdm_a5000.json` updated with the
+config. `benchmark_results_by_gpu/pdm_a5000.json` (now
+`benchmarks/results/pdm_a5000.json`) updated with the
 recovery table (batch-2 throughput grid retained unmodified).
 
 ## A3: NFFT error-floor diagnosis
