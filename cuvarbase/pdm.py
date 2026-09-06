@@ -45,7 +45,16 @@ def _check_pdm_data(data, freqs, where, is_deprecated):
     """
     for i, lc in enumerate(data):
         name = '%s lightcurve %d' % (where, i)
+        # exactly (t, y, err) -- or (t, y, w, freqs) for the deprecated
+        # format, which is detected from the FIRST lightcurve: run()
+        # unpacks the tuples downstream, so a 2-tuple died there with a
+        # raw "not enough values to unpack" instead of this message
         if is_deprecated:
+            if len(lc) != 4:
+                raise ValueError(
+                    "%s: must be a (t, y, w, freqs) tuple like the first "
+                    "lightcurve (deprecated format); got %d elements"
+                    % (name, len(lc)))
             t, y, w, frqs = lc
             check_lightcurve(t, y, min_n=_PDM_MIN_NDATA, name=name)
             w = np.asarray(w)
@@ -59,7 +68,13 @@ def _check_pdm_data(data, freqs, where, is_deprecated):
                     "they are normalized to sum to one internally)" % name)
             check_freqs(frqs, name=name)
         else:
-            check_lightcurve(lc[0], lc[1], lc[2] if len(lc) > 2 else None,
+            if len(lc) != 3:
+                raise ValueError(
+                    "%s: must be a (t, y, err) tuple; got %d elements "
+                    "(the deprecated (t, y, w, freqs) format is accepted "
+                    "only when every lightcurve, the first included, "
+                    "uses it)" % (name, len(lc)))
+            check_lightcurve(lc[0], lc[1], lc[2],
                              min_n=_PDM_MIN_NDATA, name=name)
     if not is_deprecated and freqs is not None:
         # ``freqs`` is either one shared grid or one per light curve
@@ -586,10 +601,13 @@ class PDMAsyncProcess(GPUAsyncProcess):
         batch_size = int(batch_size)
         if batch_size < 1:
             raise ValueError("batch_size must be >= 1; got %d" % batch_size)
-        if any(len(d) != 3 for d in data):
-            raise ValueError("batched_run_const_nfreq expects (t, y, err) "
-                             "tuples; the deprecated (t, y, w, freqs) "
-                             "run() format is not supported here")
+        for i, d in enumerate(data):
+            if len(d) != 3:
+                raise ValueError(
+                    "batched_run_const_nfreq lightcurve %d: must be a "
+                    "(t, y, err) tuple; got %d elements (the deprecated "
+                    "(t, y, w, freqs) run() format is not supported here)"
+                    % (i, len(d)))
         if len(data) == 0:
             return []
         _check_pdm_data(data, freqs, 'batched_run_const_nfreq', False)
