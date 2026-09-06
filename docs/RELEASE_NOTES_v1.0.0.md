@@ -3,8 +3,9 @@ DRAFT for review — not yet published (this comment is stripped at the final
 content commit). Pending before publishing: confirm the final release commit
 and re-tag v1.0.0 on it. The GPU test count and date quoted below are from
 the full on-device suite of 4 September 2026 (NVIDIA A40, Phase 1+2 tree:
-1582 passed / 0 failed / 0 skipped) and are refreshed from the Phase 5
-release gate on the frozen tree. PRs #57-#62 and #65-#68 are merged
+1582 passed / 0 failed / 0 skipped) and are refreshed at the freeze from
+the Phase 5 candidate-tip run (the last content commit before the tree is
+frozen); the release gate on the frozen tree must reproduce that count. PRs #57-#62 and #65-#68 are merged
 (#65-#68 on 2026-07-07); no further PRs are pending for 1.0.0.
 -->
 
@@ -26,7 +27,7 @@ In production: cuvarbase's BLS has powered the TESS Quick-Look Pipeline's planet
 - **Deterministic periodograms.** A float32 guard bug let degenerate trial boxes produce run-to-run-varying spurious peaks on single-site ground-based data (reported by @astrobatty against HATPI light curves). Fixed at the root, with regression tests proving 500 ppm transits still survive.
 - **New algorithms and APIs**: sparse BLS for small datasets (Panahi & Zucker 2021), batched multi-lightcurve BLS, Keplerian frequency grids (4–37× fewer trial frequencies at survey baselines), multiharmonic generalized Lomb–Scargle on GPU, fast PDM kernels, CE log-probability periodograms, and an experimental NUFFT matched-filter transit search.
 - **Modern, lighter install**: Python 3.9–3.14, numpy 2.x, no more scikit-cuda or `future`; `import cuvarbase` works on GPU-less machines (the pure helpers need no pycuda at all; the method modules need the pycuda package but no device until the first GPU call).
-- **Trustworthy by construction**: the GPU test suite grew from 37 test functions with no CI (0.2.5) to **1,582 tests (0 skips) passing on-device** (full suite, NVIDIA A40, 4 September 2026; the release gate on the tagged tree refreshes this count), plus a 14-check on-GPU release gate, CPU CI across Python 3.9–3.14, and a published benchmark methodology with archived raw results.
+- **Trustworthy by construction**: the GPU test suite grew from 37 test functions with no CI (0.2.5) to **1,582 tests (0 skips) passing on-device** (full suite, NVIDIA A40, 4 September 2026; the count is refreshed from the Phase 5 candidate-tip run at the freeze and reproduced by the release gate on the frozen tree), plus a 14-check on-GPU release gate, CPU CI across Python 3.9–3.14, and a published benchmark methodology with archived raw results.
 
 ## Performance
 
@@ -160,6 +161,7 @@ A read-only algorithm audit of the release candidate (September 2026, on-device)
 - Optional extras: `cuvarbase[test]` (pytest, nfft, astropy, batman-package, transitleastsquares — matplotlib is no longer required for the tests), `cuvarbase[cufinufft]`, `cuvarbase[docs]` (sphinx, matplotlib); batman-package enables limb-darkened TLS templates.
 - pytest is configured in `pyproject.toml` (`testpaths`, `-rs --strict-markers`, `gpu` marker); `cuvarbase/kernels/wavelet.cu` (never loaded) no longer ships, guarded by an orphan-kernel test.
 - GitHub Actions CI: the CPU suite on Python 3.9–3.14, wheel and sdist install legs (including `pytest --pyargs cuvarbase` from the installed wheel), a docs build, and flake8. The repository's Dockerfile was removed: it never installed cuvarbase (a rebuilt image is queued for 1.1).
+- **If you fetched the earlier `v1.0.0` tag (June 2026) from this repository:** it was deleted and re-created on the 1.0.0 release commit; run `git fetch --tags --force` to replace your stale copy (a plain `git fetch` keeps the old one).
 
 ## Credits
 
