@@ -676,8 +676,8 @@ class TestNFFTGuards(object):
 # under an earlier test's context raises ``cuFuncSetBlockShape failed:
 # invalid resource handle`` when it is reused under a new one. Calling
 # the entry points directly runs them in cuvarbase's own primary
-# context; on a GPU-less machine the root ``conftest.py`` turns the
-# resulting ``GPUStubError`` into a skip.
+# context; on a GPU-less machine ``cuvarbase/tests/conftest.py`` turns
+# the resulting ``GPUStubError`` into a skip.
 
 def test_cuda_context_survives_rejected_calls():
     """The payoff of defect 23.

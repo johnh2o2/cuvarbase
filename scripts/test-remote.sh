@@ -40,7 +40,7 @@ echo "Step 2: Running tests on RunPod..."
 echo "=========================================="
 
 # Run tests remotely and stream output
-ssh ${SSH_OPTS} ${SSH_HOST} "export PATH=/usr/local/cuda/bin:\$PATH && export CUDA_HOME=/usr/local/cuda && export LD_LIBRARY_PATH=/usr/local/cuda/lib64:\$LD_LIBRARY_PATH && cd ${RUNPOD_REMOTE_DIR} && pytest ${TEST_PATH} ${PYTEST_ARGS} -v"
+ssh ${SSH_OPTS} ${SSH_HOST} "export PATH=/usr/local/cuda/bin:\$PATH && export CUDA_HOME=/usr/local/cuda && export LD_LIBRARY_PATH=/usr/local/cuda/lib64:\$LD_LIBRARY_PATH && cd ${RUNPOD_REMOTE_DIR} && pytest ${TEST_PATH} ${PYTEST_ARGS} -v -rs"
 
 echo ""
 echo "=========================================="

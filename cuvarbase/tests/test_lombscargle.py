@@ -5,9 +5,8 @@ from numpy.testing import assert_allclose
 from astropy.timeseries import LombScargle
 
 from ..lombscargle import LombScargleAsyncProcess
-from pycuda.tools import mark_cuda_test
-#import pycuda.autoinit
-import pycuda.autoprimaryctx
+# NOT `import pycuda.autoprimaryctx`/`autoinit` here: cuvarbase retains
+# the primary context itself, lazily (cuvarbase.base.ensure_context).
 spp = 3
 nfac = 3
 # Tolerances vs astropy / between GPU paths. Before the Sep-2026 NFFT
@@ -912,6 +911,55 @@ class TestCufinufftPlanCache(object):
         assert len(cb._plan_cache) == cb._PLAN_CACHE_MAX_SIZE
         cb.free_plan_cache()
         assert len(cb._plan_cache) == 0
+
+
+class TestCufinufftBackendOnDevice(object):
+    """The real cuFINUFFT backend against the built-in NFFT backend on
+    a device (release finding 74: only the fake-Plan tests above ran in
+    the suite; the cross-check lived in
+    ``scripts/benchmark_new_features.py --tests-only``). Guarded by
+    ``importorskip('cufinufft')`` so the zero-skip gate policy covers
+    it; on CPU-only hosts it skips at the import."""
+
+    @staticmethod
+    def _sinusoid(ndata, baseline, period, seed, amplitude=0.01,
+                  noise=0.002):
+        rng = np.random.RandomState(seed)
+        t = np.sort(rng.uniform(0, baseline, ndata)).astype(np.float32)
+        y = amplitude * np.cos(2 * np.pi * t / period).astype(np.float32)
+        y += rng.randn(ndata).astype(np.float32) * noise
+        dy = np.full(ndata, noise, dtype=np.float32)
+        return t, y, dy
+
+    @pytest.mark.parametrize("ndata,nfreq,period", [
+        (1000, 5000, 5.0), (5000, 10000, 3.0)])
+    def test_cufinufft_matches_builtin_nfft(self, ndata, nfreq, period):
+        pytest.importorskip('cufinufft')
+        from ..cufinufft_backend import HAS_CUFINUFFT
+        assert HAS_CUFINUFFT
+        fmax = 2.0
+        df = fmax / nfreq
+        freqs = (np.arange(1, nfreq + 1) * df).astype(np.float32)
+        for seed in (100, 101):
+            t, y, dy = self._sinusoid(ndata, 365.0, period, seed)
+            proc = LombScargleAsyncProcess(use_cufinufft=False)
+            _, p_builtin = proc.run([(t, y, dy)], freqs=[freqs])[0]
+            proc.finish()
+            proc = LombScargleAsyncProcess(use_cufinufft=True)
+            _, p_cufi = proc.run([(t, y, dy)], freqs=[freqs])[0]
+            proc.finish()
+            p_builtin = np.asarray(p_builtin, dtype=np.float64)
+            p_cufi = np.asarray(p_cufi, dtype=np.float64)
+            assert p_cufi.shape == p_builtin.shape == freqs.shape
+            assert np.all(np.isfinite(p_cufi))
+            # the benchmark script's acceptance: corr > 0.9999, max abs
+            # diff < 0.01 (power is in [0, 1]), peaks within 2 df
+            assert np.corrcoef(p_builtin, p_cufi)[0, 1] > 0.9999
+            assert np.max(np.abs(p_builtin - p_cufi)) < 0.01
+            peak_b = freqs[np.argmax(p_builtin)]
+            peak_c = freqs[np.argmax(p_cufi)]
+            assert abs(peak_b - peak_c) < 2 * df
+            assert abs(peak_b - 1.0 / period) < 2 * df
 
 
 class TestAmplitudePrior(object):

@@ -1,7 +1,6 @@
 import types
 
 import pytest
-from pycuda.tools import mark_cuda_test
 import pycuda.gpuarray as gpuarray
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal

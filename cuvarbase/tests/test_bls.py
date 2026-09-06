@@ -306,14 +306,12 @@ class TestBLS(object):
         for freq, (qg, phg), gpower in zip(freqs, gsols, power):
             q_and_phis = product(q_values, phi_values)
             
-            best_q, best_phi, best_p = None, None, None
+            best_p = None
             for Q, PHI in q_and_phis:
                 p = single_bls(t, y, dy, freq, Q, PHI,
                                ignore_negative_delta_sols=ignore_negative_delta_sols)
                 if best_p is None or p > best_p:
                     best_p = p
-                    best_q = Q
-                    best_phi = PHI
             
             assert np.abs(best_p - gpower) < 1e-5
 
@@ -1031,16 +1029,19 @@ class TestEeblsTransitSparseKwargs(object):
     def test_sparse_gpu_path_accepts_documented_kwargs(self):
         # Before the fix: TypeError('sparse_bls_gpu() got an unexpected
         # keyword argument "rho"') raised at call time, before any GPU
-        # work. GPU-runtime errors (e.g. on CPU-only test machines) are
-        # acceptable here -- we are only asserting the kwarg plumbing.
+        # work. Runs on a device; on CPU-only hosts the conftest turns
+        # the GPUStubError into a skip (it used to swallow every
+        # exception and so passed while asserting nothing).
         t, y, dy = self._data()
-        try:
-            eebls_transit(t, y, dy, rho=1.5, samples_per_peak=2,
-                          fmin=0.95, fmax=1.05, use_gpu=True)
-        except TypeError as e:
-            pytest.fail("sparse path crashed on documented kwarg: %s" % e)
-        except Exception:
-            pass  # GPU unavailable (stubbed) -- plumbing already verified
+        freqs, powers, sols = eebls_transit(t, y, dy, rho=1.5,
+                                            samples_per_peak=2,
+                                            fmin=0.95, fmax=1.05,
+                                            use_gpu=True)
+        assert len(freqs) == len(powers) == len(sols)
+        assert len(freqs) > 0
+        assert np.all(np.isfinite(powers))
+        # the injected transit (freq = 1.0) is the peak
+        assert abs(freqs[np.argmax(powers)] - 1.0) < 0.01
 
     def test_sparse_cpu_path_accepts_documented_kwargs(self):
         t, y, dy = self._data()
@@ -1070,18 +1071,20 @@ class TestEeblsTransitSparseKwargs(object):
                 assert q_found <= qmax_fac * qv + 1e-6
 
     def test_standard_path_unaffected(self):
-        # No warning and no kwargs filtering on the standard path
+        # No warning and no kwargs filtering on the standard path.
+        # Runs on a device (the conftest skips it on CPU-only hosts);
+        # a UserWarning is an error here, so "should not warn" is
+        # asserted rather than swallowed.
         import warnings as _warnings
         t, y, dy = self._data(ndata=100)
         with _warnings.catch_warnings():
             _warnings.simplefilter("error", UserWarning)
-            try:
-                eebls_transit(t, y, dy, fmin=0.95, fmax=1.05,
-                              use_sparse=False)
-            except UserWarning:
-                pytest.fail("standard path should not warn")
-            except Exception:
-                pass  # GPU unavailable (stubbed)
+            freqs, powers, sols = eebls_transit(t, y, dy, fmin=0.95,
+                                                fmax=1.05, use_sparse=False)
+        assert len(freqs) == len(powers) == len(sols)
+        assert len(freqs) > 0
+        assert np.all(np.isfinite(powers))
+        assert abs(freqs[np.argmax(powers)] - 1.0) < 0.01
 
 
 class TestEeblsGpuFastNoverlap(object):
@@ -1515,12 +1518,12 @@ class TestPowerConventions(object):
 
     def _our_power_at(self, t, y, dy, period, duration, transit_time):
         # Evaluate the native power at astropy's exact solution.
-        # astropy's transit_time is mid-transit; single_bls phases are
-        # relative to floor(min(t)) and phi0 is the transit start.
+        # astropy's transit_time is mid-transit; single_bls takes phi0
+        # (the transit START phase) in the ORIGINAL input timescale and
+        # re-references it to the subtracted epoch internally.
         freq = 1.0 / period
         q = duration / period
-        epoch = np.floor(t.min())
-        phi0 = ((transit_time - 0.5 * duration - epoch) * freq) % 1.0
+        phi0 = ((transit_time - 0.5 * duration) * freq) % 1.0
         return single_bls(t, y, dy, freq, q, phi0), q
 
     def test_snr_matches_astropy(self):
@@ -1638,7 +1641,9 @@ class TestEpochHandling(object):
     loses essentially all phase information: float32 carries ~7
     significant digits, so the fractional part of ``t * freq`` is
     dominated by rounding error. All BLS paths subtract ``min(t)`` (in
-    float64) before casting, and phases are reported relative to it.
+    float64) before casting; the phases they report are re-referenced
+    to the ORIGINAL input timescale (see
+    ``test_single_bls_phase_is_original_timescale``).
     """
 
     # Integer offset: epoch = floor(min(t)) makes the shifted and
@@ -1955,7 +1960,7 @@ class TestBlsBatchSizing(object):
         # points were binned and every other frequency stayed empty.
         # One q level of 1024 bins keeps the atomics cheap (~1 s).
         import pycuda.gpuarray as gpuarray
-        from ..bls import _function_signatures, _default_block_size
+        from ..bls import _default_block_size
         ndata, nf, nb = 131072, 32769, 1024
         assert ndata * nf > 2 ** 32
         t, y, dy = self._big_lc(ndata)
@@ -2579,6 +2584,9 @@ class TestBlsPrecisionDocs(object):
         here = os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.abspath(__file__))))
         path = os.path.join(here, 'docs', 'source', 'bls.rst')
+        if not os.path.exists(path):
+            pytest.skip("docs/source/bls.rst not found (running outside "
+                        "the source tree)")
         with open(path, encoding='utf-8') as f:
             return f.read()
 
@@ -3397,3 +3405,59 @@ class TestPerFrequencyHostWork(object):
         chi2_0 = float(np.einsum('i,i->', w, (np.asarray(y) - ybar) ** 2))
         assert_allclose(p_snr, np.sqrt(chi2_0 * p), rtol=1e-5, atol=1e-6)
         assert_allclose(p_ll, 0.5 * chi2_0 * p, rtol=1e-5, atol=1e-6)
+
+
+class TestAdaptiveBlockSize(object):
+    """``eebls_gpu_fast_adaptive`` picks the CUDA block size from
+    ``ndata`` (ported from ``scripts/test_adaptive_correctness.py``).
+    The heuristic is CPU-checkable; the parity of the adaptive wrapper
+    with ``eebls_gpu_fast_optimized`` at the same block size runs on a
+    device (the conftest skips it on CPU-only hosts)."""
+
+    EXPECTED = [(2, 32), (10, 32), (32, 32), (33, 64), (50, 64), (64, 64),
+                (65, 128), (100, 128), (128, 128), (129, 256), (500, 256),
+                (65536, 256)]
+
+    @pytest.mark.parametrize("ndata,expected", EXPECTED)
+    def test_choose_block_size(self, ndata, expected):
+        from ..bls import _choose_block_size
+        bs = _choose_block_size(ndata)
+        assert bs == expected
+        assert bs in (32, 64, 128, 256)
+
+    def test_choose_block_size_is_monotonic(self):
+        from ..bls import _choose_block_size
+        sizes = [_choose_block_size(n) for n in range(2, 600)]
+        assert all(a <= b for a, b in zip(sizes, sizes[1:]))
+        assert set(sizes) == {32, 64, 128, 256}
+
+    @staticmethod
+    def _lc(ndata, seed=42):
+        rand = np.random.RandomState(seed)
+        t = np.sort(rand.uniform(0, 100, ndata))
+        period, depth = 5.0, 0.01
+        phase = (t % period) / period
+        y = np.ones(ndata) - depth * ((phase > 0.4) & (phase < 0.5))
+        y += rand.normal(0, 0.01, ndata)
+        dy = 0.01 * np.ones(ndata)
+        return t, y, dy
+
+    @pytest.mark.parametrize("ndata", [10, 50, 100, 500])
+    def test_adaptive_matches_optimized_at_the_chosen_block_size(self,
+                                                                 ndata):
+        # GPU only. The adaptive wrapper is eebls_gpu_fast_optimized with
+        # block_size=_choose_block_size(ndata) and the same cached
+        # kernel set; results must agree to float32 rounding (the
+        # fold/bin arithmetic is identical, only the launch shape
+        # differs) and the peak must be the same grid point.
+        from ..bls import (eebls_gpu_fast_adaptive, eebls_gpu_fast_optimized,
+                           _choose_block_size)
+        t, y, dy = self._lc(ndata)
+        freqs = np.linspace(0.05, 0.5, 100)
+        bs = _choose_block_size(ndata)
+        p_adaptive = eebls_gpu_fast_adaptive(t, y, dy, freqs)
+        p_fixed = eebls_gpu_fast_optimized(t, y, dy, freqs, block_size=bs)
+        assert p_adaptive.shape == freqs.shape
+        assert np.all(np.isfinite(p_adaptive))
+        assert_allclose(p_adaptive, p_fixed, rtol=1e-5, atol=1e-6)
+        assert np.argmax(p_adaptive) == np.argmax(p_fixed)
