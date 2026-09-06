@@ -139,6 +139,10 @@ def _marginal_precompute(Y, V_ks, psd, weights, prior_cov):
     (K, nf), ``M`` the (K, K) response matrix of
     :func:`_prior_response_matrix` and ``w_y[j] = <v_j, Y>_W``."""
     K = len(V_ks)
+    if K == 0:
+        raise ValueError("Detector A needs at least one basis vector "
+                         "(K >= 1); use the plain matched filter for "
+                         "K = 0")
     Vk = np.asarray(V_ks).reshape(K, -1)
     wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd, np.float64)
     Vw = Vk * wp
@@ -761,6 +765,17 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
                                  "n = len(t)")
             if not np.all(np.isfinite(V)):
                 raise ValueError("systematics_basis must be finite")
+            if V.shape[1] == 0:
+                # an empty basis used to fall through to the plain
+                # matched filter for 'marginal'; since the Detector A
+                # precompute was hoisted out of the template loop it
+                # died in numpy (reshape of a size-0 array) after the
+                # data transforms had already run. Reject it here,
+                # before any device work: pass detector='matched'.
+                raise ValueError("systematics_basis must have at least "
+                                 "one column (K >= 1) for detector=%r; "
+                                 "use detector='matched' for no "
+                                 "systematics model" % (detector,))
         if detector == 'marginal' and coeff_prior_cov is None:
             raise ValueError("detector='marginal' requires "
                              "coeff_prior_cov (estimate it from "
