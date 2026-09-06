@@ -66,22 +66,24 @@ __global__ void nfft_shift(
 	CMPLX *out,
 	CONSTANT int ng,
 	CONSTANT int nbatch,
-	CONSTANT FLT x0,
-	CONSTANT FLT xf,
+	CONSTANT FLT x0,     // unused since the host passes k0 (kept for
+	CONSTANT FLT xf,     // a stable prepared signature)
 	CONSTANT FLT spp,
-	CONSTANT FLT f0){
+	CONSTANT int k0){    // first mode (integer, computed on the host)
 
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
 	int batch = i / ng;
 
 	if (batch < nbatch) {
-		// First mode k0 = f0 / df = f0 * spp * (xf - x0), which is an
+		// The first mode k0 = f0 / df = f0 * spp * (xf - x0) is an
 		// INTEGER by construction (the periodic grid only has integer
 		// modes; a fractional k0 would give a Dirichlet-leakage mixture,
-		// not the transform). The FLT product carries ~k0 * 2e-7 of
-		// float32 rounding, so round it back before use (id 104).
-		long long k0 = (long long) rint(f0 * spp * (xf - x0));
+		// not the transform). It is rounded on the host in float64 and
+		// passed in: re-deriving it here from the FLT product misrounded
+		// by one mode from k0 ~ 2e6 upward in the float32 build, and
+		// this kernel and normalize could round to different integers
+		// (ids 104 and 24 of the Sep-2026 readiness review).
 
 		// phi = 2 pi (i mod ng) k0 / ng, reduced modulo one cycle in exact
 		// integer arithmetic. The un-reduced float32 product
@@ -244,7 +246,8 @@ __global__ void normalize(
 	CONSTANT FLT x0,     // min(x)
 	CONSTANT FLT xf,     // max(x)
 	CONSTANT FLT spp,    // samples per peak
-	CONSTANT FLT f0)     // first frequency
+	CONSTANT int k0)     // first mode (integer, computed on the host;
+	                     // see nfft_shift)
 {
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
@@ -254,8 +257,8 @@ __global__ void normalize(
 		int k = i % nf;
 
 		FLT sT = spp * (xf - x0);
-		// integer first mode (see nfft_shift)
-		FLT k0 = (FLT) rint(f0 * sT);
+		// mode index of this entry, in 64-bit integer arithmetic
+		long long kk = ((long long) k0) + k;
 		CMPLX G = gin[batch * ng + k];
 
 		// *= exp(2 pi i f_k x0) with f_k = (k0 + k) / sT: the phase of the
@@ -263,14 +266,14 @@ __global__ void normalize(
 		// 2 pi f |tmin| (1e4-1e6 rad at survey scale), so reduce it modulo
 		// one cycle in double BEFORE the FLT trig -- evaluated as the
 		// float32 2 pi n0 (k0 + k) / ng it lost ~0.05-0.1 rad (ids 98/160).
-		double cyc = ((double) (k0 + k)) * ((double) x0) / ((double) sT);
+		double cyc = ((double) kk) * ((double) x0) / ((double) sT);
 		cyc -= floor(cyc);
 		FLT theta_k = (FLT) (2.0 * 3.14159265358979323846264338327950288 * cyc);
 
 		G *= CMPLX(cos(theta_k), sin(theta_k));
 
 		// normalization factor from gridding kernel (gaussian)
-		FLT khat = PI * (k0 + k) / ng;
+		FLT khat = PI * ((FLT) kk) / ng;
 		gout[i] = G * exp(b * khat * khat);
 	}
 

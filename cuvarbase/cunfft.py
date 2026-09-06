@@ -21,6 +21,30 @@ __all__ = [
 ]
 
 
+def _first_mode(minimum_frequency, samples_per_peak, tmin, tmax):
+    """The integer first mode ``k0 = round(f0 * spp * (tmax - tmin))``
+    of an adjoint NFFT starting at ``minimum_frequency``, computed in
+    float64 on the host.
+
+    The periodic grid only has integer modes, so the kernels
+    (``nfft_shift``/``normalize``) need ``k0`` as an integer. They used
+    to re-derive it from the float32 product of their ``f0``, ``spp``
+    and ``xf - x0`` arguments, whose rounding reaches half a mode from
+    ``k0 ~ 2e6`` upward (about 0.5% of grids in [2e6, 3e6), ~18% in
+    [4e6, 5e6)); the two kernels could even round to *different*
+    integers (Sep-2026 readiness review, idx 24). The float64 product
+    here is exact to well beyond ``1e9``.
+    """
+    k0 = np.rint(float(minimum_frequency) * float(samples_per_peak)
+                 * (float(tmax) - float(tmin)))
+    if not np.isfinite(k0) or abs(k0) >= 2 ** 31:
+        raise ValueError(
+            "nfft_adjoint_async: the first mode "
+            "minimum_frequency * samples_per_peak * (tmax - tmin) = %r "
+            "does not fit the kernels' int32 mode index" % (k0,))
+    return int(k0)
+
+
 def _reject_precision_override(process, kwargs, name):
     """Return ``kwargs`` without a ``use_double`` key, raising
     ``ValueError`` when that key disagrees with ``process.use_double``.
@@ -94,7 +118,11 @@ def nfft_adjoint_async(memory, functions,
         Tuple of compiled functions from `SourceModule`. Must be prepared with
         their appropriate dtype.
     minimum_frequency: float, optional (default: 0)
-        First frequency of transform
+        First frequency of transform. The transform starts at the
+        integer mode ``k0 = round(minimum_frequency * samples_per_peak
+        * (tmax - tmin))`` (rounded in float64 on the host; see
+        :func:`_first_mode`), so a fractional first mode gives the
+        nearest integer mode's transform.
     block_size: int, optional
         Number of CUDA threads per block
     just_return_gridded_data: bool, optional
@@ -171,7 +199,10 @@ def nfft_adjoint_async(memory, functions,
     def grid_size(nthreads):
         return int(np.ceil(float(nthreads) / block_size))
 
-    minimum_frequency = memory.real_type(minimum_frequency)
+    # integer first mode, exact on the host (the kernels used to
+    # recompute it from float32 arguments; see _first_mode)
+    k0 = _first_mode(minimum_frequency, samples_per_peak,
+                     memory.tmin, memory.tmax)
 
     # transfer data -> gpu
     if transfer_to_device:
@@ -246,8 +277,8 @@ def nfft_adjoint_async(memory, functions,
     if use_grid is not None:
         memory.ghat_g.set(use_grid)
 
-    # for a non-zero minimum frequency, do a shift
-    if abs(minimum_frequency) > 1E-9:
+    # for a non-zero first mode, do a shift (k0 = 0 is the identity)
+    if k0 != 0:
         grid = (grid_size(memory.n), 1)
         args = (grid, block, stream)
         args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
@@ -255,7 +286,7 @@ def nfft_adjoint_async(memory, functions,
         args += (memory.real_type(memory.tmin),
                  memory.real_type(memory.tmax),
                  memory.real_type(samples_per_peak),
-                 memory.real_type(minimum_frequency))
+                 np.int32(k0))
         nfft_shift.prepared_async_call(*args)
 
     # Run IFFT on grid
@@ -272,7 +303,7 @@ def nfft_adjoint_async(memory, functions,
     args += (memory.real_type(memory.tmin),
              memory.real_type(memory.tmax),
              memory.real_type(samples_per_peak),
-             memory.real_type(minimum_frequency))
+             np.int32(k0))
     normalize.prepared_async_call(*args)
 
     # Transfer result and wait for it: the caller gets the pinned host
@@ -494,12 +525,14 @@ class NFFTAsyncProcess(GPUAsyncProcess):
                                 self.real_type, self.real_type,
                                 self.real_type],
 
+            # the last argument of normalize/nfft_shift is the integer
+            # first mode k0 (host-computed; see _first_mode)
             normalize=[np.intp, np.intp, np.int32, np.int32, np.int32,
                        self.real_type, self.real_type, self.real_type,
-                       self.real_type, self.real_type],
+                       self.real_type, np.int32],
 
             nfft_shift=[np.intp, np.intp, np.int32, np.int32, self.real_type,
-                        self.real_type, self.real_type, self.real_type]
+                        self.real_type, self.real_type, np.int32]
         )
 
         for function, dtype in self.dtypes.items():
