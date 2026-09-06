@@ -35,10 +35,11 @@ notes). The ones I think you'll care about:
   outside their own duration window). The fast kernels now evaluate the
   `qmax` box itself (the ladder stopped one rung short). And the Keplerian
   frequency-grid recursion (`transit_autofreq`, `keplerian_freq_grid`) is
-  now solved in numpy instead of a per-frequency Python loop — 10x faster
+  now solved in numpy instead of a per-frequency Python loop —
+  `transit_autofreq` 9.8-14.9x and `keplerian_freq_grid` 5.2-13.6x faster
   at survey sizes, and disclosed as result-changing at the level of
-  float64 rounding (grid length identical, frequencies agree to ~1e-15
-  relative; the float32 `keplerian_freq_grid` output is bitwise
+  float64 rounding (grid length identical, frequencies agree to at most
+  9.4e-16 relative; the float32 `keplerian_freq_grid` output is bitwise
   identical in every configuration we tested; `method='recursion'` keeps
   the old loop).
 - **CE:** the brightest point was binned out of range (index `mag_bins`,
@@ -57,20 +58,24 @@ notes). The ones I think you'll care about:
   which is what makes `batched_run_const_nfreq`/`large_run` cheap per chunk.
 - **Lomb-Scargle / NFFT:** the w-spectrum was gridded with the psi tables
   of a differently sized grid (every default-path power biased by
-  3e-3..2e-2), the NFFT grids were sized so that bands not starting near
+  3e-3..2.4e-2), the NFFT grids were sized so that bands not starting near
   zero returned garbage, and `use_double=True` was less accurate than
   float32 because of a `floorf` on a double. All fixed; float64 now sits at
-  ~1e-8 of astropy on dense grids.
+  2e-8 of astropy on a 1000-point 3-yr, 109K-frequency grid (~4e-8 on a
+  300-point 1-yr grid; float32 <= ~2e-4 there).
 
 **Performance (Phase 2)** was measured on one shared A40, so I only quote
 ratios: BLS calls that used to recompile per call (`eebls_gpu`,
-`sparse_bls_gpu`, `hone_solution`) go through the kernel cache (30-90x on
-small calls), the adaptive/optimized BLS paths use the fused kernel they
-were silently missing (~2x GPU time), the CE `use_fast=True` grid is sized
-from the device and is now the faster CE path (1.2-8x over the default
-kernels depending on N), and the multiharmonic LS host solve is stacked
-(50-300x on the solve alone). Everything is bit-neutral except where the
-changelog says otherwise.
+`sparse_bls_gpu`, `hone_solution`) go through the kernel cache
+(`sparse_bls_gpu` 305 -> 5.2 ms, `eebls_transit` 327 -> 3.8 ms, `eebls_gpu`
+338 -> 10 ms on small calls), the adaptive/optimized BLS paths use the
+fused kernel they were silently missing (1.9-2.3x less GPU time), the CE
+`use_fast=True` grid is sized from the device and is now the faster CE path
+(1.2x, 1.9x and 8x over the default kernels at 300, 2000 and 10,000
+observations, 1e5 frequencies), and the multiharmonic LS host solve is
+stacked (63-295x on the solve alone; 48-136x on a re-measurement under
+heavier load). Everything is bit-neutral except where the changelog says
+otherwise.
 
 **API freeze.** 1.0 has one top-level namespace (`cuvarbase.__all__`
 equals the lazy attribute list; the accidental `cuvarbase.np`-style names

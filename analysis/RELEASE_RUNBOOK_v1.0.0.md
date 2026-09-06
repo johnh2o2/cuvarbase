@@ -23,21 +23,35 @@ here.
 - Audits of record for 1.0: `analysis/audit-sep2026/` (release readiness,
   algorithm audit, execution plan, NUFFT-LRT campaign, repro scripts). The
   July audits (`tls-audit-jul2026.md`, `claims-trace-jul2026.md`,
-  `nufft-lrt-audit-jul2026.md`) are reachable through the archive tag.
+  `nufft-lrt-audit-jul2026.md`) and the July gate record
+  (`v1.0-release-gate-jul2026/`) are kept in `analysis/` as well; only the
+  pruned material listed under the archive tag below is archive-only.
 - GPU gate: the September Phase 1-2 gate (`000c299`) is superseded by
   Phase 3 and will be re-run in full on the frozen tree T (Phase 5). No
   gate record for T exists yet; that record is commit T'.
+- GPU test count: it flows ONE way. Phase 5 measures it once on the
+  candidate tip C (full suite, 0 skipped), writes it into
+  `docs/RELEASE_NOTES_v1.0.0.md` as the last content commit -- that commit
+  is T -- and the gate run on T must reproduce the same count. The notes
+  are part of T, so they are necessarily edited BEFORE T; the gate on T
+  confirms the count, it does not produce it.
 - Old `v1.0.0` tag: annotated object `afa9741` pointing at `5553248`
-  (Jun 11 2026), exists on origin, STALE (166+ commits behind; its message
-  says 0.2.6 was the last PyPI release and cites 568 tests, both wrong).
+  (Jun 11 2026), exists on origin, STALE (303 commits behind at `47e0ae3`,
+  Sep 5 2026 -- `git rev-list --count 5553248..v1.0-fixes` for the current
+  figure; its message says 0.2.6 was the last PyPI release and cites 568
+  tests, both wrong).
   Never published to PyPI; no GitHub Release exists for it (the only
   GitHub Release ever is v0.2.1 from 2021). It is deleted and re-created
   on release day (step 5).
 - Archive tag: `archive/pre-1.0-process` exists LOCALLY only (annotated,
   on the last pre-prune commit; created by the Phase 3 orchestrator). It is
-  pushed on release day together with `master` and `v1.0.0`; the
-  pre-prune history (July gate folders, `BENCHMARK_PROTOCOL_V1.md`, the
-  one-off scripts) is reachable through it, never through `master`.
+  pushed on release day together with `master` and `v1.0.0`; the pruned
+  material (`BENCHMARK_PROTOCOL_V1.md`, `GTLS_COMPARISON.md`, the TESS/TLS
+  cost analyses and punchlists, the June `v1.0.0-gpu-validation/` record,
+  the raw `pr65-resolution-jul2026/` and `kernel-hygiene-jul2026/` files,
+  the one-off scripts) is reachable through it, never through `master`.
+  Verified Sep 5 2026 at `47e0ae3`: the tag exists locally and is an
+  ancestor of `v1.0-fixes` (pre-flight box below).
 - Local `master` is stale: `ec53ae8` versus `origin/master` at `060d839`
   (PR #26, `normalize_light_curves`). Every merge step below starts with
   `git reset --hard origin/master`; never merge from the stale local ref.
@@ -85,10 +99,19 @@ here.
       (T and T' are SHAs from `analysis/v1.0-release-gate-<date>/SUMMARY.md`).
       Anything else after T means: go back to Phase 5.
 - [ ] `docs/RELEASE_NOTES_v1.0.0.md`: the leading `<!-- DRAFT ... -->`
-      comment is gone; the GPU test count is the collected count from the
-      gate log (`suite_full.log`: "N passed" with 0 skipped, 0 failed); the
-      "if you fetched the June v1.0.0 tag, run `git fetch --tags --force`"
-      line is present.
+      comment is gone; the GPU test count in the notes is the N that Phase 5
+      step 0 measured on the candidate tip and wrote at T, and the gate run
+      on T reproduced it: the "N passed" line of `suite_full.log` in the
+      gate record (0 skipped, 0 failed) equals the count in the notes. (The
+      notes were edited before T by construction -- they are part of T; a
+      differing gate count means the run is investigated, never the notes
+      edited after T.) The "if you fetched the June v1.0.0 tag, run `git
+      fetch --tags --force`" line is present.
+- [ ] Archive tag present locally and inside the branch history:
+      `git tag -l archive/pre-1.0-process` prints the tag and
+      `git merge-base --is-ancestor archive/pre-1.0-process v1.0-fixes`
+      exits 0 (both verified Sep 5 2026 at `47e0ae3`). It is pushed in
+      step 6; a missing or detached tag stops the release.
 - [ ] `CHANGELOG.rst` top section is `1.0.0` (no "Unreleased" heading).
 - [ ] `docs/source/nufft_lrt.rst` and the release notes say what Phase 4
       decided (official or experimental) and quote its archived numbers.
@@ -137,16 +160,23 @@ Extends `scripts/nufft_lrt_validation.py` and decides D1. It changes
 5. Terminate the pod (`scripts/runpod-stop.sh --terminate`, confirm with
    the `myself{pods}` query that only that pod went away).
 
-## Phase 5: freeze + gate (pod, ~3 pod-hours; no go needed)
+## Phase 5: freeze + gate (pod, ~4 pod-hours; no go needed)
 
-T = `origin/v1.0-fixes` tip after Phase 4 and the last content commit. Once
-T is cut, nothing but `analysis/` changes may land on the branch; if
-anything else does, that commit is the new T and the gate is re-run.
+The sequence is: candidate tip C -> full suite once on C (this measures N)
+-> write N into the release notes and strip the DRAFT comment (the last
+content commit; that commit is T) -> full suite + gate on T, which must
+reproduce N. So T = the last content commit on `origin/v1.0-fixes` after
+Phase 4, and it is the commit that carries the count. Once T is cut,
+nothing but `analysis/` changes may land on the branch; if anything else
+does, that commit is the new T and the gate is re-run (a docs-only commit
+cannot change the collected count, so N carries over; if the gate on the
+new T ever reports a different N, investigate the run -- never edit the
+notes after T).
 
 ```bash
-# --- local: freeze
+# --- local: candidate tip C (everything Phase 4 produced is pushed)
 git checkout v1.0-fixes && git pull --ff-only && git status   # clean
-T=$(git rev-parse HEAD); echo "T=$T"; git rev-parse "$T^{tree}"
+C=$(git rev-parse HEAD); echo "C=$C"
 DATE=$(date +%Y%m%d)
 
 # --- pod: fresh RTX A5000 (A40/4090 acceptable; record which)
@@ -156,16 +186,34 @@ scripts/runpod-create.sh "NVIDIA RTX A5000"        # writes .runpod.env
 # working tree without .git, which is why the July record could not name
 # its commit).
 git clone https://github.com/johnh2o2/cuvarbase.git /workspace/cuvarbase
-cd /workspace/cuvarbase && git checkout --detach "$T"
-git rev-parse HEAD "HEAD^{tree}"                    # must print T and its tree
+cd /workspace/cuvarbase && git checkout --detach "$C"
+git rev-parse HEAD                                  # must print C
 pip install -e '.[test]' cufinufft
 python -c "import pycuda.driver, batman, transitleastsquares, nfft, astropy, cufinufft; print('preflight ok')"
 python -c "import cuvarbase; print(cuvarbase.__version__, cuvarbase.__file__)"   # 1.0.0, /workspace/cuvarbase/...
 
-# 1. full suite: every test must run on the device (0 skipped)
+# 0. candidate run on C: measures N once (every test on the device, 0 skipped)
+python -m pytest cuvarbase/tests -v -rs 2>&1 | tee suite_candidate.log
+tail -3 suite_candidate.log  # "<N> passed in ..." -- no skipped, no failed;
+                             # this N goes into the notes, nothing else does
+
+# --- local: write N into the notes = the last content commit = T
+#     edit docs/RELEASE_NOTES_v1.0.0.md: the "<N> tests (0 skips)" figure,
+#     the GPU and date of the candidate run, and delete the leading
+#     <!-- DRAFT ... --> block; nothing else changes in this commit
+git commit -am "Release notes: GPU test count from the candidate run at $C"
+git push origin v1.0-fixes
+T=$(git rev-parse HEAD); echo "T=$T"; git rev-parse "$T^{tree}"
+
+# --- pod: move to T (same pod, same install)
+cd /workspace/cuvarbase && git fetch origin && git checkout --detach "$T"
+git rev-parse HEAD "HEAD^{tree}"                    # must print T and its tree
+git diff --stat "$C" "$T"                           # docs/RELEASE_NOTES_v1.0.0.md only
+
+# 1. full suite on T: must reproduce N exactly
 python -m pytest cuvarbase/tests -v -rs 2>&1 | tee suite_full.log
-tail -3 suite_full.log       # "<N> passed in ..." -- no skipped, no failed;
-                             # N is the collected count and goes into the notes
+tail -3 suite_full.log       # "<N> passed in ..." -- the SAME N as
+                             # suite_candidate.log and the notes; else STOP
 # 2. release gate
 python scripts/check_release_gate.py 2>&1 | tee release_gate.log   # 14/14
 # 3. docs with every figure rendered (warnings are errors)
@@ -216,19 +264,26 @@ tar -C docs/build/html -czf /workspace/site-$T.tgz .
 Back on the workstation:
 
 ```bash
-# copy logs + site back (scp via the .runpod.env host/port; no rsync needed)
+# copy logs + site back (scp via the .runpod.env host/port; no rsync needed).
+# runpod-create.sh writes RUNPOD_SSH_HOST / RUNPOD_SSH_PORT / RUNPOD_SSH_USER
+# (and optionally RUNPOD_SSH_KEY) into .runpod.env -- source it, as
+# scripts/setup-remote.sh and test-remote.sh do.
+source .runpod.env
+POD="$RUNPOD_SSH_USER@$RUNPOD_SSH_HOST"
+SCP="scp -P $RUNPOD_SSH_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${RUNPOD_SSH_KEY:+-i $RUNPOD_SSH_KEY}"
 REC=analysis/v1.0-release-gate-$DATE; mkdir -p "$REC"
-scp -P "$RUNPOD_PORT" "root@$RUNPOD_HOST:/workspace/cuvarbase/{suite_full,release_gate,docs_build,build,twine_check,wheel_smoke,wheel_pyargs,sdist_smoke,wheel_run}.log" "$REC"/
-scp -P "$RUNPOD_PORT" "root@$RUNPOD_HOST:/workspace/cuvarbase/env_record.txt" "$REC"/
-scp -P "$RUNPOD_PORT" "root@$RUNPOD_HOST:/workspace/site-$T.tgz" /tmp/
+$SCP "$POD:/workspace/cuvarbase/{suite_candidate,suite_full,release_gate,docs_build,build,twine_check,wheel_smoke,wheel_pyargs,sdist_smoke,wheel_run}.log" "$REC"/
+$SCP "$POD:/workspace/cuvarbase/env_record.txt" "$REC"/
+$SCP "$POD:/workspace/site-$T.tgz" /tmp/
 scripts/runpod-stop.sh --terminate           # only the pod in .runpod.env; confirm with myself{pods}
 
 # commit T' = the gate record only (the logs are tracked through the
 # !analysis/**/*.log negation in .gitignore)
 cat > "$REC"/SUMMARY.md <<EOS
 # v1.0.0 release gate ($DATE)
-commit T: $T   tree: $(git rev-parse "$T^{tree}")
-GPU: <from env_record.txt>   suite: <N> passed, 0 skipped, 0 failed (suite_full.log)
+commit T: $T   tree: $(git rev-parse "$T^{tree}")   candidate tip C: $C
+GPU: <from env_record.txt>   suite on T: <N> passed, 0 skipped, 0 failed (suite_full.log)
+candidate run on C: <N> passed, 0 skipped, 0 failed (suite_candidate.log) -- same N as the notes
 check_release_gate.py: 14/14   docs: -E -a -W clean, all figures   build/twine: ok
 wheel smoke + --pyargs from outside the tree: ok   sdist: ok   wheel run: ok
 EOS
@@ -294,7 +349,7 @@ MERGE=$(git rev-parse HEAD)
 
 # 3. build from the merge commit in a clean venv (the tag comes after
 #    the build proves the tree, but the tree is identical to what the
-#    gate ran; N below = the gate's passed count)
+#    gate ran; N below = the count in the notes, which the gate reproduced)
 python3 -m venv /tmp/relbuild && source /tmp/relbuild/bin/activate
 pip install -q build twine
 rm -rf dist && python -m build && twine check dist/*
