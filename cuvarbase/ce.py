@@ -37,6 +37,16 @@ _CE_KERNELS = ('ce_classical_fast', 'ce_classical_faster', 'constdpdm_ce',
                'histogram_data_count', 'histogram_data_weighted',
                'log_prob', 'standard_ce', 'weighted_ce')
 
+# The ``ConditionalEntropyMemory`` options a ``run`` call may pass per
+# call. When the call runs on an existing memory object the kernels
+# dispatch on THAT object's settings, so a per-call value that disagrees
+# with it is rejected rather than silently ignored (``use_fast`` is not
+# overridable per call at all: ``call_func`` is fixed in the constructor).
+_CE_MEMORY_OPTIONS = ('phase_bins', 'mag_bins', 'mag_overlap',
+                      'phase_overlap', 'max_phi', 'weighted', 'use_double',
+                      'compute_log_prob', 'balanced_magbins',
+                      'widen_mag_range')
+
 
 # Minimum number of observations the conditional-entropy entry points
 # accept. CE rescales y to [0, 1] with (y - min) / (max - min), which
@@ -50,7 +60,10 @@ def _check_ce_data(data, where):
     ``dy = 0`` or a NaN in ``y`` used to give a finite but wrong
     spectrum (the NaN point was counted in magnitude bin 0; 3% relative
     error with a different argmax), and a NaN in ``t`` moved the argmax
-    without any warning (Sep 2026 audit, defect 23).
+    without any warning (Sep 2026 audit, defect 23). A constant ``y``
+    (audit id 115) made ``setdata``'s ``(y - min) / (max - min)`` 0/0
+    for every point: the NaN bin indices were cast to uint32 (a
+    platform-defined value) and the spectrum was flat garbage.
     """
     for i, lc in enumerate(data):
         # exactly (t, y, dy): normalize_light_curves unpacks three
@@ -61,8 +74,16 @@ def _check_ce_data(data, where):
                              "tuple; got %d elements"
                              % (where, i, len(lc)))
         dy = lc[2]
-        check_lightcurve(lc[0], lc[1], dy, min_n=_CE_MIN_NDATA,
-                         name='%s lightcurve %d' % (where, i))
+        name = '%s lightcurve %d' % (where, i)
+        _t, y, _dy = check_lightcurve(lc[0], lc[1], dy,
+                                      min_n=_CE_MIN_NDATA, name=name)
+        if np.all(y == y[0]):
+            raise ValueError(
+                "%s: y is constant (all %d values equal %r); the "
+                "conditional entropy bins y over its range max - min, "
+                "which is zero, so there are no magnitude bins to build. "
+                "Remove constant lightcurves before searching"
+                % (name, y.size, y[0]))
 
 
 def _needs_compile(prepared_functions):
@@ -382,8 +403,9 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         ndata 1000-2000. They also need no global
         histogram, saving ``nfreq * phase_bins * mag_bins`` uint32 of
         device memory (20 MB for a 100k-frequency 10 x 5 search).
-        Incompatible with ``weighted=True`` and
-        ``balanced_magbins=True``. Works with ``run``, ``large_run``
+        Incompatible with ``weighted=True``, ``balanced_magbins=True``
+        and ``compute_log_prob=True`` (the fast kernels compute only the
+        conditional entropy). Works with ``run``, ``large_run``
         and the batched entry points, in single or double precision.
     use_double: bool, optional (default: False)
         Use double precision on the GPU.
@@ -405,7 +427,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         phase-independent null model (``sum_{phi, m} [N log Nexp - Nexp
         - lgamma(N + 1)]`` with ``Nexp = N_phi * p(m)``). Like the CE it
         is *minimized* at the true frequency. Incompatible with
-        ``weighted`` and ``balanced_magbins``.
+        ``weighted``, ``balanced_magbins`` and ``use_fast`` (there is
+        no shared-memory log-probability kernel).
 
     Notes
     -----
@@ -498,6 +521,14 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
 
         if weighted and use_fast:
             raise ValueError("use_fast must be False if weighted is True")
+        if log_prob and use_fast:
+            # conditional_entropy_fast only launches the shared-memory
+            # CE kernels: this combination used to return the plain
+            # conditional entropy instead of the log-probability
+            raise ValueError("use_fast must be False if compute_log_prob "
+                             "is True (the fast kernels compute only the "
+                             "conditional entropy; there is no "
+                             "shared-memory log-probability kernel)")
         if weighted and balanced:
             raise ValueError("simultaneous balanced_magbins and weighted"
                              " options is not currently supported")
@@ -540,6 +571,44 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         kw['use_fast'] = self.use_fast
         self._check_options(kw, use_fast=self.use_fast)
         return kw
+
+    def _check_memory_options(self, mem, kwargs):
+        """
+        Check the per-call option kwargs of a ``run`` that uses an
+        existing memory object (``memory=...`` or the memory from
+        :meth:`preallocate`).
+
+        The kernels dispatch on the *memory's* settings (its ``weighted``
+        / ``compute_log_prob`` / ``balanced_magbins`` flags pick the
+        kernel, ``phase_bins`` / ``mag_bins`` size its histogram), so a
+        per-call option that disagrees with the memory used to be
+        silently ignored. Raise ``ValueError`` instead, and re-check the
+        memory's own option combination against this process's
+        ``use_fast`` (a weighted memory run through the fast kernels,
+        for instance, read its float magnitudes as bin indices).
+        """
+        opts = dict(phase_bins=mem.phase_bins,
+                    mag_bins=mem.mag_bins,
+                    mag_overlap=mem.mag_overlap,
+                    phase_overlap=mem.phase_overlap,
+                    max_phi=mem.max_phi,
+                    weighted=mem.weighted,
+                    use_double=(mem.real_type is np.float64),
+                    compute_log_prob=mem.compute_log_prob,
+                    balanced_magbins=mem.balanced_magbins,
+                    widen_mag_range=mem.widen_mag_range)
+        bad = [k for k in _CE_MEMORY_OPTIONS
+               if k in kwargs and kwargs[k] != opts[k]]
+        if bad:
+            raise ValueError(
+                "per-call option(s) %s do not match the memory this call "
+                "runs on (%s): the kernels dispatch on the memory's "
+                "settings, so the per-call value would be ignored. "
+                "Allocate (or preallocate) the memory with these options, "
+                "or leave the memory argument out"
+                % (', '.join('%s=%r' % (k, kwargs[k]) for k in bad),
+                   ', '.join('%s=%r' % (k, opts[k]) for k in bad)))
+        self._check_options(opts, use_fast=self.use_fast)
 
     def _ensure_compiled(self, **kwargs):
         """Compile and prepare the kernels once per process object."""
@@ -856,13 +925,22 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
                 check_freqs(frq,
                             name='ConditionalEntropyAsyncProcess.run')
 
+        memory = memory if memory is not None else self.memory
+        if memory is None:
+            # per-call option kwargs: reject an unsupported combination
+            # on the host, before the kernels are compiled
+            self._memory_kwargs(**kwargs)
+        else:
+            # ... and, on an existing memory, a per-call option that
+            # disagrees with the memory (it would be silently ignored)
+            for mem in memory[:len(data)]:
+                self._check_memory_options(mem, kwargs)
+
         # compile module if not compiled already
         self._ensure_compiled(**kwargs)
 
         # Prepare data
         data = normalize_light_curves(data)
-
-        memory = memory if memory is not None else self.memory
 
         # create and/or check frequencies
         frqs = freqs
@@ -960,6 +1038,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             for frq in _freq_grids(freqs, len(data)):
                 check_freqs(
                     frq, name='ConditionalEntropyAsyncProcess.large_run')
+        # per-call option kwargs: validated before any device work
+        self._memory_kwargs(**kwargs)
 
         # compile module if not compiled already
         self._ensure_compiled(**kwargs)
@@ -1050,6 +1130,8 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         _check_ce_data(data, 'batched_run_const_nfreq')
         if freqs is not None:
             check_freqs(freqs, name='batched_run_const_nfreq')
+        # per-call option kwargs: validated before any device work
+        self._memory_kwargs(**kwargs)
 
         # create streams if needed
         bsize = min([len(data), batch_size])
