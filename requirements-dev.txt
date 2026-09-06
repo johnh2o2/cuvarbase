@@ -1,8 +1,0 @@
--e .
-numpy >= 1.17
-scipy >= 1.3
-pycuda >= 2017.1.1, != 2024.1.2
-pytest
-nfft
-astropy
-matplotlib

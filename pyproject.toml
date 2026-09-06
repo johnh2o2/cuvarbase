@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ dynamic = ["version"]
 description = "Period-finding and variability on the GPU"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.9"
-license = {text = "GPL-3.0"}
+license = "GPL-3.0-only"
+license-files = ["LICENSE.txt"]
 authors = [
     {name = "John Hoffman", email = "johnh2o2@gmail.com"}
 ]
@@ -17,31 +18,46 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: C",
     "Programming Language :: C++",
 ]
+# numpy/scipy floors: the oldest releases that install on every supported
+# interpreter (1.17/1.3 have no Python 3.9 wheels and were tested nowhere);
+# 1.22/1.8 pass the CPU suite on 3.9.
 dependencies = [
-    "numpy>=1.17",
-    "scipy>=1.3",
+    "numpy>=1.22",
+    "scipy>=1.8",
     "pycuda>=2017.1.1,!=2024.1.2",
 ]
 
 [project.optional-dependencies]
+# Test extra: what `pytest --pyargs cuvarbase` needs beyond the runtime
+# deps. matplotlib is not needed (every plotting import sits behind
+# plot=False); batman-package and transitleastsquares exercise the
+# limb-darkened TLS templates and the TLS reference comparisons.
 test = [
     "pytest",
     "nfft",
-    "matplotlib",
     "astropy",
+    "batman-package",
+    "transitleastsquares",
 ]
 cufinufft = [
     "cufinufft>=2.2",
+]
+# Mirrors docs/requirements.txt (the numpy/scipy floors come from the
+# runtime dependencies above).
+docs = [
+    "sphinx>=7,<9",
+    "matplotlib>=3.7",
 ]
 
 [project.urls]
@@ -58,3 +74,20 @@ cuvarbase = ["kernels/*.cu", "kernels/*.cuh"]
 
 [tool.setuptools.dynamic]
 version = {attr = "cuvarbase.__version__"}
+
+[tool.pytest.ini_options]
+testpaths = ["cuvarbase/tests"]
+addopts = "-rs --strict-markers"
+markers = [
+    "gpu: needs a CUDA device",
+]
+# Only warnings the library emits on purpose are silenced here; everything
+# else (DeprecationWarning, RuntimeWarning, ...) stays visible in the
+# summary so a new one is noticed.
+filterwarnings = [
+    # tls_models: informational, fires once at import when the optional
+    # batman-package is absent (the analytic template is used instead)
+    "ignore:batman package not available:UserWarning",
+    # nufft_lrt: the deliberate EXPERIMENTAL notice (re-validation pending)
+    "ignore:.*nufft.?lrt.*EXPERIMENTAL:UserWarning",
+]
