@@ -98,9 +98,11 @@ When is this the right tool?
 
 What the Sep-2026 injection-recovery campaign (run *before* the fixes
 below, with an explicit epoch grid, epoch-relative times and a zero-mean
-basis, so it exercised none of the defects except the Detector A one)
-showed, at 60 injections per depth on 600-point ground-based sampling
-over 90 d:
+basis, so of the defects it exercised only the Detector A PSD one and --
+since it built the process with the defaults of the time -- the old
+``sigma = 2`` NFFT oversampling, fix 5 below, whose effect on the
+statistic is small, ~0.1 at n = 600; not the other three) showed, at 60
+injections per depth on 600-point ground-based sampling over 90 d:
 
 * The whitened NUFFT matched filter **matched BLS's completeness** in
   white noise and in OU red noise at 1x and 3x the white level

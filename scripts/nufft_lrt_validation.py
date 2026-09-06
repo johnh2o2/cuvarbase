@@ -18,9 +18,16 @@ Protocol (per noise configuration):
    period/duration, swept depth) into fresh noise; a detection requires
    the statistic to exceed the null threshold AND the best period to
    land within 1% of the truth or its 2:1 aliases.
-3. Completeness(depth) per method per noise config + the LRT SNR
-   calibration check (statistic ~ N(0,1) on white noise at a fixed
-   template).
+3. Completeness(depth) per method per noise config + the LRT statistic's
+   null calibration (mean/std on white noise at ONE fixed template).
+   This is a calibration CONSTANT of the configuration, not a pass/fail
+   check: the statistic is NOT N(0,1) by design (the NFFT modes of
+   irregular sampling are not orthogonal, so the frequency-diagonal
+   whitened correlation is over-dispersed even with the true PSD; null
+   std ~1.8-2.7 for this harness's ground sampling at nf = 2n -- see the
+   cuvarbase.nufft_lrt module docstring). Expect a mean near 0 and a
+   std well above 1; the std is what a threshold must be scaled by if
+   it is ever quoted in "sigma" units.
 
 Noise model: white Gaussian + an exact Ornstein-Uhlenbeck (AR(1) in
 continuous time) red component generated directly at the irregular
@@ -263,8 +270,14 @@ def run_config(cfg, methods, rng, n_null, n_inj, depths, t):
 
 
 def snr_calibration(rng, t, proc_kwargs, n=200):
-    """LRT statistic on pure white noise at ONE fixed template must be
-    ~ N(0,1) if the whitened matched filter is correctly normalized."""
+    """Null mean/std of the LRT statistic on pure white noise at ONE
+    fixed template: the calibration constant of this (sampling, nf, PSD
+    estimator) configuration. The statistic is a whitened correlation,
+    not N(0,1): with irregular sampling the NFFT modes are not
+    orthogonal and the null std is ~1.8-2.7 for the harness's ground
+    sampling at nf = 2n even with the true PSD (module docstring of
+    cuvarbase.nufft_lrt). A mean far from 0 would indicate a
+    normalization bug; a std above 1 is expected."""
     from cuvarbase.nufft_lrt import NUFFTLRTAsyncProcess
     proc = NUFFTLRTAsyncProcess(**proc_kwargs)
     vals = []
@@ -371,10 +384,12 @@ def main():
                             depths=depths, sigma_white=sigma_w),
                'snr_calibration': None, 'configs': []}
 
-    print('LRT SNR calibration on white noise...', flush=True)
+    print('LRT statistic null calibration on white noise...', flush=True)
     results['snr_calibration'] = snr_calibration(
         rng, t, {}, n=40 if args.quick else 200)
-    print('  mean=%.3f std=%.3f (want ~0, ~1)'
+    print('  mean=%.3f std=%.3f (calibration constant: mean ~0 expected; '
+          'std is NOT ~1 by design, ~1.8-2.7 for this sampling at '
+          'nf = 2n)'
           % (results['snr_calibration']['mean'],
              results['snr_calibration']['std']), flush=True)
 
