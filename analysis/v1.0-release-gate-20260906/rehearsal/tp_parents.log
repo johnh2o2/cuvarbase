@@ -1,0 +1,6 @@
+cwd: /Users/johnhoffman/Documents/cuvarbase
+command: git show -s --format=%P ea2694ffafbb49363f236133bb16675a64ca00ba
+
+1032caf029570dc4841db1c594a2cbb1654e8fd8
+
+EXIT_CODE=0

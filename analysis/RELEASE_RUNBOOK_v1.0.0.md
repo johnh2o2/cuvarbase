@@ -13,28 +13,28 @@ here.
 
 ## State as staged (Sep 2026)
 
-- Release branch: `v1.0-fixes`. It carries everything since 0.2.5 (PRs
-  #57-#68, the July audits) plus the September 2026 work: Phase 1 (25
-  confirmed correctness defects fixed, input validation that raises) and
-  Phase 2 (performance), GPU-gated at `000c299` on a shared NVIDIA A40
-  (1582 passed / 0 failed / 0 skipped), and the Phase 3 hygiene on top
-  (API freeze, packaging, test hygiene, docs consistency, repo prune,
-  this runbook). CI: CPU suite green on every push.
+- Release branch: `v1.0-fixes`; Phases 1-4 are complete, D1 is decided
+  (NUFFT-LRT stays experimental, validated but API not frozen). Frozen
+  content T = `1032caf029570dc4841db1c594a2cbb1654e8fd8`, tree
+  `b023c3e8d163010dbae2fc0b7cd5204ca04384d1`. The Sep 6 Phase 5
+  RTX A5000 source gate reproduced **1,785 passed + 1 xfailed of 1,786
+  collected**, 0 failed / 0 skipped; release gate 14/14. Full record:
+  `analysis/v1.0-release-gate-20260906/`.
 - Audits of record for 1.0: `analysis/audit-sep2026/` (release readiness,
   algorithm audit, execution plan, NUFFT-LRT campaign, repro scripts). The
   July audits (`tls-audit-jul2026.md`, `claims-trace-jul2026.md`,
   `nufft-lrt-audit-jul2026.md`) and the July gate record
   (`v1.0-release-gate-jul2026/`) are kept in `analysis/` as well; only the
   pruned material listed under the archive tag below is archive-only.
-- GPU gate: the September Phase 1-2 gate (`000c299`) is superseded by
-  Phase 3 and will be re-run in full on the frozen tree T (Phase 5). No
-  gate record for T exists yet; that record is commit T'.
-- GPU test count: it flows ONE way. Phase 5 measures it once on the
-  candidate tip C (full suite, 0 skipped), writes it into
-  `docs/RELEASE_NOTES_v1.0.0.md` as the last content commit -- that commit
-  is T -- and the gate run on T must reproduce the same count. The notes
-  are part of T, so they are necessarily edited BEFORE T; the gate on T
-  confirms the count, it does not produce it.
+- GPU gate: the Phase 5 SHA-clone run on T supersedes the Phase 1-2
+  and Phase 4 runs. T' is the single analysis-only gate-record child of T;
+  its literal SHA and final CI run are recorded in the session handoff.
+- GPU test count flows one way: per the Sep 6 maintainer instruction,
+  Phase 4's measured count was written to README and release notes in T,
+  then reproduced on T. The expected failure is
+  `test_examples_compile.py::test_notebook_code_cells_compile_without_warnings[Phase Dispersion Minimization.ipynb]`
+  (known non-raw TeX label strings). Any later content/count change
+  requires a new freeze and gate.
 - Old `v1.0.0` tag: annotated object `afa9741` pointing at `5553248`
   (Jun 11 2026), exists on origin, STALE (303 commits behind at `47e0ae3`,
   Sep 5 2026 -- `git rev-list --count 5553248..v1.0-fixes` for the current
@@ -76,46 +76,56 @@ here.
   but never uploaded. Publishing needs the maintainer's PyPI token: type
   `! twine upload dist/*` yourself in the session so the token never
   enters a transcript, or keep it in `~/.pypirc`.
-- NUFFT-LRT (D1): importable as `cuvarbase.nufft_lrt`, quarantined (not in
-  the top-level namespace, EXPERIMENTAL warning at first construction).
-  Whether it ships "official" or "experimental" is decided by Phase 4
-  (below) BEFORE the freeze; either way the docs text is written from the
-  measured numbers before T is cut.
+- NUFFT-LRT (D1): importable as `cuvarbase.nufft_lrt`, quarantined
+  (outside the top-level namespace; EXPERIMENTAL warning at first
+  construction). Phase 4 decided **experimental, validated but API not
+  frozen**. Docs quote the archived campaign; promotion is a 1.1 backlog
+  item, not part of Phase 5.
 
 ## Pre-flight checklist (release day, before step 1; every box or stop)
+
+Phase 5 evidence: `analysis/v1.0-release-gate-20260906/`. Checked items
+are preparation checks; the coordinated go and contributor messages remain
+unchecked. Release day must recheck moving refs and exact-tip CI.
 
 - [ ] Explicit maintainer go, coordinated with @astrobatty (draft in
       `analysis/release-staging-v1.0.0/astrobatty-message.md`; he is
       expecting "some changes in BLS" -- ask whether anything targets 1.0.0
       before tagging). @xiaziyna has been told what ships for NUFFT-LRT
       (`analysis/release-staging-v1.0.0/xiaziyna-message.md`).
-- [ ] `git fetch origin --prune`. The release tree T is the `origin/v1.0-fixes`
-      tip AFTER Phase 4 (NUFFT-LRT re-validation) and Phase 5 (freeze +
-      gate). `origin/v1.0-fixes` must equal the local branch.
-- [ ] CPU CI (GitHub Actions) is green at T and at T'.
-- [ ] Gate record commit T' is the ONLY commit after T and touches
+- [x] `git fetch origin --prune`. The frozen content commit is T =
+      `1032caf029570dc4841db1c594a2cbb1654e8fd8`; after the gate record,
+      `origin/v1.0-fixes` and the local branch must both equal T'.
+- [x] CPU CI (GitHub Actions) is green at T and at T'. The final
+      amended T' SHA/run is verified after push and recorded in the external
+      `v1-execution-status-sep2026.md` handoff before declaring Phase 5 done.
+- [x] Gate record commit T' is the ONLY commit after T and touches
       `analysis/` only:
       `git diff --quiet T T' -- . ':!analysis' && echo TREE-OK`
-      (T and T' are SHAs from `analysis/v1.0-release-gate-<date>/SUMMARY.md`).
+      (resolve T and T' as specified in
+      `analysis/v1.0-release-gate-20260906/SUMMARY.md`; T' is the commit
+      containing that record).
       Anything else after T means: go back to Phase 5.
-- [ ] `docs/RELEASE_NOTES_v1.0.0.md`: the leading `<!-- DRAFT ... -->`
-      comment is gone; the GPU test count in the notes is the N that Phase 5
-      step 0 measured on the candidate tip and wrote at T, and the gate run
-      on T reproduced it: the "N passed" line of `suite_full.log` in the
-      gate record (0 skipped, 0 failed) equals the count in the notes. (The
+- [x] `docs/RELEASE_NOTES_v1.0.0.md`: the leading `<!-- DRAFT ... -->`
+      comment is gone; the notes carry Phase 4's measured
+      **1,785 passed + 1 xfailed of 1,786 collected** (0 skipped, 0 failed),
+      written before freezing T per the Sep 6 maintainer instruction;
+      `suite_full.log` on T reproduced those counts. The expected
+      failure is the PDM notebook compile test, named in both README and notes. (The
       notes were edited before T by construction -- they are part of T; a
       differing gate count means the run is investigated, never the notes
       edited after T.) The "if you fetched the June v1.0.0 tag, run `git
       fetch --tags --force`" line is present.
-- [ ] Archive tag present locally and inside the branch history:
+- [x] Archive tag present locally and inside the branch history:
       `git tag -l archive/pre-1.0-process` prints the tag and
       `git merge-base --is-ancestor archive/pre-1.0-process v1.0-fixes`
-      exits 0 (both verified Sep 5 2026 at `47e0ae3`). It is pushed in
+      exits 0 (reverified Sep 6 2026 at T = `1032caf`; tag object `037708f`, target `a480bea`,
+      local only). It is pushed in
       step 6; a missing or detached tag stops the release.
-- [ ] `CHANGELOG.rst` top section is `1.0.0` (no "Unreleased" heading).
-- [ ] `docs/source/nufft_lrt.rst` and the release notes say what Phase 4
+- [x] `CHANGELOG.rst` top section is `1.0.0` (no "Unreleased" heading).
+- [x] `docs/source/nufft_lrt.rst` and the release notes say what Phase 4
       decided (official or experimental) and quote its archived numbers.
-- [ ] PKG-INFO check on a fresh local build of T (`python -m build`):
+- [x] PKG-INFO check on a fresh local build of T (`python -m build`):
       ```
       tar -xzOf dist/cuvarbase-1.0.0.tar.gz cuvarbase-1.0.0/PKG-INFO \
         | grep -n "Until v1.0.0\|git+https"
@@ -130,10 +140,10 @@ here.
       sentence "first release published to PyPI since 0.2.5" (or a line
       that contains the words `since 0.2.5`). Any other 0.2.5 mention is a
       leftover of the pre-flip README and stops the release.
-- [ ] `gh-pages-staging` was rebuilt from T (its orphan commit message
+- [x] `gh-pages-staging` was rebuilt from T (its orphan commit message
       names T's SHA; `git ls-tree -r --name-only gh-pages-staging | grep
       -c "\.doctrees\|\.buildinfo"` prints 0; `.nojekyll` present).
-- [ ] The merge rehearsal (Phase 5, last step) was done against the
+- [x] The merge rehearsal (Phase 5, last step) was done against the
       current `origin/master` and recorded four conflicts.
 
 ## Phase 3 GPU follow-ups (run on the Phase 5 pod, before the freeze)
@@ -234,10 +244,9 @@ ones to look at if anything fails). Result-changing items are marked
   gone; `scripts/setup-remote.sh` and `scripts/benchmark_new_features.py --tests-only`
   still work without the stripped scikit-cuda patch blocks; the docs build with
   `-W` renders the five plot-directive figures.
-- Counts to refresh from the gate log: `docs/RELEASE_NOTES_v1.0.0.md` (the
-  1,582 / 1,786 sentence) and `README.md` ('1,582 tests'). *Phase 4 measured
-  1,785 passed + 1 xfailed of 1,786 collected; Phase 5's gate log on the
-  frozen commit is the number to write.*
+- Counts in `docs/RELEASE_NOTES_v1.0.0.md` and `README.md`: **done
+  before T**, using Phase 4's 1,785 passed + 1 xfailed of 1,786 collected.
+  Phase 5 reproduced that count on T; no post-freeze count edit is allowed.
 
 ## Phase 4: NUFFT-LRT re-validation (pod; before the freeze; no go needed)
 
@@ -289,6 +298,15 @@ Extends `scripts/nufft_lrt_validation.py` and decides D1. It changes
    the `myself{pods}` query that only that pod went away).
 
 ## Phase 5: freeze + gate (pod, ~4 pod-hours; no go needed)
+
+**Sep 6 execution override:** the maintainer authorized Phase 4's full
+A40 suite as the count measurement; its log is copied as
+`suite_candidate_phase4.log`. T is the two-file count correction, pushed
+before creating the fresh pod. No second candidate run was needed. All
+full source-suite commands used `python -m pytest -p no:cacheprovider -v -rs`
+from the repo root with no path. The C-to-T command block below is a historical sequencing reference;
+its strict-Sphinx, smoke-dependency and installed-skip details are superseded
+by `analysis/v1.0-release-gate-20260906/runner/` and that record's deviations.
 
 The sequence is: candidate tip C -> full suite once on C (this measures N)
 -> write N into the release notes and strip the DRAFT comment (the last

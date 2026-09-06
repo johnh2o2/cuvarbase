@@ -1,0 +1,579 @@
+{
+  "T_prime": "ea2694ffafbb49363f236133bb16675a64ca00ba",
+  "T_prime_tree": "96f43f6afcb34170c880a9b5fd48c3464621fb7d",
+  "artifacts": [
+    {
+      "bytes": 454670,
+      "name": "cuvarbase-1.0.0-py3-none-any.whl",
+      "sha256": "b1e41687c005cd3fc69fbe32f98f56a5b36607a0b01e16f6e957981483801423"
+    },
+    {
+      "bytes": 463137,
+      "name": "cuvarbase-1.0.0.tar.gz",
+      "sha256": "232dcffa979543fddfac9d52b4ad4f83dc33c7990ae93240a484fbd61f287663"
+    }
+  ],
+  "branch": "rehearsal-1.0.0",
+  "checkout": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+  "cleanup": "temporary checkout, temporary directory, and rehearsal branch removed",
+  "commands": [
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD^{commit}"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "resolve_tp.log",
+      "name": "resolve_tp"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "resolve_head.log",
+      "name": "resolve_head"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "-s",
+        "--format=%P",
+        "ea2694ffafbb49363f236133bb16675a64ca00ba"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "tp_parents.log",
+      "name": "tp_parents"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "ea2694ffafbb49363f236133bb16675a64ca00ba^{tree}"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "tp_tree.log",
+      "name": "tp_tree"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "1032caf029570dc4841db1c594a2cbb1654e8fd8^{tree}"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "frozen_tree.log",
+      "name": "frozen_tree"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "1032caf029570dc4841db1c594a2cbb1654e8fd8",
+        "ea2694ffafbb49363f236133bb16675a64ca00ba",
+        "--",
+        ".",
+        ":!analysis"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "analysis_only.log",
+      "name": "analysis_only"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "origin/v1.0-fixes"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "origin_release_tip.log",
+      "name": "origin_release_tip"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "origin/master"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "origin_master.log",
+      "name": "origin_master"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "master"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "local_master_before.log",
+      "name": "local_master_before"
+    },
+    {
+      "command": [
+        "git",
+        "show-ref",
+        "--verify",
+        "--quiet",
+        "refs/heads/rehearsal-1.0.0"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 1,
+      "log": "rehearsal_branch_absent.log",
+      "name": "rehearsal_branch_absent"
+    },
+    {
+      "command": [
+        "git",
+        "merge-tree",
+        "--write-tree",
+        "060d839035bcc65d7c69a48a3329852a5f6d580b",
+        "ea2694ffafbb49363f236133bb16675a64ca00ba"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 1,
+      "log": "merge_tree.log",
+      "name": "merge_tree"
+    },
+    {
+      "command": [
+        "git",
+        "worktree",
+        "add",
+        "-b",
+        "rehearsal-1.0.0",
+        "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+        "060d839035bcc65d7c69a48a3329852a5f6d580b"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "worktree_add.log",
+      "name": "worktree_add"
+    },
+    {
+      "command": [
+        "git",
+        "-c",
+        "rerere.enabled=false",
+        "merge",
+        "--no-ff",
+        "--no-commit",
+        "ea2694ffafbb49363f236133bb16675a64ca00ba"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 1,
+      "log": "merge.log",
+      "name": "merge"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--name-only",
+        "--diff-filter=U"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "unmerged_paths.log",
+      "name": "unmerged_paths"
+    },
+    {
+      "command": [
+        "git",
+        "checkout",
+        "--theirs",
+        "--",
+        "README.rst",
+        "cuvarbase/lombscargle.py",
+        "cuvarbase/pdm.py",
+        "cuvarbase/utils.py"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "take_release_side.log",
+      "name": "take_release_side"
+    },
+    {
+      "command": [
+        "git",
+        "add",
+        "--",
+        "README.rst",
+        "cuvarbase/lombscargle.py",
+        "cuvarbase/pdm.py",
+        "cuvarbase/utils.py"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "stage_resolution.log",
+      "name": "stage_resolution"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--name-only",
+        "--diff-filter=U"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "unmerged_paths_after_resolution.log",
+      "name": "unmerged_paths_after_resolution"
+    },
+    {
+      "command": [
+        "git",
+        "commit",
+        "-m",
+        "rehearsal: cuvarbase 1.0.0 gate at ea2694ffafbb49363f236133bb16675a64ca00ba"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "merge_commit.log",
+      "name": "merge_commit"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "merge_sha.log",
+      "name": "merge_sha"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "merge_tree_sha.log",
+      "name": "merge_tree_sha"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "-s",
+        "--format=%P",
+        "HEAD"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "merge_parents.log",
+      "name": "merge_parents"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "ea2694ffafbb49363f236133bb16675a64ca00ba",
+        "HEAD"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "tree_identity_diff.log",
+      "name": "tree_identity_diff"
+    },
+    {
+      "command": [
+        "/Users/johnhoffman/Documents/cuvarbase/.git/phase5/local-venv/bin/python",
+        "-m",
+        "build"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "build.log",
+      "name": "build"
+    },
+    {
+      "command": [
+        "/Users/johnhoffman/Documents/cuvarbase/.git/phase5/local-venv/bin/python",
+        "-m",
+        "twine",
+        "check",
+        "--strict",
+        "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout/dist/cuvarbase-1.0.0-py3-none-any.whl",
+        "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout/dist/cuvarbase-1.0.0.tar.gz"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "twine_check.log",
+      "name": "twine_check"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "1032caf029570dc4841db1c594a2cbb1654e8fd8:README.md"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "frozen_readme.log",
+      "name": "frozen_readme"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "HEAD"
+      ],
+      "cwd": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout",
+      "exit_code": 0,
+      "log": "tracked_checkout_clean.log",
+      "name": "tracked_checkout_clean"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "main_head_after.log",
+      "name": "main_head_after"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "master"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "local_master_after.log",
+      "name": "local_master_after"
+    },
+    {
+      "command": [
+        "git",
+        "worktree",
+        "remove",
+        "--force",
+        "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "worktree_remove.log",
+      "name": "worktree_remove"
+    },
+    {
+      "command": [
+        "git",
+        "branch",
+        "-D",
+        "rehearsal-1.0.0"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "branch_delete.log",
+      "name": "branch_delete"
+    },
+    {
+      "command": [
+        "git",
+        "worktree",
+        "list"
+      ],
+      "cwd": "/Users/johnhoffman/Documents/cuvarbase",
+      "exit_code": 0,
+      "log": "remaining_worktrees.log",
+      "name": "remaining_worktrees"
+    }
+  ],
+  "finished_utc": "2026-09-06T22:00:18.967235+00:00",
+  "frozen_T": "1032caf029570dc4841db1c594a2cbb1654e8fd8",
+  "frozen_tree": "b023c3e8d163010dbae2fc0b7cd5204ca04384d1",
+  "local_master_before": "ec53ae8280e872d9aa87a60c65ad48c9c219c0d5",
+  "merge_commit": "1cc63fc014e6057dfc074ca4a3e5fd412217e1e0",
+  "merge_tree": "96f43f6afcb34170c880a9b5fd48c3464621fb7d",
+  "merge_tree_conflict_lines": [
+    "CONFLICT (content): Merge conflict in README.rst",
+    "CONFLICT (content): Merge conflict in cuvarbase/lombscargle.py",
+    "CONFLICT (content): Merge conflict in cuvarbase/pdm.py",
+    "CONFLICT (content): Merge conflict in cuvarbase/utils.py"
+  ],
+  "origin_master": "060d839035bcc65d7c69a48a3329852a5f6d580b",
+  "outcomes": {
+    "actual_merge_has_expected_four_conflicts": {
+      "detail": [
+        "README.rst",
+        "cuvarbase/lombscargle.py",
+        "cuvarbase/pdm.py",
+        "cuvarbase/utils.py"
+      ],
+      "passed": true
+    },
+    "all_conflicts_resolved": {
+      "detail": [],
+      "passed": true
+    },
+    "cleanup_path_is_owned": {
+      "detail": null,
+      "passed": true
+    },
+    "expected_artifacts_built": {
+      "detail": [
+        "cuvarbase-1.0.0-py3-none-any.whl",
+        "cuvarbase-1.0.0.tar.gz"
+      ],
+      "passed": true
+    },
+    "frozen_tree_matches": {
+      "detail": "b023c3e8d163010dbae2fc0b7cd5204ca04384d1",
+      "passed": true
+    },
+    "local_build_python_present": {
+      "detail": "/Users/johnhoffman/Documents/cuvarbase/.git/phase5/local-venv/bin/python",
+      "passed": true
+    },
+    "local_master_unchanged": {
+      "detail": "ec53ae8280e872d9aa87a60c65ad48c9c219c0d5",
+      "passed": true
+    },
+    "main_head_unchanged": {
+      "detail": "ea2694ffafbb49363f236133bb16675a64ca00ba",
+      "passed": true
+    },
+    "merge_has_expected_two_parents": {
+      "detail": [
+        "060d839035bcc65d7c69a48a3329852a5f6d580b",
+        "ea2694ffafbb49363f236133bb16675a64ca00ba"
+      ],
+      "passed": true
+    },
+    "merge_tree_has_expected_four_conflicts": {
+      "detail": [
+        "CONFLICT (content): Merge conflict in README.rst",
+        "CONFLICT (content): Merge conflict in cuvarbase/lombscargle.py",
+        "CONFLICT (content): Merge conflict in cuvarbase/pdm.py",
+        "CONFLICT (content): Merge conflict in cuvarbase/utils.py"
+      ],
+      "passed": true
+    },
+    "merge_tree_identical_to_tp": {
+      "detail": {
+        "T_prime_tree": "96f43f6afcb34170c880a9b5fd48c3464621fb7d",
+        "merge_tree": "96f43f6afcb34170c880a9b5fd48c3464621fb7d"
+      },
+      "passed": true
+    },
+    "requested_tp_is_current_head": {
+      "detail": {
+        "HEAD": "ea2694ffafbb49363f236133bb16675a64ca00ba",
+        "requested": "ea2694ffafbb49363f236133bb16675a64ca00ba"
+      },
+      "passed": true
+    },
+    "sdist_forbidden_banner_absent": {
+      "detail": null,
+      "passed": true
+    },
+    "sdist_forbidden_git_install_absent": {
+      "detail": null,
+      "passed": true
+    },
+    "sdist_measured_counts_present": {
+      "detail": null,
+      "passed": true
+    },
+    "sdist_no_unpermitted_025_mentions": {
+      "detail": null,
+      "passed": true
+    },
+    "sdist_phase2_count_absent": {
+      "detail": null,
+      "passed": true
+    },
+    "sdist_pypi_install_present": {
+      "detail": null,
+      "passed": true
+    },
+    "sdist_readme_exactly_matches_T": {
+      "detail": null,
+      "passed": true
+    },
+    "sdist_xfail_named": {
+      "detail": null,
+      "passed": true
+    },
+    "throwaway_branch_does_not_exist": {
+      "detail": null,
+      "passed": true
+    },
+    "tp_is_analysis_only": {
+      "detail": null,
+      "passed": true
+    },
+    "tp_is_later_than_T": {
+      "detail": null,
+      "passed": true
+    },
+    "tp_is_single_child_of_T": {
+      "detail": [
+        "1032caf029570dc4841db1c594a2cbb1654e8fd8"
+      ],
+      "passed": true
+    },
+    "tp_matches_origin_release_tip": {
+      "detail": "ea2694ffafbb49363f236133bb16675a64ca00ba",
+      "passed": true
+    },
+    "wheel_forbidden_banner_absent": {
+      "detail": null,
+      "passed": true
+    },
+    "wheel_forbidden_git_install_absent": {
+      "detail": null,
+      "passed": true
+    },
+    "wheel_measured_counts_present": {
+      "detail": null,
+      "passed": true
+    },
+    "wheel_no_unpermitted_025_mentions": {
+      "detail": null,
+      "passed": true
+    },
+    "wheel_phase2_count_absent": {
+      "detail": null,
+      "passed": true
+    },
+    "wheel_pypi_install_present": {
+      "detail": null,
+      "passed": true
+    },
+    "wheel_readme_exactly_matches_T": {
+      "detail": null,
+      "passed": true
+    },
+    "wheel_xfail_named": {
+      "detail": null,
+      "passed": true
+    }
+  },
+  "started_utc": "2026-09-06T22:00:15.788026+00:00",
+  "status": "passed",
+  "temporary_root": "/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj"
+}

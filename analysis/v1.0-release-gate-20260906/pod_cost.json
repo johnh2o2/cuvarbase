@@ -1,0 +1,13 @@
+{
+  "pod_id": "cyx6rax5q03t94",
+  "gpu": "NVIDIA RTX A5000",
+  "rate_usd_per_hour": 0.27,
+  "started_utc": "2026-09-06T21:06:59.703Z",
+  "termination_confirmed_utc": "2026-09-06T21:59:38.451979+00:00",
+  "elapsed_hours": 0.8774302719444445,
+  "estimated_phase5_spend_usd": 0.24,
+  "prior_cumulative_spend_usd": 13.94,
+  "estimated_cumulative_spend_usd": 14.18,
+  "cost_basis": "Elapsed time through confirmed termination at API costPerHr; estimate, not invoice",
+  "account_pods_after_termination": 0
+}

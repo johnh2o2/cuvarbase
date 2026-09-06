@@ -1,0 +1,7 @@
+cwd: /Users/johnhoffman/Documents/cuvarbase
+command: git worktree add -b rehearsal-1.0.0 /var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout 060d839035bcc65d7c69a48a3329852a5f6d580b
+
+Preparing worktree (new branch 'rehearsal-1.0.0')
+HEAD is now at 060d839 Merge pull request #26 from johnh2o2/normalize-light-curves
+
+EXIT_CODE=0

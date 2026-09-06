@@ -1,0 +1,6 @@
+cwd: /Users/johnhoffman/Documents/cuvarbase
+command: git rev-parse 'HEAD^{commit}'
+
+ea2694ffafbb49363f236133bb16675a64ca00ba
+
+EXIT_CODE=0

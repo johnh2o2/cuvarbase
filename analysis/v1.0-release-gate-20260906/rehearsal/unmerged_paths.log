@@ -1,0 +1,9 @@
+cwd: /var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout
+command: git diff --name-only --diff-filter=U
+
+README.rst
+cuvarbase/lombscargle.py
+cuvarbase/pdm.py
+cuvarbase/utils.py
+
+EXIT_CODE=0

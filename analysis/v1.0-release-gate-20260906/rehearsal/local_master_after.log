@@ -1,0 +1,6 @@
+cwd: /Users/johnhoffman/Documents/cuvarbase
+command: git rev-parse master
+
+ec53ae8280e872d9aa87a60c65ad48c9c219c0d5
+
+EXIT_CODE=0

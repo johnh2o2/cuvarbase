@@ -1,0 +1,6 @@
+cwd: /var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout
+command: git rev-parse 'HEAD^{tree}'
+
+96f43f6afcb34170c880a9b5fd48c3464621fb7d
+
+EXIT_CODE=0

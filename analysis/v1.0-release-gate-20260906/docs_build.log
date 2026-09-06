@@ -1,0 +1,114 @@
+make: Entering directory '/workspace/cuvarbase/docs'
+Running Sphinx v8.2.3
+loading translations [en]... done
+making output directory... done
+Converting `source_suffix = '.rst'` to `source_suffix = {'.rst': 'restructuredtext'}`.
+building [mo]: all of 0 po files
+writing output... 
+building [html]: all source files
+updating environment: [new config] 11 added, 0 changed, 0 removed
+reading sources... [  9%] bls
+Ignoring fixed x limits to fulfill fixed data aspect with adjustable data limits.
+reading sources... [ 18%] ce
+reading sources... [ 27%] cuvarbase
+reading sources... [ 36%] index
+reading sources... [ 45%] install
+reading sources... [ 55%] lomb
+reading sources... [ 64%] modules
+reading sources... [ 73%] nufft_lrt
+reading sources... [ 82%] pdm
+reading sources... [ 91%] tls
+reading sources... [100%] whatsnew
+
+looking for now-outdated files... none found
+pickling environment... done
+checking consistency... done
+preparing documents... done
+copying assets... 
+copying downloadable files... [  4%] ../../build/plot_directive/plots/bls_transit_diagram.py
+copying downloadable files... [  7%] ../../build/plot_directive/plots/bls_transit_diagram.png
+copying downloadable files... [ 11%] ../../build/plot_directive/plots/bls_transit_diagram.hires.png
+copying downloadable files... [ 14%] ../../build/plot_directive/plots/bls_transit_diagram.pdf
+copying downloadable files... [ 18%] ../../build/plot_directive/plots/bls_example.py
+copying downloadable files... [ 21%] ../../build/plot_directive/plots/bls_example.png
+copying downloadable files... [ 25%] ../../build/plot_directive/plots/bls_example.hires.png
+copying downloadable files... [ 29%] ../../build/plot_directive/plots/bls_example.pdf
+copying downloadable files... [ 32%] ../../build/plot_directive/plots/planet_transit_diagram.py
+copying downloadable files... [ 36%] ../../build/plot_directive/plots/planet_transit_diagram.png
+copying downloadable files... [ 39%] ../../build/plot_directive/plots/planet_transit_diagram.hires.png
+copying downloadable files... [ 43%] ../../build/plot_directive/plots/planet_transit_diagram.pdf
+copying downloadable files... [ 46%] ../../build/plot_directive/plots/bls_example_transit.py
+copying downloadable files... [ 50%] ../../build/plot_directive/plots/bls_example_transit.png
+copying downloadable files... [ 54%] ../../build/plot_directive/plots/bls_example_transit.hires.png
+copying downloadable files... [ 57%] ../../build/plot_directive/plots/bls_example_transit.pdf
+copying downloadable files... [ 61%] ../../build/plot_directive/plots/ce_example.py
+copying downloadable files... [ 64%] ../../build/plot_directive/plots/ce_example.png
+copying downloadable files... [ 68%] ../../build/plot_directive/plots/ce_example.hires.png
+copying downloadable files... [ 71%] ../../build/plot_directive/plots/ce_example.pdf
+copying downloadable files... [ 75%] ../../build/plot_directive/lomb-1.py
+copying downloadable files... [ 79%] ../../build/plot_directive/lomb-1.png
+copying downloadable files... [ 82%] ../../build/plot_directive/lomb-1.hires.png
+copying downloadable files... [ 86%] ../../build/plot_directive/lomb-1.pdf
+copying downloadable files... [ 89%] ../../build/plot_directive/lomb-2.py
+copying downloadable files... [ 93%] ../../build/plot_directive/lomb-2.png
+copying downloadable files... [ 96%] ../../build/plot_directive/lomb-2.hires.png
+copying downloadable files... [100%] ../../build/plot_directive/lomb-2.pdf
+
+copying static files... 
+Writing evaluated template result to /workspace/cuvarbase/docs/build/html/_static/basic.css
+Writing evaluated template result to /workspace/cuvarbase/docs/build/html/_static/documentation_options.js
+Writing evaluated template result to /workspace/cuvarbase/docs/build/html/_static/language_data.js
+Writing evaluated template result to /workspace/cuvarbase/docs/build/html/_static/alabaster.css
+copying static files: done
+copying extra files... 
+copying extra files: done
+copying assets: done
+writing output... [  9%] bls
+writing output... [ 18%] ce
+writing output... [ 27%] cuvarbase
+writing output... [ 36%] index
+writing output... [ 45%] install
+writing output... [ 55%] lomb
+writing output... [ 64%] modules
+writing output... [ 73%] nufft_lrt
+writing output... [ 82%] pdm
+writing output... [ 91%] tls
+writing output... [100%] whatsnew
+
+generating indices... genindex py-modindex done
+highlighting module code... [  5%] cuvarbase.base.async_process
+highlighting module code... [ 11%] cuvarbase.base.context
+highlighting module code... [ 16%] cuvarbase.bls
+highlighting module code... [ 21%] cuvarbase.bls_frequencies
+highlighting module code... [ 26%] cuvarbase.ce
+highlighting module code... [ 32%] cuvarbase.cufinufft_backend
+highlighting module code... [ 37%] cuvarbase.cunfft
+highlighting module code... [ 42%] cuvarbase.lombscargle
+highlighting module code... [ 47%] cuvarbase.memory.bls_memory
+highlighting module code... [ 53%] cuvarbase.memory.ce_memory
+highlighting module code... [ 58%] cuvarbase.memory.lombscargle_memory
+highlighting module code... [ 63%] cuvarbase.memory.nfft_memory
+highlighting module code... [ 68%] cuvarbase.nufft_lrt
+highlighting module code... [ 74%] cuvarbase.pdm
+highlighting module code... [ 79%] cuvarbase.tls
+highlighting module code... [ 84%] cuvarbase.tls_grids
+highlighting module code... [ 89%] cuvarbase.tls_models
+highlighting module code... [ 95%] cuvarbase.tls_stats
+highlighting module code... [100%] cuvarbase.utils
+
+writing additional pages... search done
+copying images... [ 12%] ../build/plot_directive/plots/bls_transit_diagram.png
+copying images... [ 25%] ../build/plot_directive/plots/bls_example.png
+copying images... [ 38%] ../build/plot_directive/plots/planet_transit_diagram.png
+copying images... [ 50%] ../build/plot_directive/plots/bls_example_transit.png
+copying images... [ 62%] ../build/plot_directive/plots/ce_example.png
+copying images... [ 75%] logo.png
+copying images... [ 88%] ../build/plot_directive/lomb-1.png
+copying images... [100%] ../build/plot_directive/lomb-2.png
+
+dumping search index in English (code: en)... done
+dumping object inventory... done
+build succeeded.
+
+The HTML pages are in build/html.
+make: Leaving directory '/workspace/cuvarbase/docs'

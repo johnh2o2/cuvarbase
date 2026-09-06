@@ -1,0 +1,11 @@
+{
+  "pod_log_files_verified": 30,
+  "all_sha256_match": true,
+  "artifact_checksums_match": true,
+  "final_site_archive_matches_staging_git_tree": true,
+  "site_files_verified": 99,
+  "source_clone_clean": true,
+  "gate_exit": 0,
+  "wheel_suite": "1773 passed, 11 source-only skips",
+  "sdist_suite": "1773 passed, 11 source-only skips"
+}

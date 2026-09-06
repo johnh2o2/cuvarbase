@@ -1,0 +1,33 @@
+T: 1032caf029570dc4841db1c594a2cbb1654e8fd8
+tree: b023c3e8d163010dbae2fc0b7cd5204ca04384d1
+Python: Python 3.13.12
+Fresh local build: PASS
+twine check --strict: PASS
+PASS build_sha_is_T
+PASS build_tree_is_expected
+PASS tracked_tree_clean
+PASS sdist_readme_matches_T
+PASS wheel_readme_matches_T
+PASS pypi_install_present
+PASS forbidden_banner_absent
+PASS forbidden_git_install_absent
+PASS no_unpermitted_025_mentions
+PASS phase4_counts_present
+PASS phase2_count_absent
+PASS expected_xfail_named
+PASS wheel_python3_tag
+PASS wheel_test_conftest_present
+PASS wheel_base_subpackage_present
+PASS wheel_memory_subpackage_present
+FAIL wheel_core_subpackage_present
+PASS wheel_bls_shared_header_present
+PASS wheel_kernel_inventory_matches_T
+PASS sdist_kernel_inventory_matches_T
+FAIL wheel_test_module_count_33
+kernel inventory: 12 files
+test modules: 30
+Artifacts:
+cuvarbase-1.0.0-py3-none-any.whl sha256=48895ff9f71506229099488b24375c0cd7ef4849eb3f14f6138a835a3ed71c32 bytes=454670
+cuvarbase-1.0.0.tar.gz sha256=7f9d439d3259aa6551524aa8e5922f0d70f04d1993e3673717efb8abf3893b4a bytes=463116
+PKG-INFO:78: pip install cuvarbase
+PKG-INFO:113: v1.0 is a major modernization — the first release since the `0.2.x` line on PyPI — with large architectural speedups (an LRU kernel cache alone makes per-lightcurve loops **34x faster**; survey-speed BLS kernels add **2.0-12.7x end-to-end**), the new survey-scale TLS engine, correct results on absolute BJD-scale timestamps (silently wrong before), sparse BLS, batched BLS, Keplerian frequency grids, multiharmonic GPU Lomb-Scargle, a PDM/CE overhaul contributed by [@astrobatty](https://github.com/astrobatty) (PRs #57-#62, #65), Python 3.9-3.14 + numpy 2.x support without scikit-cuda, and a GPU-validated test suite with **1,785 passed + 1 xfailed of 1,786 collected** (0 failed, 0 skipped; NVIDIA A40, 6 September 2026). The expected failure is `test_examples_compile.py::test_notebook_code_cells_compile_without_warnings[Phase Dispersion Minimization.ipynb]`, for known non-raw TeX label strings.

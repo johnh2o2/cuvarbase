@@ -1,0 +1,15 @@
+{
+  "verified_utc": "2026-09-06T21:56:14.430972+00:00",
+  "protected_remote_refs_unchanged": true,
+  "local_tags_unchanged": true,
+  "archive_tag_local_only": true,
+  "local_master_unchanged": true,
+  "pr65_branches_unchanged": {
+    "pr65-bls-kernel": "c959d51f2f00e233393edc7fd0582ed4f719420b",
+    "pr65-latest": "11e9a5bd76e54bd4cda86916f02f8cca056e93f7",
+    "pr65-resolution": "a6d5f5d640e8d5c9840d431a356f14bf757ac4a0"
+  },
+  "current_head": "1032caf029570dc4841db1c594a2cbb1654e8fd8",
+  "current_tree": "b023c3e8d163010dbae2fc0b7cd5204ca04384d1",
+  "worktrees": "/Users/johnhoffman/Documents/cuvarbase  1032caf [v1.0-fixes]"
+}

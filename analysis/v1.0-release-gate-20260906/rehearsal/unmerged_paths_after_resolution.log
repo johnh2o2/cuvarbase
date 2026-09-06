@@ -1,0 +1,5 @@
+cwd: /var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout
+command: git diff --name-only --diff-filter=U
+
+
+EXIT_CODE=0

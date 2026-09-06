@@ -1,0 +1,246 @@
+COMMAND ['git', 'rev-parse', 'gh-pages-staging']
+fab3a5e67d5c7fe477bc556786f6c1decc598923
+
+EXIT 0
+COMMAND ['git', 'ls-remote', '--heads', 'origin', 'gh-pages-staging']
+
+EXIT 0
+COMMAND ['git', 'worktree', 'add', '--detach', '/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-site-jqelz_2b/checkout', '1032caf029570dc4841db1c594a2cbb1654e8fd8']
+Preparing worktree (detached HEAD 1032caf)
+HEAD is now at 1032caf Release notes: record Phase 4 GPU counts before the 1.0 freeze
+
+EXIT 0
+COMMAND ['git', 'checkout', '--orphan', 'phase5-site-new']
+Switched to a new branch 'phase5-site-new'
+
+EXIT 0
+COMMAND ['git', 'rm', '-rfq', '.']
+
+EXIT 0
+COMMAND ['git', 'add', '-A']
+
+EXIT 0
+COMMAND ['git', 'commit', '-m', 'docs site built from v1.0-fixes @ 1032caf029570dc4841db1c594a2cbb1654e8fd8 (Sphinx -E -a -W, all figures)']
+[phase5-site-new (root-commit) 1fd5c7d] docs site built from v1.0-fixes @ 1032caf029570dc4841db1c594a2cbb1654e8fd8 (Sphinx -E -a -W, all figures)
+ 99 files changed, 38942 insertions(+)
+ create mode 100644 .nojekyll
+ create mode 100644 _downloads/08ade8bc9904fa429f08c5ddaf262e56/bls_transit_diagram.pdf
+ create mode 100644 _downloads/1a611f8f4615a08f87279f63874d5b62/bls_transit_diagram.py
+ create mode 100644 _downloads/2797dc1a296f6abdf4fa169b37d4a9b5/lomb-1.py
+ create mode 100644 _downloads/5099b9b97905457949191803141574a7/planet_transit_diagram.pdf
+ create mode 100644 _downloads/5bc87a0c0ee927a305757c0944b5fd58/bls_example.png
+ create mode 100644 _downloads/635ac97b093f83f99b3a0d516454f43d/bls_example_transit.png
+ create mode 100644 _downloads/69e6793b784ac24ae90a772907508082/lomb-2.pdf
+ create mode 100644 _downloads/6f405f58a47e1e19efc121f815e0278e/bls_example.py
+ create mode 100644 _downloads/785c4436b8bb7cf965898f62fe7a1226/bls_example_transit.py
+ create mode 100644 _downloads/83ce03f383992fc1dedb9384310a4757/bls_example.pdf
+ create mode 100644 _downloads/97a84e213adac2c4440de716e67eac09/lomb-1.hires.png
+ create mode 100644 _downloads/9d83209979ad96b956902510ed85c2e3/ce_example.pdf
+ create mode 100644 _downloads/aa59051ac4a146cc88de4d0841ecd406/lomb-2.png
+ create mode 100644 _downloads/aee5719abad4bc673e99810e7325e980/ce_example.png
+ create mode 100644 _downloads/af1bc4030451bc236a12a85507c2ea0c/planet_transit_diagram.py
+ create mode 100644 _downloads/afe238c93f808a73dcab0c0150530512/ce_example.py
+ create mode 100644 _downloads/b844aa926f9f80da4f753613e8f93bf4/bls_transit_diagram.hires.png
+ create mode 100644 _downloads/c6b1459d4bfcc8500e89869d30b80257/bls_example.hires.png
+ create mode 100644 _downloads/c789fba8ba627c826eb372e5f91830ce/ce_example.hires.png
+ create mode 100644 _downloads/c9ec2d6ba9d700b3aa245bd1725812ae/lomb-2.hires.png
+ create mode 100644 _downloads/d252c352b22ec7109ac8d3287f083566/planet_transit_diagram.png
+ create mode 100644 _downloads/d284e27743b276326de2ddd12647fb58/bls_transit_diagram.png
+ create mode 100644 _downloads/d66a2b265c1274933bb5f9ce8d041626/bls_example_transit.pdf
+ create mode 100644 _downloads/dd376eb3b29b8b9cc5b61b14c519c079/bls_example_transit.hires.png
+ create mode 100644 _downloads/e0ed4832567a822896127d28ff9f8488/lomb-2.py
+ create mode 100644 _downloads/e7f74be639715cba4711231a6f23ed74/lomb-1.png
+ create mode 100644 _downloads/f767f36df9a593004ef99a2fe0e49c9e/planet_transit_diagram.hires.png
+ create mode 100644 _downloads/fd0589608ceb003f953e198e3a2ebc7f/lomb-1.pdf
+ create mode 100644 _images/bls_example.png
+ create mode 100644 _images/bls_example_transit.png
+ create mode 100644 _images/bls_transit_diagram.png
+ create mode 100644 _images/ce_example.png
+ create mode 100644 _images/logo.png
+ create mode 100644 _images/lomb-1.png
+ create mode 100644 _images/lomb-2.png
+ create mode 100644 _images/planet_transit_diagram.png
+ create mode 100644 _modules/cuvarbase/base/async_process.html
+ create mode 100644 _modules/cuvarbase/base/context.html
+ create mode 100644 _modules/cuvarbase/bls.html
+ create mode 100644 _modules/cuvarbase/bls_frequencies.html
+ create mode 100644 _modules/cuvarbase/ce.html
+ create mode 100644 _modules/cuvarbase/cufinufft_backend.html
+ create mode 100644 _modules/cuvarbase/cunfft.html
+ create mode 100644 _modules/cuvarbase/lombscargle.html
+ create mode 100644 _modules/cuvarbase/memory/bls_memory.html
+ create mode 100644 _modules/cuvarbase/memory/ce_memory.html
+ create mode 100644 _modules/cuvarbase/memory/lombscargle_memory.html
+ create mode 100644 _modules/cuvarbase/memory/nfft_memory.html
+ create mode 100644 _modules/cuvarbase/nufft_lrt.html
+ create mode 100644 _modules/cuvarbase/pdm.html
+ create mode 100644 _modules/cuvarbase/tls.html
+ create mode 100644 _modules/cuvarbase/tls_grids.html
+ create mode 100644 _modules/cuvarbase/tls_models.html
+ create mode 100644 _modules/cuvarbase/tls_stats.html
+ create mode 100644 _modules/cuvarbase/utils.html
+ create mode 100644 _modules/index.html
+ create mode 100644 _sources/bls.rst.txt
+ create mode 100644 _sources/ce.rst.txt
+ create mode 100644 _sources/cuvarbase.rst.txt
+ create mode 100644 _sources/index.rst.txt
+ create mode 100644 _sources/install.rst.txt
+ create mode 100644 _sources/lomb.rst.txt
+ create mode 100644 _sources/modules.rst.txt
+ create mode 100644 _sources/nufft_lrt.rst.txt
+ create mode 100644 _sources/pdm.rst.txt
+ create mode 100644 _sources/tls.rst.txt
+ create mode 100644 _sources/whatsnew.rst.txt
+ create mode 100644 _static/alabaster.css
+ create mode 100644 _static/basic.css
+ create mode 100644 _static/custom.css
+ create mode 100644 _static/doctools.js
+ create mode 100644 _static/documentation_options.js
+ create mode 100644 _static/file.png
+ create mode 100644 _static/github-banner.svg
+ create mode 100644 _static/language_data.js
+ create mode 100644 _static/logo.png
+ create mode 100644 _static/minus.png
+ create mode 100644 _static/plot_directive.css
+ create mode 100644 _static/plus.png
+ create mode 100644 _static/pygments.css
+ create mode 100644 _static/searchtools.js
+ create mode 100644 _static/sphinx_highlight.js
+ create mode 100644 bls.html
+ create mode 100644 ce.html
+ create mode 100644 cuvarbase.html
+ create mode 100644 genindex.html
+ create mode 100644 index.html
+ create mode 100644 install.html
+ create mode 100644 lomb.html
+ create mode 100644 modules.html
+ create mode 100644 nufft_lrt.html
+ create mode 100644 objects.inv
+ create mode 100644 pdm.html
+ create mode 100644 py-modindex.html
+ create mode 100644 search.html
+ create mode 100644 searchindex.js
+ create mode 100644 tls.html
+ create mode 100644 whatsnew.html
+
+EXIT 0
+COMMAND ['git', 'branch', '-M', 'gh-pages-staging']
+
+EXIT 0
+COMMAND ['git', 'rev-parse', 'HEAD']
+1fd5c7d357bada18adf68e10407d9a71afe5d880
+
+EXIT 0
+COMMAND ['git', 'rev-parse', 'HEAD^{tree}']
+33d09eba25d576b44f6cbd8920d459c700703aa8
+
+EXIT 0
+COMMAND ['git', 'rev-list', '--count', 'HEAD']
+1
+
+EXIT 0
+COMMAND ['git', 'ls-tree', '-r', '--name-only', 'HEAD']
+.nojekyll
+_downloads/08ade8bc9904fa429f08c5ddaf262e56/bls_transit_diagram.pdf
+_downloads/1a611f8f4615a08f87279f63874d5b62/bls_transit_diagram.py
+_downloads/2797dc1a296f6abdf4fa169b37d4a9b5/lomb-1.py
+_downloads/5099b9b97905457949191803141574a7/planet_transit_diagram.pdf
+_downloads/5bc87a0c0ee927a305757c0944b5fd58/bls_example.png
+_downloads/635ac97b093f83f99b3a0d516454f43d/bls_example_transit.png
+_downloads/69e6793b784ac24ae90a772907508082/lomb-2.pdf
+_downloads/6f405f58a47e1e19efc121f815e0278e/bls_example.py
+_downloads/785c4436b8bb7cf965898f62fe7a1226/bls_example_transit.py
+_downloads/83ce03f383992fc1dedb9384310a4757/bls_example.pdf
+_downloads/97a84e213adac2c4440de716e67eac09/lomb-1.hires.png
+_downloads/9d83209979ad96b956902510ed85c2e3/ce_example.pdf
+_downloads/aa59051ac4a146cc88de4d0841ecd406/lomb-2.png
+_downloads/aee5719abad4bc673e99810e7325e980/ce_example.png
+_downloads/af1bc4030451bc236a12a85507c2ea0c/planet_transit_diagram.py
+_downloads/afe238c93f808a73dcab0c0150530512/ce_example.py
+_downloads/b844aa926f9f80da4f753613e8f93bf4/bls_transit_diagram.hires.png
+_downloads/c6b1459d4bfcc8500e89869d30b80257/bls_example.hires.png
+_downloads/c789fba8ba627c826eb372e5f91830ce/ce_example.hires.png
+_downloads/c9ec2d6ba9d700b3aa245bd1725812ae/lomb-2.hires.png
+_downloads/d252c352b22ec7109ac8d3287f083566/planet_transit_diagram.png
+_downloads/d284e27743b276326de2ddd12647fb58/bls_transit_diagram.png
+_downloads/d66a2b265c1274933bb5f9ce8d041626/bls_example_transit.pdf
+_downloads/dd376eb3b29b8b9cc5b61b14c519c079/bls_example_transit.hires.png
+_downloads/e0ed4832567a822896127d28ff9f8488/lomb-2.py
+_downloads/e7f74be639715cba4711231a6f23ed74/lomb-1.png
+_downloads/f767f36df9a593004ef99a2fe0e49c9e/planet_transit_diagram.hires.png
+_downloads/fd0589608ceb003f953e198e3a2ebc7f/lomb-1.pdf
+_images/bls_example.png
+_images/bls_example_transit.png
+_images/bls_transit_diagram.png
+_images/ce_example.png
+_images/logo.png
+_images/lomb-1.png
+_images/lomb-2.png
+_images/planet_transit_diagram.png
+_modules/cuvarbase/base/async_process.html
+_modules/cuvarbase/base/context.html
+_modules/cuvarbase/bls.html
+_modules/cuvarbase/bls_frequencies.html
+_modules/cuvarbase/ce.html
+_modules/cuvarbase/cufinufft_backend.html
+_modules/cuvarbase/cunfft.html
+_modules/cuvarbase/lombscargle.html
+_modules/cuvarbase/memory/bls_memory.html
+_modules/cuvarbase/memory/ce_memory.html
+_modules/cuvarbase/memory/lombscargle_memory.html
+_modules/cuvarbase/memory/nfft_memory.html
+_modules/cuvarbase/nufft_lrt.html
+_modules/cuvarbase/pdm.html
+_modules/cuvarbase/tls.html
+_modules/cuvarbase/tls_grids.html
+_modules/cuvarbase/tls_models.html
+_modules/cuvarbase/tls_stats.html
+_modules/cuvarbase/utils.html
+_modules/index.html
+_sources/bls.rst.txt
+_sources/ce.rst.txt
+_sources/cuvarbase.rst.txt
+_sources/index.rst.txt
+_sources/install.rst.txt
+_sources/lomb.rst.txt
+_sources/modules.rst.txt
+_sources/nufft_lrt.rst.txt
+_sources/pdm.rst.txt
+_sources/tls.rst.txt
+_sources/whatsnew.rst.txt
+_static/alabaster.css
+_static/basic.css
+_static/custom.css
+_static/doctools.js
+_static/documentation_options.js
+_static/file.png
+_static/github-banner.svg
+_static/language_data.js
+_static/logo.png
+_static/minus.png
+_static/plot_directive.css
+_static/plus.png
+_static/pygments.css
+_static/searchtools.js
+_static/sphinx_highlight.js
+bls.html
+ce.html
+cuvarbase.html
+genindex.html
+index.html
+install.html
+lomb.html
+modules.html
+nufft_lrt.html
+objects.inv
+pdm.html
+py-modindex.html
+search.html
+searchindex.js
+tls.html
+whatsnew.html
+
+EXIT 0
+COMMAND ['git', 'worktree', 'remove', '--force', '/var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-site-jqelz_2b/checkout']
+
+EXIT 0

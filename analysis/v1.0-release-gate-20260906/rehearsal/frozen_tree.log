@@ -1,0 +1,6 @@
+cwd: /Users/johnhoffman/Documents/cuvarbase
+command: git rev-parse '1032caf029570dc4841db1c594a2cbb1654e8fd8^{tree}'
+
+b023c3e8d163010dbae2fc0b7cd5204ca04384d1
+
+EXIT_CODE=0

@@ -1,0 +1,6 @@
+cwd: /Users/johnhoffman/Documents/cuvarbase
+command: git branch -D rehearsal-1.0.0
+
+Deleted branch rehearsal-1.0.0 (was 1cc63fc).
+
+EXIT_CODE=0

@@ -1,0 +1,6 @@
+cwd: /Users/johnhoffman/Documents/cuvarbase
+command: git worktree list
+
+/Users/johnhoffman/Documents/cuvarbase  ea2694f [v1.0-fixes]
+
+EXIT_CODE=0

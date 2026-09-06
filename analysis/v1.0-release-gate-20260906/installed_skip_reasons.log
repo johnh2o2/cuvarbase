@@ -1,0 +1,15 @@
+Installed-wheel expected repository-file guards (11 skips):
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/wheel-test/lib/python3.11/site-packages/cuvarbase/tests/test_api_freeze.py:315: docs/source not present (installed wheel)
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/wheel-test/lib/python3.11/site-packages/cuvarbase/tests/test_bls.py:2590: docs/source/bls.rst not found (running outside the source tree)
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/wheel-test/lib/python3.11/site-packages/cuvarbase/tests/test_examples_compile.py:89: examples/ and notebooks/ not found (running outside the source tree)
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/wheel-test/lib/python3.11/site-packages/cuvarbase/tests/test_examples_compile.py:94: got empty parameter set for (path)
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/wheel-test/lib/python3.11/site-packages/cuvarbase/tests/test_examples_compile.py:101: got empty parameter set for (path)
+SKIPPED [6] ../../tmp/cuvarbase-phase5/venvs/wheel-test/lib/python3.11/site-packages/cuvarbase/tests/test_readme_consistency.py:20: README.md not found (running outside the source tree)
+
+Installed-sdist same repository-file guards (11 skips):
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/sdist-test/lib/python3.11/site-packages/cuvarbase/tests/test_api_freeze.py:315: docs/source not present (installed wheel)
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/sdist-test/lib/python3.11/site-packages/cuvarbase/tests/test_bls.py:2590: docs/source/bls.rst not found (running outside the source tree)
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/sdist-test/lib/python3.11/site-packages/cuvarbase/tests/test_examples_compile.py:89: examples/ and notebooks/ not found (running outside the source tree)
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/sdist-test/lib/python3.11/site-packages/cuvarbase/tests/test_examples_compile.py:94: got empty parameter set for (path)
+SKIPPED [1] ../../tmp/cuvarbase-phase5/venvs/sdist-test/lib/python3.11/site-packages/cuvarbase/tests/test_examples_compile.py:101: got empty parameter set for (path)
+SKIPPED [6] ../../tmp/cuvarbase-phase5/venvs/sdist-test/lib/python3.11/site-packages/cuvarbase/tests/test_readme_consistency.py:20: README.md not found (running outside the source tree)

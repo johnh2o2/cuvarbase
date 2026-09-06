@@ -1,0 +1,7 @@
+GPU-less import OK: 1.0.0 from /tmp/cuvarbase-phase5/venvs/sdist-smoke/lib/python3.11/site-packages/cuvarbase
+/tmp/cuvarbase-phase5/venvs/sdist-smoke/lib/python3.11/site-packages/cuvarbase/tls_models.py:40: UserWarning: batman package not available. Install with: pip install batman-package
+  warnings.warn("batman package not available. Install with: pip install batman-package")
+submodules import OK (16): base, bls, bls_frequencies, ce, core, cufinufft_backend, cunfft, lombscargle, memory, nufft_lrt, pdm, tls, tls_grids, tls_models, tls_stats, utils
+cuvarbase.tests OK (30 test modules)
+kernels OK: 11 .cu (bls, bls_batch, bls_optimized, ce, cunfft, lomb, nufft_lrt, pdm, sparse_bls, tls, tls_fast), 1 .cuh (bls_common.cuh)
+wheel import OK: 1.0.0
