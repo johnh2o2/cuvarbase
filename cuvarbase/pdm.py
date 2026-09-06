@@ -428,7 +428,10 @@ class PDMAsyncProcess(GPUAsyncProcess):
             * ``err``: observation uncertainties
             Alternatively, [(t, y, w, freqs), ...] for backward compatibility
             (deprecated). ``w`` are observation weights of any scale (they
-            are normalized to sum to one internally).
+            are normalized to sum to one internally); like ``err`` they
+            must be finite and strictly positive -- a zero weight (used
+            before 1.0 to mask a point) is rejected, so drop masked
+            points from the arrays instead.
         gpu_data: list, optional
             list of GPU arrays from ``allocate``
         pow_cpus: list, optional
