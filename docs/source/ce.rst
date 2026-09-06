@@ -200,5 +200,15 @@ misbehaving:
 ``use_fast=True`` with ``use_double=True`` is supported (in single and
 double precision, for any ``phase_bins``/``mag_bins``).
 
+When ``run`` uses an existing memory object -- ``memory=...`` or the
+memory :meth:`~cuvarbase.ce.ConditionalEntropyAsyncProcess.preallocate`
+created -- the kernels dispatch on *that memory's* settings, so a
+per-call option keyword argument (``weighted``, ``compute_log_prob``,
+``balanced_magbins``, ``mag_bins``, ...) must match the options the
+memory was allocated with; a mismatch raises ``ValueError`` instead of
+being silently ignored, and the memory's own option combination is
+checked against the process's ``use_fast``. All of these checks run on
+the host before the kernels are compiled.
+
 For an actively developed GPU conditional-entropy implementation, see
 `periodfind <https://github.com/scope-ml/periodfind>`_.

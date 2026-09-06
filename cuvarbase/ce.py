@@ -37,6 +37,16 @@ _CE_KERNELS = ('ce_classical_fast', 'ce_classical_faster', 'constdpdm_ce',
                'histogram_data_count', 'histogram_data_weighted',
                'log_prob', 'standard_ce', 'weighted_ce')
 
+# The ``ConditionalEntropyMemory`` options a ``run`` call may pass per
+# call. When the call runs on an existing memory object the kernels
+# dispatch on THAT object's settings, so a per-call value that disagrees
+# with it is rejected rather than silently ignored (``use_fast`` is not
+# overridable per call at all: ``call_func`` is fixed in the constructor).
+_CE_MEMORY_OPTIONS = ('phase_bins', 'mag_bins', 'mag_overlap',
+                      'phase_overlap', 'max_phi', 'weighted', 'use_double',
+                      'compute_log_prob', 'balanced_magbins',
+                      'widen_mag_range')
+
 
 # Minimum number of observations the conditional-entropy entry points
 # accept. CE rescales y to [0, 1] with (y - min) / (max - min), which
@@ -551,6 +561,44 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         self._check_options(kw, use_fast=self.use_fast)
         return kw
 
+    def _check_memory_options(self, mem, kwargs):
+        """
+        Check the per-call option kwargs of a ``run`` that uses an
+        existing memory object (``memory=...`` or the memory from
+        :meth:`preallocate`).
+
+        The kernels dispatch on the *memory's* settings (its ``weighted``
+        / ``compute_log_prob`` / ``balanced_magbins`` flags pick the
+        kernel, ``phase_bins`` / ``mag_bins`` size its histogram), so a
+        per-call option that disagrees with the memory used to be
+        silently ignored. Raise ``ValueError`` instead, and re-check the
+        memory's own option combination against this process's
+        ``use_fast`` (a weighted memory run through the fast kernels,
+        for instance, read its float magnitudes as bin indices).
+        """
+        opts = dict(phase_bins=mem.phase_bins,
+                    mag_bins=mem.mag_bins,
+                    mag_overlap=mem.mag_overlap,
+                    phase_overlap=mem.phase_overlap,
+                    max_phi=mem.max_phi,
+                    weighted=mem.weighted,
+                    use_double=(mem.real_type is np.float64),
+                    compute_log_prob=mem.compute_log_prob,
+                    balanced_magbins=mem.balanced_magbins,
+                    widen_mag_range=mem.widen_mag_range)
+        bad = [k for k in _CE_MEMORY_OPTIONS
+               if k in kwargs and kwargs[k] != opts[k]]
+        if bad:
+            raise ValueError(
+                "per-call option(s) %s do not match the memory this call "
+                "runs on (%s): the kernels dispatch on the memory's "
+                "settings, so the per-call value would be ignored. "
+                "Allocate (or preallocate) the memory with these options, "
+                "or leave the memory argument out"
+                % (', '.join('%s=%r' % (k, kwargs[k]) for k in bad),
+                   ', '.join('%s=%r' % (k, opts[k]) for k in bad)))
+        self._check_options(opts, use_fast=self.use_fast)
+
     def _ensure_compiled(self, **kwargs):
         """Compile and prepare the kernels once per process object."""
         if _needs_compile(getattr(self, 'prepared_functions', None)):
@@ -871,6 +919,11 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
             # per-call option kwargs: reject an unsupported combination
             # on the host, before the kernels are compiled
             self._memory_kwargs(**kwargs)
+        else:
+            # ... and, on an existing memory, a per-call option that
+            # disagrees with the memory (it would be silently ignored)
+            for mem in memory[:len(data)]:
+                self._check_memory_options(mem, kwargs)
 
         # compile module if not compiled already
         self._ensure_compiled(**kwargs)

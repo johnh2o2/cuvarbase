@@ -981,6 +981,62 @@ class TestCEBalanced(object):
                         rtol=0, atol=1e-5)
 
 
+class TestCEMemoryOptionMismatch(object):
+    """Sep 2026 review (idx 8): ``run(memory=...)`` dispatches on the
+    memory's flags, so a per-call option kwarg that disagreed with the
+    memory was silently ignored (the docs claimed it raised). All
+    CPU-runnable: the checks run before the kernels are compiled."""
+
+    @staticmethod
+    def _proc_and_mem(**kw):
+        proc = ConditionalEntropyAsyncProcess(**kw)
+        # no allocation: the option check needs only the flags
+        return proc, ConditionalEntropyMemory(**proc._memory_kwargs())
+
+    def test_matching_and_unrelated_kwargs_pass(self):
+        proc, mem = self._proc_and_mem(weighted=True, max_phi=2.5)
+        proc._check_memory_options(mem, {})
+        proc._check_memory_options(mem, dict(weighted=True, max_phi=2.5,
+                                             block_size=128,
+                                             samples_per_peak=5))
+
+    @pytest.mark.parametrize('kw', [dict(weighted=True),
+                                    dict(compute_log_prob=True),
+                                    dict(balanced_magbins=True),
+                                    dict(mag_bins=7), dict(phase_bins=20),
+                                    dict(mag_overlap=1),
+                                    dict(phase_overlap=1),
+                                    dict(max_phi=1.0),
+                                    dict(use_double=True),
+                                    dict(widen_mag_range=True)])
+    def test_mismatched_kwarg_raises(self, kw):
+        proc, mem = self._proc_and_mem()
+        key = list(kw)[0]
+        with pytest.raises(ValueError, match=key):
+            proc._check_memory_options(mem, kw)
+
+    def test_run_raises_before_any_gpu_work(self):
+        t, y, dy = lightcurve(60, seed=0)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc, mem = self._proc_and_mem()
+        with pytest.raises(ValueError, match='do not match the memory'):
+            proc.run([(t, y, dy)], memory=[mem], freqs=freqs,
+                     balanced_magbins=True)
+        proc.memory = [mem]     # what preallocate() would have set
+        with pytest.raises(ValueError, match='do not match the memory'):
+            proc.run([(t, y, dy)], freqs=freqs, weighted=True)
+
+    def test_fast_process_rejects_a_weighted_memory(self):
+        # conditional_entropy_fast ignores ``weighted`` and would read
+        # the weighted memory's float magnitudes as uint32 bin indices
+        t, y, dy = lightcurve(60, seed=0)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        mem = ConditionalEntropyMemory(weighted=True)
+        with pytest.raises(ValueError, match='use_fast must be False'):
+            proc.run([(t, y, dy)], memory=[mem], freqs=freqs)
+
+
 class TestCEPreallocate(object):
     """Defect 19 (ce-preallocate): ``preallocate()`` never uploaded the
     frequency grid (every frequency evaluated at f = 0) and left
