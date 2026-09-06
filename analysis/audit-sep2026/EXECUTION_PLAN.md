@@ -315,9 +315,12 @@ fast-forward `origin/v1.0`; contributor messages; issue sweep.
 Delete `origin/v1.0-fixes` after a grace period, the four `worktree-*` and the
 ~24 merged local branches, the obsolete remote branches (tell the contributor
 before deleting `fix/BLS-kernel`); remove `analysis/release-staging-v1.0.0/`;
-queue 1.0.1/1.1: TLS coarse-kernel rewrite, Detector A promotion after
-re-validation, Dockerfile rebuild, `_cufft.py` hardening, stellar-parameter
-overrides, CE float32 grids, float64 grid builders, thread-safety.
+queue 1.0.1/1.1: TLS coarse-kernel rewrite, NUFFT-LRT promotion to official
+(Phase 4 option C: fix the default epoch grid, the `run()` return convention
+and the default PSD whitening, re-run the default-path arm, then un-quarantine;
+the full list is in the runbook's 1.0.1 / 1.1 queue), Dockerfile rebuild,
+`_cufft.py` hardening, stellar-parameter overrides, CE float32 grids, float64
+grid builders, thread-safety.
 
 ---
 

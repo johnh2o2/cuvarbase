@@ -565,8 +565,22 @@ git push origin master:v1.0
 - 1.0.1 / 1.1 queue (goes into the roadmap issue; from EXECUTION_PLAN.md
   Phase 7 plus the audit's deferred items): TLS coarse-kernel rewrite
   (band-of-periods-per-block; the 2-4x the audit measured as available),
-  PDM `_fast` kernel rewrite, Detector A (NUFFT-LRT `detector='marginal'`)
-  promotion after re-validation, Dockerfile rebuild (deleted in 1.0),
+  PDM `_fast` kernel rewrite, **NUFFT-LRT promotion to official (Phase 4
+  option C)**: fix the three defaults the 2026-09-06 campaign flagged (a
+  finer default epoch grid -- the default loses 4-9 % completeness at
+  `epoch_oversample=2`; one return convention for `run()` instead of
+  tuple-or-array; revisit the default PSD whitening, which gave no gain
+  over a flat PSD; also `durations=None` and `dy`), re-run the
+  default-path arm of `scripts/nufft_lrt_validation.py` (~1-2 pod-hours)
+  and add a cotrend-then-BLS/TLS comparator, then bring the module into
+  the top-level namespace and the stability promise (touch points:
+  `__init__.py` `_LAZY_ATTRS`, `test_api_freeze.py`,
+  `test_lazy_imports.py`, `_EXPERIMENTAL_MSG`, README, notes, rst);
+  the deferred unweighted-CE `dy` relaxation (patch in the Phase 3
+  scratchpad; `dy=None` documented for now); bump the GitHub Actions
+  majors (Node 20 deprecation annotations); enforce flake8 `F` in CI
+  (`scripts/` still has F401/F541/F841 in the older benchmark scripts);
+  Dockerfile rebuild (deleted in 1.0),
   `_cufft.py` hardening, stellar-parameter overrides for the Keplerian
   grids, CE float32 grids, float64 grid builders, thread-safety of the
   process objects, multi-GPU dispatch.

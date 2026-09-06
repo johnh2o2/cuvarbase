@@ -141,7 +141,8 @@ limitations and deferred work" section is the user-facing summary.
       warning at construction, outside the 1.x stability promise). The
       re-validation passed the correctness gate (default path exact on
       BJD-scale times, epoch search works; Detector A = sequential
-      baseline; numbers on the docs page). Remaining before promotion:
+      baseline; numbers on the docs page). Remaining before promotion
+      (Phase 4 "option C", queued for 1.1):
       a finer default epoch grid (the default costs 4-9 % completeness
       against `epoch_oversample` ~4 at the longer durations), one return
       convention for `run()` (tuple vs array), a sane `durations=None`
