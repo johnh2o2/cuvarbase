@@ -31,6 +31,15 @@ explicitly. The Sep 2026 audit (defect 20) found
 ``sparse_bls_simple.cu`` still carrying ``MAX_W_COMPLEMENT 1E-9`` after
 PR #65 had set 1E-4 in ``sparse_bls.cu`` (powers up to 4.6 in pure
 noise on the opt-in kernel); the define check would have caught it.
+
+The function extractor accepts a definition wherever its qualifier
+appears on the line -- indented, or behind ``extern "C"``, ``static``,
+``inline``, ``__forceinline__`` or a one-line ``template<...>`` -- so
+the ``extern "C" __global__`` TLS kernels are covered too (the
+column-0 anchor the guard first shipped with skipped them); a name
+defined more than once in one file keeps every body. Both guards are
+proved to bite on a mutated scratch copy of the kernel directory
+(:func:`test_guards_bite_on_a_mutated_copy`).
 """
 import glob
 import os
@@ -86,10 +95,23 @@ def _common_path():
                         'bls_common.cuh')
 
 
+# A __device__/__global__ definition (or prototype) header. The
+# qualifier may be indented and may follow ``extern "C"``, ``static``,
+# ``inline``, ``__forceinline__``/``__noinline__`` or a one-line
+# ``template<...>``, and several CUDA qualifiers may be chained
+# (``__host__ __device__``). ``[^\n{;]*?`` keeps the match on one
+# line and stops at a body or a prototype's ``;``.
+_FUNC_DEF = re.compile(
+    r"^[ \t]*(?:(?:extern\s+\"C\"|static|inline|__forceinline__|"
+    r"__noinline__|template\s*<[^>\n]*>)\s+)*"
+    r"__(?:device|global|host)__"
+    r"(?:\s+__(?:device|global|host|forceinline__|noinline__)__)*"
+    r"[^\n{;]*?(\w+)\s*\(", re.M)
+
+
 def _func_names(src):
     """Names of every __device__/__global__ function defined in ``src``."""
-    return set(re.findall(
-        r"^__(?:device|global)__[^\n]*?(\w+)\s*\(", src, re.M))
+    return set(_FUNC_DEF.findall(src))
 
 
 def _strip_comments(src):
@@ -99,15 +121,18 @@ def _strip_comments(src):
 
 
 def _func_bodies(src):
-    """Map name -> normalized source (signature + brace-matched body) for
-    every __device__/__global__ function defined in ``src``."""
+    """Map name -> frozenset of normalized sources (signature +
+    brace-matched body) for every __device__/__global__ function
+    defined in ``src``. A name defined more than once in the file
+    (e.g. in both branches of an ``#ifdef``) keeps every body;
+    prototypes (``;`` before any ``{``) are skipped."""
     src = _strip_comments(src)
     bodies = {}
-    for m in re.finditer(
-            r"^__(?:device|global)__[^\n{;]*?(\w+)\s*\(", src, re.M):
+    for m in _FUNC_DEF.finditer(src):
         name = m.group(1)
         open_brace = src.find('{', m.end())
-        if open_brace < 0:
+        semicolon = src.find(';', m.end())
+        if open_brace < 0 or 0 <= semicolon < open_brace:
             continue
         depth, i = 1, open_brace + 1
         while i < len(src) and depth:
@@ -118,7 +143,7 @@ def _func_bodies(src):
             i += 1
         # normalize whitespace so formatting-only differences don't count
         text = ' '.join(src[m.start():i].split())
-        bodies[name] = text
+        bodies[name] = bodies.get(name, frozenset()) | {text}
     return bodies
 
 
@@ -225,9 +250,12 @@ def _defines(src):
     return out
 
 
-def test_same_named_defines_agree_across_all_kernel_files():
+def _define_drift(paths):
+    """(drifted, per_name) for the #defines of ``paths``: ``drifted``
+    lists ``(name, {file: sorted values})`` for every name whose value
+    set differs between two non-whitelisted files."""
     per_name = {}
-    for path in _all_kernel_files():
+    for path in paths:
         for name, values in _defines(open(path).read()).items():
             per_name.setdefault(name, {})[os.path.basename(path)] = values
 
@@ -239,6 +267,29 @@ def test_same_named_defines_agree_across_all_kernel_files():
             continue
         if len(set(frozenset(v) for v in files.values())) > 1:
             drifted.append((name, {f: sorted(v) for f, v in files.items()}))
+    return drifted, per_name
+
+
+def _function_drift(paths):
+    """(drifted, per_name) for the __device__/__global__ functions of
+    ``paths``: ``drifted`` lists ``(name, sorted files)`` for every name
+    whose bodies differ between two non-whitelisted files."""
+    per_name = {}
+    for path in paths:
+        for name, body in _func_bodies(open(path).read()).items():
+            per_name.setdefault(name, {})[os.path.basename(path)] = body
+
+    drifted = []
+    for name, per_file in sorted(per_name.items()):
+        copies = {f: b for f, b in per_file.items()
+                  if f not in INTENTIONALLY_DIVERGENT_COPIES.get(name, ())}
+        if len(copies) >= 2 and len(set(copies.values())) > 1:
+            drifted.append((name, sorted(copies)))
+    return drifted, per_name
+
+
+def test_same_named_defines_agree_across_all_kernel_files():
+    drifted, per_name = _define_drift(_all_kernel_files())
     assert not drifted, (
         "#define(s) with different values in different kernel files "
         "(the MAX_W_COMPLEMENT 1E-9 vs 1E-4 drift of sparse_bls_simple.cu "
@@ -251,17 +302,7 @@ def test_same_named_defines_agree_across_all_kernel_files():
 
 
 def test_no_cross_file_drift_of_duplicated_functions_in_any_kernel():
-    per_name = {}
-    for path in _all_kernel_files():
-        for name, body in _func_bodies(open(path).read()).items():
-            per_name.setdefault(name, {})[os.path.basename(path)] = body
-
-    drifted = []
-    for name, per_file in sorted(per_name.items()):
-        copies = {f: b for f, b in per_file.items()
-                  if f not in INTENTIONALLY_DIVERGENT_COPIES.get(name, ())}
-        if len(copies) >= 2 and len(set(copies.values())) > 1:
-            drifted.append((name, sorted(copies)))
+    drifted, per_name = _function_drift(_all_kernel_files())
     assert not drifted, (
         "function(s) defined in several kernel files with differing "
         "bodies: %s -- share one implementation (bls_common.cuh-style "
@@ -277,3 +318,76 @@ def test_no_cross_file_drift_of_duplicated_functions_in_any_kernel():
     # the extractor sees the known duplicates
     assert {'get_id', 'mod1', 'atomicAddDouble'} <= set(
         n for n, d in per_name.items() if len(d) >= 2)
+    # ... and the ``extern "C" __global__`` kernels the column-0 anchor
+    # of the first version of this guard could not see (review finding
+    # on 398cd60): a copy of one of these drifting in another file must
+    # be caught like any other.
+    assert set(per_name['tls_search_kernel']) == {'tls.cu'}
+    assert set(per_name['tls_search_kernel_keplerian']) == {'tls.cu'}
+    assert set(per_name['tls_fast_search_kernel']) == {'tls_fast.cu'}
+    assert set(per_name['tls_refine_kernel']) == {'tls_fast.cu'}
+    # every name is a definition, never a prototype: each body is braced
+    for name, per_file in per_name.items():
+        for file, bodies in per_file.items():
+            assert all(b.endswith('}') for b in bodies), (name, file)
+
+
+def test_extractor_accepts_prefixed_and_indented_qualifiers():
+    src = """
+extern "C" __global__ void k_extern(int a) { return; }
+    __device__ int k_indented(int a) { return a; }
+static __device__ __forceinline__ float k_static(float x) { return x; }
+inline __device__ float k_inline(float x) { return x; }
+template <typename T> __device__ T k_template(T x) { return x; }
+__host__ __device__ int k_host_device(int a) { return a; }
+__device__ int k_prototype(int a);
+"""
+    names = _func_names(src)
+    assert names == {'k_extern', 'k_indented', 'k_static', 'k_inline',
+                     'k_template', 'k_host_device', 'k_prototype'}
+    bodies = _func_bodies(src)
+    assert set(bodies) == names - {'k_prototype'}   # prototype skipped
+    assert bodies['k_extern'] == {
+        'extern "C" __global__ void k_extern(int a) { return; }'}
+
+
+def test_guards_bite_on_a_mutated_copy(tmp_path):
+    """Proof that both all-kernel guards detect real drift: on a scratch
+    copy of the kernel directory, re-create defect 20 (a second sparse
+    kernel file whose ``MAX_W_COMPLEMENT`` disagrees) and add a
+    divergent copy of an ``extern "C" __global__`` kernel (indented,
+    to exercise both blind spots of the original extractor) and check
+    that exactly those two names are reported."""
+    import shutil
+    live = _all_kernel_files()
+    copies = []
+    for path in live:
+        dst = tmp_path / os.path.basename(path)
+        shutil.copy(path, dst)
+        copies.append(str(dst))
+    assert not _define_drift(copies)[0]
+    assert not _function_drift(copies)[0]
+
+    # 1. the sparse_bls_simple.cu drift of defect 20, re-created: a
+    #    second file with the same functions but the stale define
+    src = (tmp_path / 'sparse_bls.cu').read_text()
+    assert re.search(r'^#define MAX_W_COMPLEMENT 1E-4$', src, re.M)
+    simple = tmp_path / 'sparse_bls_simple.cu'
+    simple.write_text(re.sub(r'^(#define MAX_W_COMPLEMENT )\S+$',
+                             r'\g<1>1E-9', src, count=1, flags=re.M))
+    copies.append(str(simple))
+    drifted, _ = _define_drift(copies)
+    assert [name for name, _ in drifted] == ['MAX_W_COMPLEMENT'], drifted
+    # identical function copies are not drift
+    assert not _function_drift(copies)[0]
+
+    # 2. a divergent copy of an extern "C" kernel in another file
+    (body,) = _func_bodies((tmp_path / 'tls.cu').read_text())[
+        'tls_search_kernel']
+    assert body.startswith('extern "C" __global__ void tls_search_kernel(')
+    mutant = body[:-1] + ' int drift_mutant = 1; }'
+    with open(tmp_path / 'tls_fast.cu', 'a') as f:
+        f.write('\n    ' + mutant + '\n')
+    drifted, per_name = _function_drift(copies)
+    assert [name for name, _ in drifted] == ['tls_search_kernel'], drifted
+    assert set(per_name['tls_search_kernel']) == {'tls.cu', 'tls_fast.cu'}
