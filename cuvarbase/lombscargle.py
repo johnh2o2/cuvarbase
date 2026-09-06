@@ -105,8 +105,9 @@ def check_k0(freqs, k0=None, rtol=1E-6, atol=0.):
     uniform grid and returned under the wrong labels before 1.0, when
     only ``freqs[0:2]`` were inspected (defect 15,
     ``ls-nonuniform-grid``). ``freqs[0]`` must also be an integer
-    multiple of ``df``: the NFFT can only produce integer modes (the
-    device rounds ``minimum_frequency`` to the nearest one).
+    multiple of ``df``: the NFFT can only produce integer modes
+    (:func:`~cuvarbase.cunfft.nfft_adjoint_async` rounds
+    ``minimum_frequency`` to the nearest one, in float64 on the host).
 
     Parameters
     ----------
@@ -850,7 +851,13 @@ def lomb_scargle_async(memory, functions, freqs,
 
         nfft_kwargs.update(kwargs)
 
-        nfft_kwargs['minimum_frequency'] = freqs[0]
+        # k0 * df rather than freqs[0]: with samples_per_peak =
+        # 1 / (T df) the first mode the NFFT derives is then k0 exactly
+        # in float64, whatever dtype the user's grid came in (a float32
+        # freqs[0] is only good to ~k0 * 6e-8 modes; the kernels used to
+        # round that product themselves in float32, see
+        # cunfft._first_mode)
+        nfft_kwargs['minimum_frequency'] = float(memory.k0) * df
         nfft_kwargs['samples_per_peak'] = samples_per_peak
 
         _check_nfft_grids(memory, int(memory.nf), int(memory.k0),
