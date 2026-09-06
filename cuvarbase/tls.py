@@ -1165,6 +1165,7 @@ def tls_transit(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
     -------
     results : dict
         Search results with keys:
+
         - 'period': Best-fit period
         - 'T0': absolute mid-transit time (days, same scale as ``t``)
           of the first transit at or after min(t); 't0_phase' is the
@@ -1174,16 +1175,19 @@ def tls_transit(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
         - 'SDE': Signal Detection Efficiency
         - 'periods': Trial periods
         - 'chi2': Chi-squared values per period
+
         ... (see tls_search_gpu for full list)
 
     Notes
     -----
     This function automatically generates:
+
     1. Optimal period grid using Ofir (2014) algorithm
     2. Per-period duration ranges based on Keplerian physics
     3. Qmin/qmax arrays for focused duration search
 
     The duration search at each period focuses on physically plausible values:
+
     - For short periods: searches shorter durations
     - For long periods: searches longer durations
     - Scales with stellar density (M_star, R_star)

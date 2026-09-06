@@ -1503,9 +1503,9 @@ class TestPowerConventions(object):
         t, y, dy = self._data()
         chi2_0 = self._chi2_0(y, dy)
         p = np.array([0.0, 0.05, 0.3])
-        assert_allclose(convert_bls_power(p, y, dy, 'snr'),
+        assert_allclose(convert_bls_power(p, y, dy, convention='snr'),
                         np.sqrt(chi2_0 * p))
-        assert_allclose(convert_bls_power(p, y, dy, 'loglik'),
+        assert_allclose(convert_bls_power(p, y, dy, convention='loglik'),
                         0.5 * chi2_0 * p)
 
     def _astropy_results(self, t, y, dy, objective):
@@ -1534,7 +1534,7 @@ class TestPowerConventions(object):
             p_native, _ = self._our_power_at(
                 t, y, dy, res.period[i], res.duration[i],
                 res.transit_time[i])
-            snr = convert_bls_power(p_native, y, dy, 'snr')
+            snr = convert_bls_power(p_native, y, dy, convention='snr')
             assert np.abs(snr - res.power[i]) <= 2e-3 * abs(res.power[i]), \
                 f"period={res.period[i]}: ours={snr}, astropy={res.power[i]}"
 
@@ -1551,7 +1551,7 @@ class TestPowerConventions(object):
             p_native, q = self._our_power_at(
                 t, y, dy, res.period[i], res.duration[i],
                 res.transit_time[i])
-            loglik = convert_bls_power(p_native, y, dy, 'loglik')
+            loglik = convert_bls_power(p_native, y, dy, convention='loglik')
 
             period, dur = res.period[i], res.duration[i]
             hp = 0.5 * period
@@ -1571,7 +1571,7 @@ class TestPowerConventions(object):
         p_native, sols = sparse_bls_cpu(t, y, dy, freqs)
         p_snr, sols_snr = sparse_bls_cpu(t, y, dy, freqs,
                                          convention='snr')
-        assert_allclose(p_snr, convert_bls_power(p_native, y, dy, 'snr'),
+        assert_allclose(p_snr, convert_bls_power(p_native, y, dy, convention='snr'),
                         rtol=1e-6)
         # solutions are convention-independent
         assert sols == sols_snr
@@ -1596,13 +1596,13 @@ class TestPowerConventions(object):
         p0, sols = eebls_gpu(t, y, dy, freqs, qmin=0.01, qmax=0.2)
         p_snr, _ = eebls_gpu(t, y, dy, freqs, qmin=0.01, qmax=0.2,
                              convention='snr')
-        assert_allclose(p_snr, convert_bls_power(p0, y, dy, 'snr'),
+        assert_allclose(p_snr, convert_bls_power(p0, y, dy, convention='snr'),
                         rtol=1e-4, atol=1e-6)
 
         f0 = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.2)
         f_log = eebls_gpu_fast(t, y, dy, freqs, qmin=0.01, qmax=0.2,
                                convention='loglik')
-        assert_allclose(f_log, convert_bls_power(f0, y, dy, 'loglik'),
+        assert_allclose(f_log, convert_bls_power(f0, y, dy, convention='loglik'),
                         rtol=1e-4, atol=1e-6)
 
 

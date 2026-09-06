@@ -467,6 +467,7 @@ def compute_all_statistics(chi2, periods, best_period_idx,
     -------
     stats : dict
         Dictionary with all statistics:
+
         - SDE: Signal Detection Efficiency (see
           :func:`signal_detection_efficiency`)
         - SDE_raw: Raw SDE before detrending

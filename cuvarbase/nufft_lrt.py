@@ -10,7 +10,7 @@ The data and each transit template are transformed with the GPU adjoint
 NFFT (:class:`cuvarbase.cunfft.NFFTAsyncProcess`), which handles the
 non-uniform (gappy / multi-season) sampling directly over the full
 observational baseline. The per-template matched-filter combination
-(SNR = sum_k Y_k T_k* w_k / P_s(k) / sqrt(sum_k |T_k|^2 w_k / P_s(k)))
+(``SNR = sum_k Y_k T_k* w_k / P_s(k) / sqrt(sum_k |T_k|^2 w_k / P_s(k))``)
 runs on the host -- it is an O(nf) reduction, negligible next to the NFFT.
 
 Conventions
@@ -345,6 +345,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         {\\sqrt{\\sum_k |T_k|^2 w_k / P_s(k)}}
 
     where:
+
     - Y_k is the NUFFT of the lightcurve
     - T_k is the NUFFT of the transit template
     - P_s(k) is the power spectrum (adaptively estimated or provided)
@@ -705,20 +706,20 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
 
         Returns
         -------
-        ``epochs=None`` (default): a tuple ``(snr, best_epoch)`` of two
-        float64 arrays of shape ``(len(periods), len(durations))``;
-        ``snr[i, j]`` is the maximum of the statistic over the automatic
-        epoch grid of cell ``(periods[i], durations[j])`` and
-        ``best_epoch[i, j]`` the epoch (transit mid-time, in the
-        caller's time scale, within one period of ``floor(min(t))``)
-        that attains it.
-
-        ``epochs`` given: one float64 array of shape ``(len(periods),
-        len(durations), len(epochs))`` with the statistic at every
-        template.
-
-        In both cases the value is the whitened correlation of the
-        module docstring: not N(0, 1), calibrate thresholds empirically.
+        snr, best_epoch : tuple of ndarray
+            With ``epochs=None`` (the default), two float64 arrays of
+            shape ``(len(periods), len(durations))``. ``snr[i, j]`` is
+            the maximum of the statistic over the automatic epoch grid
+            of cell ``(periods[i], durations[j])`` and
+            ``best_epoch[i, j]`` the epoch (transit mid-time, in the
+            caller's time scale, within one period of ``floor(min(t))``)
+            that attains it.
+        snr : ndarray
+            With ``epochs`` given, one float64 array of shape
+            ``(len(periods), len(durations), len(epochs))`` with the
+            statistic at every template. In both cases the value is the
+            whitened correlation of the module docstring -- not N(0, 1);
+            calibrate thresholds empirically.
         """
         # ---- validate and epoch-subtract (float64) before ANY cast
         t = np.asarray(t, dtype=np.float64).ravel()
