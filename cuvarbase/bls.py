@@ -456,11 +456,13 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
         How to evaluate the spacing recursion
         ``f_{n+1} = f_n + qmin_fac q(f_n) / (samples_per_peak T)``.
         ``'vectorized'`` solves it with numpy
-        (:func:`cuvarbase.bls_frequencies._euler_transit_grid`): 12-30x
-        faster, and it converges to a fixed point of the same
-        recursion rather than approximating it -- the grid length is
-        identical and every frequency agrees to <= 4e-15 relative
-        (float64 rounding on the accumulated sum). ``'recursion'``
+        (:func:`cuvarbase.bls_frequencies._euler_transit_grid`):
+        9.8-14.9x faster on the audit host (a shared NVIDIA A40
+        machine; see the CHANGELOG), and it converges to a fixed point
+        of the same recursion rather than approximating it -- the grid
+        length is identical and every frequency agrees to ~1e-15
+        relative (one to two float64 ulps of the accumulated sum).
+        ``'recursion'``
         runs the original scalar Python loop, one ``q`` evaluation per
         frequency; use it if you need grids bit-identical to
         cuvarbase < 1.0.
@@ -1840,10 +1842,24 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
 
 
 def dnbins(nbins, dlogq):
+    """Host mirror of the device ``dnbins`` in ``bls_common.cuh``: the
+    number of bins the q ladder grows by at ``nbins``.
+
+    The kernels take ``dlogq`` as a ``float`` argument and form
+    ``floorf(dlogq * nbins)`` in float32, and for some ``(dlogq,
+    nbins)`` pairs that product lands on the other side of an integer
+    than the float64 one (``0.65 * 180`` is 117.0 in float64 but
+    116.99999 in float32). The host ladder sizes ``eebls_gpu``'s device
+    bin rows (:func:`count_tot_nbins`) and replicates the fast kernels'
+    box grid (:func:`_fast_box_widths`), so it has to agree with the
+    device rung for rung: the product is formed in float32 here too.
+    Bit-identical to the old float64 arithmetic at the default
+    ``dlogq`` values (0.2, 0.3) for every ``nbins <= 200000``.
+    """
     if (dlogq < 0):
         return 1
 
-    n = int(np.floor(dlogq * nbins))
+    n = int(np.floor(np.float32(dlogq) * np.float32(nbins)))
 
     return n if n > 0 else 1
 
@@ -2259,7 +2275,8 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     freq: float
         Frequency of the signal
     q: float
-        Transit duration in phase
+        Transit duration in phase, in ``[0, 1]`` (``q = 0``, the
+        sparse paths' no-solution sentinel, evaluates to a power of 0)
     phi0: float
         Phase offset of transit, in the ORIGINAL input timescale
         (internally re-referenced to the subtracted epoch, consistent
@@ -2278,6 +2295,14 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
                          "got freq=%r, q=%r, phi0=%r" % (freq, q, phi0))
     if freq <= 0:
         raise ValueError("single_bls: freq must be > 0; got %r" % (freq,))
+    # q is a fractional transit duration. A negative q, or one wider
+    # than a full phase cycle, used to return a silent power of 0 (an
+    # empty box / an all-weight box). q = 0 is the sparse paths'
+    # "no valid box" sentinel and still evaluates to 0; phi0 is any
+    # finite phase (negative values wrap, like the reported solutions).
+    if q < 0 or q > 1:
+        raise ValueError("single_bls: q must be in [0, 1] (a fractional "
+                         "transit duration); got %r" % (q,))
 
     # Epoch-subtract before the float32 cast
     t, epoch = subtract_epoch(t)
@@ -3032,9 +3057,18 @@ def _fast_bls_solutions(t, y, dy, freqs, powers, qmin, qmax, n_solutions,
 
     freqs64 = np.asarray(freqs, dtype=np.float64)
     freqs32 = freqs64.astype(np.float32)
-    qmins = _broadcast_q_bound(qmin, nfreq, 1e-2, 'qmin')
-    qmaxes = _broadcast_q_bound(qmax, nfreq, 0.5, 'qmax')
-    nbins0, nbinsf = _fast_path_nbins(freqs32, qmins, qmaxes)
+    # The SAME ladder BLSMemory.setdata uploads: the bounds go to
+    # _fast_path_nbins as the caller passed them (their own dtype, not
+    # promoted to float64 -- float32 bounds truncate to different bin
+    # counts at some values: 1/float32(0.025) is 40 in float32 but
+    # 1/float64(float32(0.025)) = 39.9999994 -> 39), with the fast
+    # paths' defaults for None. Promoting them first, as
+    # _broadcast_q_bound does, re-scanned a ladder one bin off the
+    # kernel's for float32 ``qvals`` and returned a (q, phi) the kernel
+    # never evaluated (Sep 2026 fresh-eyes review, finding 18).
+    nbins0, nbinsf = _fast_path_nbins(freqs32,
+                                      1e-2 if qmin is None else qmin,
+                                      0.5 if qmax is None else qmax)
 
     for k in order:
         k = int(k)
