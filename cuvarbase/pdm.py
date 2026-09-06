@@ -41,8 +41,18 @@ def _check_pdm_data(data, freqs, where, is_deprecated):
     uncertainty -- it must still be finite and strictly positive, and
     its own frequency grid is validated per light curve. A NaN sample,
     ``dy = 0`` or a negative weight used to give an all-NaN spectrum
-    with no warning at all (Sep 2026 audit, defect 23).
+    with no warning at all (Sep 2026 audit, defect 23), and so did a
+    constant ``y`` (audit id 115): the statistic divides by the
+    variance of ``y``, which is then zero.
     """
+    def _check_not_constant(y, name):
+        if np.all(y == y[0]):
+            raise ValueError(
+                "%s: y is constant (all %d values equal %r); the PDM "
+                "statistic divides by the variance of y, which is zero "
+                "(the spectrum was all NaN). Remove constant lightcurves "
+                "before searching" % (name, y.size, y[0]))
+
     for i, lc in enumerate(data):
         name = '%s lightcurve %d' % (where, i)
         # exactly (t, y, err) -- or (t, y, w, freqs) for the deprecated
@@ -56,7 +66,9 @@ def _check_pdm_data(data, freqs, where, is_deprecated):
                     "lightcurve (deprecated format); got %d elements"
                     % (name, len(lc)))
             t, y, w, frqs = lc
-            check_lightcurve(t, y, min_n=_PDM_MIN_NDATA, name=name)
+            _t, y, _dy = check_lightcurve(t, y, min_n=_PDM_MIN_NDATA,
+                                          name=name)
+            _check_not_constant(y, name)
             w = np.asarray(w)
             if w.shape != np.asarray(t).shape:
                 raise ValueError("%s: t and w must have the same length; "
@@ -74,8 +86,9 @@ def _check_pdm_data(data, freqs, where, is_deprecated):
                     "(the deprecated (t, y, w, freqs) format is accepted "
                     "only when every lightcurve, the first included, "
                     "uses it)" % (name, len(lc)))
-            check_lightcurve(lc[0], lc[1], lc[2],
-                             min_n=_PDM_MIN_NDATA, name=name)
+            _t, y, _dy = check_lightcurve(lc[0], lc[1], lc[2],
+                                          min_n=_PDM_MIN_NDATA, name=name)
+            _check_not_constant(y, name)
     if not is_deprecated and freqs is not None:
         # ``freqs`` is either one shared grid or one per light curve
         # (the same test run() makes)

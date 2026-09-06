@@ -436,6 +436,33 @@ class TestPDMTupleShape(object):
                 proc.run([(t, y, w, self.grid), (t, y, dy)])
 
 
+class TestPDMConstantY(object):
+    """Sep 2026 review (idx 17, audit id 115): a constant ``y`` passed
+    the validator and the kernels returned ``1 - x / 0`` = NaN at every
+    frequency. CPU-runnable: the validator raises before any GPU work."""
+
+    grid = np.linspace(0.2, 4.0, 65)
+
+    def test_constant_y_is_rejected(self):
+        t, y, dy = _reuse_lc(40, 31)
+        const = np.full_like(y, 12.5)
+        proc = PDMAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=self.grid),
+                      lambda d: proc.large_run(d, freqs=self.grid),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=self.grid)):
+            with pytest.raises(ValueError, match='lightcurve 1: y is '
+                                                 'constant'):
+                entry([(t, y, dy), (t, const, dy)])
+        with pytest.warns(DeprecationWarning):
+            with pytest.raises(ValueError, match='y is constant'):
+                proc.run([(t, const, weights(dy), self.grid)])
+        # the host-side variance the kernels divide by really is zero
+        w = weights(dy)
+        yc = const - np.mean(const)
+        assert np.dot(w, (yc - np.dot(w, yc)) ** 2) == 0.0
+
+
 class TestPDMAllocationReuse(object):
 
     grid = np.linspace(0.2, 4.0, 257)

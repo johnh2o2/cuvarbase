@@ -29,7 +29,10 @@ frequency.
    lengths, too-short light curves and non-finite or non-positive
    frequency grids with a ``ValueError`` raised on the host, before
    any GPU work. See :ref:`Input validation <input-validation>` for
-   the full rules and the pre-1.0 behaviour they replace.
+   the full rules and the pre-1.0 behaviour they replace. PDM
+   additionally rejects a *constant* ``y``: the statistic divides by
+   the variance of ``y``, which is then zero (before 1.0 the spectrum
+   was all NaN).
 
 The statistic ``cuvarbase`` computes
 ------------------------------------

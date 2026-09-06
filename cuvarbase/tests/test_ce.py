@@ -981,6 +981,39 @@ class TestCEBalanced(object):
                         rtol=0, atol=1e-5)
 
 
+class TestCEConstantY(object):
+    """Sep 2026 review (idx 17, audit id 115): a constant ``y`` passed
+    the validator; ``setdata`` then computed ``(y - min) / (max - min)``
+    = 0/0 and cast the NaN bin indices to uint32 (platform-defined),
+    so the spectrum was flat garbage. CPU-runnable: the validator
+    raises before any GPU work."""
+
+    def test_constant_y_is_rejected(self):
+        t, y, dy = lightcurve(60, seed=0)
+        const = np.full_like(y, 12.5)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=freqs),
+                      lambda d: proc.large_run(d, freqs=freqs),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=freqs)):
+            with pytest.raises(ValueError, match='lightcurve 1: y is '
+                                                 'constant'):
+                entry([(t, y, dy), (t, const, dy)])
+        # two distinct values are enough to build the magnitude bins
+        two = np.where(np.arange(60) % 2 == 0, 12.0, 12.5)
+        ce_module._check_ce_data([(t, two, dy)], 'x')
+
+    def test_setdata_on_constant_y_was_the_failure(self):
+        # the defect the validator now prevents: NaN bin indices
+        mem = ConditionalEntropyMemory()
+        t = np.linspace(0, 10, 20)
+        with np.errstate(invalid='ignore'):
+            mem.setdata(t, np.full(20, 12.0))
+        assert mem.y.dtype == np.uint32
+        assert len(set(mem.y.tolist())) == 1     # every point in one bin
+
+
 class TestCEMemoryOptionMismatch(object):
     """Sep 2026 review (idx 8): ``run(memory=...)`` dispatches on the
     memory's flags, so a per-call option kwarg that disagreed with the
