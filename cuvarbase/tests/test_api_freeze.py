@@ -5,6 +5,7 @@ on CPU (under the pycuda stub of ``conftest.py`` when no GPU is
 present)."""
 import importlib
 import os
+import re
 import subprocess
 import sys
 import warnings
@@ -329,3 +330,84 @@ def test_documented_names_are_in_module_all():
         if name not in mod.__all__:
             missing.append('cuvarbase.%s.%s' % (modname, name))
     assert missing == []
+
+
+# ---------------------------------------------------------------------
+# Docstring defaults match the code (finding 134)
+# ---------------------------------------------------------------------
+
+_DEFAULT_RE = re.compile(
+    r'^\s{4}([A-Za-z_][A-Za-z0-9_]*)\s*(?:,\s*[A-Za-z_][A-Za-z0-9_]*)*\s*:'
+    r'[^\n]*?\(default:?\s*(.+?)\)\s*$', re.M)
+
+
+def _doc_targets():
+    import inspect
+    out = []
+    for modname in _MODULES_WITH_ALL:
+        mod = importlib.import_module('cuvarbase.' + modname)
+        for name in mod.__all__:
+            obj = getattr(mod, name)
+            if inspect.isclass(obj):
+                out.append(('%s.%s.__init__' % (modname, name),
+                            obj.__init__, obj.__doc__))
+                for k, v in vars(obj).items():
+                    if inspect.isfunction(v) and not k.startswith('_'):
+                        out.append(('%s.%s.%s' % (modname, name, k), v,
+                                    v.__doc__))
+            elif inspect.isfunction(obj):
+                out.append(('%s.%s' % (modname, name), obj, obj.__doc__))
+    return out
+
+
+def test_docstring_defaults_match_signatures():
+    import ast
+    import inspect
+    bad = []
+    for qualname, func, doc in _doc_targets():
+        if not doc:
+            continue
+        try:
+            params = inspect.signature(func).parameters
+        except (TypeError, ValueError):
+            continue
+        for m in _DEFAULT_RE.finditer(doc):
+            pname, stated = m.group(1), m.group(2).strip().rstrip('.')
+            if pname not in params:
+                continue
+            real = params[pname].default
+            if real is inspect.Parameter.empty:
+                continue
+            try:
+                val = ast.literal_eval(stated.strip('`'))
+            except Exception:
+                continue   # prose defaults ("None -> 0.1 * periods")
+            numeric = (isinstance(val, (int, float))
+                       and isinstance(real, (int, float)))
+            if not (val == real or (numeric and float(val) == float(real))):
+                bad.append('%s(%s): doc %r vs code %r'
+                           % (qualname, pname, stated, real))
+    assert bad == []
+
+
+def test_finding_134_sites():
+    import inspect
+    from cuvarbase import bls, ce, cunfft
+    assert inspect.signature(bls.eebls_gpu).parameters['dlogq'].default == 0.2
+    assert '(default: 0.2)' in bls.eebls_gpu.__doc__.split('dlogq:')[1][:40]
+    assert inspect.signature(
+        bls.eebls_gpu_fast).parameters['max_nblocks'].default == 5000
+    assert '(default: 5000)' in \
+        bls.eebls_gpu_fast.__doc__.split('max_nblocks:')[1][:40]
+    # kwargs.get defaults: compare the constructor source with the doc
+    src = inspect.getsource(ce.ConditionalEntropyAsyncProcess.__init__)
+    assert "kwargs.get('mag_bins', 5)" in src
+    assert 'mag_bins: int, optional (default: 5)' in \
+        ce.ConditionalEntropyAsyncProcess.__doc__
+    src = inspect.getsource(cunfft.NFFTAsyncProcess.__init__)
+    assert "kwargs.get('sigma', 4)" in src
+    assert "kwargs.get('autoset_m', False)" in src
+    assert 'sigma: float, optional (default: 4)' in \
+        cunfft.NFFTAsyncProcess.__doc__
+    assert 'autoset_m: bool, optional (default: False)' in \
+        cunfft.NFFTAsyncProcess.__doc__

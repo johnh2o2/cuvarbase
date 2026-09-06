@@ -1505,7 +1505,7 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     cache) puts the block-size effect at ~1.0-1.3x vs the fixed
     256-thread default (earlier 1.4-5.3x figures were dominated by
     per-call kernel handling that the kernel cache now amortizes; see
-    ``benchmark_results_by_gpu/block_size_a5000.json``).
+    ``benchmarks/results/block_size_a5000.json``).
 
     All other parameters identical to eebls_gpu_fast.
 
