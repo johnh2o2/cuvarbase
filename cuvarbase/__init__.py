@@ -43,7 +43,9 @@ _LAZY_ATTRS = {
 # and NOT in ``_LAZY_ATTRS``: the NUFFT likelihood-ratio test is
 # quarantined as EXPERIMENTAL for 1.0 (importable as
 # ``cuvarbase.nufft_lrt``, outside the 1.x API-stability promise, warns
-# at construction) pending its injection-recovery re-validation.
+# at construction): its Sep-2026 re-validation passed the correctness
+# gate but showed that its defaults and return conventions should
+# still change before the API is frozen (decision D1, 2026-09-06).
 _SUBMODULES = {
     'base', 'memory', 'core', 'utils',
     'bls', 'bls_frequencies', 'ce', 'cunfft', 'lombscargle', 'pdm',

@@ -85,7 +85,8 @@ are gone). Compatibility shims for what shipped in 0.2.5 stay with a
 `GPUAsyncProcess(reader=, function_kwargs=, device=)`. Anything that never
 shipped in a release was simply removed. NUFFT-LRT stays importable as
 `cuvarbase.nufft_lrt` but out of the top-level namespace, with a warning at
-construction, until its re-validation lands.
+construction); its re-validation ran on 2026-09-06 and it stays
+experimental because its defaults may still change.
 
 You're credited in the release notes (PDM kernels + batch APIs, CE
 enhancements, LS improvements, the BLS epoch/phase work — PRs #57-#62 and

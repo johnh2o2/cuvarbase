@@ -7,9 +7,9 @@ post roadmap issue → close the 10 with the comments below (several reference
 the roadmap issue number).
 
 Placeholders to fill on release day: `#ROADMAP` (the roadmap issue number),
-`<N>` (the "passed" count from the Phase 5 gate log, 0 skipped),
-`<LRT-STATUS>` (the Phase 4 outcome for NUFFT-LRT: "official" or
-"experimental"). Archived pre-1.0 material is cited by the archive tag
+`<N>` (the "passed" count from the Phase 5 gate log, 0 skipped). The
+NUFFT-LRT status (Phase 4, 2026-09-06) is filled in below: experimental,
+validated. Archived pre-1.0 material is cited by the archive tag
 `archive/pre-1.0-process` (pushed on release day), never by an `analysis/`
 path on `master`.
 
@@ -135,13 +135,19 @@ none are release-blocking regressions — the v1.0.0 CHANGELOG's "Known
 limitations and deferred work" section is the user-facing summary.
 
 **Validation / correctness**
-- [ ] NUFFT-LRT (`cuvarbase.nufft_lrt`): shipped in 1.0.0 as <LRT-STATUS>
-      after the Sep-2026 fixes and the pre-tag injection-recovery
+- [ ] NUFFT-LRT (`cuvarbase.nufft_lrt`): shipped in 1.0.0 as EXPERIMENTAL
+      after the Sep-2026 fixes and the 2026-09-06 injection-recovery
       re-validation (importable, quarantined from the top-level namespace,
-      warning at construction, outside the 1.x stability promise).
-      Remaining: promote Detector A (`detector='marginal'`) once its arm of
-      the re-validation is quoted in the docs; bring the module into the
-      top-level namespace and the stability promise
+      warning at construction, outside the 1.x stability promise). The
+      re-validation passed the correctness gate (default path exact on
+      BJD-scale times, epoch search works; Detector A = sequential
+      baseline; numbers on the docs page). Remaining before promotion:
+      a finer default epoch grid (the default costs 4-9 % completeness
+      against `epoch_oversample` ~4 at the longer durations), one return
+      convention for `run()` (tuple vs array), a sane `durations=None`
+      default, a decision on `dy`, and a cotrend-then-BLS/TLS comparator
+      in the harness; then bring the module into the top-level namespace
+      and the stability promise
 - [ ] Legacy TLS kernel (`use_fast=False`): formal deprecation or removal
       of the legacy path (the fast batch path is the default on every
       entry point)

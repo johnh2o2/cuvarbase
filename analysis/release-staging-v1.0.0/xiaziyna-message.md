@@ -1,9 +1,10 @@
 # Draft: message to @xiaziyna about NUFFT-LRT in cuvarbase 1.0.0
 
 Send BEFORE tagging (D1: "message the contributor before tagging either
-way"). Fill the `<...>` placeholders after Phase 4 decides official vs
-experimental. Email or a GitHub mention on the release PR both work. The
-maintainer sends this; nothing here is automated.
+way"). Phase 4 decided on 2026-09-06: EXPERIMENTAL in 1.0.0 (validated,
+API not frozen); the text below reflects that. Email or a GitHub mention
+on the release PR both work. The maintainer sends this; nothing here is
+automated.
 
 ---
 
@@ -55,22 +56,57 @@ below affordable.
 (`NUFFTLRTAsyncProcess`, `detector='matched' | 'marginal' | 'sequential'`).
 It is deliberately kept out of the top-level `cuvarbase` namespace, emits a
 warning the first time a process object is constructed, and sits outside
-the 1.x API-stability promise, so its signature can still move in 1.1 if
-the validation says it should. The docs are honest about the statistic:
-it is a whitened correlation, not an N(0, 1) SNR (its null standard
-deviation is 1.8-2.7 for ground-based sampling even with the true PSD and
-grows with `nf`), so thresholds have to be calibrated per configuration,
-and the validation script shows how.
+the 1.x API-stability promise, so its signature can still move in 1.1.
+The docs are honest about the statistic: it is a whitened correlation,
+not an N(0, 1) SNR (its null standard deviation is 1.81 for the
+validation's ground-based sampling even with the true PSD, and grows
+with `nf`), so thresholds have to be calibrated per configuration, and
+the validation script shows how.
 
-**Before tagging** we re-run the injection-recovery campaign on the fixed
-code: all four existing configurations and all detector arms, plus a
-configuration with `t + 2457000.5`, an arm using the `epochs=None` default,
-a non-zero-mean basis, and at least 200 injections per depth so 0.05-level
-differences resolve. That run decides whether the module is labelled
-"official" or "experimental" in 1.0.0; I don't want to promise which until
-the numbers are in. <Phase 4 outcome: "It came back as ..., the archived
-results are at benchmarks/results/nufft_lrt_validation_<date>/ and the
-summary is in the docs page.">
+**The re-validation.** Before tagging I re-ran the injection-recovery
+campaign on the fixed code (200 injections per depth and 200 null light
+curves per threshold, 600-point ground-based sampling over 90 d, one
+A40): all four earlier noise configurations and every detector arm,
+plus a configuration on absolute timestamps (`t + 2457000.5`), an arm
+using the `epochs=None` default exactly as a user would call it, and a
+non-zero-mean basis. The archived results are at
+`benchmarks/results/nufft_lrt_validation_2026-09-06/` and the tables are
+on the docs page. What it showed:
+
+- The fixes hold on device. BJD-scale times give the same statistics as
+  relative times to 5e-8 for every method (0 of 800 detection decisions
+  differ); the `epochs=None` search finds the injected transit (99 % of
+  its detections within half a duration of the true mid-time); a
+  non-zero-mean basis changes nothing (5.5e-7).
+- With a shared-systematics basis, Detector A and the sequential
+  cotrend + filter recover 3/44/98/100 % of transits at depths
+  0.4/0.8/1.6/3.2 % where basis-free BLS recovers 0/0/2/16 % and TLS
+  nothing. After the PSD fix Detector A no longer trails the sequential
+  baseline -- but it equals it exactly (zero discordant decisions out of
+  800), so the marginalization itself bought nothing measurable at these
+  sample sizes.
+- In OU red noise (1x and 3x the white level) the whitened filter is
+  6-10 +- 3 % more complete than BLS at the transition depths and about
+  as complete as TLS; a flat-PSD matched filter does as well (1x) or
+  better (3x, by 6 +- 2 %), so the gain over BLS comes from the
+  full-baseline matched filter rather than from the PSD whitening. In
+  white noise BLS and TLS are 10-12 +- 3 % more complete.
+- The default epoch grid costs the default call 4-9 % of completeness
+  against a twice-finer explicit grid at the transition depths.
+
+**The decision.** The correctness gate passed, so the label is not
+about validation any more. I am still shipping it as experimental in
+1.0.0, because going official would freeze `run()` for the whole 1.x
+series, and the campaign itself says three things should change first:
+the default epoch grid should be finer, `run()` should have one return
+convention (it returns `(statistic, best_epoch)` for `epochs=None` and a
+plain array otherwise), and the whitening default deserves a rethink
+given the flat-PSD result. The docs page and the warning say exactly
+that ("validated; API may still change"), not "unvalidated". Promotion
+in 1.1 is the plan once those land, and I would value your view on each
+of them -- especially whether you see a regime where PSD whitening
+should beat the flat filter, and whether the Detector A prior API is
+worth keeping given the parity with the sequential detector.
 
 **Credit.** You are named as the contributor of the NUFFT-LRT search in the
 README acknowledgements (with Taaki, Kamalabadi & Kemball 2020 and the
@@ -99,11 +135,11 @@ John
 ---
 
 *Notes for the maintainer (not part of the message): the six items map to
-ALGORITHM_AUDIT.md defects 5 (`lrt-bjd-float32`), 6 (`lrt-epochs-none`),
-21 (`lrt-sequential-intercept`), 22 (`lrt-detectorA-defeated`), 24
+ALGORITHM_AUDIT.md defects 5 (`lrt-bjd-float32`), 6 (`lrt-epochs-none`), 21
+(`lrt-sequential-intercept`), 22 (`lrt-detectorA-defeated`), 24
 (`lrt-upper-half-band`) and the ids 121/122 PSD/prior items; the buffer
-reuse is LRT-1. If Phase 4 keeps the module experimental, say so plainly
-in the placeholder and mention that Detector A promotion is queued for
-1.1 in the roadmap issue. The July audit
-(`analysis/nufft-lrt-audit-jul2026.md`) predates Detector A and is only
-reachable through the archive tag; do not cite it as current.*
+reuse is LRT-1. Phase 4 (2026-09-06) kept the module experimental; the
+promotion items are listed in `issue-sweep.md` for the roadmap issue. The
+July audit (`analysis/nufft-lrt-audit-jul2026.md`) predates Detector A
+and is only reachable through the archive tag; do not cite it as
+current.*

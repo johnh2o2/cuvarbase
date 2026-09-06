@@ -138,6 +138,25 @@ here.
 
 ## Phase 3 GPU follow-ups (run on the Phase 5 pod, before the freeze)
 
+**Status (Phase 4 pod, 2026-09-06, NVIDIA A40, CUDA 12.4, py3.11,
+cufinufft 2.5.1, tree 954f037 + the one test fix below):** the whole
+list was run ahead of Phase 5. `cuvarbase/tests/test_nfft.py`,
+`test_lombscargle.py` and `test_nufft_lrt*.py` first (`-rs`, 211
+tests): 210 passed, 1 failed -- `TestBatchedMemoryReuse::
+test_per_call_use_double_matching_the_process_is_accepted` asserted two
+double-precision batched runs bitwise equal; measured on the A40, 5 of
+19 double repeats differ by up to 6.7e-15 relative (float64 `atomicAdd`
+order), so the test now compares to `rtol=1e-12` and
+`docs/source/lomb.rst` no longer claims `use_double=True` is bitwise
+stable (commit 2f9736a; the kernels are correct). Then the full suite,
+`python -m pytest -p no:cacheprovider -v -rs` from the repo root with no
+path: **1785 passed, 1 xfailed, 0 failed, 0 skipped (1,786 collected)
+in 8 min 6 s** (`/workspace/logs/p4_full_suite.log` on the pod, copied
+to `benchmarks/results/nufft_lrt_validation_2026-09-06/logs/`). Every
+item below is therefore ticked by that run; the ones with a note are
+the ones that needed a look. Phase 5 re-runs the whole gate on the
+frozen commit regardless.
+
 Phase 3 was CPU-only. The following changes were verified by reading and
 by CPU tests; each has a device-side check that Phase 5 must run (the
 full suite covers most of them, the named tests/spot checks are the
@@ -158,12 +177,17 @@ ones to look at if anything fails). Result-changing items are marked
 - LS/NFFT: a per-call `use_double` that differs from the process precision
   raises `ValueError` before compile/allocation (c95a7f7); equal values are
   still accepted (`TestBatchedMemoryReuse::test_per_call_use_double_matching_the_process_is_accepted`).
+  *Phase 4: the only red test of the list -- its bitwise assertion on the
+  double path, not the code; relaxed to rounding (2f9736a), see the status
+  note above.*
 - (R, kernel) NFFT first mode `k0` is computed on the host and passed to the
   `nfft_shift`/`normalize` kernels as an integer (df87ad1, `cunfft.cu` +
   prepared dtypes): nvcc must compile in both precisions; LS periodograms and
   raw NFFT outputs must be bit-identical to 000c299 on the default grids;
   `test_nfft.py::TestFirstModeIsExactOnTheHost::test_large_k0_band_in_double_matches_exact_dft`
-  (two ~280 MB complex128 grids) must pass.
+  (two ~280 MB complex128 grids) must pass. *Phase 4: compiled and passed
+  in both precisions (all of `test_nfft.py`, `test_lombscargle.py` and the
+  cuFINUFFT cross-check green); the NUFFT-LRT campaign ran on this NFFT.*
 - LS: `batched_run_const_nfreq` validates the shared grid before compiling
   (b91c43c) -- `TestEntryPointsRaiseBeforeDeviceWork` on device.
 - NFFT `precomp_psi=False` routes to `slow_gaussian_grid` instead of raising
@@ -198,6 +222,9 @@ ones to look at if anything fails). Result-changing items are marked
   `NUFFTLRTAsyncProcess()` must warn once); empty basis raises before device
   work (0ec98b8); `test_nufft_lrt.py` in full; Phase 4 harness prints the null
   std as a calibration constant (8ed2246) instead of a pass/fail against 1.
+  *Phase 4: all four `test_nufft_lrt*.py` files green on the A40; the
+  harness's null calibration is a quoted constant (see the Phase 4 section
+  and `docs/source/nufft_lrt.rst`).*
 - Input validation: `test_input_validation.py::test_valid_input_is_unaffected_by_the_validators`
   (rewritten, GPU: validators on vs monkeypatched off, `np.array_equal`).
 - Packaging/CI on the pod: `python -m pytest -p no:cacheprovider` with no
@@ -208,9 +235,36 @@ ones to look at if anything fails). Result-changing items are marked
   still work without the stripped scikit-cuda patch blocks; the docs build with
   `-W` renders the five plot-directive figures.
 - Counts to refresh from the gate log: `docs/RELEASE_NOTES_v1.0.0.md` (the
-  1,582 / 1,786 sentence) and `README.md` ('1,582 tests').
+  1,582 / 1,786 sentence) and `README.md` ('1,582 tests'). *Phase 4 measured
+  1,785 passed + 1 xfailed of 1,786 collected; Phase 5's gate log on the
+  frozen commit is the number to write.*
 
 ## Phase 4: NUFFT-LRT re-validation (pod; before the freeze; no go needed)
+
+**DONE 2026-09-06** (pod #2, NVIDIA A40 `bd501r0q7qz8tt`, $0.49/h;
+harness v2 = commit 2f9736a after a 60-agent adversarial review; 8
+processes, 12:13-15:43 UTC). Archive:
+`benchmarks/results/nufft_lrt_validation_2026-09-06/` (merged JSON with
+per-light-curve records, summary, process logs, both suite logs, the
+null-calibration check, the launch script, README). Docs:
+`docs/source/nufft_lrt.rst` *When is this the right tool?* and
+*Validation status* carry the measured tables. **D1 = EXPERIMENTAL
+(validated, API not frozen)**: the default path passed the correctness
+gate (BJD-scale times identical to 5e-8 for every arm, 0/800 decisions
+differ; `epochs=None` recovers the injected transit in 99 % of its
+detections; non-zero-mean basis identical to 5.5e-7; Detector A =
+sequential baseline exactly), but the campaign also showed that the
+defaults a 1.x freeze would lock in should still change (the default
+epoch grid costs 4-9 % completeness against a finer one; PSD whitening
+gave no gain over a flat PSD, and BLS/TLS are 10-12 % more complete in
+white noise; `run()` returns a tuple or an array depending on
+`epochs`), and a 6-judge panel was unanimous on both points. Status
+text updated in the module message and class docstring, `__init__.py`,
+README, release notes, CHANGELOG, `cuvarbase.rst`, `scripts/README.md`,
+the xiaziyna/astrobatty drafts and `issue-sweep.md`. Nothing in the
+namespace or the tests changed. Steps 1-5 below are the record of what
+was planned; step 5 (terminate) was done after the post-change device
+test run.
 
 Extends `scripts/nufft_lrt_validation.py` and decides D1. It changes
 `docs/`, so it precedes T.
