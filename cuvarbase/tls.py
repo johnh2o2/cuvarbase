@@ -69,6 +69,50 @@ _NO_SOLUTION_MSG = (
 _TLS_MIN_NDATA = 2
 
 
+def _check_tls_lightcurve(t, y, dy, name):
+    """``utils.check_lightcurve`` with ``dy`` mandatory.
+
+    The shared validator accepts ``dy=None`` (unit weights) for the
+    entry points that document that convention. TLS has none: every
+    path weights by ``dy ** -2`` and the fast path turned ``None`` into
+    an all-NaN weight vector, so a search without uncertainties came
+    back as the flat-light-curve null result (SDE = 0) instead of an
+    error.
+    """
+    if dy is None:
+        raise ValueError(
+            "%s: dy is required (per-point flux uncertainties, same "
+            "units as y); TLS has no unit-weight convention" % name)
+    return check_lightcurve(t, y, dy, min_n=_TLS_MIN_NDATA, name=name)
+
+
+def _validate_n_durations(n_durations):
+    """Reject ``n_durations < 2`` on every path.
+
+    Both kernels place the trial durations log-uniformly between the
+    window bounds with step ``(log qmax - log qmin) / (n_durations -
+    1)``: one duration is 0/0 (NaN, so every trial failed and the
+    legacy path returned the flat-light-curve null result for a good
+    light curve) and zero durations searches nothing. The fast path
+    additionally caps the count at ``_TLS_FAST_MAX_DURATIONS``.
+    """
+    try:
+        n = operator.index(n_durations)
+    except TypeError:
+        raise ValueError("n_durations must be an integer >= 2 (got %r)"
+                         % (n_durations,))
+    if n < 2:
+        raise ValueError("n_durations must be >= 2 (got %d): the trial "
+                         "durations are log-spaced between the window "
+                         "bounds, so fewer than two are undefined" % n)
+    return n
+
+
+# Keywords tls_search_gpu reads from **kwargs (everything else is a
+# caller error; see the check at the top of tls_search_gpu).
+_TLS_SEARCH_GPU_EXTRA_KWARGS = frozenset(['n_template'])
+
+
 def _mask_failed_periods(chi2_vals):
     """Return a boolean mask of trial periods with a valid solution.
 
@@ -624,6 +668,7 @@ def tls_search_gpu(t, y, dy, periods=None, *,
         stellar parameters (see ``duration_window``).
     n_durations : int, optional
         Number of log-spaced trial durations per period (default: 15).
+        Must be >= 2 on either path (at most 64 on the fast path).
     R_star : float, optional
         Stellar radius in solar radii (default: 1.0)
     M_star : float, optional
@@ -712,6 +757,12 @@ def tls_search_gpu(t, y, dy, periods=None, *,
     sde_kernel_size : int, optional
         Running-median window of the SDE detrend (see
         :func:`cuvarbase.tls_stats.signal_detection_efficiency`).
+    **kwargs
+        ``n_template`` (int, legacy path only): number of samples in
+        the transit template staged in shared memory (default 1000).
+        Any other keyword raises ``TypeError``; in particular the
+        null-bootstrap FAP (``fap_null_draws``/``fap_seed``) exists
+        only on :func:`tls_search_batch`.
 
     Returns
     -------
@@ -766,13 +817,30 @@ def tls_search_gpu(t, y, dy, periods=None, *,
     the wrong period). Normalize to a median (not mean) out-of-transit
     level of 1 to ~0.1 sigma per point before searching.
     """
+    # The only keyword the legacy kernel reads from **kwargs is
+    # n_template. Anything else used to be accepted and dropped without
+    # a word, so tls_search(t, y, dy, fap_null_draws=200) returned a
+    # result with no 'FAP' key and no diagnostic. Reject unknown
+    # keywords the way a normal Python signature would.
+    unknown = set(kwargs) - _TLS_SEARCH_GPU_EXTRA_KWARGS
+    if unknown:
+        hint = ''
+        if unknown & {'fap_null_draws', 'fap_seed'}:
+            hint = ("; the null-bootstrap FAP is available only from "
+                    "tls_search_batch(fap_null_draws=..., fap_seed=...)")
+        raise TypeError(
+            "tls_search_gpu() got unexpected keyword argument(s) %s%s"
+            % (', '.join(repr(k) for k in sorted(unknown)), hint))
     if u is None:
         u = [0.4804, 0.1867]
     # Validate the light curve before anything else: the automatic
     # period grid is built from t, and a NaN sample or dy = 0 used to
     # travel all the way to the kernel (chi2 off by a factor ~1e3 on
     # the fast path; Sep 2026 audit, defect 23).
-    check_lightcurve(t, y, dy, min_n=_TLS_MIN_NDATA, name='tls_search_gpu')
+    _check_tls_lightcurve(t, y, dy, name='tls_search_gpu')
+    # Both paths: the legacy kernel took n_durations unchecked and
+    # n_durations <= 1 made its duration step 0/0.
+    n_durations = _validate_n_durations(n_durations)
 
     # Validate stellar parameters
     tls_grids.validate_stellar_parameters(R_star, M_star)
@@ -1105,7 +1173,7 @@ def tls_search(t, y, dy, **kwargs):
     tls_search_gpu : Lower-level GPU function
     tls_transit : Keplerian-aware search wrapper
     """
-    check_lightcurve(t, y, dy, min_n=_TLS_MIN_NDATA, name='tls_search')
+    _check_tls_lightcurve(t, y, dy, name='tls_search')
     return tls_search_gpu(t, y, dy, **kwargs)
 
 
@@ -1212,7 +1280,7 @@ def tls_transit(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
     tls_grids.duration_window : Per-period duration bounds (used here)
     tls_grids.q_transit : Calculate Keplerian fractional duration
     """
-    check_lightcurve(t, y, dy, min_n=_TLS_MIN_NDATA, name='tls_transit')
+    _check_tls_lightcurve(t, y, dy, name='tls_transit')
 
     # Generate period grid
     periods = tls_grids.period_grid_ofir(
@@ -1399,8 +1467,8 @@ def _preprocess_batch(lightcurves):
         # equal lengths, finite t/y/dy, dy > 0 (dy = 0 gave a chi2
         # 1.3e3 times too large on the fast path; Sep 2026 audit,
         # defect 23)
-        check_lightcurve(lc[0], lc[1], lc[2], min_n=_TLS_MIN_NDATA,
-                         name='lightcurve %d' % i)
+        _check_tls_lightcurve(lc[0], lc[1], lc[2],
+                              name='lightcurve %d' % i)
     # batch-wide offsets in int64 (a large survey can exceed 2^31
     # total points); per-chunk offsets are rebased and cast to int32
     # at upload, where the chunk-size cap keeps them small
@@ -1575,11 +1643,12 @@ def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
             raise ValueError("tls_search_batch: lightcurve %d must be a "
                              "(t, y, dy) tuple; got %d elements"
                              % (i, len(lc)))
-        check_lightcurve(lc[0], lc[1], lc[2], min_n=_TLS_MIN_NDATA,
-                         name='tls_search_batch lightcurve %d' % i)
-    if n_durations < 2 or n_durations > _TLS_FAST_MAX_DURATIONS:
-        raise ValueError("n_durations must be in [2, %d]" %
-                         _TLS_FAST_MAX_DURATIONS)
+        _check_tls_lightcurve(lc[0], lc[1], lc[2],
+                              name='tls_search_batch lightcurve %d' % i)
+    n_durations = _validate_n_durations(n_durations)
+    if n_durations > _TLS_FAST_MAX_DURATIONS:
+        raise ValueError("n_durations must be in [2, %d] (got %d)" %
+                         (_TLS_FAST_MAX_DURATIONS, n_durations))
     if refine_top_k is not None and refine_top_k < 0:
         raise ValueError("refine_top_k must be >= 0 (got %r)"
                          % (refine_top_k,))
