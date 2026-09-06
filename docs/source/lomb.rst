@@ -183,7 +183,17 @@ is recommended whenever the *value* of the power matters -- false-alarm
 probabilities, amplitude estimates -- rather than the location of the
 peak, which float32 recovers identically in all tests. Times are
 mean-centred on the host in float64 before any cast, so absolute (BJD)
-timestamps are safe.
+timestamps are safe. Precision is a property of the process object --
+the kernels are compiled once, at construction, in that precision --
+so ``use_double`` is **not** a per-call keyword: ``run(...,
+use_double=True)`` or ``batched_run_const_nfreq(..., use_double=True)``
+on a ``LombScargleAsyncProcess()`` raises ``ValueError`` before any
+device work (a value equal to the process precision is accepted and
+ignored), as does a ``memory`` allocated at the other precision.
+Before 1.0 the keyword silently reached the memory constructor and the
+float32 kernels read the float64 buffers as float32: a wrong
+periodogram with a float64 dtype. ``nharmonics=`` *is* a legitimate
+per-call override.
 
 
 Reusing device memory across calls
@@ -203,7 +213,10 @@ tens of megabytes at survey ``nf``. Drop the process object, or set
 ``proc._batch_memory = None``, to release it. Passing any keyword that
 hands the memory its own buffer or fixes its size (``t_g``, ``lsp_c``,
 ``nfft_mem_yw``, ``n0_buffer``, ``nf``, ``k0``, ...) opts that call out
-of the cache entirely, so it allocates its own set as before.
+of the cache entirely, so it allocates its own set as before. A per-call
+``nharmonics=`` is part of what has to match, so it allocates and
+caches a set of its own; ``use_double`` cannot be changed per call (see
+*Precision* above).
 
 **Reproducibility.** The float32 NFFT spreads the data onto the grid
 with ``atomicAdd``, whose summation order is not fixed, so two runs of
