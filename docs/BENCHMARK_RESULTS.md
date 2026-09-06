@@ -181,7 +181,8 @@ head-to-head on the *same* RTX A5000 with an identical Ofir period grid, matched
 per-period duration windows, matched epoch density, and the SDE recomputed with
 one identical statistic on both methods' chi2 spectra — cuvarbase-TLS is
 **30–171× faster over 200–2000-day baselines** (30× at 200 d growing to 171× at
-2000 d) at 1–3% SDE parity and 100% recovery, and beats GTLS's own published
+2000 d) at 1–3% SDE parity (SDE recomputed under the pre-1.0 signal-residue
+definition on both χ² spectra) and 100% recovery, and beats GTLS's own published
 RTX-4090 numbers by 23–40× from the slower A5000. Cold single-shot (one star,
 fresh process, compile included) still favors cuvarbase by 2.6–34× over the same
 baselines. Full methodology: `docs/GTLS_COMPARISON.md`.
@@ -190,10 +191,12 @@ baselines. Full methodology: `docs/GTLS_COMPARISON.md`.
 same light curves and grid): thousands of times faster — ~1,000–3,000× at
 reference-matched epoch density (`t0_oversample=33`), ~10,000×+ at the default
 grid; the exact multiple is CPU-dependent (archived references for one config
-vary 2.7× between pods). Detection significance is preserved: SDE within 1–3%
-of the reference at the default grid, within 1% at matched density (~5–13×
-cost), with the exact refinement pass restoring full parameter precision either
-way. Fidelity data: `benchmarks/results/tls_survey_jul2026/fidelity_raw_a5000.txt`
+vary 2.7× between pods). Detection significance is preserved: under the
+July-2026 (pre-1.0) signal-residue definition the SDE was within 1–3% of the
+reference at the default grid and within 1% at matched density (~5–13× cost);
+under the 1.0 definition (`SR = chi2_min/chi2`) the coarse-vs-fine epoch-grid
+difference is 5–15% (`docs/source/tls.rst`), with the exact refinement pass
+restoring full parameter precision either way. Fidelity data: `benchmarks/results/tls_survey_jul2026/fidelity_raw_a5000.txt`
 and `docs/TLS_COST_ANALYSIS.md`.
 
 ## 5. Keplerian Frequency Grid
