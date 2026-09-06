@@ -646,3 +646,195 @@ class TestPrecompPsiFalseOnDevice(object):
                                        samples_per_peak=spp,
                                        precomp_psi=False))
         assert np.max(np.abs(got - ref)) / np.max(np.abs(ref)) < 1e-4
+
+
+class TestPerCallUseDoubleIsRejected(object):
+    """``use_double`` is fixed when the process is constructed (the
+    kernels are compiled in that precision). A per-call value that
+    differs raises ``ValueError`` before any device work -- before 1.0
+    it raised ``TypeError`` through ``allocate`` and, with a
+    user-supplied ``memory``, silently ran float32 kernels on float64
+    buffers -- and a memory allocated at the other precision is
+    rejected the same way (Sep-2026 readiness review, idx 23). CPU
+    tests: nothing below the check is reached."""
+
+    @staticmethod
+    def _no_device_work(proc, monkeypatch):
+        touched = []
+        monkeypatch.setattr(proc, '_compile_and_prepare_functions',
+                            lambda **kw: touched.append('compile'))
+        monkeypatch.setattr(proc, '_create_streams',
+                            lambda n: touched.append('streams'))
+        return touched
+
+    @pytest.mark.parametrize('process_double', [False, True])
+    def test_run_raises_before_device_work(self, process_double,
+                                           monkeypatch):
+        proc = NFFTAsyncProcess(use_double=process_double)
+        touched = self._no_device_work(proc, monkeypatch)
+        t = np.sort(np.random.RandomState(1).rand(50))
+        y = np.random.RandomState(2).randn(50)
+        with pytest.raises(ValueError,
+                           match=r'NFFTAsyncProcess\(use_double='):
+            proc.run([(t, y, 100)], use_double=not process_double)
+        with pytest.raises(ValueError, match='use_double'):
+            proc.allocate([(t, y, 100)], use_double=not process_double)
+        assert touched == []
+
+    def test_memory_at_the_other_precision_raises(self, monkeypatch):
+        proc = NFFTAsyncProcess()
+        touched = self._no_device_work(proc, monkeypatch)
+
+        class Mem(object):
+            use_double = True
+
+        with pytest.raises(ValueError, match='use_double'):
+            proc.run(None, memory=[Mem()])
+        assert touched == []
+
+    def test_matching_use_double_is_accepted(self):
+        # equal to the process precision: dropped, and the transform is
+        # the one the plain call gives (bitwise: same buffers, same
+        # launches -- the NFFT of a single light curve is deterministic
+        # apart from the gridding atomics, which a 50-point light curve
+        # on a 400-point grid does not exercise)
+        t = np.sort(np.random.RandomState(1).rand(50))
+        y = np.random.RandomState(2).randn(50)
+        proc = NFFTAsyncProcess(sigma=nfft_sigma, m=nfft_m, autoset_m=False)
+        g0 = np.array(proc.run([(t, y, 100)])[0])
+        g1 = np.array(proc.run([(t, y, 100)], use_double=False)[0])
+        assert_allclose(g1, g0, rtol=1e-6, atol=1e-6)
+
+
+class TestFirstModeIsExactOnTheHost(object):
+    """``nfft_shift``/``normalize`` re-derived the integer first mode as
+    ``rint(f0 * spp * (xf - x0))`` from their float32 arguments, whose
+    rounding reaches half a mode from ``k0 ~ 2e6`` upward -- and the two
+    kernels' different association orders could round to different
+    integers, shifting the band by one mode in one of them (Sep-2026
+    readiness review, idx 24; the rint itself was id 104). The host now
+    computes ``k0`` in float64 (:func:`cuvarbase.cunfft._first_mode`)
+    and passes the integer to both kernels."""
+
+    # the geometry of the device test below: epoch-relative times in
+    # [0.25, T + 0.25] over T = 1612.9 d at 5 samples per peak
+    T, TMIN, SPP = 1612.916152213505, 0.25, 5.0
+    # at k0 = 4213813 both kernels rounded to 4213812 (the whole band
+    # shifted by one mode); at 4229651 nfft_shift rounded to 4229652
+    # while normalize got 4229651 (an inconsistent transform)
+    K0_BOTH_OFF, K0_INCONSISTENT = 4213813, 4229651
+
+    @staticmethod
+    def _old_float32_chain(k0, tmin, tmax, spp):
+        # the kernels' arguments as the host cast them, and each
+        # kernel's own association of the FLT product
+        f32 = np.float32
+        df = 1.0 / (spp * (tmax - tmin))
+        x0, xf, s, f = f32(tmin), f32(tmax), f32(spp), f32(k0 * df)
+        shift = int(np.rint((f * s) * (xf - x0)))
+        norm = int(np.rint(f * (s * (xf - x0))))
+        return shift, norm
+
+    def test_the_float32_chain_misrounded(self):
+        tmin, tmax = self.TMIN, self.T + self.TMIN
+        k0 = self.K0_BOTH_OFF
+        assert self._old_float32_chain(k0, tmin, tmax, self.SPP) \
+            == (k0 - 1, k0 - 1)
+        k0 = self.K0_INCONSISTENT
+        assert self._old_float32_chain(k0, tmin, tmax, self.SPP) \
+            == (k0 + 1, k0)
+        # ... and no misround at all in the survey regime below ~2e6
+        rng = np.random.RandomState(4)
+        for _ in range(2000):
+            k0 = int(rng.uniform(1, 2e6))
+            tmin = rng.rand()
+            tmax = tmin + rng.uniform(100, 3650)
+            assert self._old_float32_chain(k0, tmin, tmax, 5.0) == (k0, k0)
+
+    def test_host_first_mode_is_exact(self):
+        from ..cunfft import _first_mode
+        rng = np.random.RandomState(5)
+        for _ in range(5000):
+            k0 = int(rng.uniform(1, 1e9))
+            T = rng.uniform(1, 1e4)
+            spp = rng.uniform(1, 50)
+            tmin = rng.uniform(0, 1)
+            df = 1.0 / (spp * T)
+            assert _first_mode(k0 * df, spp, tmin, tmin + T) == k0
+        # the two misrounding cases above
+        tmin, tmax = self.TMIN, self.T + self.TMIN
+        for k0 in (self.K0_BOTH_OFF, self.K0_INCONSISTENT):
+            df = 1.0 / (self.SPP * (tmax - tmin))
+            assert _first_mode(k0 * df, self.SPP, tmin, tmax) == k0
+        # a fractional first mode rounds to the nearest integer mode
+        # (id 104), negative modes are legal, and the result is an int
+        assert _first_mode(20.3 / 100.0, 1.0, 0.0, 100.0) == 20
+        assert _first_mode(-50.0, 1.0, 0.0, 1.0) == -50
+        assert isinstance(_first_mode(3.0, 1.0, 0.0, 1.0), int)
+        assert _first_mode(0.0, 1.0, 0.0, 1.0) == 0
+        with pytest.raises(ValueError, match='int32'):
+            _first_mode(3e9, 1.0, 0.0, 1.0)
+
+    def test_kernels_receive_the_integer_mode(self, monkeypatch):
+        """On fake kernels: the last argument of ``nfft_shift`` and
+        ``normalize`` is the host's ``np.int32`` first mode (not a
+        float frequency), and the shift is skipped for ``k0 = 0``."""
+        from .. import cunfft as cunfft_mod
+        monkeypatch.setattr(cunfft_mod.cufft, 'ifft',
+                            lambda *a, **k: None)
+        names = ('precompute_psi', 'fast_gaussian_grid',
+                 'slow_gaussian_grid', 'nfft_shift', 'normalize')
+
+        def run(minimum_frequency, spp):
+            funcs = dict((n, _FakeKernel()) for n in names)
+            mem = _FakeNFFTMemory(precomp_psi=True)   # tmin, tmax = 0, 1
+            mem.ghat_c = None
+            mem.cu_plan = None
+            cunfft_mod.nfft_adjoint_async(
+                mem, tuple(funcs[n] for n in names),
+                minimum_frequency=minimum_frequency, samples_per_peak=spp,
+                transfer_to_host=False)
+            return funcs
+
+        funcs = run(20.0, 1.0)                    # k0 = 20 * 1 * 1
+        assert len(funcs['nfft_shift'].calls) == 1
+        for name in ('nfft_shift', 'normalize'):
+            last = funcs[name].calls[0][-1]
+            assert isinstance(last, np.int32)
+            assert last == 20
+        funcs = run(0.0, 1.0)
+        assert len(funcs['nfft_shift'].calls) == 0
+        assert funcs['normalize'].calls[0][-1] == 0
+        # a fractional first mode is rounded on the host (id 104)
+        funcs = run(20.3, 1.0)
+        assert funcs['nfft_shift'].calls[0][-1] == 20
+
+    @pytest.mark.parametrize("k0", [K0_BOTH_OFF, K0_INCONSISTENT])
+    def test_large_k0_band_in_double_matches_exact_dft(self, k0):
+        # GPU: the int32 mode argument end to end at a k0 where the
+        # float32 chain misrounded (in double the old kernels rounded
+        # correctly, so this pins the new plumbing rather than the old
+        # defect; the float32 build is not meaningful at k0 ~ 4e6 --
+        # its grid coordinate ulp is ~2 cells of a 1.7e7-point grid).
+        # ~280 MB of complex128 grid.
+        rng = np.random.RandomState(11)
+        N, nf, spp, T = 300, 48, self.SPP, self.T
+        t = np.sort(rng.rand(N)) * T
+        t = t - t.min() + self.TMIN       # tmin = 0.25: exercises the
+        t[-1] = T + self.TMIN             # x0 phase; T is the baseline
+        y = rng.randn(N)
+        df = 1.0 / (spp * (t.max() - t.min()))
+        proc = NFFTAsyncProcess(sigma=4, m=12, autoset_m=False,
+                                use_double=True)
+        g = proc.run([(t, y, k0 + nf)], minimum_frequency=k0 * df,
+                     samples_per_peak=spp)[0]
+        proc.finish()
+        g = np.array(g)[:nf]
+        exact = direct_sums(t - np.floor(t.min()), y,
+                            (k0 + np.arange(nf)) * df)
+        scale = np.abs(exact).max()
+        assert np.max(np.abs(g - exact)) / scale < 1e-7
+        # a one-mode shift would be an O(1) error at spp = 5
+        shifted = direct_sums(t - np.floor(t.min()), y,
+                              (k0 + 1 + np.arange(nf)) * df)
+        assert np.max(np.abs(shifted - exact)) / scale > 1e-2
