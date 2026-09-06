@@ -226,9 +226,13 @@ build: sparse light curves on coarse grids are often bitwise stable,
 but dense configurations are not, differing by up to ~6e-8 in absolute
 power at ``N = 65,000``/``nf = 210,000`` and ~4e-7 at
 ``N = 65,000``/``nf = 30,000`` and ``N = 300``/``nf = 219,000``, i.e.
-~1e-4 to ~3e-4 *relative* on powers near zero. Peak locations and
-``use_double=True`` results were unaffected in every test. Compare
-float32 periodograms with a tolerance, never with ``np.array_equal``.
+~1e-4 to ~3e-4 *relative* on powers near zero. Peak locations were
+unaffected in every test. ``use_double=True`` is not bitwise stable
+either -- its ``atomicAdd`` is a compare-and-swap loop with the same
+order dependence -- but the jitter is at double rounding: 5 of 19
+repeats of a ``N = 300``/``nf = 1,500`` batched run differed, by at
+most 6.7e-15 relative (1e-17 absolute). Compare periodograms of either
+precision with a tolerance, never with ``np.array_equal``.
 
 
 Example: Basic
