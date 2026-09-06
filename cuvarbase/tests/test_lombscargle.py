@@ -1465,6 +1465,26 @@ class TestBatchedMemoryReuse(object):
         assert sum(built) == 0
 
     def test_reused_memory_gives_identical_powers(self):
+        # Deliberately bitwise, and deliberately in float32. The
+        # *Reproducibility* paragraph of docs/source/lomb.rst says the
+        # float32 NFFT "need not be bitwise identical" in general
+        # because the gridding accumulates with atomicAdd in an
+        # unspecified order -- and then carves out this regime: "sparse
+        # light curves on coarse grids are often bitwise stable". Here
+        # N = 400 points are spread onto a grid of ~16,000 cells with
+        # m = 8, so no two observations' Gaussian footprints contend for
+        # a cell in a way that changes the float32 sum with the order
+        # (the same-buffer runs measured 15/15 bitwise on the A40, see
+        # test_padded_buffers_do_not_change_the_result), and the three
+        # repeats go through the SAME buffers with the same launch
+        # sequence. That is exactly the LS-4 property under test: the
+        # reused set is zeroed and overwritten before every run, so it
+        # cannot leak anything from the previous call -- a tolerance
+        # would also pass a stale-buffer bug of order 1e-7. Dense
+        # configurations (N = 65,000, nf = 210,000) are NOT bitwise
+        # stable and must be compared with assert_allclose, as the
+        # sibling tests do. If this ever fails by ~1e-8 on some GPU,
+        # that is the documented atomic noise, not a reuse bug.
         freqs = 0.002 * (30 + np.arange(4000))
         d = [self._lc()]
         proc = LombScargleAsyncProcess()
@@ -1610,26 +1630,37 @@ class TestBatchedMemoryReuse(object):
                         np.asarray(p1, dtype=np.float64),
                         rtol=1e-6, atol=1e-7)
 
-    def test_per_call_use_double_is_not_reused(self, monkeypatch):
-        """Same as above for ``use_double=``: the memory's precision
-        sets the dtype of the returned periodogram, so a cached
-        single-precision set must not answer a ``use_double=True``
-        request. (Passing ``use_double`` per call only changes the
-        buffers -- the kernels keep the precision the process was
-        constructed with -- but that is pre-1.0 behaviour this must not
-        change silently; construct the process with ``use_double=True``
-        for a genuine double-precision run.)"""
+    def test_per_call_use_double_matching_the_process_is_accepted(
+            self, monkeypatch):
+        """``use_double`` equal to the process precision is accepted:
+        it is dropped from the keywords, so it neither rebuilds the
+        cached set nor changes the result."""
         freqs = 0.002 * (30 + np.arange(1500))
         d = [self._lc()]
         proc = LombScargleAsyncProcess()
-        p1 = proc.batched_run_const_nfreq(d, freqs=freqs)[0][1]
+        p1 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs)[0][1])
         assert np.asarray(p1).dtype == np.float32
 
         built = self._counting_memory(monkeypatch)
-        p2 = proc.batched_run_const_nfreq(d, freqs=freqs,
-                                          use_double=True)[0][1]
-        assert sum(built) == 1                 # not the float32 set
-        assert np.asarray(p2).dtype == np.float64
+        p2 = np.copy(proc.batched_run_const_nfreq(d, freqs=freqs,
+                                                  use_double=False)[0][1])
+        assert sum(built) == 0                 # the cached set served it
+        assert np.asarray(p2).dtype == np.float32
+        assert_allclose(np.asarray(p2, dtype=np.float64),
+                        np.asarray(p1, dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+        p3 = np.copy(proc.run(d, freqs=freqs, use_double=False)[0][1])
+        proc.finish()
+        assert_allclose(np.asarray(p3[:len(freqs)], dtype=np.float64),
+                        np.asarray(p1[:len(freqs)], dtype=np.float64),
+                        rtol=1e-6, atol=1e-7)
+
+        dbl = LombScargleAsyncProcess(use_double=True)
+        q1 = np.copy(dbl.batched_run_const_nfreq(d, freqs=freqs)[0][1])
+        q2 = np.copy(dbl.batched_run_const_nfreq(d, freqs=freqs,
+                                                 use_double=True)[0][1])
+        assert np.asarray(q1).dtype == np.float64
+        assert np.array_equal(q1, q2)
 
     def test_a_buffer_sizing_kwarg_opts_out_of_the_cache(self, monkeypatch):
         """``n0_buffer`` (like every other key that hands the memory a
@@ -1705,6 +1736,138 @@ class TestBatchedMemoryReuse(object):
             proc.batched_run_const_nfreq(d, freqs=np.geomspace(0.1, 5.0, 500))
         with pytest.raises(ValueError):
             proc.run(d, freqs=[np.geomspace(0.1, 5.0, 500)])
+
+    def test_a_bad_grid_is_rejected_before_any_device_work(self, monkeypatch):
+        """The shared grid is validated ahead of the kernel compile and
+        the stream creation (Sep-2026 readiness review): a rejected
+        grid must leave the CUDA context untouched, exactly like a
+        rejected light curve. Until then the compile came first, which
+        is also why this case could only be exercised on a GPU. Runs
+        without one because nothing below the validation is reached."""
+        proc = LombScargleAsyncProcess()
+        touched = []
+        monkeypatch.setattr(proc, '_compile_and_prepare_functions',
+                            lambda **kw: touched.append('compile'))
+        monkeypatch.setattr(proc, '_create_streams',
+                            lambda n: touched.append('streams'))
+        d = [self._lc()]
+        bad = 0.002 * (30 + np.arange(1500))
+        bad[7] = np.nan
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=bad)
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=np.geomspace(0.1, 5.0, 500))
+        with pytest.raises(ValueError):
+            proc.batched_run_const_nfreq(d, freqs=-bad)
+        assert touched == []
+
+
+class TestPerCallUseDoubleIsRejected(object):
+    """``use_double`` is a property of the process object: the ``lomb``
+    and ``cunfft`` kernels are compiled and prepared once, at
+    construction, in the process precision, while the memory classes
+    take ``use_double`` too. Every entry point used to forward its
+    keywords to the memory constructor, so ``use_double=True`` on a
+    default (float32) process built float64/complex128 buffers that the
+    float32 kernels read as float32 -- a wrong periodogram with a
+    plausible float64 dtype -- and the LS-4 docs/test presented that as
+    a supported per-call override (Sep-2026 readiness review, idx 23).
+    A disagreeing value now raises ``ValueError`` before any device
+    work; an equal one is accepted. These run without a GPU because
+    the check precedes the kernel compile."""
+
+    @staticmethod
+    def _lc(N=200, seed=5):
+        r = np.random.RandomState(seed)
+        t = np.sort(r.uniform(0, 60.0, N))
+        y = 0.1 * np.sin(2 * np.pi * t / 1.3) + 0.05 * r.randn(N)
+        return t, y, 0.05 * np.ones(N)
+
+    @staticmethod
+    def _no_device_work(proc, monkeypatch):
+        touched = []
+        monkeypatch.setattr(proc, '_compile_and_prepare_functions',
+                            lambda **kw: touched.append('compile'))
+        monkeypatch.setattr(proc, '_create_streams',
+                            lambda n: touched.append('streams'))
+        return touched
+
+    @pytest.mark.parametrize('process_double', [False, True])
+    def test_run_and_batched_run_raise(self, process_double, monkeypatch):
+        proc = LombScargleAsyncProcess(use_double=process_double)
+        assert proc.use_double is process_double
+        touched = self._no_device_work(proc, monkeypatch)
+        other = not process_double
+        d = [self._lc()]
+        freqs = 0.01 * (20 + np.arange(500))
+        with pytest.raises(ValueError, match='use_double'):
+            proc.run(d, freqs=freqs, use_double=other)
+        with pytest.raises(ValueError, match='use_double'):
+            proc.batched_run_const_nfreq(d, freqs=freqs, use_double=other)
+        # the message points at the fix
+        with pytest.raises(ValueError,
+                           match=r'LombScargleAsyncProcess\(use_double='):
+            proc.batched_run_const_nfreq(d, freqs=freqs, use_double=other)
+        assert touched == []
+
+    def test_allocation_entry_points_raise(self, monkeypatch):
+        proc = LombScargleAsyncProcess()
+        touched = self._no_device_work(proc, monkeypatch)
+        t, y, dy = self._lc()
+        freqs = 0.01 * (20 + np.arange(500))
+        with pytest.raises(ValueError, match='use_double'):
+            proc.allocate_for_single_lc(t, y, dy, len(freqs), k0=20,
+                                        use_double=True)
+        with pytest.raises(ValueError, match='use_double'):
+            proc.allocate([(t, y, dy)], nfreqs=len(freqs), k0s=[20],
+                          use_double=True)
+        with pytest.raises(ValueError, match='use_double'):
+            proc.preallocate(max_nobs=len(t), nlcs=1, freqs=freqs,
+                             use_double=True)
+        assert touched == []
+
+    def test_memory_at_the_other_precision_raises(self, monkeypatch):
+        """A memory object built at the other precision (e.g. by a
+        ``LombScargleAsyncProcess(use_double=True)``) is caught too,
+        before the compile."""
+        proc = LombScargleAsyncProcess()
+        touched = self._no_device_work(proc, monkeypatch)
+
+        class Mem(object):
+            use_double = True
+
+        with pytest.raises(ValueError, match='use_double'):
+            proc.run([self._lc()], memory=[Mem()],
+                     freqs=0.01 * (20 + np.arange(500)))
+        assert touched == []
+
+    def test_lomb_scargle_simple_builds_a_double_process(self, monkeypatch):
+        """The convenience wrapper constructs its own process, so its
+        ``use_double`` selects the process precision instead of
+        reaching ``run()`` (where it would now raise)."""
+        from .. import lombscargle as lsmod
+        seen = []
+
+        class Recording(object):
+            def __init__(self, **kwargs):
+                seen.append(dict(kwargs))
+
+            def run(self, data, **kwargs):
+                seen.append(dict(kwargs))
+                return [(np.arange(3.0), np.ones(3))]
+
+            def finish(self):
+                pass
+
+        monkeypatch.setattr(lsmod, 'LombScargleAsyncProcess', Recording)
+        t, y, dy = self._lc()
+        lsmod.lomb_scargle_simple(t, y, dy, use_double=True, nharmonics=2)
+        assert seen[0] == dict(use_double=True)
+        assert seen[1] == dict(nharmonics=2)
+        del seen[:]
+        lsmod.lomb_scargle_simple(t, y, dy)
+        assert seen[0] == dict(use_double=False)
+        assert seen[1] == {}
 
 
 class TestBaluevDKUsesEffectiveNharmonics(object):
