@@ -2,8 +2,6 @@
 
 **GPU-accelerated time series analysis tools for astronomy** — period-finding and transit-detection algorithms (BLS, TLS, Lomb-Scargle, PDM, CE) built on [PyCUDA](https://mathema.tician.de/software/pycuda/). Created by John Hoffman, (c) 2017.
 
-> **Note:** the current PyPI release (`0.2.5`) predates this v1.0 rewrite. Until v1.0.0 is published to PyPI, install from source (see [Installation](#installation)).
-
 ## Performance at Survey Scale
 
 cuvarbase is built for processing millions of lightcurves, and it is proven in production: **NASA's TESS Quick-Look Pipeline has run cuvarbase's GPU BLS on every TESS sector since Sector 59** ([Kunimoto et al. 2023](https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract)).
@@ -11,12 +9,12 @@ cuvarbase is built for processing millions of lightcurves, and it is proven in p
 The headline numbers, all traceable to archived benchmark data in this repository:
 
 - **Standard BLS is 257-354x faster than astropy's `BoxLeastSquares`**, measured consistently across all 7 GPU architectures tested (V100 through H200)
-- **Transit Least Squares is 30-171x faster than GTLS** — the only other GPU TLS — on the same GPU at matched search settings and equal detection significance (SDE within 1-3% under the pre-1.0 SDE definition), and thousands of times faster than the reference CPU `transitleastsquares` (methodology and the reproduced GTLS-paper figure: [docs/GTLS_COMPARISON.md](docs/GTLS_COMPARISON.md))
+- **Transit Least Squares is 30-171x faster than GTLS** — the only other GPU TLS — on the same GPU at matched search settings and equal detection significance (SDE within 1-3% under the pre-1.0 SDE definition), and thousands of times faster than the reference CPU `transitleastsquares` (methodology and the reproduced GTLS-paper figure: [docs/GTLS_COMPARISON.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/GTLS_COMPARISON.md))
 - **Survey-scale Lomb-Scargle beats [nifty-ls](https://github.com/flatironinstitute/nifty-ls)**, the fastest CPU implementation, by 1.5-12.6x per lightcurve at realistic survey frequency grids (>15x where nifty-ls exceeded the benchmark timeout). Honest caveat: for one-off small searches (< ~100K frequencies), nifty-ls on CPU is the better tool
 - **Keplerian frequency grids search 4-37x fewer frequencies** than uniform grids at survey baselines by exploiting the orbital-mechanics link between period and transit duration
 - **All four major surveys for ~$33 of GPU time**: Lomb-Scargle + BLS over ZTF + HAT-Net + TESS + Kepler scale collections, on a rented RTX A5000 at $0.20/hr
 
-Full tables, per-survey costs, and methodology: [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md).
+Full tables, per-survey costs, and methodology: [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).
 
 ## Features
 
@@ -31,19 +29,17 @@ Full tables, per-survey costs, and methodology: [docs/BENCHMARK_RESULTS.md](docs
 
 ## Installation
 
-Requirements: an NVIDIA GPU, the CUDA Toolkit (11.x or 12.x recommended), and Python 3.9+.
-
-Until v1.0.0 is published to PyPI (the current PyPI release is the older `0.2.5`), install the v1.0 line from GitHub:
+Requirements: an NVIDIA GPU, the CUDA Toolkit (1.0 is validated against CUDA 12.4; `nvcc` on your `PATH`), and Python 3.9-3.14.
 
 ```bash
-pip install "git+https://github.com/johnh2o2/cuvarbase.git@v1.0"
+pip install cuvarbase
 ```
 
-or clone the repository and `pip install -e .` for a development checkout.
+For a development checkout, clone the repository and `pip install -e .[test]`. PyCUDA builds against your CUDA toolkit during installation, so a CUDA-less machine needs the `--no-deps` path described in INSTALL.rst (see the link below).
 
 Notes:
 
-- `import cuvarbase` does **not** create a CUDA context or require a GPU (or even pycuda) — the context is created lazily on first GPU use. The pure helpers in `cuvarbase.utils`, `cuvarbase.bls_frequencies`, `cuvarbase.tls_grids`, `cuvarbase.tls_models` and `cuvarbase.tls_stats` work without pycuda; the method modules (`cuvarbase.bls` with `sparse_bls_cpu`/`single_bls`, `cuvarbase.lombscargle` with `fap_baluev`, ...) import `pycuda.driver` at module top, so they need the pycuda package installed but touch no device until the first GPU call. See [INSTALL.rst](INSTALL.rst) for the `--no-deps` install path on CUDA-less machines.
+- `import cuvarbase` does **not** create a CUDA context or require a GPU (or even pycuda) — the context is created lazily on first GPU use. The pure helpers in `cuvarbase.utils`, `cuvarbase.bls_frequencies`, `cuvarbase.tls_grids`, `cuvarbase.tls_models` and `cuvarbase.tls_stats` work without pycuda; the method modules (`cuvarbase.bls` with `sparse_bls_cpu`/`single_bls`, `cuvarbase.lombscargle` with `fap_baluev`, ...) import `pycuda.driver` at module top, so they need the pycuda package installed but touch no device until the first GPU call. See [INSTALL.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/INSTALL.rst) for the `--no-deps` install path on CUDA-less machines.
 - Device selection follows the `CUDA_DEVICE` environment variable, read at first GPU use (e.g. `CUDA_DEVICE=1 python script.py`; for multiple GPUs, split jobs across processes).
 - Optional extras: [batman-package](https://github.com/lkreidberg/batman) enables limb-darkened TLS templates; `cuvarbase[cufinufft]` enables the alternative cuFINUFFT Lomb-Scargle backend.
 
@@ -67,13 +63,13 @@ best_freq = freqs[np.argmax(power)]
 print(f"Best period: {1/best_freq:.2f} (expected: 2.5)")
 ```
 
-Full documentation — including Lomb-Scargle, TLS, CE, and PDM walkthroughs — is at **https://johnh2o2.github.io/cuvarbase/**; two runnable notebooks (Lomb-Scargle and PDM) are in [notebooks/](notebooks/).
+Full documentation — including Lomb-Scargle, TLS, CE, and PDM walkthroughs — is at **https://johnh2o2.github.io/cuvarbase/**; two runnable notebooks (Lomb-Scargle and PDM) are in [notebooks/](https://github.com/johnh2o2/cuvarbase/tree/v1.0.0/notebooks/).
 
 ## What's New in v1.0
 
 v1.0 is a major modernization — the first release since the `0.2.x` line on PyPI — with large architectural speedups (an LRU kernel cache alone makes per-lightcurve loops **34x faster**; survey-speed BLS kernels add **2.0-12.7x end-to-end**), the new survey-scale TLS engine, correct results on absolute BJD-scale timestamps (silently wrong before), sparse BLS, batched BLS, Keplerian frequency grids, multiharmonic GPU Lomb-Scargle, a PDM/CE overhaul contributed by [@astrobatty](https://github.com/astrobatty) (PRs #57-#62, #65), Python 3.9-3.14 + numpy 2.x support without scikit-cuda, and a GPU-validated test suite of 1,582 tests (0 skips on-device, September 2026).
 
-The complete list: [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/master/CHANGELOG.rst), with release notes in [docs/RELEASE_NOTES_v1.0.0.md](docs/RELEASE_NOTES_v1.0.0.md) and measured performance in [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md).
+The complete list: [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/CHANGELOG.rst), with release notes in [docs/RELEASE_NOTES_v1.0.0.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/RELEASE_NOTES_v1.0.0.md) and measured performance in [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).
 
 ## Testing
 
@@ -85,7 +81,7 @@ The test suite runs **on CPU**: `cuvarbase/tests/conftest.py` stubs `pycuda`, so
 
 ## Contributing
 
-Contributions are very welcome — see the [Contributing Guide](CONTRIBUTING.md) for development setup, code standards, testing requirements, and the PR process, and the [issue tracker](https://github.com/johnh2o2/cuvarbase/issues) for bug reports and feature requests.
+Contributions are very welcome — see the [Contributing Guide](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/CONTRIBUTING.md) for development setup, code standards, testing requirements, and the PR process, and the [issue tracker](https://github.com/johnh2o2/cuvarbase/issues) for bug reports and feature requests.
 
 ## Citation
 
@@ -121,11 +117,11 @@ I want to personally thank people who have given their time and support to this 
 
 In the years since 2017, I moved away from astrophysics and life has gone on. With coding agents finally good enough that a limited time investment can bring a lot of return, I would really like to encourage interested people to become official **contributors** so that I can pass the torch onto the larger community. With the world awash in GPUs and time-series datasets orders of magnitude larger than a decade ago, something like `cuvarbase` seems even more relevant today than when it started — and where others have built better tools for a given method (e.g. [periodfind](https://github.com/scope-ml/periodfind) for conditional entropy), we would rather point you to them than duplicate the effort.
 
-**If you're interested in contributing, please see our [Contributing Guide](CONTRIBUTING.md)!**
+**If you're interested in contributing, please see our [Contributing Guide](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/CONTRIBUTING.md)!**
 
 ## License & Acknowledgments
 
-Licensed under GPLv3 — see [LICENSE.txt](LICENSE.txt).
+Licensed under GPLv3 — see [LICENSE.txt](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/LICENSE.txt).
 
 Special thanks to Joel Hartman (author of the original `vartools`), Gaspar Bakos, Kevin Burdge, Attila Bódi ([@astrobatty](https://github.com/astrobatty) — PDM, CE, Lomb-Scargle, and BLS contributions throughout v1.0), and **Jamila Taaki** ([@xiaziyna](https://github.com/xiaziyna) — the NUFFT likelihood-ratio transit search; see Taaki, Kamalabadi & Kemball 2020, *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization*, and the [reference implementation](https://github.com/star-skelly/code_nova_exoghosts)) — and to all users and contributors who have made cuvarbase useful to the astronomy community.
 
