@@ -3046,9 +3046,18 @@ def _fast_bls_solutions(t, y, dy, freqs, powers, qmin, qmax, n_solutions,
 
     freqs64 = np.asarray(freqs, dtype=np.float64)
     freqs32 = freqs64.astype(np.float32)
-    qmins = _broadcast_q_bound(qmin, nfreq, 1e-2, 'qmin')
-    qmaxes = _broadcast_q_bound(qmax, nfreq, 0.5, 'qmax')
-    nbins0, nbinsf = _fast_path_nbins(freqs32, qmins, qmaxes)
+    # The SAME ladder BLSMemory.setdata uploads: the bounds go to
+    # _fast_path_nbins as the caller passed them (their own dtype, not
+    # promoted to float64 -- float32 bounds truncate to different bin
+    # counts at some values: 1/float32(0.025) is 40 in float32 but
+    # 1/float64(float32(0.025)) = 39.9999994 -> 39), with the fast
+    # paths' defaults for None. Promoting them first, as
+    # _broadcast_q_bound does, re-scanned a ladder one bin off the
+    # kernel's for float32 ``qvals`` and returned a (q, phi) the kernel
+    # never evaluated (Sep 2026 fresh-eyes review, finding 18).
+    nbins0, nbinsf = _fast_path_nbins(freqs32,
+                                      1e-2 if qmin is None else qmin,
+                                      0.5 if qmax is None else qmax)
 
     for k in order:
         k = int(k)
