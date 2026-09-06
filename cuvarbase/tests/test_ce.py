@@ -849,11 +849,37 @@ class TestCEBalanced(object):
                dict(weighted=True, balanced_magbins=True),
                dict(weighted=True, compute_log_prob=True),
                dict(use_fast=True, balanced_magbins=True),
+               dict(use_fast=True, compute_log_prob=True),
                dict(balanced_magbins=True, compute_log_prob=True),
                dict(mag_overlap=1, balanced_magbins=True)]
         for kw in bad:
             with pytest.raises(ValueError):
                 ConditionalEntropyAsyncProcess(**kw)
+
+    def test_use_fast_with_log_prob_raises_everywhere(self):
+        # CPU-runnable: conditional_entropy_fast only launches the CE
+        # kernels, so this combination used to return the plain CE
+        # instead of the log-probability, without a word (Sep 2026
+        # review). The constructor, the memory class and the per-call
+        # kwargs of run/preallocate all reject it now, before any GPU
+        # work.
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 100)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            ConditionalEntropyAsyncProcess(use_fast=True,
+                                           compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            ConditionalEntropyMemory(use_fast=True, compute_log_prob=True)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.run([(t, y, dy)], freqs=freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.preallocate(len(t), freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.large_run([(t, y, dy)], freqs=freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs,
+                                         compute_log_prob=True)
 
     @pytest.mark.parametrize('ctor', [dict(weighted=True), dict(use_fast=True),
                                       dict(compute_log_prob=True),

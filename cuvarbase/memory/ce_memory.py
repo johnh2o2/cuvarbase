@@ -75,6 +75,14 @@ class ConditionalEntropyMemory:
         if self.weighted and self.compute_log_prob:
             raise ValueError("simultaneous compute_log_prob and weighted"
                             " options is not currently supported")
+
+        if self.use_fast and self.compute_log_prob:
+            # the fast kernels compute only the conditional entropy; a
+            # memory built this way silently returned the CE instead of
+            # the log-probability
+            raise ValueError("use_fast must be False if compute_log_prob"
+                             " is True (there is no shared-memory"
+                             " log-probability kernel)")
         self.n0_buffer = kwargs.get('n0_buffer', None)
         self.buffered_transfer = kwargs.get('buffered_transfer', False)
         self.t = None
