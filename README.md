@@ -27,7 +27,7 @@ Full tables, per-survey costs, and methodology: [docs/BENCHMARK_RESULTS.md](docs
 - **Conditional Entropy period finder ([CE](https://adsabs.harvard.edu/abs/2013MNRAS.434.2629G))** — maintenance mode: it works and will keep working, but for an actively developed GPU CE/AOV search we recommend [periodfind](https://github.com/scope-ml/periodfind)
 - **Non-equispaced fast Fourier transform ([NFFT](http://epubs.siam.org/doi/abs/10.1137/0914081))** — the adjoint operation that powers the fast Lomb-Scargle
 
-**Experimental** (emits a `UserWarning` on import; not yet validated for science use): the NUFFT-based likelihood-ratio transit search `cuvarbase.nufft_lrt`, contributed by **Jamila Taaki** ([@xiaziyna](https://github.com/xiaziyna)) — a frequency-domain matched filter for box transits in correlated noise.
+**Experimental** (emits a `UserWarning` at first construction; not yet validated for science use; outside the 1.x stability promise, with its injection-recovery re-validation pending): the NUFFT-based likelihood-ratio transit search `cuvarbase.nufft_lrt`, contributed by **Jamila Taaki** ([@xiaziyna](https://github.com/xiaziyna)) — a frequency-domain matched filter for box transits in correlated noise, with marginalized and sequential systematics-aware detectors. It is importable as `cuvarbase.nufft_lrt` but deliberately not exported from the top-level namespace.
 
 ## Installation
 
@@ -39,11 +39,11 @@ Until v1.0.0 is published to PyPI (the current PyPI release is the older `0.2.5`
 pip install "git+https://github.com/johnh2o2/cuvarbase.git@v1.0"
 ```
 
-or clone the repository and `pip install -e .` for a development checkout. A Dockerfile (CUDA 11.8) is included: `docker build -t cuvarbase . && docker run -it --gpus all cuvarbase`.
+or clone the repository and `pip install -e .` for a development checkout.
 
 Notes:
 
-- `import cuvarbase` does **not** create a CUDA context or require a GPU — the context is created lazily on first GPU use, so the CPU-only helpers (`sparse_bls_cpu`, `single_bls`, `fap_baluev`, ...) run on GPU-less machines.
+- `import cuvarbase` does **not** create a CUDA context or require a GPU (or even pycuda) — the context is created lazily on first GPU use. The pure helpers in `cuvarbase.utils`, `cuvarbase.bls_frequencies`, `cuvarbase.tls_grids`, `cuvarbase.tls_models` and `cuvarbase.tls_stats` work without pycuda; the method modules (`cuvarbase.bls` with `sparse_bls_cpu`/`single_bls`, `cuvarbase.lombscargle` with `fap_baluev`, ...) import `pycuda.driver` at module top, so they need the pycuda package installed but touch no device until the first GPU call. See [INSTALL.rst](INSTALL.rst) for the `--no-deps` install path on CUDA-less machines.
 - Device selection follows the `CUDA_DEVICE` environment variable, read at first GPU use (e.g. `CUDA_DEVICE=1 python script.py`; for multiple GPUs, split jobs across processes).
 - Optional extras: [batman-package](https://github.com/lkreidberg/batman) enables limb-darkened TLS templates; `cuvarbase[cufinufft]` enables the alternative cuFINUFFT Lomb-Scargle backend.
 
@@ -67,21 +67,21 @@ best_freq = freqs[np.argmax(power)]
 print(f"Best period: {1/best_freq:.2f} (expected: 2.5)")
 ```
 
-Full documentation — including Lomb-Scargle, TLS, CE, and PDM walkthroughs — is at **https://johnh2o2.github.io/cuvarbase/**, with runnable notebooks in [notebooks/](notebooks/).
+Full documentation — including Lomb-Scargle, TLS, CE, and PDM walkthroughs — is at **https://johnh2o2.github.io/cuvarbase/**; two runnable notebooks (Lomb-Scargle and PDM) are in [notebooks/](notebooks/).
 
 ## What's New in v1.0
 
-v1.0 is a major modernization — the first release since the `0.2.x` line on PyPI — with large architectural speedups (an LRU kernel cache alone makes per-lightcurve loops **34x faster**; survey-speed BLS kernels add **2.0-12.7x end-to-end**), the new survey-scale TLS engine, correct results on absolute BJD-scale timestamps (silently wrong before), sparse BLS, batched BLS, Keplerian frequency grids, multiharmonic GPU Lomb-Scargle, a PDM/CE overhaul contributed by [@astrobatty](https://github.com/astrobatty) (PRs #57-#62, #65), Python 3.9-3.12 + numpy 2.x support without scikit-cuda, and a GPU-validated test suite that grew from ~37 tests to 796.
+v1.0 is a major modernization — the first release since the `0.2.x` line on PyPI — with large architectural speedups (an LRU kernel cache alone makes per-lightcurve loops **34x faster**; survey-speed BLS kernels add **2.0-12.7x end-to-end**), the new survey-scale TLS engine, correct results on absolute BJD-scale timestamps (silently wrong before), sparse BLS, batched BLS, Keplerian frequency grids, multiharmonic GPU Lomb-Scargle, a PDM/CE overhaul contributed by [@astrobatty](https://github.com/astrobatty) (PRs #57-#62, #65), Python 3.9-3.14 + numpy 2.x support without scikit-cuda, and a GPU-validated test suite of 1,582 tests (0 skips on-device, September 2026).
 
 The complete list: [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/master/CHANGELOG.rst), with release notes in [docs/RELEASE_NOTES_v1.0.0.md](docs/RELEASE_NOTES_v1.0.0.md) and measured performance in [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md).
 
 ## Testing
 
 ```bash
-pytest cuvarbase/tests/
+pytest
 ```
 
-The test suite runs **on CPU**: the root `conftest.py` stubs `pycuda`, so the pure-CPU tests run anywhere and the GPU-dependent tests skip (this is what CI does on Python 3.9-3.12). A CUDA-capable GPU is needed only to exercise the GPU kernels themselves, which are validated on-device before releases.
+The test suite runs **on CPU**: `cuvarbase/tests/conftest.py` stubs `pycuda`, so a bare `pytest` (or `pytest --pyargs cuvarbase` from an installed wheel) runs the pure-CPU tests anywhere and the GPU-dependent tests skip (this is what CI does on Python 3.9-3.14). A CUDA-capable GPU is needed only to exercise the GPU kernels themselves, which are validated on-device before releases.
 
 ## Contributing
 

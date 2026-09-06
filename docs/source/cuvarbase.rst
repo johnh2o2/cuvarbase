@@ -28,14 +28,6 @@ cuvarbase\.ce module
     :undoc-members:
     :show-inheritance:
 
-cuvarbase\.core module
-----------------------
-
-.. automodule:: cuvarbase.core
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 cuvarbase\.cufinufft\_backend module
 ------------------------------------
 
@@ -101,6 +93,25 @@ cuvarbase\.tls\_stats module
     :undoc-members:
     :show-inheritance:
 
+cuvarbase\.nufft\_lrt module (experimental)
+---------------------------------------------
+
+.. warning::
+
+   ``cuvarbase.nufft_lrt`` is **experimental** and outside the 1.x
+   API-stability promise. It is importable only by name (it is not
+   exported from the top-level ``cuvarbase`` namespace), it emits an
+   ``EXPERIMENTAL`` ``UserWarning`` when
+   :class:`~cuvarbase.nufft_lrt.NUFFTLRTAsyncProcess` is first
+   constructed, and its injection-recovery re-validation after the
+   September 2026 fixes is still pending; do not use it for publishable
+   science yet. The user guide is :doc:`nufft_lrt`.
+
+.. automodule:: cuvarbase.nufft_lrt
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 cuvarbase\.utils module
 -----------------------
 
@@ -140,11 +151,21 @@ cuvarbase\.base subpackage
     :undoc-members:
     :show-inheritance:
 
+.. automodule:: cuvarbase.base.context
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------
+
+The package re-exports the classes below lazily (PEP 562); their
+canonical documentation is in the module sections above, so this block
+is not indexed.
 
 .. automodule:: cuvarbase
     :members:
     :undoc-members:
     :show-inheritance:
+    :no-index:

@@ -7,7 +7,8 @@ the default ``epochs=None`` scans an automatic epoch grid per (period,
 duration) cell and returns the maximum statistic together with the epoch
 that attains it. Note the statistic is a whitened correlation, not an
 N(0, 1) SNR -- a detection threshold has to be calibrated on signal-free
-data (sketch at the end); see docs/NUFFT_LRT_README.md.
+data (sketch at the end); see the NUFFT-LRT page of the documentation
+(docs/source/nufft_lrt.rst).
 
 The period grid matters: a box of duration ``d`` at period ``P`` drifts
 by ``T * dP / P`` over a baseline ``T`` when the trial period is off by

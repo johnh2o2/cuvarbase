@@ -11,8 +11,8 @@ Please be respectful and constructive in all interactions with the project commu
 ### Prerequisites
 
 - Python 3.9 or later
-- CUDA-capable GPU (NVIDIA)
-- CUDA Toolkit (11.x or 12.x recommended)
+- CUDA-capable GPU (NVIDIA) — only for running the GPU tests; the CPU suite, flake8 and the docs build run anywhere
+- CUDA Toolkit (12.4 is what 1.0 is validated against; other 11.x/12.x toolkits may work)
 - PyCUDA >= 2017.1.1 (avoid 2024.1.2)
 
 ### Installation for Development
@@ -26,15 +26,24 @@ pip install -e .[test]
 ### Running Tests
 
 ```bash
-pytest cuvarbase/tests/
+pytest
 ```
+
+The pytest configuration lives in `pyproject.toml` and the pycuda stub in `cuvarbase/tests/conftest.py`, so a bare `pytest` (or `pytest --pyargs cuvarbase` from an installed wheel) runs the CPU suite on any machine and skips the GPU tests when no device is present.
+
+### Day-to-day workflow
+
+- **CPU suite** (runs anywhere): `pytest`
+- **Lint** (the CI hard-fails on this class only): `flake8 cuvarbase --select=E9,F63,F7,F82`
+- **Docs build** (pycuda is mocked; only the plot-directive figures need a GPU): `make -C docs html`
+- **GPU validation** before a release or after touching a kernel: run the full suite on a rented pod as described in [scripts/README.md](scripts/README.md)
 
 ## Code Standards
 
 ### Python Version Support
 
-- **Minimum Python version**: 3.7
-- **Tested versions**: 3.7, 3.8, 3.9, 3.10, 3.11, 3.12
+- **Minimum Python version**: 3.9
+- **Tested versions**: 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
 - Do not use Python 2.7 compatibility code
 
 ### Naming Conventions
@@ -65,13 +74,13 @@ Group imports in the following order, separated by blank lines:
 
 ```python
 import sys
-import resource
+import warnings
 
 import numpy as np
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
-from .core import GPUAsyncProcess
+from .base import GPUAsyncProcess
 from .utils import find_kernel
 ```
 
@@ -203,11 +212,20 @@ def test_function_name():
 - Update documentation when changing public APIs
 - Include examples in docstrings
 - Add entries to CHANGELOG.rst for significant changes
-- Update README.rst if changing installation or usage
+- Update README.md if changing installation or usage
+
+### API stability policy
+
+- cuvarbase follows [semantic versioning](https://semver.org/): breaking changes only land in a new major version.
+- Within 1.x the public API is the set of names in each user-facing module's `__all__` (and the lazily resolved names in `cuvarbase.__all__`); anything prefixed with `_` is internal.
+- A public name is never removed or changed incompatibly within 1.x without first emitting a `DeprecationWarning` for at least one minor release, with the replacement named in the warning.
+- Result-changing bug fixes are allowed in minor/patch releases but must be called out in CHANGELOG.rst.
+- `cuvarbase.nufft_lrt` is **outside** this promise until its injection-recovery re-validation lands: it is importable, warns `EXPERIMENTAL` at first construction, and may change incompatibly in a 1.x release.
+- Kernel-level behaviour that is not exposed through a Python signature (block sizes, shared-memory layouts) carries no stability promise.
 
 ## Pull Request Process
 
-1. **Fork and branch**: Create a feature branch from `main`
+1. **Fork and branch**: Create a feature branch from `master`
 2. **Make changes**: Follow the code standards above
 3. **Test**: Ensure all tests pass
 4. **Document**: Update docstrings and documentation
@@ -240,6 +258,10 @@ When contributing GPU code:
 - Document any performance-critical sections
 - Consider memory bandwidth vs. computation tradeoffs
 - Test with various GPU architectures when possible
+
+## Historical process material
+
+The audits, benchmark protocols, punchlists and one-off scripts that drove the 1.0 release were pruned from the tree before tagging. They are preserved in full on the annotated tag [`archive/pre-1.0-process`](https://github.com/johnh2o2/cuvarbase/tree/archive/pre-1.0-process), and [analysis/README.md](analysis/README.md) describes what was kept in-tree (the audit of record and the GPU validation records) and where the rest went.
 
 ## Questions?
 

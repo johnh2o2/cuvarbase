@@ -97,7 +97,7 @@ Projects that are sometimes confused with GPU BLS but are fundamentally differen
 
 > **Comparison-version pin:** all astropy Lomb-Scargle and BoxLeastSquares comparisons in this document were measured against **astropy 7.2.0** (the latest release as of June 2026). astropy 8.0 is expected to ship an LRA-NUFFT default for Lomb-Scargle that may change the comparison; re-run before citing these numbers against astropy >= 8.
 
-The closest CPU competitor is **fBLS** at ~6 seconds for 65K datapoints / 100K frequencies (Shahaf et al. 2022, their table 1). cuvarbase's single-LC GPU BLS measured ~0.17 s/LC at the same scale (Kepler row of the batch-vs-single table below: 6 LC/s, 65K points, 131K Keplerian frequencies, RTX A5000; `benchmarks/results/benchmark_results_new_features.json`).
+The closest CPU competitor is **fBLS** at ~6 seconds for 65K datapoints / 100K frequencies (Shahaf et al. 2022, their table 1). cuvarbase's single-LC GPU BLS measured 0.12 s/LC at the same scale (Kepler row of the survey-throughput table below: 65K points, 131K Keplerian frequencies, RTX A5000, July 2026; `benchmarks/results/bls_survey_speed_jul2026/SUMMARY.md`).
 
 ### Standard BLS across 7 GPU architectures
 
@@ -133,18 +133,20 @@ We claim **no raw-kernel speedup** over the previous release — the wins are ar
 
 ### BLS survey-scale throughput
 
-Using Keplerian frequency grids (see Section 5):
+Measured July 2026 on the RTX A5000 (CUDA 12.4) with the survey-speed kernels that ship in 1.0; warm-cache medians of 5 runs of a multi-lightcurve loop, Keplerian frequency grids (see Section 5; `oversampling=2`, `qmin=0.5 q_kep`, `qmax=2 q_kep`). Source: `benchmarks/results/bls_survey_speed_jul2026/SUMMARY.md` (raw JSON in `raw/`).
 
-| Survey | N_obs | N_freq (Keplerian) | LC/s (batch) | LC/s (single) | Best mode |
-|--------|------:|-------------------:|-------------:|--------------:|-----------|
-| ZTF | 150 | 60K | **802** | 216 | Batch (3.7x) |
-| HAT-Net | 6,000 | 301K | **38** | 24 | Batch (1.6x) |
-| TESS | 20,000 | 1.8K | 20 | **236** | Single |
-| Kepler | 65,000 | 131K | 5 | **6** | Single |
+| Survey | N_obs | N_freq (Keplerian) | `eebls_gpu_fast`, fresh call (ms/LC) | `eebls_gpu_batch`, memory reused (ms/LC) | Best path (LC/s) |
+|--------|------:|-------------------:|-----------------------------------:|-----------------------------------------:|-----------------:|
+| ZTF | 150 | 60,121 | 4.77 | 0.84 | **~1,200** (`eebls_gpu_fast` with memory reuse: 0.83 ms) |
+| HAT-Net | 6,000 | 300,592 | 32.84 | **26.98** | **37** |
+| TESS | 20,000 | 1,788 | 2.86 | **0.80** | **1,250** |
+| Kepler | 65,000 | 130,597 | 121.91 | **117.71** | **8.5** |
 
-> **Stale batch columns:** this table was measured February 2026, when `eebls_gpu_batch` recompiled its kernel on every call. That defect was fixed in July 2026, after which **batch beats the single-LC loop at every measured scale** (~10x at N_obs=200, ~5x at N_obs=20,000, 2.2x for 2-LC batches; warm cache, RTX A5000). The ZTF/HAT-Net batch rows above are therefore conservative and the TESS/Kepler "Best mode: Single" recommendations are obsolete — prefer `eebls_gpu_batch` when processing many lightcurves at any size.
+The "fresh call" column is the single-lightcurve convenience path with no reuse (it re-stages the data and re-allocates its buffers every call); the reuse paths (`eebls_gpu_batch(memory=...)` or `eebls_gpu_fast(memory=...)`) are the recommended survey usage. Against the same script on the pre-optimization 1.0 code the best path is 2.0x (ZTF), 2.2x (HAT-Net), 12.7x (TESS) and 3.0x (Kepler) faster end-to-end (kernel-only 2.9-9.2x); the TESS end-to-end figure includes curing a BLAS-threadpool pathology in-library (5.8x against a thread-pinned baseline).
 
-**When does batch mode help?** Batch mode (`eebls_gpu_batch`) amortizes per-LC overhead (kernel launch, memory allocation, host-device transfer) and, since the July 2026 fix, shares one cached kernel across the whole collection. With a warm cache it outperformed the single-LC loop at every scale measured (N_obs 200 to 20,000).
+An earlier revision of this table (February 2026) recommended the single-LC loop for TESS and Kepler. That measurement was taken while `eebls_gpu_batch` recompiled its kernel on every call, a defect fixed in July 2026 (`analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md`): with a warm cache the batch path beats a loop over `eebls_gpu_fast` at every scale measured there — 10x at N_obs=200, 6x at 2,000, 5x at 20,000 (10 lightcurves per batch), and 2.2x for a 2-lightcurve batch.
+
+**When does batch mode help?** Batch mode (`eebls_gpu_batch`) amortizes per-LC overhead (kernel launch, memory allocation, host-device transfer), shares one cached kernel across the whole collection and, with `memory=` reuse, uploads the frequency grid once. Prefer it whenever many lightcurves share a frequency grid, at any N_obs.
 
 ### Survey-wide processing cost
 
@@ -156,6 +158,8 @@ Using Keplerian frequency grids (see Section 5):
 | Kepler | 200,000 | 6 | 10.0 hours | **$2.00** |
 
 BLS transit searches across entire surveys cost **under $15 on a single consumer GPU**.
+
+> This cost table keeps the February 2026 best-path throughput (802 / 38 / 236 / 6 LC/s) so that its totals match Section 6 and the README. With the July 2026 kernels the measured cost per million lightcurves is lower still — $0.062 (ZTF), $2.02 (HAT-Net), $0.060 (TESS) and $8.83 (Kepler) at the pod's $0.27/hr (`benchmarks/results/bls_survey_speed_jul2026/SUMMARY.md`) — so treat these totals as upper bounds.
 
 ## 4. Transit Least Squares (TLS): survey-scale GPU engine
 
@@ -180,17 +184,17 @@ one identical statistic on both methods' chi2 spectra — cuvarbase-TLS is
 2000 d) at 1–3% SDE parity and 100% recovery, and beats GTLS's own published
 RTX-4090 numbers by 23–40× from the slower A5000. Cold single-shot (one star,
 fresh process, compile included) still favors cuvarbase by 2.6–34× over the same
-baselines. Full methodology: `analysis/GTLS_COMPARISON.md`.
+baselines. Full methodology: `docs/GTLS_COMPARISON.md`.
 
 **Versus the reference CPU `transitleastsquares`** (all cores of the same pod,
 same light curves and grid): thousands of times faster — ~1,000–3,000× at
 reference-matched epoch density (`t0_oversample=33`), ~10,000×+ at the default
 grid; the exact multiple is CPU-dependent (archived references for one config
 vary 2.7× between pods). Detection significance is preserved: SDE within 1–3%
-of the reference at the default grid, within 1% at matched density (~5–15×
+of the reference at the default grid, within 1% at matched density (~5–13×
 cost), with the exact refinement pass restoring full parameter precision either
 way. Fidelity data: `benchmarks/results/tls_survey_jul2026/fidelity_raw_a5000.txt`
-and `analysis/TLS_COST_ANALYSIS.md`.
+and `docs/TLS_COST_ANALYSIS.md`.
 
 ## 5. Keplerian Frequency Grid
 
@@ -248,7 +252,7 @@ python scripts/benchmark_new_features.py --bench-only
 python scripts/benchmark_new_features.py --tests-only
 ```
 
-Results are saved to `benchmarks/results/benchmark_results_new_features.json`.
+Results are saved to `benchmarks/results/benchmark_results_new_features.json`. The other harnesses (the multi-GPU BLS sweep, the survey-speed campaign, the TLS survey and GTLS comparisons, the 0.2.6 head-to-head) and the RunPod workflow are described in `scripts/README.md`.
 
 ## References
 
