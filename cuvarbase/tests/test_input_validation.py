@@ -745,21 +745,100 @@ def test_cuda_context_survives_rejected_calls():
     assert power.max() > 0.1
 
 
-def test_valid_input_is_unaffected_by_the_validators():
-    """The acceptance criterion of defect 23: no change for valid
-    input. The validators must not perturb, copy or re-cast the data
-    they pass through, so repeated calls stay reproducible to the
-    kernels' float32 atomic-accumulation noise and float32 inputs are
-    still accepted (they used to reach the kernels untouched, and they
-    still do)."""
+def _passthrough_validators(monkeypatch):
+    """Replace the BLS module's ``check_lightcurve``/``check_freqs``
+    with recording pass-throughs, so an entry point runs exactly the
+    pre-defect-23 computation. Returns the list the pass-throughs
+    append to, so a test can prove the swap took effect."""
+    from .. import bls as bls_module
+    calls = []
+
+    def no_check_lightcurve(t, y, dy=None, **kwargs):
+        calls.append('check_lightcurve')
+        return t, y, dy
+
+    def no_check_freqs(freqs, **kwargs):
+        calls.append('check_freqs')
+        return freqs
+
+    monkeypatch.setattr(bls_module, 'check_lightcurve', no_check_lightcurve)
+    monkeypatch.setattr(bls_module, 'check_freqs', no_check_freqs)
+    return calls
+
+
+@pytest.mark.parametrize('dtype', [np.float64, np.float32])
+def test_validators_do_not_mutate_their_arguments(dtype):
+    """The validators only read. After a call every array is
+    element-for-element what it was, with its dtype. The entry points
+    discard the validators' return values, so this -- not the
+    return-identity check in ``TestCheckLightcurve`` -- is what keeps
+    the kernels' input untouched."""
+    t, y, dy = (a.astype(dtype)
+                for a in make_lc(ndata=300, baseline=20., seed=11))
+    freqs = np.linspace(0.6, 1.6, 256).astype(dtype)
+    before = [a.copy() for a in (t, y, dy, freqs)]
+    check_lightcurve(t, y, dy, min_n=2, name='x')
+    check_freqs(freqs, name='x')
+    for a, b in zip((t, y, dy, freqs), before):
+        assert a.dtype == dtype
+        assert np.array_equal(a, b)
+
+
+@pytest.mark.parametrize('dtype', [np.float64, np.float32])
+def test_valid_input_is_unaffected_by_the_validators_cpu(monkeypatch,
+                                                         dtype):
+    """The acceptance criterion of defect 23 ("nothing changes for valid
+    finite input; results are bit-identical") on a path that needs no
+    GPU: ``sparse_bls_cpu`` with the validators in place returns
+    bit-for-bit what it returns with them replaced by pass-throughs,
+    i.e. the pre-defect-23 computation, for float64 and float32
+    input alike. The pass-through run uses pristine copies of the
+    arrays, so a validator that perturbed its input in place (the
+    entry points discard the validators' return values, so in-place
+    mutation is the only way one could perturb the kernels' input) is
+    caught: the run it touched no longer matches."""
+    t, y, dy = (a.astype(dtype)
+                for a in make_lc(ndata=80, baseline=20., seed=11))
+    freqs = np.linspace(0.6, 1.6, 64).astype(dtype)
+    pristine = [a.copy() for a in (t, y, dy, freqs)]
+    kwargs = dict(qmin=0.03, qmax=0.3)
+    power, sols = sparse_bls_cpu(t, y, dy, freqs, **kwargs)
+
+    calls = _passthrough_validators(monkeypatch)
+    power0, sols0 = sparse_bls_cpu(*pristine, **kwargs)
+    # the swap took effect: the entry point went through the pass-throughs
+    assert set(calls) == {'check_lightcurve', 'check_freqs'}
+    assert np.array_equal(power, power0)
+    assert np.array_equal(np.asarray(sols), np.asarray(sols0))
+
+
+def test_valid_input_is_unaffected_by_the_validators(monkeypatch):
+    """The acceptance criterion of defect 23 on a GPU path: with the
+    validators replaced by pass-throughs (the pre-defect-23
+    computation, run on pristine copies of the arrays as in the CPU
+    test above) ``eebls_gpu_fast`` returns the same periodogram --
+    bit-identical when the kernel is run-to-run deterministic on this
+    device, otherwise within its own run-to-run float32
+    accumulation noise. float32 inputs are still accepted (they used
+    to reach the kernels untouched, and they still do)."""
     t, y, dy = make_lc(ndata=300, baseline=20., seed=11)
     freqs = np.linspace(0.6, 1.6, 256)
-    a = eebls_gpu_fast(t, y, dy, freqs, qmin=0.03, qmax=0.3, noverlap=1)
-    b = eebls_gpu_fast(t, y, dy, freqs, qmin=0.03, qmax=0.3, noverlap=1)
+    pristine = [a.copy() for a in (t, y, dy, freqs)]
+    kwargs = dict(qmin=0.03, qmax=0.3, noverlap=1)
+    a = eebls_gpu_fast(t, y, dy, freqs, **kwargs)
+    b = eebls_gpu_fast(t, y, dy, freqs, **kwargs)     # the kernel's own noise
     assert_allclose(a, b, rtol=1e-6, atol=1e-8)
+
+    calls = _passthrough_validators(monkeypatch)
+    a0 = eebls_gpu_fast(*pristine, **kwargs)
+    assert 'check_lightcurve' in calls
+    assert_allclose(a0, a, rtol=1e-6, atol=1e-8)
+    if np.array_equal(a, b):
+        # deterministic on this device: the validators cost nothing
+        assert np.array_equal(a0, a)
 
     # float32 inputs are accepted unchanged by the validator
     c = eebls_gpu_fast(t.astype(np.float32), y.astype(np.float32),
                        dy.astype(np.float32), freqs.astype(np.float32),
-                       qmin=0.03, qmax=0.3, noverlap=1)
+                       **kwargs)
     assert_allclose(c, a, rtol=1e-3, atol=1e-5)

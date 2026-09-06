@@ -147,8 +147,10 @@ limitations and deferred work" section is the user-facing summary.
       entry point)
 - [ ] float64 frequency/period grid builders (the grids are built in
       float64 and handed to the kernels as float32 today)
-- [ ] Thread-safety of the `*AsyncProcess` objects (documented as
-      one-process-per-thread in 1.0)
+- [ ] Thread-safety of the `*AsyncProcess` objects (undocumented in 1.0:
+      the kernel cache is thread-safe, the process objects are not, and
+      nothing states a one-process-per-thread rule -- document it or make
+      them safe)
 
 **Performance (measured opportunities on record)**
 - [ ] TLS fast kernel: XOR-swizzle for the 32-way shared-memory bank
