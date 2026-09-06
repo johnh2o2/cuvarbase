@@ -219,6 +219,13 @@ API notes
   ``DeprecationWarning``; it returns bare power arrays instead of
   ``(freqs, power)`` tuples. The weights ``w`` may have any scale (raw
   :math:`1/\sigma^2`, all ones, ...): they are normalized to sum to one
-  internally, exactly like the weights derived from ``err``.
+  internally, exactly like the weights derived from ``err``. Like
+  ``err`` they must be finite and strictly positive: a zero weight,
+  which some pre-1.0 pipelines used to mask a point while keeping the
+  array shapes, is rejected since 1.0 (the binned kernels skipped such
+  points, but ``binless_tophat`` divided 0/0 when a masked point's
+  window held no other point, and the ``(t, y, err)`` format cannot
+  express a masked point either) -- drop masked points from the arrays
+  instead.
 
 .. [S1978] `Stellingwerf 1978 <https://ui.adsabs.harvard.edu/abs/1978ApJ...224..953S/abstract>`_
