@@ -456,11 +456,13 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
         How to evaluate the spacing recursion
         ``f_{n+1} = f_n + qmin_fac q(f_n) / (samples_per_peak T)``.
         ``'vectorized'`` solves it with numpy
-        (:func:`cuvarbase.bls_frequencies._euler_transit_grid`): 12-30x
-        faster, and it converges to a fixed point of the same
-        recursion rather than approximating it -- the grid length is
-        identical and every frequency agrees to <= 4e-15 relative
-        (float64 rounding on the accumulated sum). ``'recursion'``
+        (:func:`cuvarbase.bls_frequencies._euler_transit_grid`):
+        9.8-14.9x faster on the audit host (a shared NVIDIA A40
+        machine; see the CHANGELOG), and it converges to a fixed point
+        of the same recursion rather than approximating it -- the grid
+        length is identical and every frequency agrees to ~1e-15
+        relative (one to two float64 ulps of the accumulated sum).
+        ``'recursion'``
         runs the original scalar Python loop, one ``q`` evaluation per
         frequency; use it if you need grids bit-identical to
         cuvarbase < 1.0.
