@@ -5,6 +5,13 @@ These tests exercise the *shipped* template-generation and matched-filter
 code in cuvarbase.nufft_lrt (both are pure numpy). An earlier version of
 this file defined local copies of the algorithms and tested those, which
 validated nothing about the package.
+
+``_compute_matched_filter_snr`` is not called by ``run()``; it is a
+single-template reference wrapper over the same ``_floor_psd`` /
+``_matched_filter_statistic`` helpers that ``run()`` evaluates per
+template, so testing it tests the shipped arithmetic.
+``TestRunHostPipeline`` closes the loop by running ``run()`` itself with
+the GPU transform replaced by an exact host adjoint DFT.
 """
 import numpy as np
 import pytest
@@ -210,3 +217,90 @@ def test_empty_basis_is_rejected_before_device_work(proc):
     with pytest.raises(ValueError, match="K >= 1"):
         _marginal_precompute(Y, [], np.ones(nf), np.ones(nf),
                              np.zeros((0, 0)))
+
+
+def _adjoint_dft(t, y, nf):
+    """Exact float64 adjoint DFT at the GPU convention (modes k = 0..nf-1,
+    f_k = k / (max t - min t))."""
+    t = np.asarray(t, np.float64)
+    y = np.asarray(y, np.float64)
+    x = t / (t.max() - t.min())
+    k = np.arange(nf)
+    return np.exp(2j * np.pi * np.outer(k, x)) @ y
+
+
+class TestRunHostPipeline:
+    """``run()`` end to end on the CPU: the adjoint NFFT (the only GPU
+    work) is replaced by the exact adjoint DFT, so everything else --
+    validation, epoch subtraction, PSD estimate and floor, the whitening
+    weights and the per-template reduction ``run()`` actually executes --
+    is exercised under the stub. The earlier CPU tests only reached the
+    helper ``_compute_matched_filter_snr``, which ``run()`` no longer
+    calls (finding 32 of the Sep-2026 review)."""
+
+    @pytest.fixture
+    def cpu_proc(self, proc, monkeypatch):
+        monkeypatch.setattr(proc, '_nfft_memory',
+                            lambda t, nf, l1_max, **kw: None)
+        monkeypatch.setattr(proc, 'compute_nufft',
+                            lambda t, y, nf, memory=None, **kw:
+                            _adjoint_dft(t, y, nf))
+        return proc
+
+    @staticmethod
+    def _data(rng, n=80):
+        t = np.sort(rng.rand(n) * 30.0) + 2457000.0    # absolute BJD
+        P, e, d = 4.3, 2457001.1, 0.25
+        phase = np.fmod(t - e, P) / P
+        phase[phase > 0.5] -= 1.0
+        y = 1.0 + 2e-3 * rng.randn(n)
+        y[np.abs(phase) <= d / (2 * P)] -= 0.02
+        return t, y, P, e, d
+
+    def test_matched_path_equals_reference_wrapper(self, cpu_proc):
+        rng = np.random.RandomState(11)
+        t, y, P, e, d = self._data(rng)
+        periods = np.array([3.0, P, 6.0])
+        epochs = np.array([0.0, e - np.floor(t.min()), 1.7])
+        got = cpu_proc.run(t, y, periods, durations=np.array([d]),
+                           epochs=epochs + np.floor(t.min()))
+        assert got.shape == (3, 1, 3)
+        # independent per-template evaluation through the wrapper, on
+        # the same host transforms run() saw
+        from ..nufft_lrt import _smoothed_periodogram
+        t0 = t - np.floor(t.min())
+        nf = 2 * len(t)
+        Y = _adjoint_dft(t0, y - y.mean(), nf)
+        psd = _smoothed_periodogram(
+            (np.abs(Y) ** 2).astype(cpu_proc.real_type), 5)
+        want = np.zeros_like(got)
+        for i, p in enumerate(periods):
+            for k, ep in enumerate(epochs):
+                tm = cpu_proc._generate_template(t0, p, ep, d, 1.0)
+                tm -= tm.mean()
+                T = _adjoint_dft(t0, tm, nf)
+                want[i, 0, k] = cpu_proc._compute_matched_filter_snr(
+                    Y, T, psd, np.ones(nf), 1e-3)
+        np.testing.assert_allclose(got, want, rtol=1e-10)
+        # and the injected template is the maximum
+        i, j, k = np.unravel_index(np.argmax(got), got.shape)
+        assert (i, k) == (1, 1)
+
+    def test_marginal_and_sequential_run_on_the_host(self, cpu_proc):
+        rng = np.random.RandomState(5)
+        t, y, P, e, d = self._data(rng)
+        v = np.sin(2 * np.pi * (t - t.min()) / 11.0)
+        y_sys = y + 0.05 * v
+        periods = np.array([3.0, P, 6.0])
+        for detector, kw in (('sequential', {}),
+                             ('marginal',
+                              dict(coeff_prior_cov=np.array([[1.0]])))):
+            snr, best = cpu_proc.run(t, y_sys, periods,
+                                     durations=np.array([d]),
+                                     detector=detector,
+                                     systematics_basis=v[:, None], **kw)
+            assert snr.shape == best.shape == (3, 1)
+            assert np.all(np.isfinite(snr))
+            assert int(np.argmax(snr[:, 0])) == 1, detector
+            # best epoch is returned in the caller's (BJD) time scale
+            assert best[1, 0] > 2457000.0
