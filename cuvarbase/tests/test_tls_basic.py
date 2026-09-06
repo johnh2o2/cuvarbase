@@ -1126,6 +1126,33 @@ class TestTemplateTableMemoization:
                 tls_models.generate_template_tables(n_table=128)
         assert tls_models._template_table_cache == {}
 
+    def test_missing_batman_tables_are_cached_under_their_own_key(
+            self, monkeypatch):
+        """Release review (findings 0/12): with batman not installed
+        the trapezoid IS the template -- deterministic, warned about
+        once at import rather than per call -- so its tables are
+        memoized like any other, under a key that records batman's
+        absence so a batman-backed table can never collide with it."""
+        monkeypatch.setattr(tls_models, 'BATMAN_AVAILABLE', False)
+        with _w.catch_warnings():
+            _w.simplefilter("error")
+            first = tls_models.generate_template_tables(n_table=128)
+            second = tls_models.generate_template_tables(n_table=128)
+        for a, b in zip(first, second):
+            assert np.array_equal(a, b)
+        keys = list(tls_models._template_table_cache)
+        assert len(keys) == 1 and keys[0][-1] is False
+        assert keys[0] == tls_models._template_table_key(
+            128, 'quadratic', [0.4804, 0.1867], 8)
+        # the cached tables are the trapezoid's
+        expect = tls_models._trapezoid_template(128 * 8 + 1)[::8]
+        assert np.array_equal(first[0], expect.astype(np.float32))
+        # a batman-backed table lives under a different key
+        monkeypatch.setattr(tls_models, 'BATMAN_AVAILABLE', True)
+        assert tls_models._template_table_key(
+            128, 'quadratic', [0.4804, 0.1867], 8) not in \
+            tls_models._template_table_cache
+
 
 class TestBatchHasNoThreadPool:
     """Phase 2 TLS-2 (audit section 5, id 53): tls_search_batch must not
@@ -1588,3 +1615,79 @@ class TestDurationGridKeplerian:
         assert len(durations) == 1 and counts.tolist() == [3]
         assert q.shape == (1,)
         assert q[0] == pytest.approx(float(tls_grids.q_transit(7.5)))
+
+
+class TestTlsInputGuards:
+    """Sep-2026 release review (findings 2, 11, 14): ``dy=None`` passed
+    the shared validator and the fast path built NaN weights and
+    returned the flat-light-curve null result; the legacy path forwarded
+    ``n_durations`` to the kernel unchecked (``n_durations <= 1`` is a
+    0/0 duration step, again a null result for a good light curve); and
+    ``tls_search``/``tls_search_gpu``/``tls_transit`` accepted and
+    dropped any unknown keyword, so ``fap_null_draws=`` silently
+    produced a result with no 'FAP' key. All three are host-side
+    errors raised before any GPU work (CPU tests)."""
+
+    def _lc(self, n=400):
+        rand = np.random.RandomState(11)
+        t = np.sort(30.0 * rand.rand(n))
+        y = 1.0 + 1e-3 * rand.randn(n)
+        dy = np.full(n, 1e-3)
+        return t, y, dy
+
+    def test_dy_none_rejected_on_every_entry_point(self):
+        from cuvarbase import tls
+        t, y, _ = self._lc()
+        periods = np.array([2.0, 3.0])
+        with pytest.raises(ValueError, match="tls_search_gpu: dy is required"):
+            tls.tls_search_gpu(t, y, None, periods=periods)
+        with pytest.raises(ValueError, match="tls_search_gpu: dy is required"):
+            tls.tls_search_gpu(t, y, None, periods=periods, use_fast=False)
+        with pytest.raises(ValueError, match="tls_search: dy is required"):
+            tls.tls_search(t, y, None, periods=periods)
+        with pytest.raises(ValueError, match="tls_transit: dy is required"):
+            tls.tls_transit(t, y, None)
+        with pytest.raises(ValueError,
+                           match="tls_search_batch lightcurve 1: dy is required"):
+            tls.tls_search_batch([(t, y, np.full(len(t), 1e-3)), (t, y, None)],
+                                 periods=periods)
+        with pytest.raises(ValueError, match="lightcurve 0: dy is required"):
+            tls._preprocess_batch([(t, y, None)])
+
+    @pytest.mark.parametrize("use_fast", [True, False])
+    @pytest.mark.parametrize("n_durations", [1, 0, -3])
+    def test_n_durations_below_two_rejected_on_both_paths(self, use_fast,
+                                                          n_durations):
+        from cuvarbase import tls
+        t, y, dy = self._lc()
+        with pytest.raises(ValueError, match="n_durations must be >= 2"):
+            tls.tls_search_gpu(t, y, dy, periods=np.array([2.0, 3.0]),
+                               n_durations=n_durations, use_fast=use_fast)
+
+    def test_n_durations_must_be_an_integer(self):
+        from cuvarbase import tls
+        t, y, dy = self._lc()
+        with pytest.raises(ValueError, match="n_durations must be an integer"):
+            tls.tls_search_gpu(t, y, dy, periods=np.array([2.0, 3.0]),
+                               n_durations=2.5, use_fast=False)
+        with pytest.raises(ValueError, match="n_durations"):
+            tls.tls_search_batch([(t, y, dy)], periods=np.array([2.0, 3.0]),
+                                 n_durations=1)
+        # numpy integers are integers
+        assert tls._validate_n_durations(np.int64(7)) == 7
+
+    def test_unknown_keywords_are_rejected_with_a_fap_hint(self):
+        from cuvarbase import tls
+        t, y, dy = self._lc()
+        periods = np.array([2.0, 3.0])
+        with pytest.raises(TypeError, match="fap_null_draws.*tls_search_batch"):
+            tls.tls_search(t, y, dy, periods=periods, fap_null_draws=100)
+        with pytest.raises(TypeError, match="fap_seed.*tls_search_batch"):
+            tls.tls_search_gpu(t, y, dy, periods=periods, fap_seed=1)
+        with pytest.raises(TypeError, match="tls_search_batch"):
+            tls.tls_transit(t, y, dy, fap_null_draws=10, fap_seed=1)
+        with pytest.raises(TypeError, match="'bogus_kwarg'") as excinfo:
+            tls.tls_search_gpu(t, y, dy, periods=periods, bogus_kwarg=42)
+        assert 'tls_search_batch' not in str(excinfo.value)
+        # the one legitimate extra keyword is still consumed
+        assert tls._TLS_SEARCH_GPU_EXTRA_KWARGS == frozenset(['n_template'])
