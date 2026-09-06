@@ -40,8 +40,13 @@ except ImportError:
     warnings.warn("batman package not available. Install with: pip install batman-package")
 
 # Set by _warn_template_fallback so generate_template_tables can tell a
-# batman template from a degraded trapezoid one and refuse to cache the
-# degraded result (the warning must keep firing on every call).
+# batman template from the trapezoid substituted for a batman call that
+# FAILED, and refuse to cache that degraded result (its warning must
+# keep firing on every call). With batman absent altogether the
+# trapezoid is the normal, deterministic template: generate_transit_template
+# returns it without warning (the import above already warned once per
+# process) and generate_template_tables caches it like any other table,
+# under a key that records batman's absence.
 # Thread-local: two concurrent searches must not clear each other's flag.
 _fallback_state = threading.local()
 
@@ -456,11 +461,14 @@ def generate_template_tables(n_table=1024, limb_dark='quadratic',
     T, S1, S2 : ndarray
         Float32 arrays of shape (n_table + 1,). Freshly-allocated,
         writable copies: the tables are memoized on
-        ``(n_table, limb_dark, u, oversample)`` (a small LRU) because
-        the batman reference model behind them is rebuilt identically
-        on every search, but each call still returns its own arrays.
-        A trapezoid fallback (batman missing or failing) is never
-        cached, so its warning keeps firing.
+        ``(n_table, limb_dark, u, oversample, BATMAN_AVAILABLE)`` (a
+        small LRU) because the batman reference model behind them is
+        rebuilt identically on every search, but each call still
+        returns its own arrays. A trapezoid substituted for a batman
+        call that *failed* is never cached, so that warning keeps
+        firing; with batman not installed the trapezoid is the
+        template (the package warns once at import, not per call) and
+        its tables are cached under the ``BATMAN_AVAILABLE=False`` key.
     """
     if u is None:
         u = [0.4804, 0.1867]
@@ -495,8 +503,11 @@ def generate_template_tables(n_table=1024, limb_dark='quadratic',
     tables = (T.astype(np.float32),
               S1.astype(np.float32),
               S2.astype(np.float32))
-    # Never cache a trapezoid fallback: generate_transit_template warns
-    # once per failed call and that warning must not be memoized away.
+    # Never cache a trapezoid substituted for a failed batman call:
+    # generate_transit_template warns once per failed call and that
+    # warning must not be memoized away. (batman absent is not
+    # "degraded": the trapezoid is then the template, keyed on
+    # BATMAN_AVAILABLE=False.)
     if key is not None and not degraded:
         with _template_table_lock:
             _template_table_cache[key] = tuple(a.copy() for a in tables)
