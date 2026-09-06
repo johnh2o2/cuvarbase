@@ -1,0 +1,36 @@
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+LRT templates per search: 7473 explicit-epoch, 5978 automatic (epochs=None)
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+config red_3x (seed 20260714, t_offset 0.5) ...
+  [red_3x] null 25/200  (451 s)
+  [red_3x] null 50/200  (901 s)
+  [red_3x] null 75/200  (1351 s)
+  [red_3x] null 100/200  (1802 s)
+  [red_3x] null 125/200  (2252 s)
+  [red_3x] null 150/200  (2702 s)
+  [red_3x] null 175/200  (3153 s)
+  [red_3x] null 200/200  (3603 s)
+  [red_3x] depth 0.008 inj 50/200  (4504 s)
+  [red_3x] depth 0.008 inj 100/200  (5404 s)
+  [red_3x] depth 0.008 inj 150/200  (6305 s)
+  [red_3x] depth 0.008 inj 200/200  (7059 s)
+  [red_3x] depth 0.016 inj 50/200  (7720 s)
+  [red_3x] depth 0.016 inj 100/200  (8380 s)
+  [red_3x] depth 0.016 inj 150/200  (9040 s)
+  [red_3x] depth 0.016 inj 200/200  (9701 s)
+  [red_3x] depth 0.024 inj 50/200  (10298 s)
+  [red_3x] depth 0.024 inj 100/200  (10625 s)
+  [red_3x] depth 0.024 inj 150/200  (10946 s)
+  [red_3x] depth 0.024 inj 200/200  (11197 s)
+  [red_3x] depth 0.032 inj 50/200  (11442 s)
+  [red_3x] depth 0.032 inj 100/200  (11690 s)
+  [red_3x] depth 0.032 inj 150/200  (11937 s)
+  [red_3x] depth 0.032 inj 200/200  (12182 s)
+  lrt      null_p95=  14.121  4.383 s/search  completeness={'0.008': 0.0, '0.016': 0.125, '0.024': 0.57, '0.032': 0.89}
+  lrt_auto null_p95=  13.972  3.413 s/search  completeness={'0.008': 0.0, '0.016': 0.105, '0.024': 0.48, '0.032': 0.83}
+  bls      null_p95=   0.204  0.001 s/search  completeness={'0.008': 0.005, '0.016': 0.07, '0.024': 0.475, '0.032': 0.88}
+  tls      null_p95=  34.507  0.009 s/search  completeness={'0.008': 0.005, '0.016': 0.17, '0.024': 0.625, '0.032': 0.93}
+  lrt_flat null_p95=   5.097  4.376 s/search  completeness={'0.008': 0.005, '0.016': 0.18, '0.024': 0.63, '0.032': 0.895}
+wrote /workspace/p4run/D_red3x.json

@@ -1,0 +1,8 @@
+# probe_cal.py (2x1000 fresh draws, sigma=2 comparison, oddness check)
+seed 7: n=1000 mean=-0.064 (SE 0.059) std=1.867
+seed 8: n=1000 mean=0.110 (SE 0.058) std=1.827
+sigma=2 seed 7: mean=-0.062 (SE 0.059) std=1.868
+odd check: S(y)=0.564777 S(-y)=-0.564777 sum=4.49e-09
+# probe_cal2.py (campaign seed: first 200 draws, then 5000)
+campaign seed, n=200: mean=0.348 std=1.579
+campaign seed, n=5000: mean=0.030 (SE 0.026) std=1.808

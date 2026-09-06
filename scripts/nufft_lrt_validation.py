@@ -78,10 +78,12 @@ the systematics configurations).
 
 Template grids: the LRT arms search durations {0.12, 0.21, 0.30} d
 against the injected 0.22 d box (the nearest template recovers 97.7% of
-the matched-filter statistic when centred; the 96-epoch cap of the
-epoch grid at P = 5.3 d leaves a misalignment of up to 0.028 d, i.e. up
-to ~13% of the statistic, ~6% on average -- the default path's own
-resolution, which the explicit arm deliberately shares). BLS's q ladder
+the matched-filter statistic when centred). The explicit arm uses
+round(2P / 0.12) epochs for EVERY duration (88 at P = 5.3 d, up to
+0.030 d of misalignment), the default path ceil(2P / duration) per
+cell (89/51/36 epochs at P = 5.3 d for the three durations, up to
+0.030/0.052/0.074 d) -- the source of the default path's 4-9% deficit
+against the explicit arm in the 2026-09-06 campaign. BLS's q ladder
 (0.005..0.08, dlogq 0.3) has 0.2385 d at P = 5.3 d with P/200 phase
 bins, so the comparators are slightly better matched to the injection
 than the LRT grid is; the depth sweeps of each configuration bracket its
@@ -796,9 +798,12 @@ def main():
     if 'white' in selected and not args.skip_calibration:
         print('LRT statistic null calibration on white noise...',
               flush=True)
+        # 1000 draws: with 200 the sample std/mean of the 2026-09-06
+        # campaign came out 1.58/0.35 where 5000 draws from the same
+        # seed give 1.81/0.03 (see benchmarks/results/nufft_lrt_validation_2026-09-06/)
         results['snr_calibration'] = snr_calibration(
             np.random.RandomState(args.seed + CALIBRATION_SEED_OFFSET),
-            t, {}, n=40 if args.quick else 200)
+            t, {}, n=40 if args.quick else 1000)
         print('  mean=%.3f std=%.3f (calibration constant: mean ~0 '
               'expected; std is NOT ~1 by design -- the pre-fix campaign '
               'measured 1.81 at nf = 2n with the sigma = 2 NFFT)'

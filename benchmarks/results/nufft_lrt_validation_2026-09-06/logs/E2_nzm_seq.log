@@ -1,0 +1,32 @@
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+LRT templates per search: 7473 explicit-epoch, 5978 automatic (epochs=None)
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+config red_sys_nzm (seed 20260715, t_offset 0.5) ...
+  [red_sys_nzm] null 25/200  (164 s)
+  [red_sys_nzm] null 50/200  (329 s)
+  [red_sys_nzm] null 75/200  (494 s)
+  [red_sys_nzm] null 100/200  (658 s)
+  [red_sys_nzm] null 125/200  (823 s)
+  [red_sys_nzm] null 150/200  (988 s)
+  [red_sys_nzm] null 175/200  (1154 s)
+  [red_sys_nzm] null 200/200  (1319 s)
+  [red_sys_nzm] depth 0.004 inj 50/200  (1649 s)
+  [red_sys_nzm] depth 0.004 inj 100/200  (1979 s)
+  [red_sys_nzm] depth 0.004 inj 150/200  (2308 s)
+  [red_sys_nzm] depth 0.004 inj 200/200  (2637 s)
+  [red_sys_nzm] depth 0.008 inj 50/200  (2967 s)
+  [red_sys_nzm] depth 0.008 inj 100/200  (3297 s)
+  [red_sys_nzm] depth 0.008 inj 150/200  (3627 s)
+  [red_sys_nzm] depth 0.008 inj 200/200  (3956 s)
+  [red_sys_nzm] depth 0.016 inj 50/200  (4285 s)
+  [red_sys_nzm] depth 0.016 inj 100/200  (4615 s)
+  [red_sys_nzm] depth 0.016 inj 150/200  (4946 s)
+  [red_sys_nzm] depth 0.016 inj 200/200  (5276 s)
+  [red_sys_nzm] depth 0.032 inj 50/200  (5606 s)
+  [red_sys_nzm] depth 0.032 inj 100/200  (5937 s)
+  [red_sys_nzm] depth 0.032 inj 150/200  (6266 s)
+  [red_sys_nzm] depth 0.032 inj 200/200  (6597 s)
+  lrt_seq  null_p95=  12.220  6.595 s/search  completeness={'0.004': 0.03, '0.008': 0.43, '0.016': 0.975, '0.032': 1.0}
+wrote /workspace/p4run/E2_nzm_seq.json

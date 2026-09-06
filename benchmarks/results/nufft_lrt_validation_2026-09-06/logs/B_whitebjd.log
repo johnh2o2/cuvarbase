@@ -1,0 +1,35 @@
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+LRT templates per search: 7473 explicit-epoch, 5978 automatic (epochs=None)
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+config white_bjd (seed 20260712, t_offset 2.457e+06) ...
+  [white_bjd] null 25/200  (287 s)
+  [white_bjd] null 50/200  (576 s)
+  [white_bjd] null 75/200  (865 s)
+  [white_bjd] null 100/200  (1153 s)
+  [white_bjd] null 125/200  (1441 s)
+  [white_bjd] null 150/200  (1730 s)
+  [white_bjd] null 175/200  (2017 s)
+  [white_bjd] null 200/200  (2307 s)
+  [white_bjd] depth 0.002 inj 50/200  (2883 s)
+  [white_bjd] depth 0.002 inj 100/200  (3460 s)
+  [white_bjd] depth 0.002 inj 150/200  (4037 s)
+  [white_bjd] depth 0.002 inj 200/200  (4615 s)
+  [white_bjd] depth 0.003 inj 50/200  (5191 s)
+  [white_bjd] depth 0.003 inj 100/200  (5767 s)
+  [white_bjd] depth 0.003 inj 150/200  (6345 s)
+  [white_bjd] depth 0.003 inj 200/200  (6853 s)
+  [white_bjd] depth 0.004 inj 50/200  (7277 s)
+  [white_bjd] depth 0.004 inj 100/200  (7700 s)
+  [white_bjd] depth 0.004 inj 150/200  (8124 s)
+  [white_bjd] depth 0.004 inj 200/200  (8548 s)
+  [white_bjd] depth 0.008 inj 50/200  (8971 s)
+  [white_bjd] depth 0.008 inj 100/200  (9393 s)
+  [white_bjd] depth 0.008 inj 150/200  (9817 s)
+  [white_bjd] depth 0.008 inj 200/200  (10240 s)
+  lrt      null_p95=   8.588  5.740 s/search  completeness={'0.002': 0.13, '0.003': 0.47, '0.004': 0.815, '0.008': 0.99}
+  lrt_auto null_p95=   8.719  4.487 s/search  completeness={'0.002': 0.095, '0.003': 0.42, '0.004': 0.735, '0.008': 0.99}
+  bls      null_p95=   0.038  0.002 s/search  completeness={'0.002': 0.13, '0.003': 0.595, '0.004': 0.91, '0.008': 1.0}
+  tls      null_p95=   4.662  0.011 s/search  completeness={'0.002': 0.165, '0.003': 0.65, '0.004': 0.905, '0.008': 0.995}
+wrote /workspace/p4run/B_whitebjd.json

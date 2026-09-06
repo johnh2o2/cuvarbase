@@ -1,0 +1,39 @@
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+LRT templates per search: 7473 explicit-epoch, 5978 automatic (epochs=None)
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+LRT statistic null calibration on white noise...
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:513: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+  mean=0.348 std=1.579 (calibration constant: mean ~0 expected; std is NOT ~1 by design -- the pre-fix campaign measured 1.81 at nf = 2n with the sigma = 2 NFFT)
+config white (seed 20260712, t_offset 0.5) ...
+  [white] null 25/200  (290 s)
+  [white] null 50/200  (578 s)
+  [white] null 75/200  (867 s)
+  [white] null 100/200  (1155 s)
+  [white] null 125/200  (1444 s)
+  [white] null 150/200  (1733 s)
+  [white] null 175/200  (2023 s)
+  [white] null 200/200  (2312 s)
+  [white] depth 0.002 inj 50/200  (2890 s)
+  [white] depth 0.002 inj 100/200  (3469 s)
+  [white] depth 0.002 inj 150/200  (4047 s)
+  [white] depth 0.002 inj 200/200  (4625 s)
+  [white] depth 0.003 inj 50/200  (5202 s)
+  [white] depth 0.003 inj 100/200  (5779 s)
+  [white] depth 0.003 inj 150/200  (6356 s)
+  [white] depth 0.003 inj 200/200  (6860 s)
+  [white] depth 0.004 inj 50/200  (7283 s)
+  [white] depth 0.004 inj 100/200  (7706 s)
+  [white] depth 0.004 inj 150/200  (8130 s)
+  [white] depth 0.004 inj 200/200  (8553 s)
+  [white] depth 0.008 inj 50/200  (8976 s)
+  [white] depth 0.008 inj 100/200  (9399 s)
+  [white] depth 0.008 inj 150/200  (9822 s)
+  [white] depth 0.008 inj 200/200  (10240 s)
+  lrt      null_p95=   8.588  5.737 s/search  completeness={'0.002': 0.13, '0.003': 0.47, '0.004': 0.815, '0.008': 0.99}
+  lrt_auto null_p95=   8.719  4.491 s/search  completeness={'0.002': 0.095, '0.003': 0.42, '0.004': 0.735, '0.008': 0.99}
+  bls      null_p95=   0.038  0.002 s/search  completeness={'0.002': 0.13, '0.003': 0.595, '0.004': 0.91, '0.008': 1.0}
+  tls      null_p95=   4.662  0.011 s/search  completeness={'0.002': 0.165, '0.003': 0.65, '0.004': 0.905, '0.008': 0.995}
+wrote /workspace/p4run/A_white.json

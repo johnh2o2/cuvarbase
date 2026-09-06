@@ -1,0 +1,35 @@
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+LRT templates per search: 7473 explicit-epoch, 5978 automatic (epochs=None)
+/workspace/cuvarbase/scripts/nufft_lrt_validation.py:237: UserWarning: cuvarbase.nufft_lrt is EXPERIMENTAL and outside the 1.x API-stability promise. The Sep-2026 correctness fixes (float64 epoch subtraction, automatic epoch grid for epochs=None, Detector A PSD from the cotrended residual, centred sequential cotrend, full-band NFFT accuracy) are awaiting injection-recovery re-validation; the statistic is not N(0, 1) and thresholds must be calibrated empirically (see https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).
+  self.proc = NUFFTLRTAsyncProcess(**proc_kwargs)
+config red_sys (seed 20260715, t_offset 0.5) ...
+  [red_sys] null 25/200  (288 s)
+  [red_sys] null 50/200  (576 s)
+  [red_sys] null 75/200  (865 s)
+  [red_sys] null 100/200  (1152 s)
+  [red_sys] null 125/200  (1441 s)
+  [red_sys] null 150/200  (1729 s)
+  [red_sys] null 175/200  (2017 s)
+  [red_sys] null 200/200  (2305 s)
+  [red_sys] depth 0.004 inj 50/200  (2880 s)
+  [red_sys] depth 0.004 inj 100/200  (3456 s)
+  [red_sys] depth 0.004 inj 150/200  (4033 s)
+  [red_sys] depth 0.004 inj 200/200  (4609 s)
+  [red_sys] depth 0.008 inj 50/200  (5187 s)
+  [red_sys] depth 0.008 inj 100/200  (5765 s)
+  [red_sys] depth 0.008 inj 150/200  (6343 s)
+  [red_sys] depth 0.008 inj 200/200  (6849 s)
+  [red_sys] depth 0.016 inj 50/200  (7272 s)
+  [red_sys] depth 0.016 inj 100/200  (7694 s)
+  [red_sys] depth 0.016 inj 150/200  (8117 s)
+  [red_sys] depth 0.016 inj 200/200  (8540 s)
+  [red_sys] depth 0.032 inj 50/200  (8963 s)
+  [red_sys] depth 0.032 inj 100/200  (9386 s)
+  [red_sys] depth 0.032 inj 150/200  (9810 s)
+  [red_sys] depth 0.032 inj 200/200  (10231 s)
+  lrt      null_p95=  11.965  5.735 s/search  completeness={'0.004': 0.0, '0.008': 0.0, '0.016': 0.055, '0.032': 0.335}
+  lrt_auto null_p95=  11.616  4.482 s/search  completeness={'0.004': 0.0, '0.008': 0.0, '0.016': 0.05, '0.032': 0.335}
+  bls      null_p95=   0.188  0.002 s/search  completeness={'0.004': 0.0, '0.008': 0.0, '0.016': 0.025, '0.032': 0.165}
+  tls      null_p95= 114.971  0.011 s/search  completeness={'0.004': 0.0, '0.008': 0.0, '0.016': 0.0, '0.032': 0.0}
+wrote /workspace/p4run/E_redsys_main.json
