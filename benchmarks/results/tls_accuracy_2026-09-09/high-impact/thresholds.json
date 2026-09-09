@@ -1,0 +1,33 @@
+{
+  "design_sha256": "b58495839e82939a7f1cccecf736cee8fe23316b8bbe15a4537fe3c8c65089ca",
+  "frozen_at_utc": "2026-09-09T20:05:21.384897+00:00",
+  "input_manifest_sha256": "4cfae50c4f0a76e28fdfee3648fbb1a0fedf3fac62af2ead2363182f0893cb1b",
+  "methods": {
+    "gtls": {
+      "calibration_result_sha256": "69682d2e11d0c7878d01f7aec2f28e58bc1dfa06ac9be68eaa6898e991e8375d",
+      "failed": 0,
+      "n": 256,
+      "threshold": 7.172965049743652
+    },
+    "v1_defaults": {
+      "calibration_result_sha256": "4cabc1949e0925505df47a38451b4bb3516746882860970c46018a057cf369ce",
+      "failed": 0,
+      "n": 256,
+      "threshold": 7.4519208862618
+    },
+    "v1_fine": {
+      "calibration_result_sha256": "9b1408225ed73feb77ef84760a9a323eaaf6f71344859215d791d70b4c36049e",
+      "failed": 0,
+      "n": 256,
+      "threshold": 7.324375673259127
+    },
+    "v1_wide": {
+      "calibration_result_sha256": "4f8a5af97b453607246e70d65216d15ad6d2d641acbc6e1a3b54ed1dc2791b22",
+      "failed": 0,
+      "n": 256,
+      "threshold": 7.654699681858246
+    }
+  },
+  "runner_sha256": "54ff60d8e50eabd1913fc5c7bba6e560ac9b44384e82c06d7b085ffd11917b35",
+  "threshold_rule": "strict score>higher95thpercentile"
+}

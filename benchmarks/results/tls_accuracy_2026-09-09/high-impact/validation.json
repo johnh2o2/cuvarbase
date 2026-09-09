@@ -1,0 +1,221 @@
+{
+  "analysis_sha256": "930338b7d171ff60b4c774a3ce3de2461a235710292d21a192b5da6240d3a91c",
+  "audit": "Independent CPU checks of frozen scalar evidence and privately retained input arrays; no GPU rerun",
+  "checked_at_utc": "2026-09-09T20:24:20.750010+00:00",
+  "chronology": {
+    "all_calibrations_completed_before_thresholds": true,
+    "all_heldout_starts_after_thresholds": true,
+    "all_heldout_threshold_hashes_match": true,
+    "caveat": "Timestamps and hash links support the frozen runner gates; they are not an external attestation of operator actions.",
+    "design_frozen_at_utc": "2026-09-09T19:46:34.851131+00:00",
+    "execution_segments": {
+      "calibration/gtls": {
+        "finished_at_utc": "2026-09-09T20:05:16.586246+00:00",
+        "started_at_utc": "2026-09-09T20:03:34.596573+00:00"
+      },
+      "calibration/v1_defaults": {
+        "finished_at_utc": "2026-09-09T20:03:17.178102+00:00",
+        "started_at_utc": "2026-09-09T20:03:14.442809+00:00"
+      },
+      "calibration/v1_fine": {
+        "finished_at_utc": "2026-09-09T20:03:33.075170+00:00",
+        "started_at_utc": "2026-09-09T20:03:22.487375+00:00"
+      },
+      "calibration/v1_wide": {
+        "finished_at_utc": "2026-09-09T20:03:21.364731+00:00",
+        "started_at_utc": "2026-09-09T20:03:18.320885+00:00"
+      },
+      "injections/gtls": {
+        "finished_at_utc": "2026-09-09T20:07:39.804984+00:00",
+        "started_at_utc": "2026-09-09T20:05:57.878383+00:00"
+      },
+      "injections/v1_defaults": {
+        "finished_at_utc": "2026-09-09T20:05:24.032175+00:00",
+        "started_at_utc": "2026-09-09T20:05:22.308487+00:00"
+      },
+      "injections/v1_fine": {
+        "finished_at_utc": "2026-09-09T20:05:44.328591+00:00",
+        "started_at_utc": "2026-09-09T20:05:33.767989+00:00"
+      },
+      "injections/v1_wide": {
+        "finished_at_utc": "2026-09-09T20:05:29.619231+00:00",
+        "started_at_utc": "2026-09-09T20:05:27.755242+00:00"
+      },
+      "nulls/gtls": {
+        "finished_at_utc": "2026-09-09T20:09:25.655350+00:00",
+        "started_at_utc": "2026-09-09T20:07:45.507958+00:00"
+      },
+      "nulls/v1_defaults": {
+        "finished_at_utc": "2026-09-09T20:05:26.638341+00:00",
+        "started_at_utc": "2026-09-09T20:05:25.160662+00:00"
+      },
+      "nulls/v1_fine": {
+        "finished_at_utc": "2026-09-09T20:05:56.179406+00:00",
+        "started_at_utc": "2026-09-09T20:05:45.497011+00:00"
+      },
+      "nulls/v1_wide": {
+        "finished_at_utc": "2026-09-09T20:05:32.686707+00:00",
+        "started_at_utc": "2026-09-09T20:05:30.768475+00:00"
+      }
+    },
+    "inputs_generated_at_utc": "2026-09-09T19:49:03.861738+00:00",
+    "thresholds_frozen_at_utc": "2026-09-09T20:05:21.384897+00:00"
+  },
+  "confidence_interval_check": {
+    "numpy_version": "1.26.4",
+    "paired_max_absolute_difference": 5.575956363301771e-13,
+    "paired_method": "Difference of two exact 97.5% binomial proportion intervals for discordant cells; four one-sided tails at .0125, Bonferroni at least 95% paired coverage",
+    "rate_max_absolute_difference": 6.938893903907228e-18,
+    "rate_method": "scipy.stats.binomtest.proportion_ci(method=wilson, confidence_level=.95)",
+    "scipy_version": "1.12.0"
+  },
+  "design_sha256": "b58495839e82939a7f1cccecf736cee8fe23316b8bbe15a4537fe3c8c65089ca",
+  "input_check": {
+    "band_values": [
+      67
+    ],
+    "case_arrays": 3072,
+    "exposure_seconds": [
+      200.0
+    ],
+    "frozen_cadence_arrays_verified": 8,
+    "gtls_native_preprocessing": {
+      "cases_with_one_sample_removed": {
+        "calibration": 251,
+        "injections": 251,
+        "nulls": 251
+      },
+      "maximum_additional_samples_removed_per_case": 1,
+      "rule": "GTLS helpers.cleaned_array accepts only finite positive t, y and dy; t=0 is discarded"
+    },
+    "metadata_cases": 768,
+    "npz_files": 3,
+    "original_local_and_collected_design_config_manifest_byte_identical": true,
+    "relative_error_values": [
+      3.0
+    ]
+  },
+  "input_manifest_sha256": "4cfae50c4f0a76e28fdfee3648fbb1a0fedf3fac62af2ead2363182f0893cb1b",
+  "limits": [
+    "Periodogram hashes are retained, but the arrays are not available in this compact archive, so their GPU numerical values cannot be independently recomputed here.",
+    "The runner imports SciPy only for analysis. Tiny last-bit differences across SciPy versions can trigger its deliberate exact-byte output freeze.",
+    "Intervals are descriptive for this frozen threshold and targeted population; no tight recovery or false-positive equivalence test was passed."
+  ],
+  "native_mask_note": "GTLS core.py:890-902 deliberately masks raw_chi2 > 100*median(raw_chi2), including corresponding periods, before spectra and fast return. The runner fills masked values with NaN for finite-trial accounting. Raw residuals were not archived, so individual entries cannot be classified by their underlying fit from the scalar evidence.",
+  "numerical_sources_verified": {
+    "cuvarbase": 37,
+    "gputls": 19
+  },
+  "packages": {
+    "batman-package": "2.5.3",
+    "cupy-cuda12x": "13.6.0",
+    "cuvarbase": "1.0.0",
+    "gputls": "0.5.1",
+    "numpy": "2.2.6",
+    "pycuda": "2025.1.2",
+    "scipy": "1.15.3"
+  },
+  "physical_check": {
+    "actual_duration_over_default_central_duration_range": [
+      0.3100184623551094,
+      0.3665263070304682
+    ],
+    "all_injections_below_default_duration_minimum": true,
+    "all_injections_inside_widened_duration_window": true,
+    "caveat": "Nominal width coverage is not equality of template, score or sampled epochs.",
+    "gtls_nearest_nominal_cache_width_max_relative_error": 0.0488618708478723
+  },
+  "retained_warnings": {
+    "cases_by_record": {
+      "calibration/gtls": 0,
+      "calibration/v1_defaults": 16,
+      "calibration/v1_fine": 16,
+      "calibration/v1_wide": 16,
+      "injections/gtls": 0,
+      "injections/v1_defaults": 16,
+      "injections/v1_fine": 16,
+      "injections/v1_wide": 16,
+      "nulls/gtls": 0,
+      "nulls/v1_defaults": 16,
+      "nulls/v1_fine": 16,
+      "nulls/v1_wide": 16
+    },
+    "description": "ResourceWarning for unclosed baseline tls_fast.cu source file; first batch of each cuvarbase process. No template fallback warnings."
+  },
+  "runner_sha256": "54ff60d8e50eabd1913fc5c7bba6e560ac9b44384e82c06d7b085ffd11917b35",
+  "scalar_checks": {
+    "above_threshold_calibration_cases_per_method": 12,
+    "all_reported_counts_rates_subgroups_and_paired_cells_match": true,
+    "cases": 3072,
+    "failed_cases": 0,
+    "finite_trials_by_record": {
+      "calibration/gtls": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 2920,
+        "partial_periodograms": 54
+      },
+      "calibration/v1_defaults": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3043,
+        "partial_periodograms": 3
+      },
+      "calibration/v1_fine": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3067,
+        "partial_periodograms": 2
+      },
+      "calibration/v1_wide": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3084,
+        "partial_periodograms": 0
+      },
+      "injections/gtls": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 2840,
+        "partial_periodograms": 36
+      },
+      "injections/v1_defaults": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3083,
+        "partial_periodograms": 2
+      },
+      "injections/v1_fine": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3084,
+        "partial_periodograms": 0
+      },
+      "injections/v1_wide": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3084,
+        "partial_periodograms": 0
+      },
+      "nulls/gtls": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 2586,
+        "partial_periodograms": 48
+      },
+      "nulls/v1_defaults": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3049,
+        "partial_periodograms": 5
+      },
+      "nulls/v1_fine": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3070,
+        "partial_periodograms": 3
+      },
+      "nulls/v1_wide": {
+        "maximum_finite_trials": 3084,
+        "minimum_finite_trials": 3084,
+        "partial_periodograms": 0
+      }
+    },
+    "no_missing_or_duplicate_indices": true,
+    "records": 12,
+    "recovered_flags_recomputed_from_found_periods": true,
+    "thresholds_recomputed_from_order_statistic_zero_based": 243,
+    "valid_cases": 3072
+  },
+  "status": "pass",
+  "thresholds_sha256": "2fb5125a98a351bf2851419ae9e1f419c419c846a7b708798ae4c9b1b88f5ffe"
+}

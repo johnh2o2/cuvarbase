@@ -1,0 +1,72 @@
+{
+  "frozen_runner": {
+    "copy_is_byte_identical": true,
+    "path": "source_snapshots/high_impact.py",
+    "sha256": "54ff60d8e50eabd1913fc5c7bba6e560ac9b44384e82c06d7b085ffd11917b35"
+  },
+  "generation_environment_receipt": {
+    "copy_is_byte_identical": true,
+    "path": "generation-environment.json",
+    "recorded_after_generation": true,
+    "sha256": "8805a2f18ba07d4d9a938bf9395ef708f9ae1815189aa44a91f7e8c521755404"
+  },
+  "independent_audit": "validation.json",
+  "inference_limits": [
+    "Targeted high-impact 2\u20136 day solar-host injections; no all-population completeness claim.",
+    "All four configurations frozen before input generation; thresholds frozen before held-out searches.",
+    "Widening duration range also changes automatic phase bins; fine sampling retains the original duration prior.",
+    "No tight recovery or false-positive equivalence established.",
+    "Operational public-API elapsed time is not a new controlled timing or equal-sensitivity speed benchmark."
+  ],
+  "input_arrays": {
+    "case_arrays_independently_verified": 3072,
+    "file_and_array_hashes": "inputs/manifest.json",
+    "npz_files_independently_verified": 3,
+    "published": false,
+    "reason": "Generated light-curve arrays remain outside the release repository; all scalar evidence needed for reanalysis is retained."
+  },
+  "original_scalar_artifacts": {
+    "analysis.json": "930338b7d171ff60b4c774a3ce3de2461a235710292d21a192b5da6240d3a91c",
+    "configs/gtls.json": "50e56be95691d8be92c393e1b51c30796c4ae54a88ccd75af0564775da071b34",
+    "configs/v1_defaults.json": "fd8a7212c7b0ba87b46fcbf9408a1e3232c509b98975483a2fe4ab83a8c807b5",
+    "configs/v1_fine.json": "daf859627ce23833b93a56fa24533fd4a4083301f4550d74c558cced2db7ceeb",
+    "configs/v1_wide.json": "e27dfee090d6edf554d141c1858edb6d349972157e4b5a9dea0e3f647472d4b8",
+    "design.json": "b58495839e82939a7f1cccecf736cee8fe23316b8bbe15a4537fe3c8c65089ca",
+    "inputs/manifest.json": "4cfae50c4f0a76e28fdfee3648fbb1a0fedf3fac62af2ead2363182f0893cb1b",
+    "results/calibration/gtls.json": "69682d2e11d0c7878d01f7aec2f28e58bc1dfa06ac9be68eaa6898e991e8375d",
+    "results/calibration/v1_defaults.json": "4cabc1949e0925505df47a38451b4bb3516746882860970c46018a057cf369ce",
+    "results/calibration/v1_fine.json": "9b1408225ed73feb77ef84760a9a323eaaf6f71344859215d791d70b4c36049e",
+    "results/calibration/v1_wide.json": "4f8a5af97b453607246e70d65216d15ad6d2d641acbc6e1a3b54ed1dc2791b22",
+    "results/injections/gtls.json": "cccc7ae7cceeddb554d381bce118886e110a0de284fe548c8b87e90a81640188",
+    "results/injections/v1_defaults.json": "b9f95c5f2a06a373cb0b4121c1814935f1eb650cfda1210dfd354811c95f757b",
+    "results/injections/v1_fine.json": "2a508bd778ef8dce047113659d25e24337186f3437dfbdbfd77b50d1a543a429",
+    "results/injections/v1_wide.json": "eccad86862685fe1374442a2383958687166ea3d3cab5bd03f0288ea0f4ce2ad",
+    "results/nulls/gtls.json": "b6db9ac27c9e66c60d88a266d3b572779db23cb5455a6a0de4ca17bff2fdbd62",
+    "results/nulls/v1_defaults.json": "4dd3d11d3b80ff395a633554588b381beabea4b695f057c2cc88ce503717269f",
+    "results/nulls/v1_fine.json": "8bdf35b234e1fef683d54f9373d96a64fb5506df8bf29bc77d1eb9f49086db18",
+    "results/nulls/v1_wide.json": "3fd93b60689444f4ced4391e92e0a9d85fdbcf12178da97aaf869128d9f04de7",
+    "thresholds.json": "2fb5125a98a351bf2851419ae9e1f419c419c846a7b708798ae4c9b1b88f5ffe"
+  },
+  "packaged_at_utc": "2026-09-09T20:29:02.861775+00:00",
+  "periodograms": {
+    "full_arrays_retained": false,
+    "hashes": "spectrum_sha256 in each original scalar result row",
+    "limitation": "Scalar recovery and calibration can be reanalyzed without GPU data; individual GPU spectral values cannot be independently reconstructed from hashes.",
+    "published": false
+  },
+  "portable_cpu_replay": "reanalysis-validation.json",
+  "schema": 1,
+  "search_environment": "search-environment.json",
+  "source_pins": {
+    "cuvarbase_commit": "11317fb0ff1b68af05ae3f67de5f298c9a90e46b",
+    "gputls_archive_relative_path": "../../tls_profile_2026-09-08/sources/gtls-head.tar",
+    "gputls_archive_sha256": "236ef06e60dac3032f8e939b353f545ab616b45922f7d376adce72cb3c07ae7a",
+    "gputls_commit": "74e449c325792a763dde4fbffab98039c5e8c111",
+    "numerical_source_file_counts": {
+      "cuvarbase": 37,
+      "gputls": 19
+    },
+    "verification": "Every expected numerical file independently checked against the cuvarbase Git commit or pinned GTLS source archive and matched to all installed-source maps in original result records."
+  },
+  "study": "Frozen high-impact TESS-cadence TLS recovery pilot, 2026-09-09"
+}

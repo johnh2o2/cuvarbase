@@ -1,0 +1,408 @@
+{
+  "scope": "Same binned TLS search and accuracy settings; optimization replaces empty-bin visits, not the scientific model or search grid.",
+  "comparison": "Frozen baseline CUDA kernel versus conservative sparse traversal with repeated float32 coordinate additions, running the same host implementation.",
+  "gpu": {
+    "gpu": "NVIDIA A40",
+    "compute_capability": [
+      8,
+      6
+    ],
+    "gpu_memory_bytes": 47708110848,
+    "cuda_driver": 12080,
+    "platform": "Linux-6.8.0-52-generic-x86_64-with-glibc2.35",
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]"
+  },
+  "cpu_quota": {
+    "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "765000",
+    "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000"
+  },
+  "n_unique_sources": 384,
+  "source_reuse": "Timing sources are subsets of the 128-source parity cohorts; repeated executions are not additional independent lightcurves.",
+  "settings": {
+    "fine": {
+      "nbins": 8192,
+      "t0_oversample": 16.0,
+      "n_durations": 32
+    },
+    "original_benchmark": {
+      "nbins": "automatic",
+      "t0_oversample": 4.0,
+      "n_durations": 16
+    },
+    "shared": {
+      "refine_top_k": 50,
+      "refine_oversample": 33.0
+    }
+  },
+  "tests_passed": 169,
+  "timings": [
+    {
+      "profile": "tess_200s",
+      "setting": "fine",
+      "n_sources": 16,
+      "n_periods": 3084,
+      "repetitions": 5,
+      "original_seconds_per_source": 0.03824413486290723,
+      "optimized_seconds_per_source": 0.03803255577804521,
+      "speedup": 1.0055631045701157,
+      "paired_speedup_min": 1.0008954770138612,
+      "paired_speedup_max": 1.008544058789043,
+      "original_call_seconds_min": 0.609177190810442,
+      "original_call_seconds_max": 0.6123088467866182,
+      "optimized_call_seconds_min": 0.6071215644478798,
+      "optimized_call_seconds_max": 0.6096480088308454,
+      "comparison": {
+        "source_comparisons": 80,
+        "period_source_comparisons": 246720,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 1.52587890625e-05,
+        "max_relative_score_difference": 5.668718396304449e-07,
+        "max_absolute_sde_difference": 6.837725052832866e-09,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 16,
+        "period_source_comparisons": 49344,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 5.7220458984375e-06,
+        "max_relative_score_difference": 4.385900470322037e-07,
+        "max_absolute_sde_difference": 6.614962799744717e-09,
+        "max_absolute_snr_difference": 0.0
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "setting": "original",
+      "n_sources": 16,
+      "n_periods": 3084,
+      "repetitions": 5,
+      "original_seconds_per_source": 0.0016212266054935753,
+      "optimized_seconds_per_source": 0.0016037141904234886,
+      "speedup": 1.010919910277443,
+      "paired_speedup_min": 1.0023160255859738,
+      "paired_speedup_max": 1.1869402642772726,
+      "original_call_seconds_min": 0.0252063050866127,
+      "original_call_seconds_max": 0.03125754464417696,
+      "optimized_call_seconds_min": 0.025055287405848503,
+      "optimized_call_seconds_max": 0.026334555819630623,
+      "comparison": {
+        "source_comparisons": 80,
+        "period_source_comparisons": 246720,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 5.340576171875e-05,
+        "max_relative_score_difference": 1.1390020498930528e-06,
+        "max_absolute_sde_difference": 3.2551845157158255e-06,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 16,
+        "period_source_comparisons": 49344,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 4.57763671875e-05,
+        "max_relative_score_difference": 8.940696716308594e-07,
+        "max_absolute_sde_difference": 2.1168181936204178e-06,
+        "max_absolute_snr_difference": 0.0
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "setting": "fine",
+      "n_sources": 16,
+      "n_periods": 99043,
+      "repetitions": 5,
+      "original_seconds_per_source": 1.2031283260439523,
+      "optimized_seconds_per_source": 1.20436177944066,
+      "speedup": 0.9989758447853762,
+      "paired_speedup_min": 0.9985251762739443,
+      "paired_speedup_max": 0.9995020372087361,
+      "original_call_seconds_min": 19.237712393514812,
+      "original_call_seconds_max": 19.262410840950906,
+      "optimized_call_seconds_min": 19.251175886020064,
+      "optimized_call_seconds_max": 19.273617112077773,
+      "comparison": {
+        "source_comparisons": 80,
+        "period_source_comparisons": 7923440,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 2.288818359375e-05,
+        "max_relative_score_difference": 7.857486411704983e-07,
+        "max_absolute_sde_difference": 1.1396551258258114e-08,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 16,
+        "period_source_comparisons": 1584688,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 2.288818359375e-05,
+        "max_relative_score_difference": 5.896480909435478e-07,
+        "max_absolute_sde_difference": 8.101027404450178e-09,
+        "max_absolute_snr_difference": 0.0
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "setting": "original",
+      "n_sources": 16,
+      "n_periods": 99043,
+      "repetitions": 5,
+      "original_seconds_per_source": 0.02503589674597606,
+      "optimized_seconds_per_source": 0.02559400600148365,
+      "speedup": 0.9781937514793411,
+      "paired_speedup_min": 0.95826902971455,
+      "paired_speedup_max": 1.024162535245171,
+      "original_call_seconds_min": 0.39798656664788723,
+      "original_call_seconds_max": 0.4125226717442274,
+      "optimized_call_seconds_min": 0.3898858856409788,
+      "optimized_call_seconds_max": 0.4211547411978245,
+      "comparison": {
+        "source_comparisons": 80,
+        "period_source_comparisons": 7923440,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 4,
+        "coarse_duration_changes": 4,
+        "max_absolute_score_difference": 4.57763671875e-05,
+        "max_relative_score_difference": 9.99515805985986e-07,
+        "max_absolute_sde_difference": 9.567103607110994e-06,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 16,
+        "period_source_comparisons": 1584688,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 4.57763671875e-05,
+        "max_relative_score_difference": 1.008381160011435e-06,
+        "max_absolute_sde_difference": 9.55664374657772e-06,
+        "max_absolute_snr_difference": 0.0
+      }
+    },
+    {
+      "profile": "ztf",
+      "setting": "fine",
+      "n_sources": 16,
+      "n_periods": 312064,
+      "repetitions": 5,
+      "original_seconds_per_source": 3.7599831873667426,
+      "optimized_seconds_per_source": 2.8997908486053348,
+      "speedup": 1.2966394418325449,
+      "paired_speedup_min": 1.2925274637907582,
+      "paired_speedup_max": 1.297277525727743,
+      "original_call_seconds_min": 59.96622773259878,
+      "original_call_seconds_max": 60.245761435478926,
+      "optimized_call_seconds_min": 46.37790650129318,
+      "optimized_call_seconds_max": 46.49579877778888,
+      "comparison": {
+        "source_comparisons": 80,
+        "period_source_comparisons": 24965120,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 1.1444091796875e-05,
+        "max_relative_score_difference": 6.589468119000083e-07,
+        "max_absolute_sde_difference": 8.65192362198286e-09,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 16,
+        "period_source_comparisons": 4993024,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 1.1444091796875e-05,
+        "max_relative_score_difference": 5.090443953906641e-07,
+        "max_absolute_sde_difference": 3.089112965426466e-09,
+        "max_absolute_snr_difference": 0.0
+      }
+    },
+    {
+      "profile": "ztf",
+      "setting": "original",
+      "n_sources": 16,
+      "n_periods": 312064,
+      "repetitions": 5,
+      "original_seconds_per_source": 0.06126131280325353,
+      "optimized_seconds_per_source": 0.060356761037837714,
+      "speedup": 1.0149867512746211,
+      "paired_speedup_min": 0.9247923332899837,
+      "paired_speedup_max": 1.0546227512768618,
+      "original_call_seconds_min": 0.9653737368062139,
+      "original_call_seconds_max": 1.1036221673712134,
+      "optimized_call_seconds_min": 0.9566284101456404,
+      "optimized_call_seconds_max": 1.08637111261487,
+      "comparison": {
+        "source_comparisons": 80,
+        "period_source_comparisons": 24965120,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 7,
+        "coarse_duration_changes": 7,
+        "max_absolute_score_difference": 6.103515625e-05,
+        "max_relative_score_difference": 1.0100775436530262e-06,
+        "max_absolute_sde_difference": 1.8720109565606435e-05,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 16,
+        "period_source_comparisons": 4993024,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 1,
+        "coarse_duration_changes": 1,
+        "max_absolute_score_difference": 4.57763671875e-05,
+        "max_relative_score_difference": 8.197204241028544e-07,
+        "max_absolute_sde_difference": 1.4064849501949084e-05,
+        "max_absolute_snr_difference": 0.0
+      }
+    }
+  ],
+  "parity_cohorts": [
+    {
+      "profile": "tess_200s",
+      "n_sources": 128,
+      "n_periods": 3084,
+      "repetitions": 2,
+      "comparison": {
+        "source_comparisons": 256,
+        "period_source_comparisons": 789504,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 1.9073486328125e-05,
+        "max_relative_score_difference": 5.345191819558083e-07,
+        "max_absolute_sde_difference": 4.495875494114898e-08,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 128,
+        "period_source_comparisons": 394752,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 1.9073486328125e-05,
+        "max_relative_score_difference": 5.919085509180946e-07,
+        "max_absolute_sde_difference": 2.2021149348461222e-08,
+        "max_absolute_snr_difference": 0.0
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "n_sources": 128,
+      "n_periods": 4096,
+      "repetitions": 2,
+      "comparison": {
+        "source_comparisons": 256,
+        "period_source_comparisons": 1048576,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 1.52587890625e-05,
+        "max_relative_score_difference": 6.744626682383895e-07,
+        "max_absolute_sde_difference": 2.749799321577484e-08,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 128,
+        "period_source_comparisons": 524288,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 1.52587890625e-05,
+        "max_relative_score_difference": 7.037196380961825e-07,
+        "max_absolute_sde_difference": 3.112848823150216e-08,
+        "max_absolute_snr_difference": 0.0
+      }
+    },
+    {
+      "profile": "ztf",
+      "n_sources": 128,
+      "n_periods": 4096,
+      "repetitions": 2,
+      "comparison": {
+        "source_comparisons": 256,
+        "period_source_comparisons": 1048576,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 5.7220458984375e-06,
+        "max_relative_score_difference": 4.051832253739512e-07,
+        "max_absolute_sde_difference": 1.4728833264143759e-08,
+        "max_absolute_snr_difference": 0.0
+      },
+      "reference_repeated_run": {
+        "source_comparisons": 128,
+        "period_source_comparisons": 524288,
+        "primary_period_changes": 0,
+        "valid_mask_changes": 0,
+        "coarse_epoch_changes": 0,
+        "coarse_duration_changes": 0,
+        "max_absolute_score_difference": 6.67572021484375e-06,
+        "max_relative_score_difference": 4.361742755503569e-07,
+        "max_absolute_sde_difference": 1.1442182312748628e-08,
+        "max_absolute_snr_difference": 0.0
+      }
+    }
+  ],
+  "relative_score_difference_definition": "abs(new_delta_chi2 - original_delta_chi2) / max(abs(original_delta_chi2), 1)",
+  "all_comparisons": {
+    "source_comparisons": 1248,
+    "period_source_comparisons": 69157216,
+    "primary_period_changes": 0,
+    "valid_mask_changes": 0,
+    "coarse_epoch_changes": 11,
+    "coarse_duration_changes": 11,
+    "max_absolute_score_difference": 6.103515625e-05,
+    "max_relative_score_difference": 1.1390020498930528e-06,
+    "max_absolute_sde_difference": 1.8720109565606435e-05,
+    "max_absolute_snr_difference": 0.0
+  },
+  "reference_repeated_runs": {
+    "source_comparisons": 480,
+    "period_source_comparisons": 14697440,
+    "primary_period_changes": 0,
+    "valid_mask_changes": 0,
+    "coarse_epoch_changes": 1,
+    "coarse_duration_changes": 1,
+    "max_absolute_score_difference": 4.57763671875e-05,
+    "max_relative_score_difference": 1.008381160011435e-06,
+    "max_absolute_sde_difference": 1.4064849501949084e-05,
+    "max_absolute_snr_difference": 0.0
+  },
+  "baseline_commit": "11317fb0ff1b68af05ae3f67de5f298c9a90e46b",
+  "baseline_kernel_sha256": "ee8c4c84b35dc262b9e45d9048d04b67b5f04f629dfe97deb9786cebd73e7c16",
+  "optimized_kernel_sha256": "c52ea297efc597ad25899be33a975d5aebd1f15df9be864e538267b0c956e3d0",
+  "benchmark_runner_sha256": "3ac97df5b0267d76d552482a83773d7d93ca3434b78c95a62ab9a13cb035b91b",
+  "assessment": {
+    "performance": "The fine ZTF batch is about 1.30x faster (23% less elapsed time). Fine TESS cases are effectively unchanged. Original-setting differences are small relative to observed call-to-call timing variation.",
+    "coarse_parameters": "Eleven paired coarse epoch/duration changes occur only in original-setting cases where sparse traversal is disabled. One baseline-versus-baseline coarse choice also changes. Fine ZTF has no coarse changes.",
+    "numeric_scale": "All paired score differences are of the same order as repeated-run differences from the unmodified baseline; primary periods, valid masks, and reported SNR values match throughout.",
+    "coarse_parameter_limit": "The probe records changed-trial counts, not trial identities, so exact tie identity is not independently asserted."
+  },
+  "limitation": "This validates numerical preservation and runtime on earlier benchmark inputs; it is not a new injection-recovery or false-positive calibration study."
+}

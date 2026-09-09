@@ -1,0 +1,318 @@
+{
+  "scope": "Expected white-noise SNR at the true period; not detection completeness, native SDE, or GTLS.",
+  "source_commit": "11317fb0ff1b68af05ae3f67de5f298c9a90e46b",
+  "diagnostic_sha256": "cbeaf0ed786f888f5b5f3f048988962cb0f3b56ca21c5f1538fc9435d255201a",
+  "versions": {
+    "python": "3.9.6 (default, Dec  2 2025, 07:27:58) \n[Clang 17.0.0 (clang-1700.6.3.2)]",
+    "numpy": "1.26.4",
+    "scipy": "1.12.0",
+    "batman": "2.5.1"
+  },
+  "arguments": {
+    "source_root": ".",
+    "source_revision": "11317fb0ff1b68af05ae3f67de5f298c9a90e46b",
+    "out": "<output-directory>",
+    "cadences": "benchmarks/results/tls_sensitivity_2026-09-09/cadences",
+    "offsets": 32,
+    "samples_per_transit": 4096,
+    "exposure_nodes": 64,
+    "observed_epochs": 8
+  },
+  "limb_darkening": [
+    0.4804,
+    0.1867
+  ],
+  "configs": [
+    [
+      "api_default",
+      3.0,
+      15,
+      null
+    ],
+    [
+      "benchmark_original",
+      4.0,
+      16,
+      null
+    ],
+    [
+      "benchmark_fine",
+      16.0,
+      32,
+      8192
+    ]
+  ],
+  "regimes": [
+    {
+      "name": "sun_jupiter_5d",
+      "period": 5.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.1,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_subneptune_10d",
+      "period": 10.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.025,
+      "impact": 0.5,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_earth_10d",
+      "period": 10.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_earth_10d_b08",
+      "period": 10.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 0.8,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_earth_10d_b095",
+      "period": 10.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 0.95,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_earth_10d_grazing",
+      "period": 10.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 1.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_jupiter_5d_grazing",
+      "period": 5.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.1,
+      "impact": 1.05,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_earth_365d",
+      "period": 365.25,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_earth_365d_b08",
+      "period": 365.25,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 0.8,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_earth_1000d",
+      "period": 1000.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "sun_earth_100d_e08",
+      "period": 100.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 0.5,
+      "eccentricity": 0.8,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "mdwarf02_earth_10d",
+      "period": 10.0,
+      "radius": 0.2,
+      "mass": 0.2,
+      "rp": 0.045799999999999993,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "mdwarf01_earth_30d",
+      "period": 30.0,
+      "radius": 0.1,
+      "mass": 0.1,
+      "rp": 0.09159999999999999,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "mdwarf01_earth_100d",
+      "period": 100.0,
+      "radius": 0.1,
+      "mass": 0.1,
+      "rp": 0.09159999999999999,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "mdwarf01_earth_365d",
+      "period": 365.25,
+      "radius": 0.1,
+      "mass": 0.1,
+      "rp": 0.09159999999999999,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "mdwarf01_earth_365d_b09",
+      "period": 365.25,
+      "radius": 0.1,
+      "mass": 0.1,
+      "rp": 0.09159999999999999,
+      "impact": 0.9,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 200.0
+    },
+    {
+      "name": "white_dwarf_earth_1d",
+      "period": 1.0,
+      "radius": 0.012,
+      "mass": 0.6,
+      "rp": 0.7633333333333333,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 30.0
+    },
+    {
+      "name": "white_dwarf_earth_10d",
+      "period": 10.0,
+      "radius": 0.012,
+      "mass": 0.6,
+      "rp": 0.7633333333333333,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 30.0
+    },
+    {
+      "name": "sun_earth_10d_30min",
+      "period": 10.0,
+      "radius": 1.0,
+      "mass": 1.0,
+      "rp": 0.00916,
+      "impact": 0.0,
+      "eccentricity": 0.0,
+      "omega": 90.0,
+      "exposure_seconds": 1800.0
+    }
+  ],
+  "source_sha256": {
+    "source_snapshots/tls_models.py": "918facb338f2daa3fd075254c81dfd6a891b95b8be22ec19ed71feca36bc1d09",
+    "source_snapshots/tls_grids.py": "2022262fad42ef693384393ad1cc0cde51d680604e62bd1ce8ad7173ec9cd875",
+    "source_snapshots/tls_fast.cu": "ee8c4c84b35dc262b9e45d9048d04b67b5f04f629dfe97deb9786cebd73e7c16",
+    "../../tls_sensitivity_2026-09-09/cadences/tess_200s.npz": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+    "../../tls_sensitivity_2026-09-09/cadences/tess_gap.npz": "2b9746cf9a0f961967208843ecf6b5de949941bfd1f4e9861cf6dce0d0012634",
+    "../../tls_sensitivity_2026-09-09/cadences/ztf.npz": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+    "source_snapshots/diagnose.py": "cbeaf0ed786f888f5b5f3f048988962cb0f3b56ca21c5f1538fc9435d255201a",
+    "source_snapshots/test_diagnose.py": "0bf72d44ffad7df92b344cff6303eda25145e08dd2844487cf3914154befe57a"
+  },
+  "output_sha256": {
+    "cases.csv": "a0ca7c5b0345396544aac2f75792bdf144d593b2c4404cd5b21f036bbd5b7db1",
+    "summary.csv": "e1e7cde675d5af81ae271ea31d81c2fa4605e920ecdd9a4ea8bb675048c9684f",
+    "convergence.csv": "302eea156c51471fa80bccbe161f62efd0947a3b3b81d2f86c133392c7d9fdfe"
+  },
+  "rows": 2014,
+  "no_sampled_signal_rows": 13,
+  "publication_note": "Numerical outputs are unchanged. Filesystem paths were normalized for portability; convergence.csv retains only the fields used in the numerical-resolution check. Historical source snapshots are immutable benchmark evidence.",
+  "path_conventions": {
+    "source_sha256": "Paths relative to this manifest.",
+    "output_sha256": "Paths relative to this manifest.",
+    "arguments": "Arguments from the repository root; choose the output directory."
+  },
+  "diagnostic_path": "source_snapshots/diagnose.py",
+  "maintained_diagnostic": "../../../tls_accuracy/diagnose.py",
+  "convergence_run": {
+    "source_commit": "11317fb0ff1b68af05ae3f67de5f298c9a90e46b",
+    "diagnostic_sha256": "cbeaf0ed786f888f5b5f3f048988962cb0f3b56ca21c5f1538fc9435d255201a",
+    "arguments": {
+      "source_root": ".",
+      "source_revision": "11317fb0ff1b68af05ae3f67de5f298c9a90e46b",
+      "out": "<convergence-output-directory>",
+      "cadences": null,
+      "offsets": 32,
+      "samples_per_transit": 8192,
+      "exposure_nodes": 128,
+      "observed_epochs": 8
+    },
+    "source_versions": {
+      "python": "3.9.6 (default, Dec  2 2025, 07:27:58) \n[Clang 17.0.0 (clang-1700.6.3.2)]",
+      "numpy": "1.26.4",
+      "scipy": "1.12.0",
+      "batman": "2.5.1"
+    },
+    "retained_fields": [
+      "regime",
+      "config",
+      "offset_index",
+      "bin_phase_offset",
+      "epoch_phase",
+      "template_snr_over_oracle",
+      "box_snr_over_oracle",
+      "physical_projection_retention",
+      "physical_binned_over_unbinned",
+      "own_template_binned_over_unbinned",
+      "epoch_grid_only_retention",
+      "duration_grid_only_retention",
+      "coarse_grid_native_selected_over_oracle"
+    ],
+    "retained_rows": 1824,
+    "original_cases_sha256": "3e09d91cf358bf88fac541c6e4da43d4c80d3551cf75a0b976c36b0b52d6e4ed"
+  }
+}

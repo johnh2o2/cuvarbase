@@ -27,7 +27,8 @@
  *    (tls_models.generate_template_integrals). The bin-averaged
  *    template over a bin's transit-coordinate span [c0, c1] is
  *    (S1(c1)-S1(c0))/(c1-c0): area sampling rather than point
- *    sampling, so coarse bins (few bins per duration) remain accurate.
+ *    sampling. This reduces quadrature error; phase compression still
+ *    loses within-bin information and can reduce sensitivity.
  *
  * 4. Batch-native. Grid is (nperiods, nlc); per-lightcurve data are
  *    concatenated with offset/length arrays. A whole survey chunk is a
@@ -83,6 +84,24 @@
 #endif
 
 #define WARP_SIZE 32
+
+/* Keep the original dense loop available for numerical/performance
+ * comparisons. This changes only how zero-weight bins are visited,
+ * never the template, histogram resolution, or trial grid. */
+#ifndef TLS_SKIP_EMPTY_BINS
+#define TLS_SKIP_EMPTY_BINS 1
+#endif
+
+/* The reduction workspace is unused until the trial scan finishes.
+ * Reuse it for an occupancy bitmap, next-nonempty-word links, and the
+ * population count. Small block-size overrides that cannot hold this
+ * workspace simply retain the dense loop. */
+#if TLS_SKIP_EMPTY_BINS && NBINS >= 1024 && \
+        (2 * NBINS / WARP_SIZE + 1 <= 4 * BLOCK_SIZE)
+#define TLS_SPARSE_SCAN_AVAILABLE 1
+#else
+#define TLS_SPARSE_SCAN_AVAILABLE 0
+#endif
 
 __device__ inline float mod1f(float x) {
     return x - floorf(x);
@@ -239,6 +258,81 @@ extern "C" __global__ void tls_fast_search_kernel(
     }
     __syncthreads();
 
+#if TLS_SPARSE_SCAN_AVAILABLE
+    /* At fine resolutions sparse lightcurves leave most phase bins
+     * empty. Build a forward link across each empty run, using the
+     * empty B entries themselves; all nonzero A/B entries retain
+     * their original values. This has no extra shared-memory cost.
+     * A negative B value is metadata, never a statistical weight.
+     *
+     * Restrict this path to lightcurves with fewer than NBINS/4
+     * observations, guaranteeing that at least 75% of bins are empty.
+     * At intermediate occupancy, preserving the dense coordinate
+     * arithmetic across every gap can cost more than the saved
+     * integral lookups. Dense data avoid the preparation altogether.
+     */
+    bool sparse_scan = false;
+    if (nd < NBINS / 4) {
+        const int n_words = NBINS / WARP_SIZE;
+        unsigned int* occupied = (unsigned int*)red_score;
+        unsigned int* next_word = &occupied[n_words + 1];
+        const int lane = threadIdx.x & (WARP_SIZE - 1);
+        for (int word = threadIdx.x / WARP_SIZE; word < n_words;
+                word += blockDim.x / WARP_SIZE) {
+            const int k = word * WARP_SIZE + lane;
+            const unsigned int mask = __ballot_sync(
+                0xffffffff, A[k] != 0.0f || B[k] != 0.0f);
+            if (lane == 0) occupied[word] = mask;
+        }
+        __syncthreads();
+        if (threadIdx.x == 0) {
+            unsigned int count = 0;
+            for (int word = 0; word < n_words; word++)
+                count += __popc(occupied[word]);
+            occupied[n_words] = count;
+        }
+        __syncthreads();
+        const unsigned int count = occupied[n_words];
+        sparse_scan = count > 0 && count < NBINS / 2;
+        /* All threads must read the decision before any thread can
+         * reuse this workspace for the final block reduction. */
+        __syncthreads();
+        if (sparse_scan) {
+            /* Search empty runs at the word level once, not once
+             * for every bin in the run. This also bounds setup work
+             * for pathological lightcurves concentrated in a few
+             * phase bins. */
+            for (int word = threadIdx.x; word < n_words;
+                    word += blockDim.x) {
+                int next = word;
+                do {
+                    next = (next + 1) & (n_words - 1);
+                } while (!occupied[next]);
+                next_word[word] = next;
+            }
+            __syncthreads();
+            for (int k = threadIdx.x; k < NBINS; k += blockDim.x) {
+                if (A[k] == 0.0f && B[k] == 0.0f) {
+                    const int lane_k = k & (WARP_SIZE - 1);
+                    int word = k / WARP_SIZE;
+                    /* Strictly later bits; the expression is also
+                     * well defined for lane_k == 31 (result zero). */
+                    unsigned int mask = occupied[word]
+                        & (0xfffffffeu << lane_k);
+                    if (!mask) {
+                        word = next_word[word];
+                        mask = occupied[word];
+                    }
+                    const int next = word * WARP_SIZE + __ffs(mask) - 1;
+                    const int jump = (next - k) & (NBINS - 1);
+                    B[k] = -(float)jump;
+                }
+            }
+            __syncthreads();
+        }
+    }
+#endif
+
     const int total_trials = dur_cum[n_durations];
 
     /* --- Scan all (duration, t0) trials, flattened across threads --- */
@@ -273,18 +367,55 @@ extern "C" __global__ void tls_fast_search_kernel(
         float num = 0.0f;
         float den = 0.0f;
         float c0 = ((float)k0 * invNB - t0) * inv_hd;
-        float s1_prev = lookup_integral(S1, c0);
-        float s2_prev = lookup_integral(S2, c0);
-        for (int kk = k0; kk <= k1; kk++) {
-            int k = kk & (NBINS - 1);
-            float c1 = c0 + dc;
-            float s1_next = lookup_integral(S1, c1);
-            float s2_next = lookup_integral(S2, c1);
-            num += A[k] * (s1_next - s1_prev);
-            den += B[k] * (s2_next - s2_prev);
-            s1_prev = s1_next;
-            s2_prev = s2_next;
-            c0 = c1;
+#if TLS_SPARSE_SCAN_AVAILABLE
+        if (sparse_scan) {
+            float s1_prev = lookup_integral(S1, c0);
+            float s2_prev = lookup_integral(S2, c0);
+            int kk = k0;
+            while (kk <= k1) {
+                int k = kk & (NBINS - 1);
+                if (B[k] < 0.0f) {
+                    const int jump = (int)-B[k];
+                    kk += jump;
+                    if (kk > k1) break;
+                    /* Preserve the dense loop's float32 coordinates.
+                     * Replacing these additions with dc*jump changes
+                     * rounding; subtracting nearly equal cumulative
+                     * template integrals at a transit edge can amplify
+                     * that tiny shift into a material score change.
+                     * Empty bins still need no table or weight loads. */
+                    for (int skipped = 0; skipped < jump; skipped++)
+                        c0 += dc;
+                    k = kk & (NBINS - 1);
+                    s1_prev = lookup_integral(S1, c0);
+                    s2_prev = lookup_integral(S2, c0);
+                }
+                const float c1 = c0 + dc;
+                const float s1_next = lookup_integral(S1, c1);
+                const float s2_next = lookup_integral(S2, c1);
+                num += A[k] * (s1_next - s1_prev);
+                den += B[k] * (s2_next - s2_prev);
+                s1_prev = s1_next;
+                s2_prev = s2_next;
+                c0 = c1;
+                kk++;
+            }
+        } else
+#endif
+        {
+            float s1_prev = lookup_integral(S1, c0);
+            float s2_prev = lookup_integral(S2, c0);
+            for (int kk = k0; kk <= k1; kk++) {
+                int k = kk & (NBINS - 1);
+                float c1 = c0 + dc;
+                float s1_next = lookup_integral(S1, c1);
+                float s2_next = lookup_integral(S2, c1);
+                num += A[k] * (s1_next - s1_prev);
+                den += B[k] * (s2_next - s2_prev);
+                s1_prev = s1_next;
+                s2_prev = s2_next;
+                c0 = c1;
+            }
         }
         /* bin-average scale: 1/(c1-c0) = hd*NBINS applied once */
         const float scale = hd * (float)NBINS;
@@ -370,7 +501,7 @@ extern "C" __global__ void tls_fast_search_kernel(
 /*
  * Exact refinement kernel.
  *
- * The binned scan quantizes t0 to the bin grid and smears each point's
+ * The binned scan uses a coarse epoch grid and smears each point's
  * template weight over its bin. This kernel re-evaluates the best
  * candidate periods per lightcurve EXACTLY (per-point template lookup,
  * no binning) on a fine local (duration, t0) grid centered on the

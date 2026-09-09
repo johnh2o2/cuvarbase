@@ -1,0 +1,188 @@
+{
+  "all_recorded_grids_reconstructed": true,
+  "numpy": "2.2.6",
+  "platform": "Linux-6.8.0-52-generic-x86_64-with-glibc2.35",
+  "note": "CPU-only reconstruction after timing in the recorded benchmark environment.",
+  "records": {
+    "tess_200s_fine": {
+      "n_periods": 3084,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "cbd8891b7c70e41419f11d2155fcc9928f07d0a64f7344774a3536378ef0e7a7",
+        "qmin": "bd9035d0be13ac347ef06ba6016d50819c9b94632a37a2f088aed82ca08f9f26",
+        "qmax": "9d8f6df049f92016a7dbfe8a7961289c8f645806aac860841f37d4ab9afbdd2c",
+        "selected_indices": "5488c9accb879f68cc53c9e7b05e170203bd8ad3413edf6e1036c5c0d1e33b59"
+      },
+      "float32_sha256": {
+        "periods": "cc3e2f3b826a062a98d64085615f028a8d7b6ffe69c9468b4bc1576107b0807b",
+        "qmin": "b192b9287ad1e87eb2a96e9fb1814d9d2d9d11e5abae54e81eae86faf75450c0",
+        "qmax": "cc8857b65b72fea9d69c3757309c00ca45e52d65589b76f2311f444accca2d37"
+      }
+    },
+    "tess_200s_original": {
+      "n_periods": 3084,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "cbd8891b7c70e41419f11d2155fcc9928f07d0a64f7344774a3536378ef0e7a7",
+        "qmin": "bd9035d0be13ac347ef06ba6016d50819c9b94632a37a2f088aed82ca08f9f26",
+        "qmax": "9d8f6df049f92016a7dbfe8a7961289c8f645806aac860841f37d4ab9afbdd2c",
+        "selected_indices": "5488c9accb879f68cc53c9e7b05e170203bd8ad3413edf6e1036c5c0d1e33b59"
+      },
+      "float32_sha256": {
+        "periods": "cc3e2f3b826a062a98d64085615f028a8d7b6ffe69c9468b4bc1576107b0807b",
+        "qmin": "b192b9287ad1e87eb2a96e9fb1814d9d2d9d11e5abae54e81eae86faf75450c0",
+        "qmax": "cc8857b65b72fea9d69c3757309c00ca45e52d65589b76f2311f444accca2d37"
+      }
+    },
+    "tess_200s_parity": {
+      "n_periods": 3084,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "cbd8891b7c70e41419f11d2155fcc9928f07d0a64f7344774a3536378ef0e7a7",
+        "qmin": "bd9035d0be13ac347ef06ba6016d50819c9b94632a37a2f088aed82ca08f9f26",
+        "qmax": "9d8f6df049f92016a7dbfe8a7961289c8f645806aac860841f37d4ab9afbdd2c",
+        "selected_indices": "5488c9accb879f68cc53c9e7b05e170203bd8ad3413edf6e1036c5c0d1e33b59"
+      },
+      "float32_sha256": {
+        "periods": "cc3e2f3b826a062a98d64085615f028a8d7b6ffe69c9468b4bc1576107b0807b",
+        "qmin": "b192b9287ad1e87eb2a96e9fb1814d9d2d9d11e5abae54e81eae86faf75450c0",
+        "qmax": "cc8857b65b72fea9d69c3757309c00ca45e52d65589b76f2311f444accca2d37"
+      }
+    },
+    "tess_gap_fine": {
+      "n_periods": 99043,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "40b122fb9dbb4e8c75f4ae21f0bc09277ad6be4cabe09b3947fea08d8b0e0f70",
+        "qmin": "78a1d4b502136889339c34ce01a4f236079516178a42ec90dfa5f98f5ff9cadf",
+        "qmax": "5193f98f5886e4054ee0059930235191d1b188e99da3dfdc10065cb059f8fdb1",
+        "selected_indices": "4193ad8b38c0aedc5a50cd46fd75e2c1b725e6f318a9147c1888c35e044483e6"
+      },
+      "float32_sha256": {
+        "periods": "61c2c79b23110bd58ab0ad81f258cf43037eca4539eeeb0196a320f07f6d865f",
+        "qmin": "1ed1ab7d1920d939046babf1f25743d15332d094b3f375f523b644472b080690",
+        "qmax": "b6f3a6f65cad63276722687aad093f64dc1cc6da1046270a9ace687fe19d2d41"
+      }
+    },
+    "tess_gap_original": {
+      "n_periods": 99043,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "40b122fb9dbb4e8c75f4ae21f0bc09277ad6be4cabe09b3947fea08d8b0e0f70",
+        "qmin": "78a1d4b502136889339c34ce01a4f236079516178a42ec90dfa5f98f5ff9cadf",
+        "qmax": "5193f98f5886e4054ee0059930235191d1b188e99da3dfdc10065cb059f8fdb1",
+        "selected_indices": "4193ad8b38c0aedc5a50cd46fd75e2c1b725e6f318a9147c1888c35e044483e6"
+      },
+      "float32_sha256": {
+        "periods": "61c2c79b23110bd58ab0ad81f258cf43037eca4539eeeb0196a320f07f6d865f",
+        "qmin": "1ed1ab7d1920d939046babf1f25743d15332d094b3f375f523b644472b080690",
+        "qmax": "b6f3a6f65cad63276722687aad093f64dc1cc6da1046270a9ace687fe19d2d41"
+      }
+    },
+    "tess_gap_parity": {
+      "n_periods": 4096,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "f9ef271ad617b167cb6d736d1849c330604f1c57a25d1c9083374549c9ee385a",
+        "qmin": "254a77fd18d4cf7ae1924391a3a267a0e582e40062469a98c767543fa1c5a430",
+        "qmax": "002cc2f74c05a86fadf2e5849c6d7b0733b5c4cf1df559d7a1d1ecafcc882d6c",
+        "selected_indices": "3cee0aa64673e335c9dd7765d57dbdac2cea64ddbb668cb2632d9140490257c7"
+      },
+      "float32_sha256": {
+        "periods": "438a24f2cbb61b0004cb08c4c821a5eaa4ed2d1ec6095f047d3e9df9fd7fe6e7",
+        "qmin": "e11947a46d757179f69a8a8ae19ed37ebe52616db65d1adfc300e924a2d28ae1",
+        "qmax": "4465929f2517a7f1d39e59b0ce5b70e8eea460b7f36a03d0a918781d36e8d3ce"
+      }
+    },
+    "ztf_fine": {
+      "n_periods": 312064,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "2c0153c61a7599af4441c1c66461fec4e3d1b065cf23af0d6112db3aca47491d",
+        "qmin": "4480443889d057ee463dc98d6239cd3ffbcd208f397c32b5ed5032b674a41972",
+        "qmax": "9e820594bd0ee2399d89a235a8d3cae8a05073ae896437301cf36e258e805522",
+        "selected_indices": "e30f0a4e2e87e83ca61660d8dcfad3a46b0f99edbca14a369c0a557631584127"
+      },
+      "float32_sha256": {
+        "periods": "6c8239c197baff5eddde31c6bf3276b126fede5a01e908ed14d9e2845a0e31f4",
+        "qmin": "a0eb1e2c1d1665978afddbf0580a4942d4ca0497a5ba0b9f5610e57e4954f7cd",
+        "qmax": "1f810cf23f1aa49128fe48d9917621d1e3bf8abcc14018a4dcaff47f366dea21"
+      }
+    },
+    "ztf_original": {
+      "n_periods": 312064,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "2c0153c61a7599af4441c1c66461fec4e3d1b065cf23af0d6112db3aca47491d",
+        "qmin": "4480443889d057ee463dc98d6239cd3ffbcd208f397c32b5ed5032b674a41972",
+        "qmax": "9e820594bd0ee2399d89a235a8d3cae8a05073ae896437301cf36e258e805522",
+        "selected_indices": "e30f0a4e2e87e83ca61660d8dcfad3a46b0f99edbca14a369c0a557631584127"
+      },
+      "float32_sha256": {
+        "periods": "6c8239c197baff5eddde31c6bf3276b126fede5a01e908ed14d9e2845a0e31f4",
+        "qmin": "a0eb1e2c1d1665978afddbf0580a4942d4ca0497a5ba0b9f5610e57e4954f7cd",
+        "qmax": "1f810cf23f1aa49128fe48d9917621d1e3bf8abcc14018a4dcaff47f366dea21"
+      }
+    },
+    "ztf_parity": {
+      "n_periods": 4096,
+      "original_precision_matches": {
+        "periods": true,
+        "qmin": true,
+        "qmax": true,
+        "selected_indices": true
+      },
+      "original_precision_sha256": {
+        "periods": "610d6d8912f5aced173601aaa13715c2492c2451e323290a6263252bcd77400b",
+        "qmin": "44260fc9689c38257b9ac58485f52fedf29fa448c39030a6bbda217e5faef6ee",
+        "qmax": "2dbb310adc2eb76fae72d687b14e06ab9288f6101d54d1d9e4f776a0c55bc20f",
+        "selected_indices": "66b126d564e7b79556ec40cf0ff3d1a9a0cde33b46cfa6c58e4e4020cd788e78"
+      },
+      "float32_sha256": {
+        "periods": "1b070c5ba446c775d3a50332ebc123247bd26ef52f3f8f215f1006bf47f97b87",
+        "qmin": "f26909ec20b2d04fa9f5620ab5d5d6eaef73d1bc1a845a09a42cd70799fc7808",
+        "qmax": "43c2464728324a35f5f7ed9fbd3ef7ce78c30afe1d84f230c2619370f8eb0603"
+      }
+    }
+  }
+}

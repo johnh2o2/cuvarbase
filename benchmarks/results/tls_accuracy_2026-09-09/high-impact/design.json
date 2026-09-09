@@ -1,0 +1,190 @@
+{
+  "cadence": {
+    "arrays": {
+      "band": "00146ea87638b346ae1aff6277c4b79381dd18c0a7ae0a4b7cd5b8a9dc53b8dd",
+      "exposure_days": "739b61cc2ceaf7486db766be082e3f5b0d73a66cc526921b5ace93ef8cc83e42",
+      "freqs": "22536278ed20b0b613d4a78332bb1cf183e2f54b535216814c5ce424a37c64ac",
+      "metadata": "be1d78989b4f1afdcde8c46afac8b96ed7124746336d5ca3fbfc674468da98ea",
+      "q": "d283ea8d8531516efc34720bca7a832d98c1b8170c3366601f2ed9f699ffa085",
+      "relative_error": "950ec58270b8e578839a91e7404f1e7771e6f01ecd0aafe00988b5aa1f3344be",
+      "t": "6f666f5d2b09589a51b3ecb8f9e31752f3ad9df1718c44c3905accd89c772cec",
+      "tls_periods": "cbd8891b7c70e41419f11d2155fcc9928f07d0a64f7344774a3536378ef0e7a7"
+    },
+    "file_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+    "maximum_period": 12.878375495285127,
+    "minimum_period": 0.6002887000880809,
+    "ndata": 9736,
+    "nperiods": 3084
+  },
+  "configs": {
+    "gtls": {
+      "M_star_max": 1.0,
+      "M_star_min": 1.0,
+      "R_star_max": 2.0,
+      "R_star_min": 0.5,
+      "T0_fit_margin": 0.125,
+      "backend": "gputls",
+      "duration_grid_step": 1.1,
+      "fast": true,
+      "workers": 1
+    },
+    "v1_defaults": {
+      "backend": "cuvarbase",
+      "n_durations": 15,
+      "nbins": null,
+      "qmax_fac": 2.0,
+      "qmin_fac": 0.5,
+      "t0_oversample": 3.0
+    },
+    "v1_fine": {
+      "backend": "cuvarbase",
+      "n_durations": 32,
+      "nbins": 8192,
+      "qmax_fac": 2.0,
+      "qmin_fac": 0.5,
+      "t0_oversample": 16.0
+    },
+    "v1_wide": {
+      "backend": "cuvarbase",
+      "n_durations": 25,
+      "nbins": null,
+      "qmax_fac": 2.0,
+      "qmin_fac": 0.18574928614211855,
+      "t0_oversample": 3.0
+    }
+  },
+  "counts": {
+    "calibration": 256,
+    "injections": 256,
+    "nulls": 256
+  },
+  "expected_sources": {
+    "cuvarbase": {
+      "__init__.py": "ecededdb22bf71485ea8f52e42dec9ec9243f0802b6fdb435ff7545ffb8e764b",
+      "_cufft.py": "aecc1ed0d5787e90eca6600b67d928990d6723998a81021ea4d64c00f02ede05",
+      "base/__init__.py": "26df6507e65a9e023768da85d2dcadcce00255d697b9655b6cde6519b436a562",
+      "base/async_process.py": "974b1170ef180e946e4d6d6ae2761f88e56676d177c23f813a49fbd9eebbefb0",
+      "base/context.py": "2d8430e079b3032c4f9c1197fc4ff7cb4ebd04eaa05892eaf2684ba14883b0ab",
+      "bls.py": "e09104d989f17ceee0d46ee66976cdeeb1167901ed84fb5578bcd7dd1d459978",
+      "bls_frequencies.py": "523e57aa62fb450f02704463263f891590f45b98444983b0ad352659e5fcbace",
+      "ce.py": "9c2ac18753ab63714d9f75cfb7bbb3f9c52525015561af25532db9a7aefa86b8",
+      "core.py": "97d198f5a6a187919894a1cb046bc3d245d8b143e2faaedfa8f44b51cd975be8",
+      "cufinufft_backend.py": "9ac11d33fd47f208478e282264f23f32ea3fca84c6d9f5090712d204c62b7689",
+      "cunfft.py": "ce4f9fdd05961badaa5b4b37f11b715cd3d700018512fd1db58a311ee9f246b7",
+      "kernels/bls.cu": "400326db8eb64361d89bd696c02d0bb02e35e307715cee936dfc2bcc592d1004",
+      "kernels/bls_batch.cu": "76d786fc6cc93feaa8a56e83d4cb7d7149b315c17f738fd89ca3badb95b68622",
+      "kernels/bls_common.cuh": "f3e6ed36d840cc9d57265efc32cec82dcade0f7a9f33c6b27160e38fbdf340b9",
+      "kernels/bls_optimized.cu": "3b583bac9a4a6222207ae13760145a15f5faa8cfa4b9068e4835102450d11f19",
+      "kernels/ce.cu": "2840a0a20e4236dbb7386f990082ce8401950a3b30efd69ed661d289ffb6230d",
+      "kernels/cunfft.cu": "beeeb467ec3584a735335df0cea5d82394b0e5fa2968632a07fe183925dcd5d8",
+      "kernels/lomb.cu": "db5724f20c905ecacb9633d5c5f35cdd4c622a9a67b6e7f0aadadd5b048e94a9",
+      "kernels/nufft_lrt.cu": "3e10e3e45d9f0db4fb45f0ce0f109616ba0a9c2103ea053ba9fb20503067130c",
+      "kernels/pdm.cu": "64c69c6e3e116a16ec3c6c25c56cd891b2900d61387caa2f3446e437647c6f3b",
+      "kernels/sparse_bls.cu": "e0b9c01655b7bcde0a93acb1fbe2c5514ce12263f0a9bbf35cdee430dfb4185f",
+      "kernels/tls.cu": "bf0935db29b039e3a90a60de4696a9a49805d49142294a1805aa70cbe6963582",
+      "kernels/tls_fast.cu": "ee8c4c84b35dc262b9e45d9048d04b67b5f04f629dfe97deb9786cebd73e7c16",
+      "lombscargle.py": "b5aeceed05dcaea6454df261d322e92e3b637ab499dad6c50c49116f7ef4e213",
+      "memory/__init__.py": "1427d5bb6daad54a1359a7cac3638c6ac2973e5d5a70c9667a379d94c5e1a07f",
+      "memory/_host.py": "1be037b705b12bee28cff8e955cad735b5be2875740417e4b6405af91d9b92dd",
+      "memory/bls_memory.py": "3c92b95169c5fca7eb4ffca94c70b6d31cd07a7116115369a45fa937b6865942",
+      "memory/ce_memory.py": "0f8d05f0901aecb4011264af55c5ad82c1c1eb1783cb249ef9723ca610ce63b3",
+      "memory/lombscargle_memory.py": "5920c6a69ed0f7d3446533eccc512c5339fc515a636609c46c26b47f3f6158f0",
+      "memory/nfft_memory.py": "7cb9b2ec8cfca7c6711bc13f454dfd4b36229454e5a7846e9e162055e64d5906",
+      "nufft_lrt.py": "e928da1338d51eca2416fb8d9a80a9f752c7746d98eaf6d632ed42c97c34ff01",
+      "pdm.py": "c690b4440fe27a5bdd2bee439fccb4c03c7e445279601977969746b9d0e0c8f6",
+      "tls.py": "bb33789dbbffa82a13a913ec37ea8097968ea83e3abb22318a829168753a14ff",
+      "tls_grids.py": "2022262fad42ef693384393ad1cc0cde51d680604e62bd1ce8ad7173ec9cd875",
+      "tls_models.py": "918facb338f2daa3fd075254c81dfd6a891b95b8be22ec19ed71feca36bc1d09",
+      "tls_stats.py": "53fba5f00950175c742713fc021b5174cd5f86d8fc82e13bf14056aeb8b83ef5",
+      "utils.py": "404a0b29f2da4c7cf7f9fba5f738e7069b61c0fa93c7e2f23de86bd226cb379f"
+    },
+    "gputls": {
+      "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+      "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+      "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+      "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+      "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+      "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+      "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+      "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+      "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+      "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+      "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+      "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+      "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+      "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+      "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+      "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+      "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+      "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+      "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+    }
+  },
+  "frozen_at_utc": "2026-09-09T19:46:34.851131+00:00",
+  "generation": {
+    "exposure_subsamples": 7,
+    "flux_baseline": 1.0,
+    "minimum_events": 2,
+    "minimum_in_transit_points": 5,
+    "noise": "Independent heteroskedastic Gaussian plus OU",
+    "ou_amplitude_median_sigma": 0.25,
+    "ou_tau_days": 0.15,
+    "random_drop_uniform": [
+      0.0,
+      0.03
+    ],
+    "relative_errors": "Frozen cadence relative_error array",
+    "scale": "Weighted-centered injected signal has oracle white SNR8 or10; nulls use the same latent-signal noise-scale recipe"
+  },
+  "interpretation": [
+    "Widened v1 changes its duration window and automatically increases bin resolution; it is not a pure prior ablation.",
+    "Fine v1 retains the default duration window and changes bins, epoch sampling and duration sampling.",
+    "GTLS differs in template, sample-index duration/epoch search, depth estimation and native score.",
+    "Timing is operational accounting, not a new headline speed benchmark."
+  ],
+  "population": {
+    "M_star": 1.0,
+    "R_star": 1.0,
+    "cases_per_snr": 128,
+    "eccentricity": 0.0,
+    "epoch_uniform_one_period": true,
+    "impact_uniform": [
+      0.94,
+      0.96
+    ],
+    "oracle_white_snr": [
+      8.0,
+      10.0
+    ],
+    "period_loguniform_days": [
+      2.0,
+      6.0
+    ],
+    "rp": 0.0092,
+    "u": [
+      0.4804,
+      0.1867
+    ]
+  },
+  "runner_sha256": "54ff60d8e50eabd1913fc5c7bba6e560ac9b44384e82c06d7b085ffd11917b35",
+  "schema": 1,
+  "search": {
+    "cuvarbase_commit": "11317fb0ff1b68af05ae3f67de5f298c9a90e46b",
+    "gtls_commit": "74e449c325792a763dde4fbffab98039c5e8c111",
+    "gtls_source_archive_sha256": "236ef06e60dac3032f8e939b353f545ab616b45922f7d376adce72cb3c07ae7a",
+    "periods": "Full frozen3084period grid, not injection-limited",
+    "v1_R_planet_earth_radii": 1.0,
+    "v1_batch_size": 16,
+    "v1_refine_oversample": 33.0,
+    "v1_refine_top_k": 50
+  },
+  "seed": 2026090943,
+  "statistics": {
+    "calibration": "Strictly above higher95th percentile of256calibration scores, separately for each method",
+    "failures": "Retained; invalid injection is a miss and invalid null score is minus infinity",
+    "heldout_gate": "Threshold file must exist before either held-out run starts",
+    "inference": "Focused descriptive pilot; no tight equivalence claim or post-result tuning",
+    "intervals": "Marginal95%Wilson for rates; conservative paired discordant-cell Clopper-Pearson difference intervals",
+    "recovery": "Primary period drift abs(P_found/P_true-1)*observed_baseline <=0.5*true_duration"
+  }
+}

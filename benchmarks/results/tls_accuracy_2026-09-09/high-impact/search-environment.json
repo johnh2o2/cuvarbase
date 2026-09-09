@@ -1,0 +1,36 @@
+{
+  "cpu_quota": {
+    "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000",
+    "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "765000"
+  },
+  "cpu_quota_cores": 7.65,
+  "cuda_driver_api_integer": 12080,
+  "gpu": {
+    "driver": "570.211.01",
+    "name": "NVIDIA A40"
+  },
+  "hardware_receipt_origin": {
+    "file": "tess_200s_parity.json",
+    "relationship": "Previously collected receipt from the same GPU worker and Python environment; the pilot ran sequentially afterward without an environment change.",
+    "sha256": "16b0e6e691841ad32e48740c59f3eac916216e707031167ec8fc91e3520e968d"
+  },
+  "platform": "Linux-6.8.0-52-generic-x86_64-with-glibc2.35",
+  "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+  "schema": 1,
+  "search_packages": {
+    "batman-package": "2.5.3",
+    "cupy-cuda12x": "13.6.0",
+    "cuvarbase": "1.0.0",
+    "gputls": "0.5.1",
+    "numpy": "2.2.6",
+    "pycuda": "2025.1.2",
+    "scipy": "1.15.3"
+  },
+  "threads": {
+    "MKL_NUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "4",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "toolkit_version": "Not independently recorded by the frozen pilot runner; CuPy package targets CUDA 12."
+}

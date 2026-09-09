@@ -1,0 +1,146 @@
+{
+  "independent_math_tests": "12 passed",
+  "row_information_bounds": "All retained ratios and compressed-oracle upper bounds pass",
+  "source_and_output_hashes": "All verified",
+  "uniform_convergence": {
+    "template_snr_over_oracle": {
+      "maximum_absolute_change": 2.1561572338679724e-07,
+      "maximum_percentage_point_change": 2.1561572338679724e-05,
+      "regime": "sun_earth_1000d",
+      "config": "benchmark_original"
+    },
+    "box_snr_over_oracle": {
+      "maximum_absolute_change": 8.751463065337362e-08,
+      "maximum_percentage_point_change": 8.751463065337362e-06,
+      "regime": "sun_earth_365d_b08",
+      "config": "benchmark_original"
+    },
+    "physical_projection_retention": {
+      "maximum_absolute_change": 2.0929438482308882e-07,
+      "maximum_percentage_point_change": 2.0929438482308882e-05,
+      "regime": "sun_earth_1000d",
+      "config": "benchmark_original"
+    },
+    "physical_binned_over_unbinned": {
+      "maximum_absolute_change": 1.4089940460593198e-05,
+      "maximum_percentage_point_change": 0.0014089940460593198,
+      "regime": "white_dwarf_earth_1d",
+      "config": "api_default"
+    },
+    "own_template_binned_over_unbinned": {
+      "maximum_absolute_change": 1.3795714348674437e-08,
+      "maximum_percentage_point_change": 1.3795714348674437e-06,
+      "regime": "mdwarf01_earth_365d_b09",
+      "config": "benchmark_original"
+    },
+    "epoch_grid_only_retention": {
+      "maximum_absolute_change": 1.1726473181372654e-07,
+      "maximum_percentage_point_change": 1.1726473181372654e-05,
+      "regime": "sun_jupiter_5d",
+      "config": "benchmark_fine"
+    },
+    "duration_grid_only_retention": {
+      "maximum_absolute_change": 6.312319833501334e-08,
+      "maximum_percentage_point_change": 6.312319833501334e-06,
+      "regime": "mdwarf01_earth_30d",
+      "config": "api_default"
+    },
+    "coarse_grid_native_selected_over_oracle": {
+      "maximum_absolute_change": 2.115716635220366e-07,
+      "maximum_percentage_point_change": 2.115716635220366e-05,
+      "regime": "sun_earth_1000d",
+      "config": "api_default"
+    }
+  },
+  "no_sampled_signal_cases": 13,
+  "cases": 2014,
+  "uniform_cases": 1824,
+  "observed_ephemerides": 72,
+  "scope": "Expected SNR at true period, not a recovery experiment.",
+  "tests": {
+    "command": "python -m pytest -q benchmarks/tls_accuracy/test_diagnose.py",
+    "result": "12 passed",
+    "source_sha256": "0bf72d44ffad7df92b344cff6303eda25145e08dd2844487cf3914154befe57a"
+  },
+  "convergence_method": {
+    "baseline_samples_per_transit": 4096,
+    "baseline_exposure_nodes": 64,
+    "refined_samples_per_transit": 8192,
+    "refined_exposure_nodes": 128,
+    "phase_offsets": 32,
+    "comparison_key": [
+      "regime",
+      "config",
+      "offset_index"
+    ],
+    "fields": [
+      "template_snr_over_oracle",
+      "box_snr_over_oracle",
+      "physical_projection_retention",
+      "physical_binned_over_unbinned",
+      "own_template_binned_over_unbinned",
+      "epoch_grid_only_retention",
+      "duration_grid_only_retention",
+      "coarse_grid_native_selected_over_oracle"
+    ],
+    "phase_offsets_paired_between_numerical_resolution_runs": true,
+    "configs_paired_in_uniform_experiment": false
+  },
+  "fit_boundaries": {
+    "scope": "A deterministic repeat of the 59 observed-cadence fits with sampled signal.",
+    "selected_center_range": [
+      -0.04232678919990796,
+      0.3119945183439443
+    ],
+    "selected_width_range": [
+      0.41076119197446326,
+      1.1815644102735805
+    ],
+    "optimizer_nonconvergence": 0,
+    "boundary_clipping": false,
+    "uniform": {
+      "template_width_bounds": [
+        0.08,
+        2.5
+      ],
+      "template_center_bounds": [
+        -0.4,
+        0.4
+      ],
+      "box_width_bounds": [
+        0.08,
+        2.5
+      ],
+      "box_center_bounds": [
+        -0.4,
+        0.4
+      ],
+      "template_center_range": [
+        -9.574780533948455e-10,
+        3.358061050322546e-06
+      ],
+      "box_center_range": [
+        -9.910455812889297e-07,
+        3.1985753734531386e-07
+      ],
+      "boundary_clipping": false,
+      "fitted_template_width_range": [
+        0.6722530140135995,
+        1.0929951633938766
+      ],
+      "fitted_box_width_range": [
+        0.5593823616161431,
+        0.9809681809058695
+      ]
+    },
+    "observed_template_width_bounds": [
+      0.08,
+      2.5
+    ],
+    "observed_template_center_bounds": [
+      -0.5,
+      0.5
+    ]
+  },
+  "roundoff_note": "The largest oracle/projection ratio above one is 1.0000000000000002. Physical-binned/unbinned ratios can exceed one when smoothing improves a mismatched template; this does not exceed the compressed oracle."
+}

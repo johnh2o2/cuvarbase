@@ -1,0 +1,8 @@
+{
+  "backend": "cuvarbase",
+  "n_durations": 32,
+  "nbins": 8192,
+  "qmax_fac": 2.0,
+  "qmin_fac": 0.5,
+  "t0_oversample": 16.0
+}

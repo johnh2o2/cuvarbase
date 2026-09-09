@@ -1,0 +1,24 @@
+{
+  "all_counts_boolean_string_hash_and_structure_values_exact": true,
+  "differing_float_fields": [
+    {
+      "absolute_difference": 3.469446951953614e-18,
+      "path": "/comparisons/v1_fine_minus_v1_defaults/per_snr/8.0/conservative_paired95/0"
+    },
+    {
+      "absolute_difference": 6.938893903907228e-18,
+      "path": "/comparisons/v1_fine_minus_v1_defaults/recovery/conservative_paired95/0"
+    }
+  ],
+  "float_absolute_tolerance": 1e-12,
+  "gpu_required": false,
+  "maximum_float_absolute_difference": 6.938893903907228e-18,
+  "packages": {
+    "numpy": "1.26.4",
+    "scipy": "1.12.0"
+  },
+  "published_runner_used": true,
+  "python": "3.9.6 (default, Dec  2 2025, 07:27:58) \n[Clang 17.0.0 (clang-1700.6.3.2)]",
+  "raw_input_arrays_required": false,
+  "status": "pass"
+}

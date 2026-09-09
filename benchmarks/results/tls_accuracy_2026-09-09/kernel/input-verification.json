@@ -1,0 +1,128 @@
+{
+  "tess_200s_fine": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 9450,
+    "n_observations_max": 9731
+  },
+  "tess_200s_original": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 9450,
+    "n_observations_max": 9731
+  },
+  "tess_200s_parity": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 9419,
+    "n_observations_max": 9732
+  },
+  "tess_gap_fine": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 4152,
+    "n_observations_max": 4292
+  },
+  "tess_gap_original": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 4152,
+    "n_observations_max": 4292
+  },
+  "tess_gap_parity": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 4151,
+    "n_observations_max": 4292
+  },
+  "ztf_fine": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 1283,
+    "n_observations_max": 1314
+  },
+  "ztf_original": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 1283,
+    "n_observations_max": 1314
+  },
+  "ztf_parity": {
+    "input_file_match": true,
+    "all_selected_lightcurve_arrays_match": true,
+    "config_hash_match": true,
+    "linux_q64_reconstructed": true,
+    "local_float32_grid_matches": {
+      "periods": true,
+      "qmin": true,
+      "qmax": true
+    },
+    "local_production_source_mismatches": {},
+    "n_observations_min": 1264,
+    "n_observations_max": 1317
+  }
+}

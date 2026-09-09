@@ -1,0 +1,29 @@
+........................................................................ [ 42%]
+........................................................................ [ 85%]
+.........................                                                [100%]
+=============================== warnings summary ===============================
+cuvarbase/tests/test_tls_basic.py::TestTLSStreamParity::test_stream_matches_default
+  /workspace/tls-accuracy/candidate/cuvarbase/tls.py:893: UserWarning: use_fast=True is ignored because a pre-compiled kernel, external memory/stream, or transfer control was supplied; falling back to the legacy per-point kernel (which caps ndata at ~3,500 points)
+    warnings.warn(
+
+cuvarbase/tests/test_tls_fast.py::TestDurationWindowDefault::test_fixed_window_optin_warns_and_default_does_not
+  /workspace/tls-accuracy/modern/lib/python3.11/site-packages/_pytest/unraisableexception.py:67: PytestUnraisableExceptionWarning: Exception ignored in: <_io.FileIO name='/workspace/tls-accuracy/candidate/cuvarbase/kernels/tls_fast.cu' mode='rb' closefd=True>
+  
+  Traceback (most recent call last):
+    File "/workspace/tls-accuracy/candidate/cuvarbase/utils.py", line 308, in _module_reader
+      txt = open(fname, 'r').read()
+            ^^^^^^^^^^^^^^^^^^^^^^^
+  ResourceWarning: unclosed file <_io.TextIOWrapper name='/workspace/tls-accuracy/candidate/cuvarbase/kernels/tls_fast.cu' mode='r' encoding='utf-8'>
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))
+
+cuvarbase/tests/test_tls_golden.py::TestGoldenVsTransitLeastSquares::test_recovery_matches_reference[3.0-0.04-0.01]
+cuvarbase/tests/test_tls_golden.py::TestGoldenVsTransitLeastSquares::test_recovery_matches_reference[12.0-0.014-0.012]
+cuvarbase/tests/test_tls_golden.py::TestSDEParityWithReference::test_strong_signal_sde_matches_reference
+  /workspace/tls-accuracy/modern/lib/python3.11/site-packages/transitleastsquares/stats.py:458: RuntimeWarning: divide by zero encountered in scalar divide
+    snr_pink_per_transit[i] = (1 - mean_flux) / pinknoise
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+169 passed, 5 warnings in 17.89s

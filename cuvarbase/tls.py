@@ -1737,9 +1737,10 @@ def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
             warnings.warn(
                 "TLS fast path: %d of %d trial periods have their "
                 "narrowest durations under-resolved by the phase bins "
-                "(device shared-memory cap); their coarse scan is "
-                "smeared and recovery there relies on the exact "
-                "refinement pass." % (int(short.sum()), nperiods))
+                "(bin-count or device shared-memory cap); their coarse "
+                "scan can lose sensitivity. Refinement only revisits "
+                "selected periods and cannot recover a period excluded "
+                "by the coarse search." % (int(short.sum()), nperiods))
         bands = [(int(nb), np.flatnonzero(nbins_per == nb).astype(np.int32))
                  for nb in np.unique(nbins_per)]
         smear = float(np.max(need / nbins_per))

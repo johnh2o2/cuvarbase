@@ -339,8 +339,8 @@ def duration_grid_keplerian(periods, R_star=1.0, M_star=1.0, R_planet=1.0,
     the search around the physically expected value.
 
     For example, for a Sun-like star (M=1, R=1) and Earth-size planet:
-    - At P=10 days: q ~ 0.015, so we search 0.0075 to 0.030 (0.5x to 2x)
-    - At P=100 days: q ~ 0.027, so we search 0.014 to 0.054
+    - At P=10 days: q ~ 0.0164, so we search 0.0082 to 0.0329 (0.5x to 2x)
+    - At P=100 days: q ~ 0.00354, so we search 0.00177 to 0.00709
 
     This is equivalent to BLS's approach but applied to transit shapes.
 

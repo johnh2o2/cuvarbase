@@ -1,0 +1,13 @@
+{
+  "python": "3.9.6 (default, Dec  2 2025, 07:27:58) \n[Clang 17.0.0 (clang-1700.6.3.2)]",
+  "platform": "macOS-26.0-arm64-arm-64bit",
+  "packages": {
+    "numpy": "1.26.4",
+    "scipy": "1.12.0",
+    "batman-package": "2.5.3"
+  },
+  "input_manifest_sha256": "4cfae50c4f0a76e28fdfee3648fbb1a0fedf3fac62af2ead2363182f0893cb1b",
+  "runner_sha256": "54ff60d8e50eabd1913fc5c7bba6e560ac9b44384e82c06d7b085ffd11917b35",
+  "command": "python benchmarks/tls_accuracy/high_impact.py generate --root OUTPUT --cadence benchmarks/results/tls_sensitivity_2026-09-09/cadences/tess_200s.npz",
+  "recorded_after_generation": true
+}

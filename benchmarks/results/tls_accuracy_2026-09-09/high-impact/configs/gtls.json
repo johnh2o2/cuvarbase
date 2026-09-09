@@ -1,0 +1,11 @@
+{
+  "M_star_max": 1.0,
+  "M_star_min": 1.0,
+  "R_star_max": 2.0,
+  "R_star_min": 0.5,
+  "T0_fit_margin": 0.125,
+  "backend": "gputls",
+  "duration_grid_step": 1.1,
+  "fast": true,
+  "workers": 1
+}

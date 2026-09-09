@@ -1,0 +1,13 @@
+{
+  "README.md": "95390d8214982d1641c508c875ed2f3f89ee8a24ab3297d60e83ef4985067764",
+  "cases.csv": "a0ca7c5b0345396544aac2f75792bdf144d593b2c4404cd5b21f036bbd5b7db1",
+  "convergence.csv": "302eea156c51471fa80bccbe161f62efd0947a3b3b81d2f86c133392c7d9fdfe",
+  "manifest.json": "2fbe31499110d801b10a8f5f141debec779e877979a1a9a6d1c701ad9fbd9c9f",
+  "source_snapshots/diagnose.py": "cbeaf0ed786f888f5b5f3f048988962cb0f3b56ca21c5f1538fc9435d255201a",
+  "source_snapshots/test_diagnose.py": "0bf72d44ffad7df92b344cff6303eda25145e08dd2844487cf3914154befe57a",
+  "source_snapshots/tls_fast.cu": "ee8c4c84b35dc262b9e45d9048d04b67b5f04f629dfe97deb9786cebd73e7c16",
+  "source_snapshots/tls_grids.py": "2022262fad42ef693384393ad1cc0cde51d680604e62bd1ce8ad7173ec9cd875",
+  "source_snapshots/tls_models.py": "918facb338f2daa3fd075254c81dfd6a891b95b8be22ec19ed71feca36bc1d09",
+  "summary.csv": "e1e7cde675d5af81ae271ea31d81c2fa4605e920ecdd9a4ea8bb675048c9684f",
+  "validation.json": "7706c03a77f9b61865199d83a52c2ca01e7be79745c21b71964d617dd37a3bcf"
+}
