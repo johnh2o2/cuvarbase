@@ -1,0 +1,7 @@
+{
+  "thresholds_sha256": "2fdad8a8fae68957fabd2c8428b895fa85093076083134da3b008decce99b70a",
+  "threshold_file_mtime_utc": "2026-09-09T17:50:28.958535+00:00",
+  "receipt_utc": "2026-09-09T17:58:43.514755+00:00",
+  "heldout_outcomes_inspected": false,
+  "purpose": "Secondary BLS control calibration frozen before held-out BLS outcome inspection."
+}

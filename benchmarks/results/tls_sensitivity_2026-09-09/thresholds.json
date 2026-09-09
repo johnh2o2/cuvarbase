@@ -1,0 +1,83 @@
+{
+  "thresholds": {
+    "tess_200s/v1_original": {
+      "threshold": 7.4689125315214255,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "88e536897006e1223b242407befbc2a1992260fd1901688a4cc923d87b82c7bb"
+    },
+    "tess_200s/v1_resolved": {
+      "threshold": 7.374063174480668,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "76c3271da5ae39401cae61249b398a147834061c53bbb1c4c9f37a2da0c41fbd"
+    },
+    "tess_200s/v1_fine": {
+      "threshold": 7.290578915995156,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "1925265538629f2bcef3ebdfcbe82472fe7facef1052b1e5a4a45e3e0e6e8995"
+    },
+    "tess_200s/gtls_tess_200s": {
+      "threshold": 7.213984489440918,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "c6830bbb54c9ceb8ea676dcae65ec169a681f4bdf18e9764ccce029a8ad3ea12"
+    },
+    "tess_gap/v1_original": {
+      "threshold": 10.241824513509249,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "cbd4982d4edf790bb84f0c8390128a01cacc26ef881220fdd1618c90071328b0"
+    },
+    "tess_gap/v1_resolved": {
+      "threshold": 10.155845121872247,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "e6d09d63c4a73fa6ab22790f27bc95c21d0b32f035131fcc4e62e8053642e616"
+    },
+    "tess_gap/v1_fine": {
+      "threshold": 10.12496940540111,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "c18db967bc65be856e72f84e7940e740d0844fbcfe7b62888656738b4a4a1cce"
+    },
+    "tess_gap/gtls_tess_gap": {
+      "threshold": 10.393630981445312,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "ccf2664cef34514dbb82748f418740d6c1a2285bf110c467abb046b4dad5e69d"
+    },
+    "ztf/v1_original": {
+      "threshold": 11.582567095841805,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "f74bf2443da1b317fb1b73156bbafac10603a9ca2dc1814c85fb85f60b800111"
+    },
+    "ztf/v1_resolved": {
+      "threshold": 11.421004108324713,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "87dcf3431487d9cf21ba85f19ab86ee7b4ba9592f59d1531ce3c1a34195b479c"
+    },
+    "ztf/v1_fine": {
+      "threshold": 11.40443369431142,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "f72275cf67de524cf231ddc5d5fc7273f7e882705d32e10fab4b2acf637088ac"
+    },
+    "ztf/gtls_ztf": {
+      "threshold": 11.00349235534668,
+      "n": 4096,
+      "invalid": 34,
+      "calibration_digest": "adba924de4d71fd6bf286e6ee89e1fcbde02adf08a33cce58b8c25f6e58826f8"
+    }
+  },
+  "source_signatures": {
+    "cuvarbase": "4b4add47227b149d6e8bcf17ee329880b27c5f7392092c53c30583a0c5d91cd9",
+    "gputls": "f5e41d3d18b443a244216d818eb68f1c5b66dd74f1bb6467da4209497437b0ed"
+  },
+  "quantile": 0.95,
+  "method": "higher",
+  "decision": "strict exceedance"
+}

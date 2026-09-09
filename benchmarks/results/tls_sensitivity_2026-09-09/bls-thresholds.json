@@ -1,0 +1,29 @@
+{
+  "thresholds": {
+    "tess_200s/v1_bls_control": {
+      "threshold": 5.642220143067503,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "a35c5b6a181a459cdc7a2dfd7150994140d981d934478a3a3c91e46134fc66cd"
+    },
+    "tess_gap/v1_bls_control": {
+      "threshold": 7.146206428855256,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "f152a0015c846344e96923b6d065c14c0c618164eee9ba01bb6bb971023d8e58"
+    },
+    "ztf/v1_bls_control": {
+      "threshold": 7.814707866158527,
+      "n": 4096,
+      "invalid": 0,
+      "calibration_digest": "65056e6781343a12eb857bd1ff5cae2c7106240a17d7b9904d5a60da4ddffdf3"
+    }
+  },
+  "source_signatures": {
+    "cuvarbase": "4b4add47227b149d6e8bcf17ee329880b27c5f7392092c53c30583a0c5d91cd9",
+    "gputls": "f5e41d3d18b443a244216d818eb68f1c5b66dd74f1bb6467da4209497437b0ed"
+  },
+  "quantile": 0.95,
+  "method": "higher",
+  "decision": "strict exceedance"
+}

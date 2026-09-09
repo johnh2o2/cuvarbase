@@ -1,0 +1,126 @@
+{
+  "cuvarbase_commit": "1032caf029570dc4841db1c594a2cbb1654e8fd8",
+  "gtls_commit": "74e449c325792a763dde4fbffab98039c5e8c111",
+  "gtls_repository": "https://github.com/Farthing-0/GTLS",
+  "initial_design_frozen_utc": "2026-09-09T14:36:07.738375+00:00",
+  "private_protocol_sha256": "c63a8ddb5869294042b2fcbf0857b2e84e761b92ccc126882964588585ba87ad",
+  "amendments": [
+    {
+      "utc": "2026-09-09T14:39:12.161902+00:00",
+      "change": "Increase calibration and held-out nulls to 4096 each, before generation; keep 2048 injections."
+    },
+    {
+      "utc": "2026-09-09T15:33:53.483818+00:00",
+      "change": "Use two ZTF GTLS workers with public CuPy cache release; supersede and recompute all initial four-worker ZTF calibration results. No held-out cases had yet been generated or inspected."
+    },
+    {
+      "utc": "2026-09-09T16:03:06.285913+00:00",
+      "change": "Add the secondary BLS control without altering the primary comparisons; before inspecting held-out outcomes."
+    }
+  ],
+  "profiles": [
+    "tess_200s",
+    "tess_gap",
+    "ztf"
+  ],
+  "counts_per_profile": {
+    "calibration": 4096,
+    "injections": 2048,
+    "nulls": 4096
+  },
+  "injection_snr": [
+    6,
+    8,
+    10,
+    14
+  ],
+  "injections_per_snr": 512,
+  "seed_entropy": [
+    2026090917,
+    "profile_id",
+    "split_id",
+    "global_index"
+  ],
+  "profile_id_order": [
+    "tess_200s",
+    "tess_gap",
+    "ztf"
+  ],
+  "split_id_order": [
+    "calibration",
+    "injections",
+    "nulls"
+  ],
+  "conditioning": "At least five in-transit observations and two observed events; known unit band baselines; achromatic transits; solar density and circular orbits.",
+  "calibration": {
+    "quantile": 0.95,
+    "method": "higher",
+    "decision": "strict exceedance",
+    "api_failures": "score minus infinity"
+  },
+  "detection": "Score above independently calibrated threshold AND primary-period total drift at most half the injected transit duration over the full cadence baseline.",
+  "aliases_diagnostic": [
+    0.5,
+    1,
+    2,
+    0.3333333333333333,
+    3
+  ],
+  "acceptance": {
+    "recall_lower_greater_than": -0.05,
+    "fpr_lower_greater_than": -0.02,
+    "fpr_upper_less_than": 0.02,
+    "primary_comparisons": 9,
+    "primary_one_sided_bounds": 27,
+    "alpha_per_bound": 0.001851851851851852,
+    "difference_bounds": "Paired discordant-cell Clopper-Pearson bounds, alpha/2 per cell; subtract cell bounds.",
+    "primary_population": "Equally weighted mixture of the four injected SNR strata.",
+    "failed_injections": "Misses; no cases excluded"
+  },
+  "selection": "Fastest predeclared v1 setting passing all criteria per cadence. If none passes, original settings remain an explicitly unqualified timing comparison.",
+  "secondary": "Original/intermediate versus fine and complete TLS versus BLS controls: diagnostic, nominal bounds, outside primary claims.",
+  "timing": {
+    "source": "Earlier heldout archives, used as tuning/timing data only in this follow-up.",
+    "indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135
+    ],
+    "repetitions": 5,
+    "batch_size": 16,
+    "scheduling": "Sequential isolated configuration processes, randomized order, synchronized warmed APIs.",
+    "single_gtls": "One worker; contextual latency when recovery calibration uses a concurrent batch policy.",
+    "boundary": "Prepared host observations and explicit grid to host periodograms and native candidates; includes transfers and API postprocessing.",
+    "excludes": [
+      "imports",
+      "context setup",
+      "grid creation",
+      "input generation",
+      "disk I/O",
+      "survey preprocessing",
+      "vetting"
+    ]
+  },
+  "configurations": {
+    "gtls_tess_200s.json": "44d528561ffa570f7e3c4afcf05d5de068e733ee653c0be60d440936da1f7561",
+    "gtls_tess_gap.json": "f0fc03e5145ed514e30744575f530ea713e4ad349ae5f944efe5cd9c610f5865",
+    "gtls_ztf.json": "0df74ad0af618fb880d850ef6c34081cc9e69c1513fd366fbe77b64ab5d6ae61",
+    "v1_bls_control.json": "08404307668420cfe66ddf41e5d116ffeb8a85751407f64d36de319698ca47ff",
+    "v1_fine.json": "d142d44efca3bad84ba5952e845e48563fc9dd8610c8e598484c7ffca172e297",
+    "v1_original.json": "8a1604b3411061395ba72d8688f1d67891dfb0fec2ee65ff3a88d49ab90ff44e",
+    "v1_resolved.json": "5e59c6d8fb684c83cee98f91005d871b294648979e1c9f9380b0def226472765"
+  }
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "job": "binned300s/v1_tls_original",
+    "status": "ok"
+  },
+  {
+    "job": "binned300s/v1_bls",
+    "status": "ok"
+  },
+  {
+    "job": "native30s/v1_tls_original",
+    "status": "ok"
+  },
+  {
+    "job": "binned300s/v1_tls_intermediate",
+    "status": "ok"
+  },
+  {
+    "job": "binned300s/v1_tls_fine",
+    "status": "ok"
+  },
+  {
+    "job": "binned300s/gtls",
+    "status": "ok"
+  },
+  {
+    "job": "native30s/v1_tls_intermediate",
+    "status": "ok"
+  },
+  {
+    "job": "native30s/gtls",
+    "status": "ok"
+  },
+  {
+    "job": "native30s/v1_bls",
+    "status": "ok"
+  },
+  {
+    "job": "native30s/v1_tls_fine",
+    "status": "ok"
+  }
+]

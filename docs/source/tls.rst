@@ -16,7 +16,9 @@ significance at fixed depth.
   (duration, epoch) trial against precomputed integrated-template
   tables, with a closed-form :math:`\chi^2`. A second kernel then
   re-fits the best ``refine_top_k`` candidate periods per lightcurve
-  *exactly* (per-point template evaluation) on a finer local grid.
+  against individual observations on a finer local grid. The reported
+  SDE still uses the coarse spectrum; refinement cannot rescue periods
+  excluded by the first stage.
   There is **no cap on the number of points per lightcurve**, absolute
   BJD-scale timestamps are safe (the epoch is subtracted in float64
   internally), and whole surveys can be searched in one call.
@@ -39,6 +41,9 @@ differ. Equal scalar SDE does not establish equivalent detection
 sensitivity. The `current transit benchmark
 <https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md>`_
 reports timing, independent recovery and false-positive qualifications.
+The `phase-binning explanation
+<https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TLS_NUMERICS.md>`_
+shows the retained transit shape and the measured resolution tradeoff.
 
 .. note::
 

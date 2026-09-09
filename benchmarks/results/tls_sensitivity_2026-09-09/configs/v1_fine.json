@@ -1,0 +1,7 @@
+{
+  "backend": "v1_tls",
+  "epoch_os": 16,
+  "durations": 32,
+  "nbins": 8192,
+  "eval_chunk": 16
+}

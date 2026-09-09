@@ -1,0 +1,186 @@
+{
+  "status": "ok",
+  "mode": "native30s",
+  "method": "v1_tls_original",
+  "config": {
+    "backend": "v1_tls",
+    "epoch_os": 4,
+    "durations": 16
+  },
+  "input_sha256": "b5ac723b8e464112d0eeb710d9e181e264d52c858a9814e7693b41e3c5fd9fe7",
+  "n_points": [
+    97920,
+    97920,
+    97920,
+    97920
+  ],
+  "n_periods": 17377,
+  "repetitions": [
+    {
+      "label": "first_api",
+      "elapsed_s": 0.4155329689383507,
+      "n_sources": 1,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 2.2998194694519043,
+          "score": 25.79620572789303,
+          "epoch": 0.3793516876753529,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "batch_warmup",
+      "elapsed_s": 0.26603852584958076,
+      "n_sources": 4,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 2.2998194694519043,
+          "score": 25.7962031496407,
+          "epoch": 0.3793516876753529,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.700263023376465,
+          "score": 16.569696221272036,
+          "epoch": 0.5757738972867443,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.723986625671387,
+          "score": 6.505004075220181,
+          "epoch": 3.3242764731764396,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.958857536315918,
+          "score": 6.5053062643395405,
+          "epoch": 0.7918249012760725,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "rep0",
+      "elapsed_s": 0.26238203793764114,
+      "n_sources": 4,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 2.2998194694519043,
+          "score": 25.796203596213598,
+          "epoch": 0.3793516876753529,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.700263023376465,
+          "score": 16.56968743750789,
+          "epoch": 0.5757738972867443,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.723986625671387,
+          "score": 6.50500586014034,
+          "epoch": 3.3242764731764396,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.958857536315918,
+          "score": 6.505301317867418,
+          "epoch": 0.7918249012760725,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "rep1",
+      "elapsed_s": 0.2608971521258354,
+      "n_sources": 4,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 2.2998194694519043,
+          "score": 25.796202764611312,
+          "epoch": 0.3793516876753529,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.700263023376465,
+          "score": 16.569696397474942,
+          "epoch": 0.5757738972867443,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.723986625671387,
+          "score": 6.505004538772639,
+          "epoch": 3.3242764731764396,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.958857536315918,
+          "score": 6.50530659058202,
+          "epoch": 0.7918249012760725,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "rep2",
+      "elapsed_s": 0.27449357509613037,
+      "n_sources": 4,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 2.2998194694519043,
+          "score": 25.79620347945331,
+          "epoch": 0.3793516876753529,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.700263023376465,
+          "score": 16.569687430897968,
+          "epoch": 0.5757738972867443,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.723986625671387,
+          "score": 6.505006369639531,
+          "epoch": 3.3242764731764396,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        },
+        {
+          "period": 5.958857536315918,
+          "score": 6.505303407576048,
+          "epoch": 0.7918249012760725,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "initialization_s": 0.53188281878829,
+  "seconds_per_source": 0.06559550948441029
+}

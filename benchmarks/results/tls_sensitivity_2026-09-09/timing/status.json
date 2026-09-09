@@ -1,0 +1,146 @@
+[
+  {
+    "job": "tess_gap/gtls_tess_gap/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788973809.983945,
+    "finished_epoch": 1788974268.2225444
+  },
+  {
+    "job": "ztf/v1_resolved/single",
+    "exit_code": 0,
+    "started_epoch": 1788974268.2233462,
+    "finished_epoch": 1788974322.411524
+  },
+  {
+    "job": "tess_gap/v1_fine/single",
+    "exit_code": 0,
+    "started_epoch": 1788974322.4124212,
+    "finished_epoch": 1788974439.648725
+  },
+  {
+    "job": "ztf/gtls_ztf/single",
+    "exit_code": 0,
+    "started_epoch": 1788974439.6494045,
+    "finished_epoch": 1788976176.2558482
+  },
+  {
+    "job": "tess_gap/v1_resolved/single",
+    "exit_code": 0,
+    "started_epoch": 1788976176.2567735,
+    "finished_epoch": 1788976194.199336
+  },
+  {
+    "job": "ztf/v1_original/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788976194.2003527,
+    "finished_epoch": 1788976204.1571698
+  },
+  {
+    "job": "tess_gap/v1_fine/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788976204.1581159,
+    "finished_epoch": 1788976320.0517564
+  },
+  {
+    "job": "tess_200s/gtls_tess_200s/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788976320.0529058,
+    "finished_epoch": 1788976366.395742
+  },
+  {
+    "job": "ztf/v1_fine/single",
+    "exit_code": 0,
+    "started_epoch": 1788976366.3967576,
+    "finished_epoch": 1788976732.5188756
+  },
+  {
+    "job": "tess_gap/v1_resolved/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788976732.5199804,
+    "finished_epoch": 1788976750.4002328
+  },
+  {
+    "job": "tess_200s/v1_fine/single",
+    "exit_code": 0,
+    "started_epoch": 1788976750.4013066,
+    "finished_epoch": 1788976755.9926429
+  },
+  {
+    "job": "tess_gap/v1_original/single",
+    "exit_code": 0,
+    "started_epoch": 1788976755.9939978,
+    "finished_epoch": 1788976761.764027
+  },
+  {
+    "job": "ztf/v1_fine/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788976761.765156,
+    "finished_epoch": 1788977124.0277197
+  },
+  {
+    "job": "tess_200s/v1_original/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788977124.0288875,
+    "finished_epoch": 1788977125.953644
+  },
+  {
+    "job": "tess_200s/v1_original/single",
+    "exit_code": 0,
+    "started_epoch": 1788977125.9550993,
+    "finished_epoch": 1788977128.1624606
+  },
+  {
+    "job": "tess_200s/v1_resolved/single",
+    "exit_code": 0,
+    "started_epoch": 1788977128.1635735,
+    "finished_epoch": 1788977130.2718894
+  },
+  {
+    "job": "tess_200s/gtls_tess_200s/single",
+    "exit_code": 0,
+    "started_epoch": 1788977130.2730432,
+    "finished_epoch": 1788977177.080788
+  },
+  {
+    "job": "ztf/v1_resolved/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788977177.08195,
+    "finished_epoch": 1788977228.596566
+  },
+  {
+    "job": "ztf/v1_original/single",
+    "exit_code": 0,
+    "started_epoch": 1788977228.597758,
+    "finished_epoch": 1788977240.699074
+  },
+  {
+    "job": "tess_gap/v1_original/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788977240.7002811,
+    "finished_epoch": 1788977245.0854182
+  },
+  {
+    "job": "tess_200s/v1_fine/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788977245.086662,
+    "finished_epoch": 1788977250.2514539
+  },
+  {
+    "job": "tess_200s/v1_resolved/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788977250.2526915,
+    "finished_epoch": 1788977252.1972077
+  },
+  {
+    "job": "ztf/gtls_ztf/batch16",
+    "exit_code": 0,
+    "started_epoch": 1788977252.1984606,
+    "finished_epoch": 1788978285.7434025
+  },
+  {
+    "job": "tess_gap/gtls_tess_gap/single",
+    "exit_code": 0,
+    "started_epoch": 1788978285.7454562,
+    "finished_epoch": 1788978988.1823897
+  }
+]

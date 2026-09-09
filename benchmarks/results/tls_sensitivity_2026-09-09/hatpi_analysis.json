@@ -1,0 +1,159 @@
+{
+  "timings": [
+    {
+      "mode": "binned300s",
+      "method": "gtls",
+      "n_points": 9792,
+      "n_periods": 17377,
+      "seconds_per_source": 2.2321979478001595,
+      "min_seconds_per_source": 1.8987360373139381,
+      "max_seconds_per_source": 2.2355570271611214,
+      "source": "hatpi-cost/binned300s/gtls/summary.json"
+    },
+    {
+      "mode": "binned300s",
+      "method": "v1_bls",
+      "n_points": 9792,
+      "n_periods": 17377,
+      "seconds_per_source": 0.004582629539072514,
+      "min_seconds_per_source": 0.004340575076639652,
+      "max_seconds_per_source": 0.005619295872747898,
+      "source": "hatpi-cost/binned300s/v1_bls/summary.json"
+    },
+    {
+      "mode": "binned300s",
+      "method": "v1_tls_fine",
+      "n_points": 9792,
+      "n_periods": 17377,
+      "seconds_per_source": 0.2091867635026574,
+      "min_seconds_per_source": 0.20778566040098667,
+      "max_seconds_per_source": 0.20988792087882757,
+      "source": "hatpi-cost/binned300s/v1_tls_fine/summary.json"
+    },
+    {
+      "mode": "binned300s",
+      "method": "v1_tls_intermediate",
+      "n_points": 9792,
+      "n_periods": 17377,
+      "seconds_per_source": 0.031829966232180595,
+      "min_seconds_per_source": 0.03076649270951748,
+      "max_seconds_per_source": 0.031906078569591045,
+      "source": "hatpi-cost/binned300s/v1_tls_intermediate/summary.json"
+    },
+    {
+      "mode": "binned300s",
+      "method": "v1_tls_original",
+      "n_points": 9792,
+      "n_periods": 17377,
+      "seconds_per_source": 0.005882020108401775,
+      "min_seconds_per_source": 0.005857151001691818,
+      "max_seconds_per_source": 0.006717251613736153,
+      "source": "hatpi-cost/binned300s/v1_tls_original/summary.json"
+    },
+    {
+      "mode": "native30s",
+      "method": "gtls",
+      "n_points": 97920,
+      "n_periods": 17377,
+      "seconds_per_source": 19.23100583255291,
+      "min_seconds_per_source": 16.788771454244852,
+      "max_seconds_per_source": 20.688439525663853,
+      "source": "hatpi-cost/native30s/gtls/summary.json"
+    },
+    {
+      "mode": "native30s",
+      "method": "v1_bls",
+      "n_points": 97920,
+      "n_periods": 17377,
+      "seconds_per_source": 0.02118799090385437,
+      "min_seconds_per_source": 0.021136139519512653,
+      "max_seconds_per_source": 0.021252812817692757,
+      "source": "hatpi-cost/native30s/v1_bls/summary.json"
+    },
+    {
+      "mode": "native30s",
+      "method": "v1_tls_fine",
+      "n_points": 97920,
+      "n_periods": 17377,
+      "seconds_per_source": 0.23527014069259167,
+      "min_seconds_per_source": 0.2348409928381443,
+      "max_seconds_per_source": 0.2355652740225196,
+      "source": "hatpi-cost/native30s/v1_tls_fine/summary.json"
+    },
+    {
+      "mode": "native30s",
+      "method": "v1_tls_intermediate",
+      "n_points": 97920,
+      "n_periods": 17377,
+      "seconds_per_source": 0.04895193688571453,
+      "min_seconds_per_source": 0.04867993760854006,
+      "max_seconds_per_source": 0.049796623177826405,
+      "source": "hatpi-cost/native30s/v1_tls_intermediate/summary.json"
+    },
+    {
+      "mode": "native30s",
+      "method": "v1_tls_original",
+      "n_points": 97920,
+      "n_periods": 17377,
+      "seconds_per_source": 0.06559550948441029,
+      "min_seconds_per_source": 0.06522428803145885,
+      "max_seconds_per_source": 0.06862339377403259,
+      "source": "hatpi-cost/native30s/v1_tls_original/summary.json"
+    }
+  ],
+  "study_projections": [
+    {
+      "mode": "native30s",
+      "n_cases_per_method": 10240,
+      "primary_search_seconds": 200507.631816864,
+      "primary_search_usd": 27.291316552850933,
+      "secondary_bls_search_usd": 0.029531350877549913,
+      "primary_plus_bls_search_usd": 27.320847903728485
+    },
+    {
+      "mode": "binned300s",
+      "n_cases_per_method": 10240,
+      "primary_search_seconds": 25385.95018386841,
+      "primary_search_usd": 3.4553098861376443,
+      "secondary_bls_search_usd": 0.0063871672153472895,
+      "primary_plus_bls_search_usd": 3.461697053352992
+    }
+  ],
+  "verification": {
+    "complete": true,
+    "input_files_verified": true,
+    "paired_time_averages_verified": true,
+    "averaging_recheck_rtol": 1e-14,
+    "averaging_recheck_atol": 1e-14,
+    "averaging_max_absolute_errors": {
+      "t": 8.526512829121202e-14,
+      "y": 5.551115123125783e-16,
+      "dy": 1.734723475976807e-18
+    },
+    "all_timed_api_outputs_valid": true
+  },
+  "scope": "Entirely synthetic cost pilot; no observed HATPI lightcurve or calibrated recovery comparison.",
+  "timing_limit": "cuvarbase: three batch-of-four repetitions after workload warmup. GTLS: three distinct single-source calls after one first-source warmup; these are a small pricing sample, not matched-cohort headline speed ratios.",
+  "source_harness_sha256": "883df7b9b57b7e5afcb54c3785a2997e032e6cc566a8bdce7dd91aca1cb9a711",
+  "hardware_context": {
+    "gpu": "NVIDIA A40",
+    "cpu_quota": {
+      "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "765000",
+      "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000",
+      "/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us": "765000",
+      "/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_period_us": "100000"
+    },
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "batman-package": "2.5.3",
+      "pycuda": "2025.1.2",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.5.1",
+      "cuvarbase": "1.0.0"
+    },
+    "evidence": "Immediately preceding BLS control on the same pilot node; no package or hardware change before the HATPI pilot.",
+    "preceding_control_summary_sha256": "24ce361fb4ca268a1d0ef79b0eecd5dd67310850bfb8c9ad7da7cd02f0c7605d",
+    "cpu_model_recorded": false
+  }
+}

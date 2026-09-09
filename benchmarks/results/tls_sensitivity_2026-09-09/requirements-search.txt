@@ -1,0 +1,24 @@
+# Measured worker stack: Python 3.11, CUDA 12.4, NVIDIA A40.
+# Install cuvarbase and GTLS from the source commits in design.json.
+astropy==8.0.1
+astropy-iers-data==0.2026.9.7.0.56.14
+batman-package==2.5.3
+cupy-cuda12x==13.6.0
+fastrlock==0.8.3
+llvmlite==0.49.0
+Mako==1.4.1
+MarkupSafe==3.0.3
+numba==0.67.0
+numpy==2.2.6
+nvidia-ml-py==13.610.43
+packaging==26.3
+platformdirs==4.11.8
+pycuda==2025.1.2
+pyerfa==2.0.1.5
+pynvml==13.0.1
+pytools==2026.1.1
+PyYAML==6.0.3
+scipy==1.15.3
+siphash24==1.9
+tqdm==4.70.0
+typing_extensions==4.16.0

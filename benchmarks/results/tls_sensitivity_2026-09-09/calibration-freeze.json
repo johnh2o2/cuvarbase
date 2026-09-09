@@ -1,0 +1,7 @@
+{
+  "frozen_utc": "2026-09-09T16:46:39.137587+00:00",
+  "sha256": "962c817d20cd38b49cce8bce6c2e63827130787664f10d0ae52bcd081ae6d0ee",
+  "calibration_nulls_per_cadence": 4096,
+  "thresholds_frozen": 12,
+  "heldout_outcomes_inspected": false
+}

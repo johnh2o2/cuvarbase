@@ -2,11 +2,11 @@
 
 **GPU-accelerated time series analysis tools for astronomy** — period-finding and transit-detection algorithms (BLS, TLS, Lomb-Scargle, PDM, CE) built on [PyCUDA](https://mathema.tician.de/software/pycuda/). Created by John Hoffman, (c) 2017.
 
-**Faster transit searches for TESS and ZTF.** On the tested cadences, v1 BLS is **1.8–4.3× faster than PyPI 0.2.5** in batches, and **4.2–10.7× faster** when each source needs a new period grid. The figure shows single-source and batch search times; the linked report gives independent recovery tests.
+**Faster transit searches for TESS and ZTF.** v1 BLS is **1.8–4.3× faster than PyPI 0.2.5** in the measured batches; separated TESS supports the recovery comparison. Independent TLS tests support **11.9× and 175.5× faster batch searches than public GTLS** on the two TESS examples, using the settings and recovery tolerances below.
 
-![BLS and TLS search times on TESS and ZTF cadences](https://raw.githubusercontent.com/johnh2o2/cuvarbase/v1.0-fixes/docs/figures/transit_benchmarks_20260908.png)
+![BLS and TLS search times on TESS and ZTF cadences](https://raw.githubusercontent.com/johnh2o2/cuvarbase/v1.0-fixes/docs/figures/transit_benchmarks_20260909.png)
 
-Single-source latency and batch throughput on observed cadences with synthetic transits and noise. Equivalent TLS detection sensitivity is not established. [Results, sensitivity qualifications and methodology](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md) · [PDF figure](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/figures/transit_benchmarks_20260908.pdf)
+Single-source latency and batch throughput on observed cadences with synthetic transits and noise. Dense TESS uses finer TLS sampling; ZTF false-positive matching remains inconclusive. [Results, recovery bounds and methodology](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md) · [PDF figure](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/figures/transit_benchmarks_20260909.pdf)
 
 ## Performance at Survey Scale
 
@@ -16,9 +16,9 @@ cuvarbase is built for processing millions of lightcurves, and it is proven in p
 
 Against external BLS implementations, measured batch searches were **19–57× faster than the strongest tested CPU settings** (Astropy or periodfind) and **1.5–11.9× faster than periodfind GPU**. The linked report identifies the comparisons whose recovery and false-positive results support the stated 5-point criterion.
 
-**TLS concentrates expensive fitting on promising candidates.** The coarse search works on weighted phase bins; selected candidate periods then receive exact fits against individual observations. This reduces repeated observation-level work and GPU dispatches. GTLS also has substantial host-loop overhead: batching just two of its loops improved diagnostic runtime by 1.4–8.2×. Those diagnostic patches are separate from the public GTLS used in the figure.
+**TLS concentrates expensive fitting on promising candidates.** The coarse search works on weighted phase bins; selected candidate periods then receive fits against individual observations. The bins retain a transit-shaped template, with a measurable resolution tradeoff ([how phase binning affects accuracy](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TLS_NUMERICS.md)). This reduces repeated observation-level work and GPU dispatches. GTLS also has substantial host-loop overhead: batching just two of its loops improved diagnostic runtime by 1.4–8.2×. Those diagnostic patches are separate from the public GTLS used in the figure.
 
-The resulting v1 TLS batch searches were **93–284× faster than public GTLS**, but the two implementations use different numerical searches. **Equivalent TLS detection sensitivity is not established by this experiment.** On ZTF, v1 recovered more transits and also accepted more nulls. The timing advantage is measured; its recovery tradeoff remains part of the comparison.
+**The TLS speed claim now has an independent recovery test.** Each cadence has 2,048 injected transits, 4,096 calibration nulls and 4,096 new test nulls. At a nominal 5% false-alarm target, the selected TESS settings support less than a 5-percentage-point recovery loss and false-positive rates within 2 points of GTLS, with simultaneous confidence bounds across the predeclared comparisons. ZTF measured a **155.6×** batch timing advantage and more recovered transits with fewer false positives, but its strict false-positive matching test remains inconclusive. These are related transit-template searches with different numerical implementations; the [full study](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/benchmarks/results/tls_sensitivity_2026-09-09/README.md) reports all three resolutions and their costs.
 
 For a concrete QLP-oriented upgrade result, BLS on separated TESS sectors was **2.73× faster in batches**, or **10.18× faster including a fresh grid**, with the same **89/128** detected injections as PyPI. Paired confidence bounds support less than a 5-percentage-point recovery loss and less than a 5-point false-positive increase on this test population. Other PyPI comparisons remain inconclusive under that criterion.
 

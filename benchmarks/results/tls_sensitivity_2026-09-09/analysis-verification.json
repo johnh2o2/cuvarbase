@@ -1,0 +1,37 @@
+{
+  "verified_utc": "2026-09-09T18:22:46.334059+00:00",
+  "compact_reanalysis_matches_original": true,
+  "analyses": {
+    "thresholds.json": {
+      "original_and_compact_sha256": "962c817d20cd38b49cce8bce6c2e63827130787664f10d0ae52bcd081ae6d0ee",
+      "byte_identical": true
+    },
+    "recovery_analysis.json": {
+      "original_and_compact_sha256": "cdef0b4642d422a271975ea0220aba8912aa7b53807b0d08cb305c61690ed587",
+      "byte_identical": true
+    },
+    "bls-thresholds.json": {
+      "original_and_compact_sha256": "2fdad8a8fae68957fabd2c8428b895fa85093076083134da3b008decce99b70a",
+      "byte_identical": true
+    },
+    "bls_analysis.json": {
+      "original_and_compact_sha256": "56ef54be92f82940ceb69947f9363dac52b04e8258a9409c1cdaf98f9f7c7fa6",
+      "byte_identical": true
+    }
+  },
+  "original_array_verification": {
+    "input_arrays_verified": 122880,
+    "sampled_spectrum_files_verified": 4800,
+    "search_summaries_roundtripped": 1200,
+    "omitted_spectra": "All unretained spectra have hashes; their bytes cannot be re-verified from this compact archive.",
+    "input_archive_sha256": "096292f4cdf81799b4f6ee84d1f2a4b9901d3225f419e0b067d02df92f2e720c",
+    "search_archive_sha256": "f97d11a34093e87d2d6f69eb0a6391acf88a402fd42fbc01d82c7256c157d649"
+  },
+  "cohort": {
+    "shards": 240,
+    "lightcurves": 30720,
+    "primary_searches": 122880,
+    "secondary_bls_searches": 30720
+  },
+  "scope": "Input and sampled spectrum bytes were verified against the complete local measurement archive before compact export. Reanalysis from this checkout validates compact scalar evidence and recorded archive hashes, not omitted arrays."
+}

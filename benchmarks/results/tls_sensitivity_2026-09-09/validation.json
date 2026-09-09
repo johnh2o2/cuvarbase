@@ -1,0 +1,24 @@
+{
+  "documentation_tests": {
+    "passed": 10,
+    "gpu_skipped": 3,
+    "known_notebook_xfailed": 1
+  },
+  "sphinx": {
+    "succeeded": true,
+    "expected_gpu_plot_warnings": 5
+  },
+  "packages": {
+    "wheel_built": true,
+    "sdist_built": true,
+    "twine_check_passed": true,
+    "current_readme_verified": true,
+    "benchmark_data_excluded": true
+  },
+  "scientific_analysis": {
+    "compact_reanalysis_byte_identical": true,
+    "all_24_exclusive_timing_blocks_verified": true,
+    "timing_input_arrays_verified": true
+  },
+  "library_changes": "No numerical implementation changes in this work. Source equivalence to the measured pin is recorded in source-verification.json."
+}

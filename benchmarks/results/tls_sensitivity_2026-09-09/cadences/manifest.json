@@ -1,0 +1,66 @@
+[
+  {
+    "file": "ztf.npz",
+    "sha256": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+    "profile": "ztf",
+    "baseline": 2743.768345858436,
+    "pmin": 0.32771700148842975,
+    "pmax": 10.0,
+    "scope": "Controlled recovery conditional on >=5 in-transit observations and >=2 observed transit events; observed cadences, synthetic flux and noise; solar density, circular orbits, known normalized band baselines.",
+    "noise": "Independent Gaussian errors plus OU residual of 0.25 median error amplitude; tau=0.15 days TESS / 1 day ZTF. Quoted SNR is white-noise oracle, not native SDE or pink SNR.",
+    "source_files": [
+      {
+        "file": "inputs/cadence_sources/real_ztf_heldout.npz",
+        "sha256": "cfa12cf370838b9c040eb122e94d4dcc661381b61b39bda94b94d11b581ce650"
+      }
+    ],
+    "period_grid": {
+      "tls": 312064
+    },
+    "ndata": 1317
+  },
+  {
+    "file": "tess_200s.npz",
+    "sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+    "profile": "tess_200s",
+    "baseline": 25.756750990570254,
+    "pmin": 0.32771700148842975,
+    "pmax": 12.878375495285127,
+    "scope": "Controlled recovery conditional on >=5 in-transit observations and >=2 observed transit events; observed cadences, synthetic flux and noise; solar density, circular orbits, known normalized band baselines.",
+    "noise": "Independent Gaussian errors plus OU residual of 0.25 median error amplitude; tau=0.15 days TESS / 1 day ZTF. Quoted SNR is white-noise oracle, not native SDE or pink SNR.",
+    "source_files": [
+      {
+        "file": "sources/qlp-tic261136679-s0067.fits",
+        "sha256": "94355faec5d89c22b04de4e2669879e2a56f8bea6794fc0dc3684539e89c3ccd"
+      }
+    ],
+    "period_grid": {
+      "tls": 3084
+    },
+    "ndata": 9736
+  },
+  {
+    "file": "tess_gap.npz",
+    "sha256": "2b9746cf9a0f961967208843ecf6b5de949941bfd1f4e9861cf6dce0d0012634",
+    "profile": "tess_gap",
+    "baseline": 734.853796173106,
+    "pmin": 0.32771700148842975,
+    "pmax": 27.457888046800917,
+    "scope": "Controlled recovery conditional on >=5 in-transit observations and >=2 observed transit events; observed cadences, synthetic flux and noise; solar density, circular orbits, known normalized band baselines.",
+    "noise": "Independent Gaussian errors plus OU residual of 0.25 median error amplitude; tau=0.15 days TESS / 1 day ZTF. Quoted SNR is white-noise oracle, not native SDE or pink SNR.",
+    "source_files": [
+      {
+        "file": "sources/qlp-tic261136679-s0001.fits",
+        "sha256": "88717888d4f8be862db8e395ab134cd5e5391a10b0b6e8a81d8a2abac7b9da75"
+      },
+      {
+        "file": "sources/qlp-tic261136679-s0027.fits",
+        "sha256": "4ae15c58eb5d457cb23cf387e207bd5b1208b401c69221d7dbaf9085a039f424"
+      }
+    ],
+    "period_grid": {
+      "tls": 99043
+    },
+    "ndata": 4295
+  }
+]

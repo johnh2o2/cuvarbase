@@ -1,0 +1,326 @@
+[
+  {
+    "profile": "tess_200s",
+    "method": "gtls_tess_200s",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "tess_200s",
+    "method": "gtls_tess_200s",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "tess_200s",
+    "method": "gtls_tess_200s",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_fine",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 23,
+    "masked_trial_periods": 183
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_fine",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 2,
+    "masked_trial_periods": 4
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_fine",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 25,
+    "masked_trial_periods": 352
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_original",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 46,
+    "masked_trial_periods": 401
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_original",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 3,
+    "masked_trial_periods": 8
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_original",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 41,
+    "masked_trial_periods": 646
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_resolved",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 28,
+    "masked_trial_periods": 241
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_resolved",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 2,
+    "masked_trial_periods": 6
+  },
+  {
+    "profile": "tess_200s",
+    "method": "v1_resolved",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 30,
+    "masked_trial_periods": 425
+  },
+  {
+    "profile": "tess_gap",
+    "method": "gtls_tess_gap",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "tess_gap",
+    "method": "gtls_tess_gap",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "tess_gap",
+    "method": "gtls_tess_gap",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_fine",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 1,
+    "masked_trial_periods": 4
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_fine",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_fine",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 4,
+    "masked_trial_periods": 76
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_original",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 5,
+    "masked_trial_periods": 24
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_original",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 1,
+    "masked_trial_periods": 2
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_original",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 8,
+    "masked_trial_periods": 281
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_resolved",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 2,
+    "masked_trial_periods": 9
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_resolved",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "tess_gap",
+    "method": "v1_resolved",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 5,
+    "masked_trial_periods": 133
+  },
+  {
+    "profile": "ztf",
+    "method": "gtls_ztf",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 34,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "gtls_ztf",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 12,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "gtls_ztf",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 32,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_fine",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_fine",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_fine",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_original",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_original",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_original",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_resolved",
+    "split": "calibration",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_resolved",
+    "split": "injections",
+    "cases": 2048,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  },
+  {
+    "profile": "ztf",
+    "method": "v1_resolved",
+    "split": "nulls",
+    "cases": 4096,
+    "invalid": 0,
+    "partial_cases": 0,
+    "masked_trial_periods": 0
+  }
+]

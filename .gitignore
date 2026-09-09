@@ -48,11 +48,10 @@ coverage.xml
 *.mo
 *.pot
 
-# Django stuff:
+# Runtime logs
 *.log
 # ... but the on-device gate/validation logs cited by the release record
 # are evidence and are tracked
-!analysis/**/*.log
 !benchmarks/results/**/*.log
 
 # Sphinx documentation
@@ -74,15 +73,15 @@ target/
 # LaTeX
 *.aux
 *.pdf
+!docs/figures/*.pdf
+!benchmarks/results/**/*.pdf
 
 # misc
-scripts/saved_results
 .DS_Store
 work/
 *.png
-# ... except the tracked figures (docs logo, analysis/benchmark plots)
+# ... except published documentation and benchmark figures
 !docs/**/*.png
-!analysis/**/*.png
 !benchmarks/results/**/*.png
 *.gif
 

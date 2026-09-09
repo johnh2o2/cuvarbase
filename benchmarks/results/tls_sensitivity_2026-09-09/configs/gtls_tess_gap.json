@@ -1,0 +1,9 @@
+{
+  "backend": "gtls",
+  "gtls_version": "head",
+  "density": true,
+  "fast": true,
+  "workers": 2,
+  "eval_chunk": 16,
+  "margin": 0.125
+}

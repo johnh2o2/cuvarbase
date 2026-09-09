@@ -1,0 +1,349 @@
+{
+  "verified_utc": "2026-09-09T18:38:14.611925+00:00",
+  "all_owned_pods_absent": true,
+  "owned_pods": 37,
+  "prior_campaign_estimated_rental_usd": 8.031349351084028,
+  "new_study_estimated_rental_usd": 35.77033757846886,
+  "combined_estimated_rental_usd": 43.801686929552886,
+  "new_study_container_storage_estimate_usd": 0.8111187659516748,
+  "combined_rental_plus_new_storage_estimate_usd": 44.61280569550456,
+  "authorized_total_usd": 50,
+  "rate_basis": "Quoted A40 bundle rates; elapsed creation-to-confirmed-termination rental, including setup, preflights and evidence collection. This is an estimate, not an invoice.",
+  "storage_basis": "80 GB container disks, no volume or network volume; $0.10/GB/month with a 720-hour month approximation. Earlier-campaign storage is not included in this estimate.",
+  "storage_price_source": "https://docs.runpod.io/pods/pricing",
+  "nodes": [
+    {
+      "node": "pilot",
+      "pod_id": "0wzkblrmt7ls0w",
+      "created_utc": "2026-09-09T14:16:12.978035+00:00",
+      "terminated_utc": "2026-09-09T18:22:37.711393+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 2.012490380931563,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "timing01",
+      "pod_id": "etd1s1l87jdwal",
+      "created_utc": "2026-09-09T17:04:23.981571+00:00",
+      "terminated_utc": "2026-09-09T18:36:39.141517+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.753501278591156,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker01",
+      "pod_id": "ywzrrrfd06lfaa",
+      "created_utc": "2026-09-09T14:53:16.627759+00:00",
+      "terminated_utc": "2026-09-09T14:57:46.851744+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.03689602216349708,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker02",
+      "pod_id": "nhe7wnsc4jykgv",
+      "created_utc": "2026-09-09T14:53:17.918997+00:00",
+      "terminated_utc": "2026-09-09T17:53:39.622404+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.4730744799925222,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker03",
+      "pod_id": "1lzgmxxrf52ila",
+      "created_utc": "2026-09-09T14:53:19.228857+00:00",
+      "terminated_utc": "2026-09-09T14:57:40.296403+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.03566708746155103,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker04",
+      "pod_id": "268l8pex6mqxgk",
+      "created_utc": "2026-09-09T14:53:20.498522+00:00",
+      "terminated_utc": "2026-09-09T17:43:13.225441+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.3874605725414224,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker05",
+      "pod_id": "qwuga3w2vc2bfq",
+      "created_utc": "2026-09-09T14:53:21.636617+00:00",
+      "terminated_utc": "2026-09-09T17:41:17.212369+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.3715120488656893,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker06",
+      "pod_id": "u72191dguczdx4",
+      "created_utc": "2026-09-09T14:53:22.784672+00:00",
+      "terminated_utc": "2026-09-09T17:34:49.317809+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.3185600323683686,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker07",
+      "pod_id": "63dxwz0lm5pt4b",
+      "created_utc": "2026-09-09T14:53:23.898841+00:00",
+      "terminated_utc": "2026-09-09T17:39:13.464157+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.3543526599566142,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker08",
+      "pod_id": "6iuxwakok81501",
+      "created_utc": "2026-09-09T14:53:24.897140+00:00",
+      "terminated_utc": "2026-09-09T14:57:57.549465+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.03719918966823154,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker09",
+      "pod_id": "3c9y1ptgzu1ggq",
+      "created_utc": "2026-09-09T14:53:25.942612+00:00",
+      "terminated_utc": "2026-09-09T14:58:15.527234+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.03951583751175139,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker10",
+      "pod_id": "j3p30rivg8rqp6",
+      "created_utc": "2026-09-09T14:53:27.064577+00:00",
+      "terminated_utc": "2026-09-09T17:34:41.730418+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.3169397729648484,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker11",
+      "pod_id": "4h0whhynn6bz1b",
+      "created_utc": "2026-09-09T14:53:28.098090+00:00",
+      "terminated_utc": "2026-09-09T17:42:34.536103+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.38114518941972,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker12",
+      "pod_id": "kc3pc7b3k01x8t",
+      "created_utc": "2026-09-09T14:53:29.274189+00:00",
+      "terminated_utc": "2026-09-09T17:35:45.297818+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.3252944142738978,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker13",
+      "pod_id": "72870ziwi601be",
+      "created_utc": "2026-09-09T14:53:30.447806+00:00",
+      "terminated_utc": "2026-09-09T14:57:53.356833+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.03589074321654108,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker14",
+      "pod_id": "n3q9f98oqpu3w5",
+      "created_utc": "2026-09-09T14:53:31.492997+00:00",
+      "terminated_utc": "2026-09-09T14:58:09.594125+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.03795280556678772,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker15",
+      "pod_id": "idgeuiziqcn19j",
+      "created_utc": "2026-09-09T14:53:32.550239+00:00",
+      "terminated_utc": "2026-09-09T17:48:28.685287+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.4287448998093606,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker16",
+      "pod_id": "as00rhld8a7s7n",
+      "created_utc": "2026-09-09T15:36:27.865750+00:00",
+      "terminated_utc": "2026-09-09T17:44:21.850098+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.0446222967776988,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker17",
+      "pod_id": "6xtpzhfmxyvkvw",
+      "created_utc": "2026-09-09T15:36:28.918597+00:00",
+      "terminated_utc": "2026-09-09T17:29:20.441494+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9217870002925396,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker18",
+      "pod_id": "4ai6mntpb2kg1o",
+      "created_utc": "2026-09-09T15:36:30.105975+00:00",
+      "terminated_utc": "2026-09-09T17:29:13.998243+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9207601358307732,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker19",
+      "pod_id": "igpwa3u7vi2r0b",
+      "created_utc": "2026-09-09T15:36:32.062241+00:00",
+      "terminated_utc": "2026-09-09T17:28:57.885124+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9183382540755801,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker20",
+      "pod_id": "193je2dyo6azfg",
+      "created_utc": "2026-09-09T15:36:33.141978+00:00",
+      "terminated_utc": "2026-09-09T18:03:20.121960+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.1988363049255475,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker21",
+      "pod_id": "5nqtqyjyd55ngx",
+      "created_utc": "2026-09-09T15:36:34.162779+00:00",
+      "terminated_utc": "2026-09-09T17:56:31.513921+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.1430720178378952,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker22",
+      "pod_id": "bp8cwhd5odea0g",
+      "created_utc": "2026-09-09T15:36:35.279909+00:00",
+      "terminated_utc": "2026-09-09T17:44:14.440291+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.0426060180882613,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker23",
+      "pod_id": "bco9igmhd50p11",
+      "created_utc": "2026-09-09T15:36:37.629852+00:00",
+      "terminated_utc": "2026-09-09T17:41:07.581664+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.0169193152719074,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker24",
+      "pod_id": "j3vmz1r12lr9w6",
+      "created_utc": "2026-09-09T15:36:39.416142+00:00",
+      "terminated_utc": "2026-09-09T17:51:02.982458+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.0976737266355092,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker25",
+      "pod_id": "t8u5dc9xtxps6j",
+      "created_utc": "2026-09-09T15:36:40.648168+00:00",
+      "terminated_utc": "2026-09-09T17:31:34.344172+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9384223581916756,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker26",
+      "pod_id": "0gpjzswhy4uiqd",
+      "created_utc": "2026-09-09T15:36:41.705330+00:00",
+      "terminated_utc": "2026-09-09T17:54:29.962695+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.1254995967275567,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker27",
+      "pod_id": "3umnxhrqpnh56f",
+      "created_utc": "2026-09-09T15:36:42.950409+00:00",
+      "terminated_utc": "2026-09-09T17:37:39.661639+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9878306007259422,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker28",
+      "pod_id": "j6gclhp8b94goi",
+      "created_utc": "2026-09-09T15:36:44.173013+00:00",
+      "terminated_utc": "2026-09-09T17:29:35.482969+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9217571897387504,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker29",
+      "pod_id": "u6erczn0tlk1vh",
+      "created_utc": "2026-09-09T15:36:45.219480+00:00",
+      "terminated_utc": "2026-09-09T17:35:32.355762+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9701824548489517,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker30",
+      "pod_id": "bvdzfhk38yfe4d",
+      "created_utc": "2026-09-09T15:36:46.241728+00:00",
+      "terminated_utc": "2026-09-09T17:57:51.667892+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.1523366355167497,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker31",
+      "pod_id": "czwvlaaw05np1x",
+      "created_utc": "2026-09-09T15:36:47.268498+00:00",
+      "terminated_utc": "2026-09-09T17:37:53.512899+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9891141397409968,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker32",
+      "pod_id": "p9ukqcz20x9c8o",
+      "created_utc": "2026-09-09T15:36:48.559616+00:00",
+      "terminated_utc": "2026-09-09T17:48:16.449752+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.0737586281650597,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker33",
+      "pod_id": "tgd0fuvi2lyof5",
+      "created_utc": "2026-09-09T15:36:49.743114+00:00",
+      "terminated_utc": "2026-09-09T17:51:07.634730+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 1.096861644737588,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker34",
+      "pod_id": "1urm9rim13h1ec",
+      "created_utc": "2026-09-09T15:36:50.741156+00:00",
+      "terminated_utc": "2026-09-09T17:29:12.928078+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9177760309272343,
+      "provider_absence_verified": true
+    },
+    {
+      "node": "worker35",
+      "pod_id": "dukph9zf3igsrj",
+      "created_utc": "2026-09-09T15:36:51.883060+00:00",
+      "terminated_utc": "2026-09-09T17:32:41.223904+00:00",
+      "quoted_usd_per_hour": 0.49,
+      "estimated_rental_usd": 0.9459858141091134,
+      "provider_absence_verified": true
+    }
+  ]
+}

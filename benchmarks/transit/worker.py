@@ -25,7 +25,10 @@ def astropy_piece(job):
 def gtls_one(job):
     import cupy as cp
     from gputls import gtls
-    lc,kw=job
+    lc,kw,*memory_policy=job
+    release_cache=bool(memory_policy and memory_policy[0])
+    if release_cache:
+        cp.get_default_memory_pool().free_all_blocks()
     try:
         r=gtls(*lc,verbose=False).power(**kw)
         if kw.get('fast'):
@@ -37,7 +40,10 @@ def gtls_one(job):
         else:
             out=dict(periods=np.asarray(np.ma.filled(r.periods,np.nan)),power=np.asarray(np.ma.filled(r.chi2,np.nan)),
                 power_kind='chi2',native=dict(period=number(r.period),score=number(r.SDE),epoch=number(r.T0)))
-        cp.cuda.runtime.deviceSynchronize();return out
+        cp.cuda.runtime.deviceSynchronize()
+        if release_cache:
+            cp.get_default_memory_pool().free_all_blocks()
+        return out
     except Exception:
         return dict(periods=np.array([]),power=np.array([]),power_kind='failed',error=traceback.format_exc(),
                     native=dict(period=None,score=None,epoch=None))
@@ -152,6 +158,8 @@ class Backend:
             kw=dict(periods=self.tp,R_star=1,M_star=1,t0_oversample=c.get('epoch_os',8),
                 n_durations=c.get('durations',24),refine_top_k=c.get('refine',50),return_arrays=True,
                 u=[.4804,.1867],qmin=.5*q,qmax=np.minimum(2*q,.333))
+            if 'nbins' in c:
+                kw['nbins']=c['nbins']
             if c.get('wide'):
                 ps=self.tp*86400
                 kw.update(qmin=np.minimum(695508000*.05*(4*ps/(20848*1e15))**(1/3)/ps,.15),
@@ -164,7 +172,7 @@ class Backend:
             kw=dict(periods=self.tp,R_star=1,M_star=1,oversampling_factor=3,T0_fit_margin=c.get('margin',.125),
                 duration_grid_step=1.1,verbose=False,show_progress_bar=False,transit_template='default',fast=c.get('fast',False))
             if c.get('density'):kw.update(R_star_min=.5,R_star_max=2.,M_star_min=1.,M_star_max=1.)
-            jobs=[(lc,kw) for lc in lcs]
+            jobs=[(lc,kw,c.get('release_cache',False)) for lc in lcs]
             outputs=list(self.pool.map(gtls_one,jobs) if self.pool else map(gtls_one,jobs))
         elif k=='astropy':
             for lc in lcs:

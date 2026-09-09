@@ -1,0 +1,89 @@
+{
+  "status": "ok",
+  "mode": "native30s",
+  "method": "gtls",
+  "config": {
+    "backend": "gtls",
+    "density": true,
+    "fast": true,
+    "workers": 1,
+    "margin": 0.125,
+    "release_cache": true
+  },
+  "input_sha256": "b5ac723b8e464112d0eeb710d9e181e264d52c858a9814e7693b41e3c5fd9fe7",
+  "n_points": [
+    97920,
+    97920,
+    97920,
+    97920
+  ],
+  "n_periods": 17377,
+  "repetitions": [
+    {
+      "label": "first_api",
+      "elapsed_s": 20.85588527843356,
+      "n_sources": 1,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 2.2998194838239723,
+          "score": 25.53696632385254,
+          "epoch": null,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "rep0",
+      "elapsed_s": 20.688439525663853,
+      "n_sources": 1,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 5.700262863582886,
+          "score": 16.500028610229492,
+          "epoch": null,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "rep1",
+      "elapsed_s": 16.788771454244852,
+      "n_sources": 1,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 4.8923871554073415,
+          "score": 9.396312713623047,
+          "epoch": null,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "rep2",
+      "elapsed_s": 19.23100583255291,
+      "n_sources": 1,
+      "valid": true,
+      "candidates": [
+        {
+          "period": 5.958857693324582,
+          "score": 7.671216011047363,
+          "epoch": null,
+          "finite_fraction": 1.0,
+          "api_result_valid": true
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "initialization_s": 0.971632931381464,
+  "seconds_per_source": 19.23100583255291
+}

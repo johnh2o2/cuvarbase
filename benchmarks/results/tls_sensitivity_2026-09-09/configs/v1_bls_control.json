@@ -1,0 +1,6 @@
+{
+  "backend": "v1_bls_batch",
+  "noverlap": 4,
+  "qmin_fac": 0.5,
+  "eval_chunk": 16
+}
