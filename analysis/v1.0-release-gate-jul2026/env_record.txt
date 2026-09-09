@@ -1,7 +1,0 @@
-NVIDIA RTX A5000, 580.126.09, 24564 MiB
-python 3.11.10
-pycuda 2026.1
-numpy 2.4.6
-scipy 1.17.1
-tls-ref/batman/cufinufft present
-worktree-sync (local c13dbe3+)

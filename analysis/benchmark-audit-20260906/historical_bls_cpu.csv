@@ -1,8 +1,0 @@
-gpu,cuvarbase_ms,astropy_ms,speedup,comparable_duration_grids,source
-NVIDIA A100-SXM4-80GB,3.695123291015625,949.2332526482642,256.88811384352,False,benchmarks/results/by_gpu/benchmark_A100_SXM.json
-NVIDIA H100 80GB HBM3,2.258332824707031,605.930135701783,268.3086076032168,False,benchmarks/results/by_gpu/benchmark_H100_SXM.json
-NVIDIA H200,2.339583969116211,716.3904740009457,306.2042155604125,False,benchmarks/results/by_gpu/benchmark_H200_SXM.json
-NVIDIA L40,2.6181312561035157,925.9465470910072,353.6669694968101,False,benchmarks/results/by_gpu/benchmark_L40.json
-NVIDIA RTX 4000 Ada Generation,2.5692287445068356,729.3107233010232,283.86367888041616,False,benchmarks/results/by_gpu/benchmark_RTX_4000_Ada.json
-NVIDIA GeForce RTX 4090,2.993468856811523,869.1612789407372,290.35253764641453,False,benchmarks/results/by_gpu/benchmark_RTX_4090.json
-Tesla V100-SXM2-16GB,6.028899383544921,1839.7631000727415,305.1573733497909,False,benchmarks/results/by_gpu/benchmark_V100.json

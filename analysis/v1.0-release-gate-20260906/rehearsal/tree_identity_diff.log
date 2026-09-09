@@ -1,5 +1,0 @@
-cwd: /var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout
-command: git diff --exit-code ea2694ffafbb49363f236133bb16675a64ca00ba HEAD
-
-
-EXIT_CODE=0

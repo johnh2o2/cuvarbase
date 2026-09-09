@@ -1,9 +1,0 @@
-kepler 1 distinct validated 10
-kepler 32 distinct validated 11
-tess 32 shared validated 9
-small 1 distinct validated 10
-small 32 distinct validated 12
-tess 1 distinct validated 10
-tess 32 distinct validated 12
-ztf 1 distinct validated 10
-ztf 32 distinct validated 11

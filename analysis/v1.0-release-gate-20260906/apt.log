@@ -1,13 +1,0 @@
-debconf: delaying package configuration, since apt-utils is not installed
-Selecting previously unselected package libpopt0:amd64.
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 24135 files and directories currently installed.)
-Preparing to unpack .../libpopt0_1.18-3build1_amd64.deb ...
-Unpacking libpopt0:amd64 (1.18-3build1) ...
-Selecting previously unselected package rsync.
-Preparing to unpack .../rsync_3.2.7-0ubuntu0.22.04.7_amd64.deb ...
-Unpacking rsync (3.2.7-0ubuntu0.22.04.7) ...
-Setting up libpopt0:amd64 (1.18-3build1) ...
-Setting up rsync (3.2.7-0ubuntu0.22.04.7) ...
-invoke-rc.d: could not determine current runlevel
-invoke-rc.d: policy-rc.d denied execution of start.
-Processing triggers for libc-bin (2.35-0ubuntu3.8) ...

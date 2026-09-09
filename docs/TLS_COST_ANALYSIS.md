@@ -1,6 +1,6 @@
 # Transit-search rental cost
 
-The [current benchmark figure](TRANSIT_BENCHMARKS.md) pairs measured execution time with independent recovery. Cost savings have the same recovery qualifications as speedups. The A40 bundle used here costs $0.49/hour, including its CPU allocation.
+The [current benchmark report](TRANSIT_BENCHMARKS.md) reports measured execution time and independent recovery. Cost savings have the same recovery qualifications as speedups. The A40 bundle used here costs $0.49/hour, including its CPU allocation.
 
 | Observing pattern | v1 BLS / million | PyPI BLS / million | v1 TLS / million | GTLS / million | CPU BLS hourly break-even |
 |---|---:|---:|---:|---:|---:|
@@ -12,4 +12,4 @@ These are linear projections of the median 16-source search throughput, not meas
 
 CPU-only break-even price = $0.49 / (CPU time ÷ v1 GPU time), for a CPU service delivering the measured throughput. No standalone CPU rental was benchmarked. The measurement used a 7.65-CPU-equivalent quota on the same Xeon Gold 6342 host; 96 host logical CPUs were not the allocation.
 
-The [full report](../analysis/transit-recovery-20260908/README.md) contains recovery qualifications, repetitions, hardware, pinned versions and the experiment rental ledger. The old claims of universally cheapest TLS and thousands-fold CPU savings are replaced by these measured, workload-specific projections. [Preserved historical cost document](../analysis/transit-recovery-20260908/sources/claims-before/docs/TLS_COST_ANALYSIS.md).
+The [full report](../benchmarks/results/transit_2026-09-08/README.md) contains recovery qualifications, repetitions, hardware, pinned versions and the experiment rental ledger. These projections apply to the measured workloads. The [provenance audit](BENCHMARK_PROVENANCE.md) explains why earlier whole-survey cost claims were retired.

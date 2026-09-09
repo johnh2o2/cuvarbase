@@ -1,6 +1,0 @@
-cwd: /Users/johnhoffman/Documents/cuvarbase
-command: git rev-parse origin/master
-
-060d839035bcc65d7c69a48a3329852a5f6d580b
-
-EXIT_CODE=0

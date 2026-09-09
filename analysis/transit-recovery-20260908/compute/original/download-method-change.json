@@ -1,7 +1,0 @@
-{
-  "reason": "Original single SSH stream is throughput-limited; retain complete prefix members and resume remaining immutable evidence with eight parallel SSH streams.",
-  "stopped_ssh_pid": 26955,
-  "prefix_bytes": 5188859904,
-  "epoch": 1788903036.529258,
-  "scientific_jobs_affected": false
-}

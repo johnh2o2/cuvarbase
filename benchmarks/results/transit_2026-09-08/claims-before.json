@@ -1,0 +1,31 @@
+{
+  "utc": "2026-09-08T19:25:03.370180+00:00",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "7225d270b87c77a681057f1a115a8e2d6573645977045d538ff38df3ffbc367e"
+    },
+    {
+      "path": "CHANGELOG.rst",
+      "sha256": "3abe51bb4d0a1e138ed3dcfc99c2942471a5ceecfe577969d7524a26ac3ea686"
+    },
+    {
+      "path": "docs/GTLS_COMPARISON.md",
+      "sha256": "235f1a3012c98eba867720b589b78c7ca8746e6cac2b71eae309bafb138d003a"
+    },
+    {
+      "path": "docs/TLS_COST_ANALYSIS.md",
+      "sha256": "b7c9538fcd363332ac530fb79225e1b28e475fb0ed1083202fb42ef62acbd28b"
+    },
+    {
+      "path": "docs/BENCHMARK_RESULTS.md",
+      "sha256": "f3cbd4742671d9910d577804780fe9c964c0a79ea28e17b0f5535624aa792f6a"
+    },
+    {
+      "path": "docs/RELEASE_NOTES_v1.0.0.md",
+      "sha256": "0cdb2222769a7de27324a42084c6b4f38e0f863f87fc0dfeeba7e214e0ada752"
+    }
+  ],
+  "git_ref": "de0037dd8d2f81cd9296fc02f4ef73478b0b8908",
+  "retrieval": "git show <git_ref>:<files[].path>; sha256 applies to the exact blob bytes"
+}

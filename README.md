@@ -2,11 +2,11 @@
 
 **GPU-accelerated time series analysis tools for astronomy** — period-finding and transit-detection algorithms (BLS, TLS, Lomb-Scargle, PDM, CE) built on [PyCUDA](https://mathema.tician.de/software/pycuda/). Created by John Hoffman, (c) 2017.
 
-**Faster transit searches for TESS and ZTF.** On the tested cadences, v1 BLS is **1.8–4.3× faster than PyPI 0.2.5** in batches, and **4.2–10.7× faster** when each source needs a new period grid. The figure pairs execution time with independent recovery tests.
+**Faster transit searches for TESS and ZTF.** On the tested cadences, v1 BLS is **1.8–4.3× faster than PyPI 0.2.5** in batches, and **4.2–10.7× faster** when each source needs a new period grid. The figure shows single-source and batch search times; the linked report gives independent recovery tests.
 
-![Transit-search speed, recovery and projected cost on TESS and ZTF cadences](docs/figures/transit_benchmarks_20260908.png)
+![BLS and TLS search times on TESS and ZTF cadences](https://raw.githubusercontent.com/johnh2o2/cuvarbase/v1.0-fixes/docs/figures/transit_benchmarks_20260908.png)
 
-Single-source latency and batch throughput on observed cadences with synthetic transits and noise. [Results, sensitivity qualifications and methodology](docs/TRANSIT_BENCHMARKS.md) · [PDF figure](docs/figures/transit_benchmarks_20260908.pdf)
+Single-source latency and batch throughput on observed cadences with synthetic transits and noise. Equivalent TLS detection sensitivity is not established. [Results, sensitivity qualifications and methodology](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md) · [PDF figure](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/figures/transit_benchmarks_20260908.pdf)
 
 ## Performance at Survey Scale
 
@@ -14,7 +14,7 @@ cuvarbase is built for processing millions of lightcurves, and it is proven in p
 
 **BLS does less repeated work.** For each trial period, v1 reuses folded phase histograms across multiple phase offsets. Disabling this fusion made diagnostic API calls 1.35–1.57× slower. Vectorized host scans and Keplerian-grid construction remove Python loops over large grids; grid construction alone was 11–17× faster. The batch API amortizes allocation and dispatch across lightcurves. Both releases receive warmed kernels and reusable memory in these comparisons.
 
-Against external BLS implementations, measured batch searches were **19–57× faster than the strongest tested CPU settings** (Astropy or periodfind) and **1.5–11.9× faster than periodfind GPU**. The figure marks the comparisons whose recovery and false-positive results support the stated 5-point criterion.
+Against external BLS implementations, measured batch searches were **19–57× faster than the strongest tested CPU settings** (Astropy or periodfind) and **1.5–11.9× faster than periodfind GPU**. The linked report identifies the comparisons whose recovery and false-positive results support the stated 5-point criterion.
 
 **TLS concentrates expensive fitting on promising candidates.** The coarse search works on weighted phase bins; selected candidate periods then receive exact fits against individual observations. This reduces repeated observation-level work and GPU dispatches. GTLS also has substantial host-loop overhead: batching just two of its loops improved diagnostic runtime by 1.4–8.2×. Those diagnostic patches are separate from the public GTLS used in the figure.
 
@@ -22,14 +22,9 @@ The resulting v1 TLS batch searches were **93–284× faster than public GTLS**,
 
 For a concrete QLP-oriented upgrade result, BLS on separated TESS sectors was **2.73× faster in batches**, or **10.18× faster including a fresh grid**, with the same **89/128** detected injections as PyPI. Paired confidence bounds support less than a 5-percentage-point recovery loss and less than a 5-point false-positive increase on this test population. Other PyPI comparisons remain inconclusive under that criterion.
 
-The figure also gives GPU rental-cost projections from measured throughput at $0.49/hour. These cover the search stage; preprocessing, I/O and candidate vetting are additional work.
+The [cost table](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TLS_COST_ANALYSIS.md) gives GPU rental-cost projections from measured throughput at $0.49/hour. These cover the search stage; preprocessing, I/O and candidate vetting are additional work.
 
-Earlier benchmarks cover other performance features:
-
-- **Survey-scale Lomb-Scargle beats [nifty-ls](https://github.com/flatironinstitute/nifty-ls)**, the fastest CPU implementation, by 1.5-12.6x per lightcurve at realistic survey frequency grids (>15x where nifty-ls exceeded the benchmark timeout). Honest caveat: for one-off small searches (< ~100K frequencies), nifty-ls on CPU is the better tool
-- **Keplerian frequency grids search 4-37x fewer frequencies** than uniform grids at survey baselines by exploiting the orbital-mechanics link between period and transit duration
-
-[Current transit results and component breakdown](docs/TRANSIT_BENCHMARKS.md) · [Earlier benchmark results](docs/BENCHMARK_RESULTS.md)
+[Transit results, recovery qualifications and component breakdown](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md)
 
 ## Features
 
@@ -54,7 +49,7 @@ For a development checkout, clone the repository and `pip install -e .[test]`. P
 
 Notes:
 
-- `import cuvarbase` does **not** create a CUDA context or require a GPU (or even pycuda) — the context is created lazily on first GPU use. The pure helpers in `cuvarbase.utils`, `cuvarbase.bls_frequencies`, `cuvarbase.tls_grids`, `cuvarbase.tls_models` and `cuvarbase.tls_stats` work without pycuda; the method modules (`cuvarbase.bls` with `sparse_bls_cpu`/`single_bls`, `cuvarbase.lombscargle` with `fap_baluev`, ...) import `pycuda.driver` at module top, so they need the pycuda package installed but touch no device until the first GPU call. See [INSTALL.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/INSTALL.rst) for the `--no-deps` install path on CUDA-less machines.
+- `import cuvarbase` does **not** create a CUDA context or require a GPU (or even pycuda) — the context is created lazily on first GPU use. The pure helpers in `cuvarbase.utils`, `cuvarbase.bls_frequencies`, `cuvarbase.tls_grids`, `cuvarbase.tls_models` and `cuvarbase.tls_stats` work without pycuda; the method modules (`cuvarbase.bls` with `sparse_bls_cpu`/`single_bls`, `cuvarbase.lombscargle` with `fap_baluev`, ...) import `pycuda.driver` at module top, so they need the pycuda package installed but touch no device until the first GPU call. See [INSTALL.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/INSTALL.rst) for the `--no-deps` install path on CUDA-less machines.
 - Device selection follows the `CUDA_DEVICE` environment variable, read at first GPU use (e.g. `CUDA_DEVICE=1 python script.py`; for multiple GPUs, split jobs across processes).
 - Optional extras: [batman-package](https://github.com/lkreidberg/batman) enables limb-darkened TLS templates; `cuvarbase[cufinufft]` enables the alternative cuFINUFFT Lomb-Scargle backend.
 
@@ -82,9 +77,9 @@ Full documentation — including Lomb-Scargle, TLS, CE, and PDM walkthroughs —
 
 ## What's New in v1.0
 
-v1.0 is a major modernization — the first release since the `0.2.x` line on PyPI — with faster transit searches and Keplerian grid construction ([measured results](docs/TRANSIT_BENCHMARKS.md)), the new survey-scale TLS engine, correct results on absolute BJD-scale timestamps (silently wrong before), sparse BLS, batched BLS, Keplerian frequency grids, multiharmonic GPU Lomb-Scargle, a PDM/CE overhaul contributed by [@astrobatty](https://github.com/astrobatty) (PRs #57-#62, #65), Python 3.9-3.14 + numpy 2.x support without scikit-cuda, and a GPU-validated test suite with **1,785 passed + 1 xfailed of 1,786 collected** (0 failed, 0 skipped; NVIDIA A40, 6 September 2026). The expected failure is `test_examples_compile.py::test_notebook_code_cells_compile_without_warnings[Phase Dispersion Minimization.ipynb]`, for known non-raw TeX label strings.
+v1.0 is a major modernization — the first release since the `0.2.x` line on PyPI — with faster transit searches and Keplerian grid construction ([measured results](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md)), the new survey-scale TLS engine, correct results on absolute BJD-scale timestamps (silently wrong before), sparse BLS, batched BLS, Keplerian frequency grids, multiharmonic GPU Lomb-Scargle, a PDM/CE overhaul contributed by [@astrobatty](https://github.com/astrobatty) (PRs #57-#62, #65), Python 3.9-3.14 + numpy 2.x support without scikit-cuda, and a GPU-validated test suite with **1,785 passed + 1 xfailed of 1,786 collected** (0 failed, 0 skipped; NVIDIA A40, 6 September 2026). The expected failure is `test_examples_compile.py::test_notebook_code_cells_compile_without_warnings[Phase Dispersion Minimization.ipynb]`, for known non-raw TeX label strings.
 
-The complete list: [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/CHANGELOG.rst), with release notes in [docs/RELEASE_NOTES_v1.0.0.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/RELEASE_NOTES_v1.0.0.md) and measured performance in [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).
+The complete list: [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/CHANGELOG.rst), with release notes in [docs/RELEASE_NOTES_v1.0.0.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/RELEASE_NOTES_v1.0.0.md) and measured performance in [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/BENCHMARK_RESULTS.md).
 
 ## Testing
 
@@ -96,7 +91,7 @@ The test suite runs **on CPU**: `cuvarbase/tests/conftest.py` stubs `pycuda`, so
 
 ## Contributing
 
-Contributions are very welcome — see the [Contributing Guide](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/CONTRIBUTING.md) for development setup, code standards, testing requirements, and the PR process, and the [issue tracker](https://github.com/johnh2o2/cuvarbase/issues) for bug reports and feature requests.
+Contributions are very welcome — see the [Contributing Guide](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/CONTRIBUTING.md) for development setup, code standards, testing requirements, and the PR process, and the [issue tracker](https://github.com/johnh2o2/cuvarbase/issues) for bug reports and feature requests.
 
 ## Citation
 
@@ -132,11 +127,11 @@ I want to personally thank people who have given their time and support to this 
 
 In the years since 2017, I moved away from astrophysics and life has gone on. With coding agents finally good enough that a limited time investment can bring a lot of return, I would really like to encourage interested people to become official **contributors** so that I can pass the torch onto the larger community. With the world awash in GPUs and time-series datasets orders of magnitude larger than a decade ago, something like `cuvarbase` seems even more relevant today than when it started — and where others have built better tools for a given method (e.g. [periodfind](https://github.com/scope-ml/periodfind) for conditional entropy), we would rather point you to them than duplicate the effort.
 
-**If you're interested in contributing, please see our [Contributing Guide](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/CONTRIBUTING.md)!**
+**If you're interested in contributing, please see our [Contributing Guide](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/CONTRIBUTING.md)!**
 
 ## License & Acknowledgments
 
-Licensed under GPLv3 — see [LICENSE.txt](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/LICENSE.txt).
+Licensed under GPLv3 — see [LICENSE.txt](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/LICENSE.txt).
 
 Special thanks to Joel Hartman (author of the original `vartools`), Gaspar Bakos, Kevin Burdge, Attila Bódi ([@astrobatty](https://github.com/astrobatty) — PDM, CE, Lomb-Scargle, and BLS contributions throughout v1.0), and **Jamila Taaki** ([@xiaziyna](https://github.com/xiaziyna) — the NUFFT likelihood-ratio transit search; see Taaki, Kamalabadi & Kemball 2020, *Bayesian Methods for Joint Exoplanet Transit Detection and Systematic Noise Characterization*, and the [reference implementation](https://github.com/star-skelly/code_nova_exoghosts)) — and to all users and contributors who have made cuvarbase useful to the astronomy community.
 

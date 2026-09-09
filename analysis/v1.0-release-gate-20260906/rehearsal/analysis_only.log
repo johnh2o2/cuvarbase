@@ -1,5 +1,0 @@
-cwd: /Users/johnhoffman/Documents/cuvarbase
-command: git diff --exit-code 1032caf029570dc4841db1c594a2cbb1654e8fd8 ea2694ffafbb49363f236133bb16675a64ca00ba -- . ':!analysis'
-
-
-EXIT_CODE=0

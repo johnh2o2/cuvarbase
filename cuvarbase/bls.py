@@ -3504,7 +3504,7 @@ def eebls_gpu_batch(lightcurves, freqs, *, qmin=1e-2, qmax=0.5,
     re-allocating per chunk. The earlier "~12x slower at TESS scale"
     regression was per-call kernel compilation (now LRU-cached like
     the single-LC paths); see
-    ``analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md``.
+    `archived numerical diagnosis <https://github.com/johnh2o2/cuvarbase/blob/f0dc98136ae34b34465b152be1af84faf063eb44/analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md>`_.
     """
     _validate_convention(convention)
     # Validate every light curve, the shared grid and the q bounds

@@ -13,7 +13,7 @@ jobs:
   # grids/models/stats, NUFFT-LRT algorithm, frequency grids, kernel
   # inventory, lazy-import contract, input validation) run and every
   # test that touches a device skips. GPU kernels are validated on a
-  # CUDA pod before releases (see scripts/gpu-test.sh and scripts/README.md).
+  # CUDA pod before releases (see tools/README.md).
   test-cpu:
     runs-on: ubuntu-latest
     strategy:
@@ -78,7 +78,7 @@ jobs:
         /tmp/smoke-wheel/bin/pip install --upgrade pip
         /tmp/smoke-wheel/bin/pip install "numpy>=1.22" "scipy>=1.8" astropy nfft pytest
         /tmp/smoke-wheel/bin/pip install --no-deps dist/*.whl
-        /tmp/smoke-wheel/bin/python scripts/ci_wheel_smoke.py
+        /tmp/smoke-wheel/bin/python tools/ci_wheel_smoke.py
         # The shipped test package must pass from the installed wheel,
         # away from the checkout (the command INSTALL.rst advertises).
         mkdir -p /tmp/pyargs-run && cd /tmp/pyargs-run
@@ -90,7 +90,7 @@ jobs:
         /tmp/smoke-sdist/bin/pip install --upgrade pip
         /tmp/smoke-sdist/bin/pip install "numpy>=1.22" "scipy>=1.8"
         /tmp/smoke-sdist/bin/pip install --no-deps dist/*.tar.gz
-        /tmp/smoke-sdist/bin/python scripts/ci_wheel_smoke.py
+        /tmp/smoke-sdist/bin/python tools/ci_wheel_smoke.py
 
     - name: Upload dist/
       uses: actions/upload-artifact@v4

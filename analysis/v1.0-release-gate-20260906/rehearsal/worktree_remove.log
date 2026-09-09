@@ -1,5 +1,0 @@
-cwd: /Users/johnhoffman/Documents/cuvarbase
-command: git worktree remove --force /var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout
-
-
-EXIT_CODE=0

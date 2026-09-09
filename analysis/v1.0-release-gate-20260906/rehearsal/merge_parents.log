@@ -1,6 +1,0 @@
-cwd: /var/folders/mm/pwd8b0fn5dx96p97tjbyl2br0000gn/T/cuvarbase-phase5-rehearsal-u3apbyuj/checkout
-command: git show -s --format=%P HEAD
-
-060d839035bcc65d7c69a48a3329852a5f6d580b ea2694ffafbb49363f236133bb16675a64ca00ba
-
-EXIT_CODE=0

@@ -1,5 +1,0 @@
-/tmp/cuvarbase-benchmark-audit/legacy/lib/python3.11/site-packages/cuvarbase/utils.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  import pkg_resources
-/tmp/cuvarbase-benchmark-audit/legacy/lib/python3.11/site-packages/skcuda/cublas.py:284: UserWarning: creating CUBLAS context to get version number
-  warnings.warn('creating CUBLAS context to get version number')
-{"status": "ok", "seconds_per_lc": 0.015934730996377766}

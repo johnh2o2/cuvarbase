@@ -1,9 +1,0 @@
-/tmp/cuvarbase-benchmark-audit/modern/lib/python3.11/site-packages/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
-  import pynvml
-Traceback (most recent call last):
-  File "/tmp/cuvarbase-benchmark-audit/run_tls.py", line 135, in main
-    c = np.asarray(np.ma.filled(result['chi2'], np.nan), float)
-                                ~~~~~~^^^^^^^^
-TypeError: 'gtlsResult' object is not subscriptable
-
-{"status": "error"}

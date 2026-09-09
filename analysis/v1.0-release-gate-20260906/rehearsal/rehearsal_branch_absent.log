@@ -1,5 +1,0 @@
-cwd: /Users/johnhoffman/Documents/cuvarbase
-command: git show-ref --verify --quiet refs/heads/rehearsal-1.0.0
-
-
-EXIT_CODE=1
