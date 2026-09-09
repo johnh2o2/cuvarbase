@@ -108,7 +108,10 @@ log-spaced durations inside a **Keplerian duration window**
 :func:`cuvarbase.tls_grids.duration_window` from the stellar parameters
 the function takes (``qmin_fac``/``qmax_fac``/``R_planet`` adjust it;
 explicit per-period ``qmin``/``qmax`` arrays override it). The window
-follows :math:`P^{-2/3}` and stays physical out to any period. Before
+follows :math:`P^{-2/3}`. It is a central, circular-orbit prior: high
+impact parameters or eccentric periastron transits can be shorter than
+its default minimum. Widen the duration window for those populations;
+increasing phase bins alone cannot supply missing trial durations. Before
 1.0 the default was a constant window ``[0.005, 0.15]`` at every period,
 which excludes the Keplerian duration beyond P ~ 60 d for a Sun-like
 star (18.5 d for an M dwarf) — a P = 365 d transit on a 1400-d baseline
@@ -237,8 +240,10 @@ Tuning
 ``nbins`` / ``block_size``
     Phase-bin and CUDA block-size overrides. By default the period
     grid is split into bands that each compile with their own bin
-    count (long-period bands need fewer bins), sized to the device's
-    shared-memory limit — overriding is rarely necessary.
+    count (long-period bands generally need more bins), sized to the
+    narrowest allowed duration and capped by the device's shared-memory
+    limit. Finer bins preserve more phase information, but cannot repair
+    an unsuitable duration window or an inadequately sampled epoch grid.
 
 References
 ----------

@@ -8,6 +8,8 @@ The [transit benchmark report](../docs/TRANSIT_BENCHMARKS.md) is the source for 
 | [results/transit_2026-09-08/](results/transit_2026-09-08/README.md) | BLS competitor benchmark and initial TLS experiment |
 | [tls_sensitivity/](tls_sensitivity/README.md) | Independent TLS recovery, exclusive timing and numerical-resolution tools |
 | [results/tls_sensitivity_2026-09-09/](results/tls_sensitivity_2026-09-09/README.md) | Current TLS evidence, resolution tradeoffs and secondary BLS control |
+| [tls_accuracy/](tls_accuracy/README.md) | TLS approximation diagnostics, kernel parity/timing and focused high-impact recovery tools |
+| [results/tls_accuracy_2026-09-09/](results/tls_accuracy_2026-09-09/README.md) | Narrow-transit accuracy limits and validation of sparse-bin traversal |
 | [tls_profile/](tls_profile/README.md) | Supplementary TLS profiling and CPU failure diagnostics |
 | [results/tls_profile_2026-09-08/](results/tls_profile_2026-09-08/README.md) | TLS component measurements and numerical comparisons |
 | [nufft_lrt/](nufft_lrt/README.md) | Validation tools for the experimental NUFFT-LRT detector |

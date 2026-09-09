@@ -83,7 +83,7 @@ def _clear_template_table_cache():
 def create_reference_transit(n_samples=1000, limb_dark='quadratic',
                              u=None):
     """
-    Create a reference transit model normalized to Earth-like transit.
+    Create a fiducial transit model normalized to unit depth.
 
     This generates a high-resolution transit template that can be scaled
     and interpolated for different durations and depths.
@@ -110,8 +110,10 @@ def create_reference_transit(n_samples=1000, limb_dark='quadratic',
     -----
     The reference model assumes:
     - Period = 1.0 (arbitrary units, we work in phase)
-    - Semi-major axis = 1.0 (normalized)
-    - Planet-to-star radius ratio scaled to produce unit depth
+    - Semi-major axis = 15 stellar radii
+    - Planet-to-star radius ratio = 0.1, central circular transit
+    - Flux deficit normalized to unit depth; this normalization does
+      not change the ingress shape to that of a smaller planet
     """
     if u is None:
         u = [0.4804, 0.1867]
@@ -122,7 +124,7 @@ def create_reference_transit(n_samples=1000, limb_dark='quadratic',
     # Batman parameters for reference transit
     params = batman.TransitParams()
 
-    # Fixed parameters (Earth-like)
+    # Fixed fiducial shape; depth normalization does not alter geometry.
     params.t0 = 0.0                   # Mid-transit time
     params.per = 1.0                  # Period (arbitrary, we use phase)
     params.rp = 0.1                   # Planet-to-star radius ratio (will normalize)

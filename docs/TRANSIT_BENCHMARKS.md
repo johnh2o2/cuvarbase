@@ -16,6 +16,8 @@ cuvarbase v1 reduces the work needed for transit searches. BLS batches are **1.8
 
 **TLS:** 4,096 calibration nulls, 2,048 independent injections and 4,096 test nulls per cadence. The frozen rule requires recovery loss below 5 points and the false-positive difference inside ±2 points, using simultaneous confidence bounds across all nine setting/cadence comparisons. Dense TESS passes with the fine grid; all three separated-TESS settings pass. Every setting passes the recovery-loss bound on every cadence. These are bounded results for an equal SNR mixture at a nominal 5% false-alarm target, not exact equality or a per-SNR guarantee.
 
+This population uses solar hosts, periods of 0.8–12 days and impact parameters up to 0.85. The [narrow-transit accuracy audit](TLS_NUMERICS.md) examines limits outside that population: the default duration prior can omit high-impact or eccentric transits, and the phase-bin cap can limit long-period searches around dense stars. Its separate kernel timings measure a subsequent implementation optimization; the figure above retains the frozen survey-study measurements.
+
 On ZTF, original-grid v1 detects **1,620/2,048** transits versus **1,546/2,048** for GTLS, and flags **201/4,096** nulls versus **235/4,096**. Its false-positive difference is −0.83 points, with simultaneous bounds **[−2.79, +1.14]**: the lower end misses the strict ±2-point matching rule. This does not demonstrate a sensitivity loss or too many false positives. The rule remains unchanged after seeing the outcomes. GTLS's 12 injection and 32 test-null API failures are retained; the [study](../benchmarks/results/tls_sensitivity_2026-09-09/README.md) explains their handling.
 
 ## Where the speed comes from

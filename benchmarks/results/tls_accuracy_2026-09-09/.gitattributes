@@ -1,0 +1,5 @@
+# Preserve the exact bytes recorded by the evidence checksum inventories.
+* -text
+*.csv whitespace=cr-at-eol
+# Captured test output is retained verbatim, including warning indentation.
+*.log -whitespace

@@ -95,7 +95,7 @@ A read-only algorithm audit of the release candidate (September 2026, on-device)
 - **BLS**: `eebls_gpu`, `eebls_gpu_custom`, `hone_solution` and `sparse_bls_gpu` take their kernels from the LRU cache instead of compiling per call; the adaptive/optimized paths run the fused-`noverlap` kernel; no per-call `BLSMemory` on the single-call paths; vectorized solution re-phasing and `einsum` prologues.
 - **Lomb–Scargle**: `batched_run_const_nfreq` reuses its memory set, cuFFT plans and pinned buffers across calls; the multiharmonic host solve is one stacked `numpy.linalg.solve`; vectorized NumPy reductions on the host path.
 - **Conditional entropy / PDM**: `use_fast=True` sizes its grid from the device and no longer allocates the global histogram it never read; PDM `run()` reuses its device buffers across same-shape calls.
-- **TLS**: `tls_transit` builds only the duration bounds; `tls_search_batch` computes its statistics sequentially (the thread pool was GIL-bound and slower); memoized template tables.
+- **TLS**: `tls_transit` builds only the duration bounds; `tls_search_batch` computes its statistics sequentially (the thread pool was GIL-bound and slower); memoized template tables. Fine, sparsely occupied phase histograms skip template-integral evaluation across empty bins while preserving the search settings and coordinate arithmetic. The [accuracy and efficiency audit](TLS_NUMERICS.md) records validation and explains where the existing binning and duration priors limit narrow-transit searches.
 
 ## Breaking changes & migration
 

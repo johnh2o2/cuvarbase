@@ -235,6 +235,124 @@ class TestBanding:
         assert corr > 0.99
 
 
+class TestEmptyBinTraversal:
+    """Skipping empty phase bins must preserve the numerical search.
+
+    Compare the optimized kernel with its dense reference traversal on
+    identical grids, including bins straddling phase zero, capped narrow
+    durations, long empty phase intervals, and the conservative sparse
+    dispatch threshold and small-block fallback.
+    These are numerical regressions, not evidence about astrophysical
+    recovery or false-positive calibration.
+    """
+
+    @staticmethod
+    def _search_pair(tls, monkeypatch, lightcurves, **kwargs):
+        reader = tls._module_reader
+        compiled = {}
+        mode = 0
+
+        def get_kernels(bs, nb, oversample, refine_nd=3):
+            key = (mode, bs, nb, oversample, refine_nd)
+            if key not in compiled:
+                def read_variant(*args, **kw):
+                    return ('#define TLS_SKIP_EMPTY_BINS %d\n' % mode
+                            + reader(*args, **kw))
+                with monkeypatch.context() as patch:
+                    patch.setattr(tls, '_module_reader', read_variant)
+                    compiled[key] = tls.compile_tls_fast(
+                        bs, nb, oversample, refine_nd)
+            return compiled[key]
+
+        monkeypatch.setattr(tls, '_get_cached_fast_kernels', get_kernels)
+        outputs = []
+        for mode in (0, 1):
+            outputs.append(tls.tls_search_batch(lightcurves, **kwargs))
+        return outputs
+
+    @pytest.mark.parametrize('nbins,ndata,q,center,clustered,block_size', [
+        (8192, 700, .03, .9999, False, 512),
+        (8192, 256, .0001, .99999, False, 512),
+        (8192, 300, .03, .01, True, 512),
+        (1024, 3000, .03, .3, False, 256),
+        (8192, 2200, .03, .3, False, 512),
+        (8192, 300, .03, .99, False, 32),
+    ])
+    def test_same_scores_and_signal_candidate(
+            self, monkeypatch, nbins, ndata, q, center, clustered,
+            block_size):
+        from cuvarbase import tls
+
+        tls.ensure_context()
+        if tls._tls_fast_shared_size(block_size, nbins) > tls._device_max_shared():
+            pytest.skip('device cannot fit the requested fine-bin kernel')
+        rng = np.random.RandomState(841)
+        cycles = rng.randint(0, 2744, ndata)
+        phase = rng.uniform(0, 1, ndata)
+        if clustered:
+            phase = np.mod(center + rng.uniform(-.02, .02, ndata), 1.)
+        # Ensure that even the tiny-duty-cycle case contains measured
+        # transits. The aim is traversal parity, not random observability.
+        phase[:24] = np.mod(center + np.linspace(-.3 * q, .3 * q, 24), 1.)
+        t = cycles + phase
+        rel = (phase - center + .5) % 1. - .5
+        shape = np.maximum(0., 1. - (2. * rel / q) ** 2)
+        dy = rng.uniform(.001, .003, ndata)
+        y = 1. - .03 * shape + rng.randn(ndata) * dy
+        order = np.argsort(t)
+        lc = (t[order] + 2457000., y[order], dy[order])
+        periods = np.array([.701, .913, 1., 1.127, 1.701])
+        qmin = np.full(len(periods), q)
+        qmax = np.full(len(periods), 1.5 * q)
+        old_list, new_list = self._search_pair(
+            tls, monkeypatch, [lc], periods=periods, qmin=qmin, qmax=qmax,
+            n_durations=4, t0_oversample=8., nbins=nbins,
+            block_size=block_size, refine_top_k=0, return_arrays=True)
+        old, new = old_list[0], new_list[0]
+        np.testing.assert_array_equal(old['valid_periods'], new['valid_periods'])
+        chi2_0 = tls._preprocess_batch([lc])[6][0]
+        old_score = chi2_0 - old['chi2']
+        new_score = chi2_0 - new['chi2']
+        # Atomic histogram sums vary in order across launches. The
+        # sparse scan retains the dense scan's coordinate arithmetic.
+        np.testing.assert_allclose(new_score, old_score,
+                                   rtol=2e-5, atol=1e-5, equal_nan=True)
+        assert old['period'] == new['period']
+
+    def test_sparse_template_tail(self, monkeypatch):
+        """Tiny coordinate shifts can amplify integral-subtraction error.
+
+        Most phases are unobserved. A single downward fluctuation can
+        sit in a transit's faint tail, where S2(right)-S2(left) is tiny.
+        Multiplying a skip distance by dc instead of repeating the
+        dense coordinate additions perturbs that subtraction and can
+        change the winning score. The synthetic fixture is deliberately
+        small and needs no survey archive.
+        """
+        from cuvarbase import tls
+
+        tls.ensure_context()
+        if tls._tls_fast_shared_size(512, 8192) > tls._device_max_shared():
+            pytest.skip('device cannot fit the requested fine-bin kernel')
+        t = np.r_[np.linspace(0., .5, 128), 231.5752637386322]
+        y = np.r_[np.full(128, 1.001), .9982297870702772]
+        dy = np.r_[np.full(128, .001), .0006100752167838939]
+        lc = (t, y, dy)
+        old_list, new_list = self._search_pair(
+            tls, monkeypatch, [lc], periods=np.array([.9998087951893398]),
+            qmin=np.array([.038196352656710154]),
+            qmax=np.array([.15278541062684062]),
+            n_durations=32, t0_oversample=16., nbins=8192,
+            block_size=512, refine_top_k=0, return_arrays=True)
+        old, new = old_list[0], new_list[0]
+        chi2_0 = tls._preprocess_batch([lc])[6][0]
+        old_score, new_score = chi2_0 - old['chi2'], chi2_0 - new['chi2']
+        assert old['valid_periods'].all() and new['valid_periods'].all()
+        assert np.isfinite(old_score).all() and np.isfinite(new_score).all()
+        assert (old_score > 0).all() and (new_score > 0).all()
+        np.testing.assert_allclose(new_score, old_score, rtol=2e-5, atol=1e-5)
+
+
 class TestRefinementFallback:
     """PR #68 review regression: the coarse-parameter fallback in _finish_lc
     must not depend on return_arrays being set."""
