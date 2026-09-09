@@ -2,19 +2,34 @@
 
 **GPU-accelerated time series analysis tools for astronomy** — period-finding and transit-detection algorithms (BLS, TLS, Lomb-Scargle, PDM, CE) built on [PyCUDA](https://mathema.tician.de/software/pycuda/). Created by John Hoffman, (c) 2017.
 
+**Faster transit searches for TESS and ZTF.** On the tested cadences, v1 BLS is **1.8–4.3× faster than PyPI 0.2.5** in batches, and **4.2–10.7× faster** when each source needs a new period grid. The figure pairs execution time with independent recovery tests.
+
+![Transit-search speed, recovery and projected cost on TESS and ZTF cadences](docs/figures/transit_benchmarks_20260908.png)
+
+Single-source latency and batch throughput on observed cadences with synthetic transits and noise. [Results, sensitivity qualifications and methodology](docs/TRANSIT_BENCHMARKS.md) · [PDF figure](docs/figures/transit_benchmarks_20260908.pdf)
+
 ## Performance at Survey Scale
 
 cuvarbase is built for processing millions of lightcurves, and it is proven in production: **NASA's TESS Quick-Look Pipeline has run cuvarbase's GPU BLS on every TESS sector since Sector 59** ([Kunimoto et al. 2023](https://ui.adsabs.harvard.edu/abs/2023RNAAS...7...28K/abstract)).
 
-The headline numbers, all traceable to archived benchmark data in this repository:
+**BLS does less repeated work.** For each trial period, v1 reuses folded phase histograms across multiple phase offsets. Disabling this fusion made diagnostic API calls 1.35–1.57× slower. Vectorized host scans and Keplerian-grid construction remove Python loops over large grids; grid construction alone was 11–17× faster. The batch API amortizes allocation and dispatch across lightcurves. Both releases receive warmed kernels and reusable memory in these comparisons.
 
-- **Standard BLS is 257-354x faster than astropy's `BoxLeastSquares`**, measured consistently across all 7 GPU architectures tested (V100 through H200)
-- **Transit Least Squares is 30-171x faster than GTLS** — the only other GPU TLS — on the same GPU at matched search settings and equal detection significance (SDE within 1-3% under the pre-1.0 SDE definition), and thousands of times faster than the reference CPU `transitleastsquares` (methodology and the reproduced GTLS-paper figure: [docs/GTLS_COMPARISON.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/GTLS_COMPARISON.md))
+Against external BLS implementations, measured batch searches were **19–57× faster than the strongest tested CPU settings** (Astropy or periodfind) and **1.5–11.9× faster than periodfind GPU**. The figure marks the comparisons whose recovery and false-positive results support the stated 5-point criterion.
+
+**TLS concentrates expensive fitting on promising candidates.** The coarse search works on weighted phase bins; selected candidate periods then receive exact fits against individual observations. This reduces repeated observation-level work and GPU dispatches. GTLS also has substantial host-loop overhead: batching just two of its loops improved diagnostic runtime by 1.4–8.2×. Those diagnostic patches are separate from the public GTLS used in the figure.
+
+The resulting v1 TLS batch searches were **93–284× faster than public GTLS**, but the two implementations use different numerical searches. **Equivalent TLS detection sensitivity is not established by this experiment.** On ZTF, v1 recovered more transits and also accepted more nulls. The timing advantage is measured; its recovery tradeoff remains part of the comparison.
+
+For a concrete QLP-oriented upgrade result, BLS on separated TESS sectors was **2.73× faster in batches**, or **10.18× faster including a fresh grid**, with the same **89/128** detected injections as PyPI. Paired confidence bounds support less than a 5-percentage-point recovery loss and less than a 5-point false-positive increase on this test population. Other PyPI comparisons remain inconclusive under that criterion.
+
+The figure also gives GPU rental-cost projections from measured throughput at $0.49/hour. These cover the search stage; preprocessing, I/O and candidate vetting are additional work.
+
+Earlier benchmarks cover other performance features:
+
 - **Survey-scale Lomb-Scargle beats [nifty-ls](https://github.com/flatironinstitute/nifty-ls)**, the fastest CPU implementation, by 1.5-12.6x per lightcurve at realistic survey frequency grids (>15x where nifty-ls exceeded the benchmark timeout). Honest caveat: for one-off small searches (< ~100K frequencies), nifty-ls on CPU is the better tool
 - **Keplerian frequency grids search 4-37x fewer frequencies** than uniform grids at survey baselines by exploiting the orbital-mechanics link between period and transit duration
-- **All four major surveys for ~$33 of GPU time**: Lomb-Scargle + BLS over ZTF + HAT-Net + TESS + Kepler scale collections, on a rented RTX A5000 at $0.20/hr
 
-Full tables, per-survey costs, and methodology: [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).
+[Current transit results and component breakdown](docs/TRANSIT_BENCHMARKS.md) · [Earlier benchmark results](docs/BENCHMARK_RESULTS.md)
 
 ## Features
 
@@ -67,7 +82,7 @@ Full documentation — including Lomb-Scargle, TLS, CE, and PDM walkthroughs —
 
 ## What's New in v1.0
 
-v1.0 is a major modernization — the first release since the `0.2.x` line on PyPI — with large architectural speedups (an LRU kernel cache alone makes per-lightcurve loops **34x faster**; survey-speed BLS kernels add **2.0-12.7x end-to-end**), the new survey-scale TLS engine, correct results on absolute BJD-scale timestamps (silently wrong before), sparse BLS, batched BLS, Keplerian frequency grids, multiharmonic GPU Lomb-Scargle, a PDM/CE overhaul contributed by [@astrobatty](https://github.com/astrobatty) (PRs #57-#62, #65), Python 3.9-3.14 + numpy 2.x support without scikit-cuda, and a GPU-validated test suite with **1,785 passed + 1 xfailed of 1,786 collected** (0 failed, 0 skipped; NVIDIA A40, 6 September 2026). The expected failure is `test_examples_compile.py::test_notebook_code_cells_compile_without_warnings[Phase Dispersion Minimization.ipynb]`, for known non-raw TeX label strings.
+v1.0 is a major modernization — the first release since the `0.2.x` line on PyPI — with faster transit searches and Keplerian grid construction ([measured results](docs/TRANSIT_BENCHMARKS.md)), the new survey-scale TLS engine, correct results on absolute BJD-scale timestamps (silently wrong before), sparse BLS, batched BLS, Keplerian frequency grids, multiharmonic GPU Lomb-Scargle, a PDM/CE overhaul contributed by [@astrobatty](https://github.com/astrobatty) (PRs #57-#62, #65), Python 3.9-3.14 + numpy 2.x support without scikit-cuda, and a GPU-validated test suite with **1,785 passed + 1 xfailed of 1,786 collected** (0 failed, 0 skipped; NVIDIA A40, 6 September 2026). The expected failure is `test_examples_compile.py::test_notebook_code_cells_compile_without_warnings[Phase Dispersion Minimization.ipynb]`, for known non-raw TeX label strings.
 
 The complete list: [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/CHANGELOG.rst), with release notes in [docs/RELEASE_NOTES_v1.0.0.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/RELEASE_NOTES_v1.0.0.md) and measured performance in [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).
 
