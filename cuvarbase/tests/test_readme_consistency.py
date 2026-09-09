@@ -42,7 +42,12 @@ def test_readme_advertises_the_pypi_install():
     readme = _readme()
     assert "pip install cuvarbase\n" in readme
     assert "git+https" not in readme
-    assert "0.2.5" not in readme
+    # Historical versions belong in benchmark comparisons, but must not
+    # reappear as the advertised installation target or a stale banner.
+    installation = re.search(
+        r"^## Installation\n(.*?)(?=^## |\Z)", readme, re.M | re.S)
+    assert installation is not None
+    assert "0.2.5" not in installation.group(1)
     assert "Until v1.0.0" not in readme
 
 

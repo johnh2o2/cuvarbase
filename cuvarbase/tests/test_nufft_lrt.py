@@ -4,7 +4,7 @@ GPU tests for the NUFFT-based Likelihood Ratio Test (LRT) transit search.
 Every random draw is seeded (``np.random.RandomState``); the data models
 mirror the audit repro scripts (``analysis/audit-sep2026/repro/local/``
 vfy-lrt-bjd, verify-lrt-epochs, vseq, vfy-detA, verify-lrt-band) and the
-validation harness (``scripts/nufft_lrt_validation.py``).
+validation harness (``benchmarks/nufft_lrt/validate.py``).
 """
 import pytest
 import numpy as np

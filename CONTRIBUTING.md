@@ -36,7 +36,7 @@ The pytest configuration lives in `pyproject.toml` and the pycuda stub in `cuvar
 - **CPU suite** (runs anywhere): `pytest`
 - **Lint** (the CI hard-fails on this class only): `flake8 cuvarbase --select=E9,F63,F7,F82`
 - **Docs build** (pycuda is mocked; only the plot-directive figures need a GPU): `make -C docs html`
-- **GPU validation** before a release or after touching a kernel: run the full suite on a rented pod as described in [scripts/README.md](scripts/README.md)
+- **GPU validation** before a release or after touching a kernel: run the full suite on a CUDA device as described in [tools/README.md](tools/README.md)
 
 ## Code Standards
 
@@ -261,13 +261,4 @@ When contributing GPU code:
 
 ## Historical process material
 
-The audits, benchmark protocols, punchlists and one-off scripts that drove the 1.0 release were pruned from the tree before tagging. They are preserved in full on the annotated tag [`archive/pre-1.0-process`](https://github.com/johnh2o2/cuvarbase/tree/archive/pre-1.0-process), and [analysis/README.md](analysis/README.md) describes what was kept in-tree (the audit of record and the GPU validation records) and where the rest went.
-
-## Questions?
-
-If you have questions about contributing, please:
-- Check existing documentation
-- Look at similar code in the repository
-- Open an issue for discussion
-
-Thank you for contributing to cuvarbase!
+The current [benchmark tools and evidence](benchmarks/README.md) and [release validation record](docs/validation/README.md) are kept with the code. Planning notes, release drafts, cloud-specific helpers and superseded campaigns are archived in [Git history](https://github.com/johnh2o2/cuvarbase/tree/f0dc98136ae34b34465b152be1af84faf063eb44). To inspect an old file, use `git show f0dc98136ae34b34465b152be1af84faf063eb44:<path>`.

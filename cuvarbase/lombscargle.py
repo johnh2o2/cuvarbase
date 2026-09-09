@@ -1502,7 +1502,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             ``batch_size=4`` measured ~10% faster per LC than 1 at 256
             LCs/call, while 8 was net slower. Only increase this if you
             benchmark it on your own workload; see
-            ``analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md``.
+            `archived numerical diagnosis <https://github.com/johnh2o2/cuvarbase/blob/f0dc98136ae34b34465b152be1af84faf063eb44/analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md>`_.
 
         Notes
         -----

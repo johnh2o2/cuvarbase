@@ -33,12 +33,12 @@ significance at fixed depth.
 Accuracy is validated two ways in the test suite: golden tests against
 the reference `transitleastsquares
 <https://github.com/hippke/tls>`_ package, and injected-transit
-recovery tests across cadence regimes. The SDE is defined exactly as
-in the reference package (see below), and on the reference's own
-period grid the default configuration reports the same SDE for the
-same detection to within the coarse-vs-fine epoch grid difference
-(measured 5-15%) at a small fraction of the cost; see
-``docs/BENCHMARK_RESULTS.md`` for measured numbers.
+recovery tests across cadence regimes. SDE uses the reference package's
+formula (see below), but the numerical search and resulting spectrum
+differ. Equal scalar SDE does not establish equivalent detection
+sensitivity. The `current transit benchmark
+<https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md>`_
+reports timing, independent recovery and false-positive qualifications.
 
 .. note::
 
@@ -216,17 +216,13 @@ Tuning
 
 ``t0_oversample`` (default 3)
     Trial epochs per transit duration in the coarse scan. The default
-    favors speed; the reference ``transitleastsquares`` package steps
-    ~100× finer (every cadence for dense data). Measured cost of the
-    default: the SDE of a P = 7.3 d, q = 0.021 transit varies by 17%
-    (19.8-23.4) with where the true epoch falls relative to the coarse
-    grid (6.5% at 33), and for a narrow transit (M dwarf, 3.4 cadences
-    of 30 min) the SDE is 29.1 at 3 vs 32.9 at 10 and 32.7 at 33 (-11%).
-    The exact refinement restores full parameter precision at the
-    candidates but does not enter the SDE. Raise it to 10 (matched 33
-    within 1% in those runs) for sensitivity-critical or
-    narrow-transit searches, at a roughly proportional increase in
-    kernel time.
+    favors speed. Finer sampling can improve the response to narrow
+    transits and increases the search work. Exact refinement sharpens
+    selected candidates but does not enter the SDE spectrum or recover
+    a period missed by the coarse candidate selection. Choose this
+    setting using independent injections and null calibration for the
+    intended cadence; neither a particular oversampling value nor a
+    close SDE match guarantees comparable sensitivity.
 ``refine_top_k`` (default 50) / ``refine_oversample`` (default 33)
     How many candidate periods per lightcurve are re-fit exactly, and
     the epoch resolution of that re-fit.

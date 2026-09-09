@@ -36,7 +36,7 @@ Conventions
   growing with ``nf``). Detection thresholds must be calibrated
   empirically per (sampling, ``nf``, PSD estimator) configuration, e.g.
   from the null-percentile of signal-free or scrambled light curves as
-  ``scripts/nufft_lrt_validation.py`` does. Raising ``nf`` inflates the
+  ``benchmarks/nufft_lrt/validate.py`` does. Raising ``nf`` inflates the
   raw value without adding information.
 * **Detectors** (:meth:`NUFFTLRTAsyncProcess.run`, ``detector=``):
   ``'matched'`` (default) is the stationary whitened filter above;

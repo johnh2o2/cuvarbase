@@ -97,7 +97,7 @@ joint detectors are modest (~2% detection efficiency on Kepler; 0.2% and
 not statistically significant on TESS). The NUFFT / irregular-sampling
 variant in this module appears in no publication -- its characterization
 is the cuvarbase injection-recovery study
-(``scripts/nufft_lrt_validation.py``; see *Validation status*). Do not
+(``benchmarks/nufft_lrt/validate.py``; see *Validation status*). Do not
 cite the papers' numbers as this module's performance.
 
 When is this the right tool?
@@ -166,11 +166,11 @@ hold:**
    period.
 3. **You can calibrate thresholds empirically** (see the caveats).
 
-**Prefer BLS** for blind box searches at scale (thousands of times
-cheaper per trial, more complete in white noise, within ~10 % of the
-whitened filter in red noise) and **TLS** when limb-darkened template
-fidelity matters or in red noise without a basis, where it matched or
-beat the whitened filter here. (Lomb-Scargle is not a transit
+**BLS** is designed for blind box searches over large period grids;
+**TLS** uses limb-darkened transit templates. The validation tables
+below compare recovery and cost for the specified NUFFT-LRT experiment.
+Use the current transit benchmark for BLS/TLS release speed claims.
+(Lomb-Scargle is not a transit
 competitor at all -- a short-duty-cycle box leaves only a small
 fraction of its power in the sinusoidal fundamental, which is why box
 searches exist.)
@@ -328,8 +328,8 @@ Validation status
 **Re-validated after the Sep-2026 fixes** (Phase 4 of the 1.0 release
 plan; campaign JSON, per-process logs and the full-suite log under
 ``benchmarks/results/nufft_lrt_validation_2026-09-06/``; harness
-``scripts/nufft_lrt_validation.py`` at commit 2f9736a; tables rendered
-by ``scripts/summarize_lrt_validation.py --rst``). Measured on one
+``benchmarks/nufft_lrt/validate.py`` at commit 2f9736a; tables rendered
+by ``benchmarks/nufft_lrt/summarize.py --rst``). Measured on one
 NVIDIA A40 (CUDA 12.4); the numbers are completeness fractions and
 per-search costs, not absolute timings for any other GPU.
 
@@ -806,7 +806,7 @@ What the numbers say
   systematics: only the basis-aware detectors work (98 % vs <= 6 % at
   depth 0.016), and Detector A equals the sequential baseline exactly.
 * Compared with the pre-fix campaign (60 injections, explicit epochs
-  only, ``sigma = 2``, ``analysis/audit-sep2026/campaign/``): the
+  only, ``sigma = 2``, the `archived pre-fix campaign <https://github.com/johnh2o2/cuvarbase/tree/f0dc98136ae34b34465b152be1af84faf063eb44/analysis/audit-sep2026/campaign>`_): the
   qualitative picture in white and red noise is unchanged (no
   whitening gain over a flat PSD; thresholds rise with red noise), the
   Detector A row now measures the detector instead of the PSD defect,
