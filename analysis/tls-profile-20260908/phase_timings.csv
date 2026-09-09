@@ -1,0 +1,177 @@
+job,profile_repeat,phase,category,exclusive_s,inclusive_s,calls
+rubin_gtls_head_both,0,GTLS input/template setup,Setup / remaining API work,0.02731812745332718,0.02731812745332718,1
+rubin_gtls_head_both,0,GTLS setup and allocations,Setup / remaining API work,0.007236182689666748,0.007236182689666748,2
+rubin_gtls_head_both,0,GTLS CUDA module lookup/compile,Setup / remaining API work,9.639561176300049e-05,9.639561176300049e-05,1
+rubin_gtls_head_both,0,GTLS duration-mask union,Duration-mask union,0.005914624780416489,0.005914624780416489,31
+rubin_gtls_head_both,0,GTLS chunk allocations/transfers,Setup / remaining API work,0.042686864733695984,0.042686864733695984,31
+rubin_gtls_head_both,0,GTLS folding/sorting,Other coarse search / transfers,0.33553096279501915,0.33553096279501915,31
+rubin_gtls_head_both,0,GTLS reorder/weights,Other coarse search / transfers,0.01050952821969986,0.01050952821969986,31
+rubin_gtls_head_both,0,GTLS row-wise flux prefix sums,Per-period prefix-sum loop,0.024954531341791153,0.024954531341791153,31
+rubin_gtls_head_both,0,GTLS error prefixes/out-of-transit terms,Other coarse search / transfers,0.07780595868825912,0.07780595868825912,31
+rubin_gtls_head_both,0,GTLS transit residual kernel,Other coarse search / transfers,0.2549600191414356,0.2549600191414356,31
+rubin_gtls_head_both,0,GTLS reductions/chunk cleanup,Other coarse search / transfers,0.04999883845448494,0.04999883845448494,31
+rubin_gtls_head_both,0,GTLS result/statistics processing,Statistics / final diagnostics,2.05530908331275,2.05530908331275,3
+rubin_gtls_head_both,0,GTLS candidate refinement,Candidate refinement,0.9163180962204933,0.9163180962204933,2
+rubin_gtls_head_both,0,GTLS best-period fit/diagnostics,Statistics / final diagnostics,0.06864684447646141,0.06864684447646141,1
+rubin_gtls_head_both,0,GTLS full search call,Setup / remaining API work,0.0674877017736435,3.91745563223958,1
+rubin_gtls_head_both,0,API preparation/remaining host work,Setup / remaining API work,0.0023382827639579773,3.9471120424568653,1
+ztf_gtls_head_native,0,GTLS input/template setup,Setup / remaining API work,0.01984405890107155,0.01984405890107155,1
+ztf_gtls_head_native,0,GTLS setup and allocations,Setup / remaining API work,0.004544522613286972,0.004544522613286972,2
+ztf_gtls_head_native,0,GTLS CUDA module lookup/compile,Setup / remaining API work,8.425116539001465e-05,8.425116539001465e-05,1
+ztf_gtls_head_native,0,GTLS duration-mask union,Duration-mask union,2.6295381262898445,2.6295381262898445,31
+ztf_gtls_head_native,0,GTLS chunk allocations/transfers,Setup / remaining API work,0.04144638031721115,0.04144638031721115,31
+ztf_gtls_head_native,0,GTLS folding/sorting,Other coarse search / transfers,0.1482488512992859,0.1482488512992859,31
+ztf_gtls_head_native,0,GTLS reorder/weights,Other coarse search / transfers,0.00508904829621315,0.00508904829621315,31
+ztf_gtls_head_native,0,GTLS row-wise flux prefix sums,Per-period prefix-sum loop,8.71030891686678,8.71030891686678,31
+ztf_gtls_head_native,0,GTLS error prefixes/out-of-transit terms,Other coarse search / transfers,0.030102360993623734,0.030102360993623734,31
+ztf_gtls_head_native,0,GTLS transit residual kernel,Other coarse search / transfers,0.07385526970028877,0.07385526970028877,31
+ztf_gtls_head_native,0,GTLS reductions/chunk cleanup,Other coarse search / transfers,0.02118295431137085,0.02118295431137085,31
+ztf_gtls_head_native,0,GTLS result/statistics processing,Statistics / final diagnostics,1.442806575447321,1.442806575447321,3
+ztf_gtls_head_native,0,GTLS candidate refinement,Candidate refinement,0.6330719403922558,0.6330719403922558,2
+ztf_gtls_head_native,0,GTLS best-period fit/diagnostics,Statistics / final diagnostics,0.10383562371134758,0.10383562371134758,1
+ztf_gtls_head_native,0,GTLS full search call,Setup / remaining API work,0.04684858024120331,13.890963401645422,1
+ztf_gtls_head_native,0,API preparation/remaining host work,Setup / remaining API work,0.0013560988008975983,13.912163559347391,1
+rubin_gtls_head_native,0,GTLS input/template setup,Setup / remaining API work,0.028137557208538055,0.028137557208538055,1
+rubin_gtls_head_native,0,GTLS setup and allocations,Setup / remaining API work,0.005863916128873825,0.005863916128873825,2
+rubin_gtls_head_native,0,GTLS CUDA module lookup/compile,Setup / remaining API work,0.00010169297456741333,0.00010169297456741333,1
+rubin_gtls_head_native,0,GTLS duration-mask union,Duration-mask union,4.0768484100699425,4.0768484100699425,31
+rubin_gtls_head_native,0,GTLS chunk allocations/transfers,Setup / remaining API work,0.04498661682009697,0.04498661682009697,31
+rubin_gtls_head_native,0,GTLS folding/sorting,Other coarse search / transfers,0.3381597772240639,0.3381597772240639,31
+rubin_gtls_head_native,0,GTLS reorder/weights,Other coarse search / transfers,0.010670889168977737,0.010670889168977737,31
+rubin_gtls_head_native,0,GTLS row-wise flux prefix sums,Per-period prefix-sum loop,13.352823246270418,13.352823246270418,31
+rubin_gtls_head_native,0,GTLS error prefixes/out-of-transit terms,Other coarse search / transfers,0.07950641959905624,0.07950641959905624,31
+rubin_gtls_head_native,0,GTLS transit residual kernel,Other coarse search / transfers,0.25460947677493095,0.25460947677493095,31
+rubin_gtls_head_native,0,GTLS reductions/chunk cleanup,Other coarse search / transfers,0.05136486142873764,0.05136486142873764,31
+rubin_gtls_head_native,0,GTLS result/statistics processing,Statistics / final diagnostics,2.0696683935821056,2.0696683935821056,3
+rubin_gtls_head_native,0,GTLS candidate refinement,Candidate refinement,0.9601034037768841,0.9601034037768841,2
+rubin_gtls_head_native,0,GTLS best-period fit/diagnostics,Statistics / final diagnostics,0.09300055727362633,0.09300055727362633,1
+rubin_gtls_head_native,0,GTLS full search call,Setup / remaining API work,0.0856749378144741,21.423382598906755,1
+rubin_gtls_head_native,0,API preparation/remaining host work,Setup / remaining API work,0.0025142058730125427,21.454034361988306,1
+ztf_gtls_head_both,0,GTLS input/template setup,Setup / remaining API work,0.019568484276533127,0.019568484276533127,1
+ztf_gtls_head_both,0,GTLS setup and allocations,Setup / remaining API work,0.0038705207407474518,0.0038705207407474518,2
+ztf_gtls_head_both,0,GTLS CUDA module lookup/compile,Setup / remaining API work,8.462369441986084e-05,8.462369441986084e-05,1
+ztf_gtls_head_both,0,GTLS duration-mask union,Duration-mask union,0.004666734486818314,0.004666734486818314,31
+ztf_gtls_head_both,0,GTLS chunk allocations/transfers,Setup / remaining API work,0.02955678477883339,0.02955678477883339,31
+ztf_gtls_head_both,0,GTLS folding/sorting,Other coarse search / transfers,0.14882000908255577,0.14882000908255577,31
+ztf_gtls_head_both,0,GTLS reorder/weights,Other coarse search / transfers,0.0049779824912548065,0.0049779824912548065,31
+ztf_gtls_head_both,0,GTLS row-wise flux prefix sums,Per-period prefix-sum loop,0.00782066211104393,0.00782066211104393,31
+ztf_gtls_head_both,0,GTLS error prefixes/out-of-transit terms,Other coarse search / transfers,0.028721235692501068,0.028721235692501068,31
+ztf_gtls_head_both,0,GTLS transit residual kernel,Other coarse search / transfers,0.07356001809239388,0.07356001809239388,31
+ztf_gtls_head_both,0,GTLS reductions/chunk cleanup,Other coarse search / transfers,0.019942138344049454,0.019942138344049454,31
+ztf_gtls_head_both,0,GTLS result/statistics processing,Statistics / final diagnostics,1.414280954748392,1.414280954748392,3
+ztf_gtls_head_both,0,GTLS candidate refinement,Candidate refinement,0.6461798287928104,0.6461798287928104,2
+ztf_gtls_head_both,0,GTLS best-period fit/diagnostics,Statistics / final diagnostics,0.10503512620925903,0.10503512620925903,1
+ztf_gtls_head_both,0,GTLS full search call,Setup / remaining API work,0.04695470631122589,2.5344713255763054,1
+ztf_gtls_head_both,0,API preparation/remaining host work,Setup / remaining API work,0.0014428868889808655,2.5554826967418194,1
+rubin_v1_release_native,0,v1 grid/configuration,Setup / remaining API work,0.01845831423997879,0.01845831423997879,1
+rubin_v1_release_native,0,v1 kernel lookup/grid transfers,Setup / remaining API work,0.006975576281547546,0.006975576281547546,1
+rubin_v1_release_native,0,v1 template tables,Setup / remaining API work,6.471201777458191e-05,6.471201777458191e-05,1
+rubin_v1_release_native,0,v1 host lightcurve preparation,Setup / remaining API work,0.00022464990615844727,0.00022464990615844727,1
+rubin_v1_release_native,0,v1 buffer allocations/transfers,Setup / remaining API work,0.0015679411590099335,0.0015679411590099335,1
+rubin_v1_release_native,0,v1 lightcurve transfers,Setup / remaining API work,0.00028812140226364136,0.00028812140226364136,1
+rubin_v1_release_native,0,v1 coarse search kernel,Other coarse search / transfers,0.5769607163965702,0.5769607163965702,1
+rubin_v1_release_native,0,v1 coarse spectrum transfer,Other coarse search / transfers,0.0006308145821094513,0.0006308145821094513,1
+rubin_v1_release_native,0,v1 candidate selection/refinement/transfers,Candidate refinement,0.002890743315219879,0.002890743315219879,1
+rubin_v1_release_native,0,v1 parameter-spectrum transfers,Other coarse search / transfers,0.0017793364822864532,0.0017793364822864532,1
+rubin_v1_release_native,0,v1 CPU statistics/results,Statistics / final diagnostics,0.03769994527101517,0.03769994527101517,1
+rubin_v1_release_native,0,v1 final packaging,Setup / remaining API work,2.250075340270996e-06,2.250075340270996e-06,1
+rubin_v1_release_native,0,API preparation/remaining host work,Setup / remaining API work,0.03446563705801964,0.682008758187294,1
+rubin_v1_release_native,1,v1 grid/configuration,Setup / remaining API work,0.014202553778886795,0.014202553778886795,1
+rubin_v1_release_native,1,v1 kernel lookup/grid transfers,Setup / remaining API work,0.01898166537284851,0.01898166537284851,1
+rubin_v1_release_native,1,v1 template tables,Setup / remaining API work,4.287436604499817e-05,4.287436604499817e-05,1
+rubin_v1_release_native,1,v1 host lightcurve preparation,Setup / remaining API work,0.00018129125237464905,0.00018129125237464905,1
+rubin_v1_release_native,1,v1 buffer allocations/transfers,Setup / remaining API work,0.006663475185632706,0.006663475185632706,1
+rubin_v1_release_native,1,v1 lightcurve transfers,Setup / remaining API work,0.00026756152510643005,0.00026756152510643005,1
+rubin_v1_release_native,1,v1 coarse search kernel,Other coarse search / transfers,0.5797881446778774,0.5797881446778774,1
+rubin_v1_release_native,1,v1 coarse spectrum transfer,Other coarse search / transfers,0.0006185844540596008,0.0006185844540596008,1
+rubin_v1_release_native,1,v1 candidate selection/refinement/transfers,Candidate refinement,0.0022079087793827057,0.0022079087793827057,1
+rubin_v1_release_native,1,v1 parameter-spectrum transfers,Other coarse search / transfers,0.0015526488423347473,0.0015526488423347473,1
+rubin_v1_release_native,1,v1 CPU statistics/results,Statistics / final diagnostics,0.04099884629249573,0.04099884629249573,1
+rubin_v1_release_native,1,v1 final packaging,Setup / remaining API work,2.3618340492248535e-06,2.3618340492248535e-06,1
+rubin_v1_release_native,1,API preparation/remaining host work,Setup / remaining API work,0.026014942675828934,0.6915228590369225,1
+ztf_gtls_head_union,0,GTLS input/template setup,Setup / remaining API work,0.020822584629058838,0.020822584629058838,1
+ztf_gtls_head_union,0,GTLS setup and allocations,Setup / remaining API work,0.003733571618795395,0.003733571618795395,2
+ztf_gtls_head_union,0,GTLS CUDA module lookup/compile,Setup / remaining API work,8.464977145195007e-05,8.464977145195007e-05,1
+ztf_gtls_head_union,0,GTLS duration-mask union,Duration-mask union,0.005272336304187775,0.005272336304187775,31
+ztf_gtls_head_union,0,GTLS chunk allocations/transfers,Setup / remaining API work,0.03629231080412865,0.03629231080412865,31
+ztf_gtls_head_union,0,GTLS folding/sorting,Other coarse search / transfers,0.14645036682486534,0.14645036682486534,31
+ztf_gtls_head_union,0,GTLS reorder/weights,Other coarse search / transfers,0.004973050206899643,0.004973050206899643,31
+ztf_gtls_head_union,0,GTLS row-wise flux prefix sums,Per-period prefix-sum loop,8.28770862147212,8.28770862147212,31
+ztf_gtls_head_union,0,GTLS error prefixes/out-of-transit terms,Other coarse search / transfers,0.030085299164056778,0.030085299164056778,31
+ztf_gtls_head_union,0,GTLS transit residual kernel,Other coarse search / transfers,0.07333921641111374,0.07333921641111374,31
+ztf_gtls_head_union,0,GTLS reductions/chunk cleanup,Other coarse search / transfers,0.02103511616587639,0.02103511616587639,31
+ztf_gtls_head_union,0,GTLS result/statistics processing,Statistics / final diagnostics,1.6397212594747543,1.6397212594747543,3
+ztf_gtls_head_union,0,GTLS candidate refinement,Candidate refinement,0.7431692443788052,0.7431692443788052,2
+ztf_gtls_head_union,0,GTLS best-period fit/diagnostics,Statistics / final diagnostics,0.12471194565296173,0.12471194565296173,1
+ztf_gtls_head_union,0,GTLS full search call,Setup / remaining API work,0.058133114129304886,11.174710102379322,1
+ztf_gtls_head_union,0,API preparation/remaining host work,Setup / remaining API work,0.0015242286026477814,11.197056915611029,1
+ztf_v1_release_native,0,v1 grid/configuration,Setup / remaining API work,0.009487230330705643,0.009487230330705643,1
+ztf_v1_release_native,0,v1 kernel lookup/grid transfers,Setup / remaining API work,0.004803221672773361,0.004803221672773361,1
+ztf_v1_release_native,0,v1 template tables,Setup / remaining API work,4.13842499256134e-05,4.13842499256134e-05,1
+ztf_v1_release_native,0,v1 host lightcurve preparation,Setup / remaining API work,0.0001550428569316864,0.0001550428569316864,1
+ztf_v1_release_native,0,v1 buffer allocations/transfers,Setup / remaining API work,0.0012255087494850159,0.0012255087494850159,1
+ztf_v1_release_native,0,v1 lightcurve transfers,Setup / remaining API work,0.00025852397084236145,0.00025852397084236145,1
+ztf_v1_release_native,0,v1 coarse search kernel,Other coarse search / transfers,0.40344369038939476,0.40344369038939476,1
+ztf_v1_release_native,0,v1 coarse spectrum transfer,Other coarse search / transfers,0.00047143176198005676,0.00047143176198005676,1
+ztf_v1_release_native,0,v1 candidate selection/refinement/transfers,Candidate refinement,0.0019293874502182007,0.0019293874502182007,1
+ztf_v1_release_native,0,v1 parameter-spectrum transfers,Other coarse search / transfers,0.002106405794620514,0.002106405794620514,1
+ztf_v1_release_native,0,v1 CPU statistics/results,Statistics / final diagnostics,0.02924473211169243,0.02924473211169243,1
+ztf_v1_release_native,0,v1 final packaging,Setup / remaining API work,2.93925404548645e-06,2.93925404548645e-06,1
+ztf_v1_release_native,0,API preparation/remaining host work,Setup / remaining API work,0.028258655220270157,0.4814281538128853,1
+ztf_v1_release_native,1,v1 grid/configuration,Setup / remaining API work,0.010052695870399475,0.010052695870399475,1
+ztf_v1_release_native,1,v1 kernel lookup/grid transfers,Setup / remaining API work,0.005383044481277466,0.005383044481277466,1
+ztf_v1_release_native,1,v1 template tables,Setup / remaining API work,4.9486756324768066e-05,4.9486756324768066e-05,1
+ztf_v1_release_native,1,v1 host lightcurve preparation,Setup / remaining API work,0.0001546330749988556,0.0001546330749988556,1
+ztf_v1_release_native,1,v1 buffer allocations/transfers,Setup / remaining API work,0.0011174492537975311,0.0011174492537975311,1
+ztf_v1_release_native,1,v1 lightcurve transfers,Setup / remaining API work,0.0002354942262172699,0.0002354942262172699,1
+ztf_v1_release_native,1,v1 coarse search kernel,Other coarse search / transfers,0.4035860076546669,0.4035860076546669,1
+ztf_v1_release_native,1,v1 coarse spectrum transfer,Other coarse search / transfers,0.003311406821012497,0.003311406821012497,1
+ztf_v1_release_native,1,v1 candidate selection/refinement/transfers,Candidate refinement,0.0056806206703186035,0.0056806206703186035,1
+ztf_v1_release_native,1,v1 parameter-spectrum transfers,Other coarse search / transfers,0.0013230033218860626,0.0013230033218860626,1
+ztf_v1_release_native,1,v1 CPU statistics/results,Statistics / final diagnostics,0.04881870746612549,0.04881870746612549,1
+ztf_v1_release_native,1,v1 final packaging,Setup / remaining API work,1.959502696990967e-06,1.959502696990967e-06,1
+ztf_v1_release_native,1,API preparation/remaining host work,Setup / remaining API work,0.02412481978535652,0.5038393288850784,1
+rubin_gtls_pypi_native,0,GTLS setup and allocations,Setup / remaining API work,0.0032102689146995544,0.0032102689146995544,2
+rubin_gtls_pypi_native,0,GTLS CUDA module lookup/compile,Setup / remaining API work,9.904056787490845e-05,9.904056787490845e-05,1
+rubin_gtls_pypi_native,0,GTLS duration-mask union,Duration-mask union,3.9108527339994907,3.9108527339994907,31
+rubin_gtls_pypi_native,0,GTLS chunk allocations/transfers,Setup / remaining API work,0.05428471788764,0.05428471788764,31
+rubin_gtls_pypi_native,0,GTLS folding/sorting,Other coarse search / transfers,0.3357042819261551,0.3357042819261551,31
+rubin_gtls_pypi_native,0,GTLS reorder/weights,Other coarse search / transfers,0.01070912554860115,0.01070912554860115,31
+rubin_gtls_pypi_native,0,GTLS row-wise flux prefix sums,Per-period prefix-sum loop,12.768409565091133,12.768409565091133,31
+rubin_gtls_pypi_native,0,GTLS transit residual kernel,Other coarse search / transfers,0.22689523175358772,0.22689523175358772,31
+rubin_gtls_pypi_native,0,GTLS reductions/chunk cleanup,Other coarse search / transfers,0.0897066667675972,0.0897066667675972,31
+rubin_gtls_pypi_native,0,GTLS result/statistics processing,Statistics / final diagnostics,1.978220671415329,1.978220671415329,3
+rubin_gtls_pypi_native,0,GTLS candidate refinement,Candidate refinement,0.8728385083377361,0.8728385083377361,2
+rubin_gtls_pypi_native,0,GTLS best-period fit/diagnostics,Statistics / final diagnostics,0.05590669810771942,0.05590669810771942,1
+rubin_gtls_pypi_native,0,GTLS input/template setup,Setup / remaining API work,0.10227765142917633,20.40911516174674,1
+rubin_gtls_pypi_native,0,API preparation/remaining host work,Setup / remaining API work,0.002727378159761429,20.4118425399065,1
+ztf_gtls_pypi_native,0,GTLS setup and allocations,Setup / remaining API work,0.002143029123544693,0.002143029123544693,2
+ztf_gtls_pypi_native,0,GTLS CUDA module lookup/compile,Setup / remaining API work,0.00013354793190956116,0.00013354793190956116,1
+ztf_gtls_pypi_native,0,GTLS duration-mask union,Duration-mask union,3.275159403681755,3.275159403681755,31
+ztf_gtls_pypi_native,0,GTLS chunk allocations/transfers,Setup / remaining API work,0.05708964541554451,0.05708964541554451,31
+ztf_gtls_pypi_native,0,GTLS folding/sorting,Other coarse search / transfers,0.15095634013414383,0.15095634013414383,31
+ztf_gtls_pypi_native,0,GTLS reorder/weights,Other coarse search / transfers,0.005278110504150391,0.005278110504150391,31
+ztf_gtls_pypi_native,0,GTLS row-wise flux prefix sums,Per-period prefix-sum loop,10.721305180341005,10.721305180341005,31
+ztf_gtls_pypi_native,0,GTLS transit residual kernel,Other coarse search / transfers,0.06941511854529381,0.06941511854529381,31
+ztf_gtls_pypi_native,0,GTLS reductions/chunk cleanup,Other coarse search / transfers,0.035640325397253036,0.035640325397253036,31
+ztf_gtls_pypi_native,0,GTLS result/statistics processing,Statistics / final diagnostics,1.3907533213496208,1.3907533213496208,3
+ztf_gtls_pypi_native,0,GTLS candidate refinement,Candidate refinement,0.6254303492605686,0.6254303492605686,2
+ztf_gtls_pypi_native,0,GTLS best-period fit/diagnostics,Statistics / final diagnostics,0.10070474073290825,0.10070474073290825,1
+ztf_gtls_pypi_native,0,GTLS input/template setup,Setup / remaining API work,0.07238953188061714,16.506398644298315,1
+ztf_gtls_pypi_native,0,API preparation/remaining host work,Setup / remaining API work,0.0017532706260681152,16.508151914924383,1
+rubin_gtls_head_union,0,GTLS input/template setup,Setup / remaining API work,0.027487222105264664,0.027487222105264664,1
+rubin_gtls_head_union,0,GTLS setup and allocations,Setup / remaining API work,0.00571504607796669,0.00571504607796669,2
+rubin_gtls_head_union,0,GTLS CUDA module lookup/compile,Setup / remaining API work,8.94404947757721e-05,8.94404947757721e-05,1
+rubin_gtls_head_union,0,GTLS duration-mask union,Duration-mask union,0.00651959702372551,0.00651959702372551,31
+rubin_gtls_head_union,0,GTLS chunk allocations/transfers,Setup / remaining API work,0.05184264853596687,0.05184264853596687,31
+rubin_gtls_head_union,0,GTLS folding/sorting,Other coarse search / transfers,0.33687848970294,0.33687848970294,31
+rubin_gtls_head_union,0,GTLS reorder/weights,Other coarse search / transfers,0.01063661277294159,0.01063661277294159,31
+rubin_gtls_head_union,0,GTLS row-wise flux prefix sums,Per-period prefix-sum loop,12.293479107320309,12.293479107320309,31
+rubin_gtls_head_union,0,GTLS error prefixes/out-of-transit terms,Other coarse search / transfers,0.07907585427165031,0.07907585427165031,31
+rubin_gtls_head_union,0,GTLS transit residual kernel,Other coarse search / transfers,0.2545378729701042,0.2545378729701042,31
+rubin_gtls_head_union,0,GTLS reductions/chunk cleanup,Other coarse search / transfers,0.050893206149339676,0.050893206149339676,31
+rubin_gtls_head_union,0,GTLS result/statistics processing,Statistics / final diagnostics,2.2422652691602707,2.2422652691602707,3
+rubin_gtls_head_union,0,GTLS candidate refinement,Candidate refinement,0.9240027517080307,0.9240027517080307,2
+rubin_gtls_head_union,0,GTLS best-period fit/diagnostics,Statistics / final diagnostics,0.06667240709066391,0.06667240709066391,1
+rubin_gtls_head_union,0,GTLS full search call,Setup / remaining API work,0.07502305135130882,16.397631354629993,1
+rubin_gtls_head_union,0,API preparation/remaining host work,Setup / remaining API work,0.0022021234035491943,16.427320700138807,1

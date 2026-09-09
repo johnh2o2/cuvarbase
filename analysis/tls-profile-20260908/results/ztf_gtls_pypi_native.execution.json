@@ -1,0 +1,26 @@
+{
+  "job": {
+    "name": "ztf_gtls_pypi_native",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_ztf.npz",
+      "--out",
+      "results/ztf_gtls_pypi_native.json",
+      "--variant",
+      "native",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "pypi",
+    "timeout": 900
+  },
+  "started_epoch": 1788885801.1869948,
+  "elapsed_s": 86.96854090690613,
+  "exit_code": 0,
+  "timed_out": false,
+  "pid": 491
+}

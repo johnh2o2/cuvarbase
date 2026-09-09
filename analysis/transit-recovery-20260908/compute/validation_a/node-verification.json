@@ -1,0 +1,44 @@
+{
+  "complete": true,
+  "node": "validation_a",
+  "jobs": [
+    {
+      "job": "calibration_ztf_gtls__part000",
+      "cases": 64
+    },
+    {
+      "job": "heldout_ztf_gtls__part000",
+      "cases": 64
+    },
+    {
+      "job": "heldout_ztf_gtls__part128",
+      "cases": 64
+    },
+    {
+      "job": "calibration_tess_gap_gtls__part000",
+      "cases": 64
+    },
+    {
+      "job": "heldout_tess_gap_gtls__part000",
+      "cases": 64
+    },
+    {
+      "job": "heldout_tess_gap_gtls__part128",
+      "cases": 64
+    },
+    {
+      "job": "calibration_tess_200s_gtls__part000",
+      "cases": 64
+    },
+    {
+      "job": "heldout_tess_200s_gtls__part000",
+      "cases": 64
+    },
+    {
+      "job": "heldout_tess_200s_gtls__part128",
+      "cases": 64
+    }
+  ],
+  "cases": 576,
+  "note": "Verified complete planned partitions, successful APIs, frozen worker/controller, pinned installed GTLS sources, identical input hashes and every retained output hash before rental termination."
+}

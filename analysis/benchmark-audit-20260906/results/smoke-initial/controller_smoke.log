@@ -1,0 +1,18 @@
+START smoke_ls_cuvarbase
+END smoke_ls_cuvarbase exited 0 2.52
+START smoke_ls_nifty_cpu
+END smoke_ls_nifty_cpu exited 0 0.87
+START smoke_ls_nifty_gpu
+END smoke_ls_nifty_gpu exited 0 3.62
+START smoke_ls_astropy
+END smoke_ls_astropy exited 0 0.52
+START smoke_ls_legacy
+END smoke_ls_legacy exited 0 2.87
+START smoke_tls_cuvarbase
+END smoke_tls_cuvarbase exited 0 3.22
+START smoke_tls_gtls
+END smoke_tls_gtls exited 0 1.87
+START smoke_tls_cpu
+END smoke_tls_cpu exited 0 23.57
+START smoke_tls_gtls_head
+END smoke_tls_gtls_head exited 0 1.82

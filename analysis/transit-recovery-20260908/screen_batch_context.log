@@ -1,0 +1,7 @@
+START probe2_tess_200s_v1_batch_reused 2026-09-08T18:47:39.065399+00:00
+END probe2_tess_200s_v1_batch_reused 0 1.12
+START probe2_tess_gap_v1_batch_reused 2026-09-08T18:47:40.184718+00:00
+END probe2_tess_gap_v1_batch_reused 0 3.42
+START probe2_ztf_v1_batch_reused 2026-09-08T18:47:43.609853+00:00
+END probe2_ztf_v1_batch_reused 0 8.73
+MANIFEST_COMPLETE screen_batch_context.json

@@ -1,0 +1,160 @@
+{
+  "status": "ok",
+  "config": {
+    "backend": "gtls",
+    "gtls_version": "head",
+    "density": true,
+    "fast": true,
+    "workers": 1
+  },
+  "input_file": "tess_200s_heldout.npz",
+  "input_sha256": "e2e42d08417442113072426e366840bb2c276f88b6a70b0b83b303aa35718676",
+  "profile": "tess_200s",
+  "split": "heldout",
+  "indices": [
+    128
+  ],
+  "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2",
+      "astropy": "8.0.1",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.5.1",
+      "cuvarbase": "1.0.0",
+      "periodfind": "0.1.3"
+    },
+    "cpu_quota": null,
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [
+    {
+      "index": 128,
+      "injected": false,
+      "snr": null,
+      "true_period": 2.738169256295329,
+      "duration": 0.10329800225120374,
+      "period": 1.0424890325231344,
+      "score": 4.847716331481934,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 15.95051627393782,
+      "n_periods": 3084,
+      "search_s": null,
+      "evaluation_chunk": 1,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0128.npz",
+      "output_sha256": "1069c718b4146243c9f5c2fd41982c1d687c9b6646c4888417bb9a5786dd2b93"
+    }
+  ],
+  "initialization_s": 1.3302765414118767,
+  "first_api_candidates": [
+    {
+      "period": 1.0424890325231344,
+      "score": 4.847716331481934,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    }
+  ],
+  "first_api_valid": true,
+  "first_api_s": 0.6659211292862892,
+  "installed_sources": {
+    "gputls": {
+      "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+      "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+      "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+      "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+      "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+      "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+      "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+      "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+      "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+      "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+      "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+      "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+      "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+      "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+      "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+      "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+      "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+    }
+  },
+  "batch_warmup_candidates": [
+    {
+      "period": 1.0424890325231344,
+      "score": 4.847716331481934,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    }
+  ],
+  "timed_candidates": [
+    [
+      {
+        "period": 1.0424890325231344,
+        "score": 4.847716331481934,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      }
+    ],
+    [
+      {
+        "period": 1.0424890325231344,
+        "score": 4.847716331481934,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      }
+    ],
+    [
+      {
+        "period": 1.0424890325231344,
+        "score": 4.847716331481934,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      }
+    ],
+    [
+      {
+        "period": 1.0424890325231344,
+        "score": 4.847716331481934,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      }
+    ],
+    [
+      {
+        "period": 1.0424890325231344,
+        "score": 4.847716331481934,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      }
+    ]
+  ],
+  "times_s": [
+    0.5005530156195164,
+    0.4691131077706814,
+    0.45280682295560837,
+    0.45570625364780426,
+    0.45659099891781807
+  ],
+  "median_s": 0.45659099891781807,
+  "seconds_per_source": 0.45659099891781807
+}

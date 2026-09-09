@@ -1,0 +1,585 @@
+{
+  "utc": "2026-09-08T19:03:33.015585+00:00",
+  "validation_manifest_sha256": "a9ef5f82dae22bc2ddbd6cadfbddee29f5f2a2bbe33473da666428a026518e16",
+  "methods": [
+    {
+      "profile": "ztf",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_ztf_bls_v1_single",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_ztf_bls_v1_batch16",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 8,
+        "optimized": true,
+        "reuse_batch": true,
+        "batch_capacity": 16
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_200s_bls_pypi_single",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 4,
+        "manual_overlap": true,
+        "qmin_fac": 0.25
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_200s_bls_pypi_batch16",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 4,
+        "manual_overlap": true,
+        "qmin_fac": 0.25
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_200s_bls_cpu_single",
+      "config": {
+        "backend": "astropy",
+        "epoch_os": 3,
+        "workers": 7
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_200s_bls_cpu_sources_batch16",
+      "config": {
+        "backend": "astropy",
+        "epoch_os": 3,
+        "workers": 7
+      },
+      "operational_adapter": "cpu_batch.py; bit-identical spectra and candidates on 384 independent calibration/heldout sources"
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_gap_bls_v1_single",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 4,
+        "optimized": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_gap_bls_v1_batch16",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 4,
+        "optimized": true,
+        "qmin_fac": 0.25,
+        "block_size": 128,
+        "reuse_batch": true,
+        "batch_capacity": 16
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_gap_bls_cpu_single",
+      "config": {
+        "backend": "periodfind_cpu",
+        "epoch_os": 2,
+        "threads": 7
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_gap_bls_cpu_batch16",
+      "config": {
+        "backend": "periodfind_cpu",
+        "epoch_os": 2,
+        "threads": 7
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_ztf_bls_gpu_single",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_ztf_bls_gpu_batch16",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_gap_bls_gpu_single",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_gap_bls_gpu_batch16",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_200s_tls_v1_single",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_200s_tls_v1_batch16",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_200s_bls_gpu_single",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2,
+        "cap_bins": 64
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_200s_bls_gpu_batch16",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2,
+        "cap_bins": 64
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "gtls",
+      "family": "GTLS",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_200s_gtls_single",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 1
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "gtls",
+      "family": "GTLS",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_200s_gtls_batch16",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 1
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "gtls",
+      "family": "GTLS",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_ztf_gtls_single",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 1
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "gtls",
+      "family": "GTLS",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_ztf_gtls_batch16",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 4
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_ztf_bls_cpu_single",
+      "config": {
+        "backend": "periodfind_cpu",
+        "epoch_os": 2,
+        "threads": 7
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_ztf_bls_cpu_batch16",
+      "config": {
+        "backend": "periodfind_cpu",
+        "epoch_os": 2,
+        "threads": 7
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_gap_bls_pypi_single",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 4,
+        "manual_overlap": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_gap_bls_pypi_batch16",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 4,
+        "manual_overlap": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_200s_bls_v1_single",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_200s_bls_v1_batch16",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 8,
+        "optimized": true,
+        "reuse_batch": true,
+        "batch_capacity": 16
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_ztf_tls_v1_single",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_ztf_tls_v1_batch16",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_ztf_bls_pypi_single",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 3,
+        "manual_overlap": true
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_ztf_bls_pypi_batch16",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 3,
+        "manual_overlap": true
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_gap_tls_v1_single",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_gap_tls_v1_batch16",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "gtls",
+      "family": "GTLS",
+      "mode": "single",
+      "n": 1,
+      "job": "timing_tess_gap_gtls_single",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 1
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "gtls",
+      "family": "GTLS",
+      "mode": "batch16",
+      "n": 16,
+      "job": "timing_tess_gap_gtls_batch16",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 2
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "fresh_grid",
+      "n": 1,
+      "job": "timing_ztf_bls_v1_fresh_grid",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "fresh_grid",
+      "n": 1,
+      "job": "timing_tess_200s_bls_pypi_fresh_grid",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 4,
+        "manual_overlap": true,
+        "qmin_fac": 0.25
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "fresh_grid",
+      "n": 1,
+      "job": "timing_tess_gap_bls_v1_fresh_grid",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 4,
+        "optimized": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      }
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "fresh_grid",
+      "n": 1,
+      "job": "timing_tess_gap_bls_pypi_fresh_grid",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 4,
+        "manual_overlap": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      }
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "mode": "fresh_grid",
+      "n": 1,
+      "job": "timing_tess_200s_bls_v1_fresh_grid",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      }
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "mode": "fresh_grid",
+      "n": 1,
+      "job": "timing_ztf_bls_pypi_fresh_grid",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 3,
+        "manual_overlap": true
+      }
+    }
+  ],
+  "boundary": "Prepared host arrays and explicit grid to host spectra and ranked candidate. Grid generation, imports, disk I/O and preprocessing excluded.",
+  "projected_gpu_hourly_usd": 0.49,
+  "batch_note": "16 distinct independent null sources. Costs per million are linear projections, not measured full-pipeline costs."
+}

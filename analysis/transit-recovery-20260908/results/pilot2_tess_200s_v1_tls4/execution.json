@@ -1,0 +1,20 @@
+{
+  "name": "pilot2_tess_200s_v1_tls4",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 3.071091413497925,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+    "--config",
+    "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+    "--indices",
+    "2",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/pilot2_tess_200s_v1_tls4"
+  ],
+  "started_epoch": 1788887873.1699548,
+  "finished_epoch": 1788887876.2410486
+}

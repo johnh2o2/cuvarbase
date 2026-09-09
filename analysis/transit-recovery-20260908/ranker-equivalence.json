@@ -1,0 +1,81 @@
+{
+  "old_source": "analysis/transit-recovery-20260908/sources/harness/worker-5ab5b4a450079a841fb8678f70a2c8e55bbf5cec54a6208c50e33f54e851dbfd.py",
+  "new_worker_sha256": "b8a043f71fe17cb7d0c85c49b52efb91fc346a5c0260801070db7a264957f93c",
+  "checks": [
+    {
+      "n": 4133,
+      "mode": "ascending",
+      "equal": true
+    },
+    {
+      "n": 4133,
+      "mode": "descending",
+      "equal": true
+    },
+    {
+      "n": 4133,
+      "mode": "shuffled",
+      "equal": true
+    },
+    {
+      "n": 4133,
+      "mode": "duplicates",
+      "equal": true
+    },
+    {
+      "n": 4133,
+      "mode": "nonfinite",
+      "equal": true
+    },
+    {
+      "n": 128964,
+      "mode": "ascending",
+      "equal": true
+    },
+    {
+      "n": 128964,
+      "mode": "descending",
+      "equal": true
+    },
+    {
+      "n": 128964,
+      "mode": "shuffled",
+      "equal": true
+    },
+    {
+      "n": 128964,
+      "mode": "duplicates",
+      "equal": true
+    },
+    {
+      "n": 128964,
+      "mode": "nonfinite",
+      "equal": true
+    },
+    {
+      "n": 423781,
+      "mode": "ascending",
+      "equal": true
+    },
+    {
+      "n": 423781,
+      "mode": "descending",
+      "equal": true
+    },
+    {
+      "n": 423781,
+      "mode": "shuffled",
+      "equal": true
+    },
+    {
+      "n": 423781,
+      "mode": "duplicates",
+      "equal": true
+    },
+    {
+      "n": 423781,
+      "mode": "nonfinite",
+      "equal": true
+    }
+  ]
+}

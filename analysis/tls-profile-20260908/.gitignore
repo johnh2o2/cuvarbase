@@ -1,0 +1,6 @@
+# Bulk inputs, periodograms and transfer containers are retained locally.
+/inputs/*.npz
+/results/**/*.npz
+/*.tar
+
+!figures/*.pdf

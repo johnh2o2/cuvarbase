@@ -1,0 +1,87 @@
+{
+  "algorithm": "LS",
+  "args": {
+    "backend": "nifty_cpu",
+    "config": "small",
+    "n_lcs": 1,
+    "shared_times": false,
+    "threads": 1,
+    "workers": 1,
+    "batch_size": 8,
+    "reps": 3,
+    "double": false,
+    "out": "/tmp/cuvarbase-benchmark-audit/results/smoke_ls_nifty_cpu.json"
+  },
+  "config": {
+    "ndata": 1000,
+    "baseline": 27.0,
+    "nfreq": 5000,
+    "fmax": 10.0
+  },
+  "environment": {
+    "python": "3.11.10",
+    "host": "ae9fe6933d41",
+    "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.35",
+    "packages": {
+      "cuvarbase": "1.0.0",
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2",
+      "astropy": "8.0.1",
+      "nifty-ls": "1.1.0",
+      "finufft": "2.5.1",
+      "cufinufft": "2.5.1",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.4.4",
+      "transitleastsquares": "1.32",
+      "batman-package": "2.5.3",
+      "numba": "0.67.0"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMBA_NUM_THREADS": "1"
+    },
+    "cpu.max": "765000 100000",
+    "cpu.stat": "usage_usec 188955739\nuser_usec 166824562\nsystem_usec 22131177\ncore_sched.force_idle_usec 0\nnr_periods 2229\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0",
+    "cpuset.cpus.effective": "0-95",
+    "gpu": "NVIDIA A40, GPU-db05ecc0-699a-af3b-a499-319ac12b6119, 580.159.03, 49140 MiB"
+  },
+  "status": "error",
+  "input_sha256": "1644ca93e6f88443ce0b0f62b131730d1d1d3f38dc907a6b7b996b727c57c28a",
+  "frequency_sha256": "f97c7944629fe368f15a5eed47d6c162c3a6b91c17c1739e4d93c43a3f1ad97a",
+  "dtype_input": "float64",
+  "boundary": "API wall time, host inputs to full host periodograms; imports, input generation and validation excluded",
+  "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-benchmark-audit/run_ls.py\", line 102, in main\n    stats, power = measure(run, sync, args.reps)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-benchmark-audit/common.py\", line 68, in measure\n    result = fn()\n             ^^^^\n  File \"/tmp/cuvarbase-benchmark-audit/run_ls.py\", line 85, in run\n    return np.asarray([single(lc) for lc in lcs])\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-benchmark-audit/run_ls.py\", line 85, in <listcomp>\n    return np.asarray([single(lc) for lc in lcs])\n                       ^^^^^^^^^^\n  File \"/tmp/cuvarbase-benchmark-audit/run_ls.py\", line 68, in single\n    result = nifty_ls.lombscargle(*lc, **kw).power\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-benchmark-audit/modern/lib/python3.11/site-packages/nifty_ls/core.py\", line 145, in lombscargle\n    power = backend_module.lombscargle(\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: lombscargle() got an unexpected keyword argument 'backend_kwargs'\n",
+  "environment_after": {
+    "python": "3.11.10",
+    "host": "ae9fe6933d41",
+    "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.35",
+    "packages": {
+      "cuvarbase": "1.0.0",
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2",
+      "astropy": "8.0.1",
+      "nifty-ls": "1.1.0",
+      "finufft": "2.5.1",
+      "cufinufft": "2.5.1",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.4.4",
+      "transitleastsquares": "1.32",
+      "batman-package": "2.5.3",
+      "numba": "0.67.0"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMBA_NUM_THREADS": "1"
+    },
+    "cpu.max": "765000 100000",
+    "cpu.stat": "usage_usec 189525843\nuser_usec 167208857\nsystem_usec 22316986\ncore_sched.force_idle_usec 0\nnr_periods 2234\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0",
+    "cpuset.cpus.effective": "0-95",
+    "gpu": "NVIDIA A40, GPU-db05ecc0-699a-af3b-a499-319ac12b6119, 580.159.03, 49140 MiB"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "status": "running",
+  "config": {
+    "backend": "fbls",
+    "epoch_os": 1,
+    "period_os": 2,
+    "native_chunks": 4
+  },
+  "input_file": "ztf_tune.npz",
+  "input_sha256": "299508b42dab363170e93ee465b24ce609a7f4fdc48e14e6694315f20428f04e",
+  "profile": "ztf",
+  "split": "tune",
+  "indices": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "worker_sha256": "c7e862dd155cb3c7f0d7634953e3c0a158fed84c0fc213c705f26c877b066c3c",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [
+    {
+      "index": 0,
+      "injected": true,
+      "snr": 6.0,
+      "period": null,
+      "score": null,
+      "recovered": false,
+      "alias_recovered": false,
+      "api_result_valid": false,
+      "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 247, in main\n    try:outputs=backend.search([lcs[i] for i in indices]);backend.sync()\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 183, in search\n    p,s,w,n=obj.BLS([self.meta['pmin'],self.meta['pmax']],NumberOfPeriodChunks=c['native_chunks'],\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 143, in BLS\n    pt, st, wt, Nt = __BLS_PeriodChunk__(self.grid_flux, self.grid_var, self.dt,\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 294, in __BLS_PeriodChunk__\n    p, dds, _ = __GenerateTrialPeriods__(grid_flux, grid_var, dt,\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 253, in __GenerateTrialPeriods__\n    dyp.init_data_structure()\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/FFA.py\", line 102, in init_data_structure\n    self.initialize_func(self.data),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nMemoryError: Allocation failed (probably too large).\n",
+      "search_s": 0.7273098006844521
+    },
+    {
+      "index": 1,
+      "injected": true,
+      "snr": 8.0,
+      "period": null,
+      "score": null,
+      "recovered": false,
+      "alias_recovered": false,
+      "api_result_valid": false,
+      "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 247, in main\n    try:outputs=backend.search([lcs[i] for i in indices]);backend.sync()\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 183, in search\n    p,s,w,n=obj.BLS([self.meta['pmin'],self.meta['pmax']],NumberOfPeriodChunks=c['native_chunks'],\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 143, in BLS\n    pt, st, wt, Nt = __BLS_PeriodChunk__(self.grid_flux, self.grid_var, self.dt,\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 294, in __BLS_PeriodChunk__\n    p, dds, _ = __GenerateTrialPeriods__(grid_flux, grid_var, dt,\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 253, in __GenerateTrialPeriods__\n    dyp.init_data_structure()\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/FFA.py\", line 102, in init_data_structure\n    self.initialize_func(self.data),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nMemoryError: Allocation failed (probably too large).\n",
+      "search_s": 0.7186782658100128
+    }
+  ],
+  "initialization_s": 0.5683624148368835,
+  "warmup_error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 223, in main\n    try:backend.search([lcs[ids[0]]]);backend.sync()\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 183, in search\n    p,s,w,n=obj.BLS([self.meta['pmin'],self.meta['pmax']],NumberOfPeriodChunks=c['native_chunks'],\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 143, in BLS\n    pt, st, wt, Nt = __BLS_PeriodChunk__(self.grid_flux, self.grid_var, self.dt,\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 294, in __BLS_PeriodChunk__\n    p, dds, _ = __GenerateTrialPeriods__(grid_flux, grid_var, dt,\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 253, in __GenerateTrialPeriods__\n    dyp.init_data_structure()\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/FFA.py\", line 102, in init_data_structure\n    self.initialize_func(self.data),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nMemoryError: Allocation failed (probably too large).\n",
+  "first_api_s": 8.405131842941046,
+  "installed_sources": {}
+}

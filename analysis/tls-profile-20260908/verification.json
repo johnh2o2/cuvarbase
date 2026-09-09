@@ -1,0 +1,27 @@
+{
+  "transferred_files": 95,
+  "jobs": 14,
+  "source_files": {
+    "v1": 69,
+    "gtls_head": 19,
+    "gtls_pypi": 16,
+    "cpu_tls": 14
+  },
+  "errors": [],
+  "noninstalled_upstream_reference_files": [
+    {
+      "group": "gtls_head",
+      "file": "GPUFun.cu",
+      "upstream_sha256": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+      "reason": "Upstream reference file omitted by package installation; runtime CUDA source is embedded in GPUFun.py, whose installed hash is verified. useLocalPTXCUBIN=False in this protocol."
+    },
+    {
+      "group": "gtls_head",
+      "file": "GPUFun_bak.cu",
+      "upstream_sha256": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+      "reason": "Upstream reference file omitted by package installation; runtime CUDA source is embedded in GPUFun.py, whose installed hash is verified. useLocalPTXCUBIN=False in this protocol."
+    }
+  ],
+  "all_pass": true,
+  "meaning": "Evidence consistency; CPU API errors remain errors. Ablation numerical differences are reported, not reclassified as equivalent."
+}

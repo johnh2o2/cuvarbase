@@ -1,0 +1,9 @@
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:223: RuntimeWarning: Degrees of freedom <= 0 for slice
+  ret = _var(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:181: RuntimeWarning: invalid value encountered in divide
+  arrmean = um.true_divide(arrmean, div, out=arrmean,
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:215: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+{"index": 2, "injected": true, "snr": 10.0, "true_period": 1.868470383859269, "duration": 0.09623446618321171, "period": 1.8684814058387758, "score": 20.961708068847656, "epoch": 1.7100497517034936, "finite_fraction": 1.0, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.016185302555971816, "n_periods": 312064, "search_s": 21.85582337155938, "output_file": "case_0002.npz", "output_sha256": "28e9570ad14124c1ee32d643f22b45a93cec6b732d262d4bb1acc6d172c7be14"}

@@ -1,0 +1,62 @@
+{
+  "status": "running",
+  "config": {
+    "backend": "periodfind_gpu",
+    "epoch_os": 2
+  },
+  "input_file": "tess_200s_tune.npz",
+  "input_sha256": "ee72923cb93dacbf4bf059e9f7545938ea8ee3b2db367fca9b53e6f8ff99e051",
+  "profile": "tess_200s",
+  "split": "tune",
+  "indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31
+  ],
+  "worker_sha256": "5ab5b4a450079a841fb8678f70a2c8e55bbf5cec54a6208c50e33f54e851dbfd",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": []
+}

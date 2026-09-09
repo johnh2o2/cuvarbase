@@ -1,0 +1,26 @@
+[
+  {
+    "sector": 1,
+    "url": "https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:HLSP/qlp/s0001/0000/0002/6113/6679/hlsp_qlp_tess_ffi_s0001-0000000261136679_tess_v01_llc.fits",
+    "file": "qlp-tic261136679-s0001.fits",
+    "status": 0,
+    "bytes": 80640,
+    "sha256": "88717888d4f8be862db8e395ab134cd5e5391a10b0b6e8a81d8a2abac7b9da75"
+  },
+  {
+    "sector": 27,
+    "url": "https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:HLSP/qlp/s0027/0000/0002/6113/6679/hlsp_qlp_tess_ffi_s0027-0000000261136679_tess_v01_llc.fits",
+    "file": "qlp-tic261136679-s0027.fits",
+    "status": 0,
+    "bytes": 198720,
+    "sha256": "4ae15c58eb5d457cb23cf387e207bd5b1208b401c69221d7dbaf9085a039f424"
+  },
+  {
+    "sector": 67,
+    "url": "https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:HLSP/qlp/s0067/0000/0002/6113/6679/hlsp_qlp_tess_ffi_s0067-0000000261136679_tess_v01_llc.fits",
+    "file": "qlp-tic261136679-s0067.fits",
+    "status": 0,
+    "bytes": 714240,
+    "sha256": "94355faec5d89c22b04de4e2669879e2a56f8bea6794fc0dc3684539e89c3ccd"
+  }
+]

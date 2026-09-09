@@ -1,0 +1,87 @@
+{
+  "status": "error",
+  "args": {
+    "input": "inputs/tls_sparse_ps1.npz",
+    "out": "results/ps1_cpu_failure.json",
+    "offset": 4,
+    "threads": 8
+  },
+  "input_sha256": "27775d1ff079ff8e49fdebdfa1910e3c3d6ca1e92f60d4d69afc963b2c35057e",
+  "runner_sha256": "17fdb9599a41e8b96dc4cbc53f131d3dd7268dab3f27585003a9fc7da293d8b2",
+  "ndata": 60,
+  "nperiods": 125203,
+  "truth": {
+    "index": 4,
+    "period": 3.716209242586465,
+    "epoch": 1.8175398204896265,
+    "impact": 0.0,
+    "rp": 0.1,
+    "injected": true,
+    "ndata": 60,
+    "in_transit_observations": 0,
+    "distinct_transits_sampled": 0,
+    "band_counts": [
+      12,
+      12,
+      12,
+      12,
+      12
+    ]
+  },
+  "scope": "CPU failure reproduction; first call including JIT; no failure repair",
+  "main_source_sha256": "35bb8a719e7d49c5696e1818b90016e49b05d3e61686a0d3d6903ee726a93a31",
+  "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/diagnose_cpu.py\", line 63, in main\n    result = transitleastsquares(*lc, verbose=False).power(\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/main.py\", line 76, in power\n    lc_cache_overview, lc_arr = get_cache(\n                                ^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/diagnose_cpu.py\", line 55, in call\n    return original(*a, **kw)\n           ^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/transit.py\", line 147, in get_cache\n    first_sample = numpy.min(full_values)\n                   ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/fromnumeric.py\", line 3302, in min\n    return _wrapreduction(a, np.minimum, 'min', axis, None, out,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/fromnumeric.py\", line 86, in _wrapreduction\n    return ufunc.reduce(obj, axis, dtype, out, **passkwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nValueError: zero-size array to reduction operation minimum which has no identity\n",
+  "completed_search_scalars_before_exception": {
+    "maxwidth_in_samples": 8.0
+  },
+  "failure_frames": [
+    {
+      "file": "/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/main.py",
+      "function": "power",
+      "line": 76,
+      "scalars": {
+        "maxwidth_in_samples": 8.0
+      }
+    },
+    {
+      "file": "/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/transit.py",
+      "function": "get_cache",
+      "line": 147,
+      "scalars": {
+        "used_samples": 0.0,
+        "maxwidth_in_samples": 8.0,
+        "duration": 0.004562738797528194
+      },
+      "full_values": {
+        "shape": [
+          1,
+          0
+        ],
+        "size": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "scaled_transit": {
+        "shape": [
+          8
+        ],
+        "size": 8,
+        "minimum": 1.0,
+        "maximum": 1.0
+      }
+    }
+  ],
+  "total_first_call_s": 0.07312566414475441,
+  "function_events": [
+    {
+      "function": "get_cache",
+      "event": "enter",
+      "seconds": 0.07096702978014946
+    },
+    {
+      "function": "get_cache",
+      "event": "exit",
+      "seconds": 0.07184631377458572
+    }
+  ]
+}

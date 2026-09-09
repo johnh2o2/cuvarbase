@@ -1,0 +1,52 @@
+{
+  "status": "ok",
+  "config": {
+    "backend": "astropy",
+    "epoch_os": 3
+  },
+  "input_file": "tess_gap_tune.npz",
+  "input_sha256": "b262bb9a0534e116b43b8d1ba716527af12f5ca1ed94bfa2b3e0bcc1f71f1ccc",
+  "profile": "tess_gap",
+  "split": "tune",
+  "indices": [
+    2
+  ],
+  "worker_sha256": "4e074700e0b9830842da627c6a99c4b8470f34bfc2f42cce14cb9ec39f48d5fb",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [
+    {
+      "index": 2,
+      "injected": true,
+      "snr": 10.0,
+      "true_period": 0.9875057384459229,
+      "duration": 0.06993970211832559,
+      "period": 0.9875201666005101,
+      "score": 11.7962537257621,
+      "finite_fraction": 1.0,
+      "recovered": true,
+      "alias_recovered": true,
+      "phase_drift_days": 0.01073673170431658,
+      "n_periods": 128964,
+      "search_s": 6.922122173011303,
+      "output_file": "case_0002.npz",
+      "output_sha256": "f366019aa961326281a5feb16c008654f9c8ab1ba30e8e1f7f9e82b303d09d03"
+    }
+  ],
+  "initialization_s": 0.3341779559850693,
+  "first_api_s": 6.7567994594573975,
+  "installed_sources": {}
+}

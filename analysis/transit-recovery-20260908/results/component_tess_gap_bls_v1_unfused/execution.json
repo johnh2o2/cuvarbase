@@ -1,0 +1,18 @@
+{
+  "name": "component_tess_gap_bls_v1_unfused",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 1.568626880645752,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/components.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+    "--config",
+    "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25, \"block_size\": 128, \"unfused\": true}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/component_tess_gap_bls_v1_unfused"
+  ],
+  "started_epoch": 1788902062.2864985,
+  "finished_epoch": 1788902063.8551269
+}

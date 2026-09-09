@@ -1,0 +1,13 @@
+{
+  "name": "heldout_tess_200s_gtls",
+  "exit_code": 0,
+  "derived": true,
+  "parts": [
+    "heldout_tess_200s_gtls__part000",
+    "heldout_tess_200s_gtls__part064",
+    "heldout_tess_200s_gtls__part128",
+    "heldout_tess_200s_gtls__part192"
+  ],
+  "elapsed_s": 142.67314291000366,
+  "note": "Sum of independent recovery worker elapsed times, not latency or throughput."
+}

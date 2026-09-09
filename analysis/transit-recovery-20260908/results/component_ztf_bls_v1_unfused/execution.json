@@ -1,0 +1,18 @@
+{
+  "name": "component_ztf_bls_v1_unfused",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 3.0718328952789307,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/components.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+    "--config",
+    "{\"backend\": \"v1_bls_fast\", \"noverlap\": 8, \"optimized\": true, \"unfused\": true}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/component_ztf_bls_v1_unfused"
+  ],
+  "started_epoch": 1788902144.4203382,
+  "finished_epoch": 1788902147.4921725
+}

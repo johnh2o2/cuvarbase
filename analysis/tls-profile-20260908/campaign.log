@@ -1,0 +1,29 @@
+START rubin_gtls_head_both
+FINISHED rubin_gtls_head_both 0 28.23
+START ztf_gtls_head_native
+FINISHED ztf_gtls_head_native 0 77.63
+START rubin_gtls_head_native
+FINISHED rubin_gtls_head_native 0 117.02
+START ztf_gtls_head_both
+FINISHED ztf_gtls_head_both 0 16.05
+START rubin_v1_release_native
+FINISHED rubin_v1_release_native 0 8.19
+START ztf_gtls_head_union
+FINISHED ztf_gtls_head_union 0 63.26
+START ztf_v1_release_native
+FINISHED ztf_v1_release_native 0 4.93
+START rubin_gtls_pypi_native
+FINISHED rubin_gtls_pypi_native 0 115.4
+START ztf_gtls_pypi_native
+FINISHED ztf_gtls_pypi_native 0 86.97
+START rubin_gtls_head_union
+FINISHED rubin_gtls_head_union 0 90.66
+START ps1_cpu_failure
+FINISHED ps1_cpu_failure 0 1.12
+START gaia_cpu_failure
+FINISHED gaia_cpu_failure 0 1.52
+START ztf_cpu_failure
+FINISHED ztf_cpu_failure 0 77.25
+START rubin_cpu_failure
+FINISHED rubin_cpu_failure 0 160.88
+PROFILE_CAMPAIGN_COMPLETE

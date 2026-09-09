@@ -1,0 +1,183 @@
+[
+  {
+    "file": "real_ps1_heldout.npz",
+    "sha256": "a60ca6d54eaf4f99c3322372ab9907ee7f3869ad5a75baf70dd6ad681dde161e",
+    "profile": "real_ps1",
+    "split": "heldout",
+    "nsource": 1,
+    "nband": 5,
+    "simulation": false,
+    "parameters": {
+      "label": "real_ps1",
+      "bands": [
+        "g",
+        "r",
+        "i",
+        "z",
+        "y"
+      ],
+      "baseline": 1643.6484245000029,
+      "counts": [
+        10,
+        10,
+        19,
+        16,
+        14
+      ],
+      "cadence": "observed",
+      "heterogeneous": true
+    },
+    "counts": [
+      [
+        10,
+        10,
+        19,
+        16,
+        14
+      ]
+    ],
+    "observed_spans_days": [
+      [
+        715.2476288000034,
+        1017.3231204999975,
+        1176.8381188999992,
+        1443.974108500006,
+        1639.5860944000015
+      ]
+    ],
+    "injected_frequencies": [
+      null
+    ],
+    "source": {
+      "file": "ps1-cadence-five-band.csv",
+      "sha256": "8b334dd92523e95d928808b7ecc388c49a1457a967a29d15605ec641afedc160",
+      "source_id": "155212125684898931",
+      "selection": "first cone-query row with at least 6 mean PSF measurements in every band",
+      "cuts": "finite time and positive finite PSF flux/error; no population claim"
+    },
+    "frequency": {
+      "n": 164355,
+      "fmin": 0.0012168052304788958,
+      "fmax": 19.999897490243324,
+      "df": 0.00012168052304788959
+    },
+    "purpose": "Real-cadence/observed-flux numerical and timing check; not representative population statistics",
+    "generator_sha256": "66490a4ab0971c652c9e1a45a9051434a0de5a32545ae128ff59e25cb0b810f5",
+    "arrays_sha256": "0b6f5c637b030cc553cdc1dddb477ffa38dc5c2d308e72861d7c571813b90cf7"
+  },
+  {
+    "file": "real_gaia_heldout.npz",
+    "sha256": "0e67591920e48daf6fee252c0f780542ecd249dba9d35f5cde083d9692562344",
+    "profile": "real_gaia",
+    "split": "heldout",
+    "nsource": 1,
+    "nband": 3,
+    "simulation": false,
+    "parameters": {
+      "label": "real_gaia",
+      "bands": [
+        "G",
+        "BP",
+        "RP"
+      ],
+      "baseline": 888.9617793796028,
+      "counts": [
+        41,
+        39,
+        39
+      ],
+      "cadence": "observed",
+      "heterogeneous": true
+    },
+    "counts": [
+      [
+        41,
+        39,
+        39
+      ]
+    ],
+    "observed_spans_days": [
+      [
+        888.9617793796028,
+        888.8877564938145,
+        888.8877567358832
+      ]
+    ],
+    "injected_frequencies": [
+      null
+    ],
+    "source": {
+      "file": "gaia-5712267402298562560.csv",
+      "sha256": "1fa27223eefbdd206f140335b99129551e9f06d8e8495588328e77e21291a6ba",
+      "source_id": "5712267402298562560",
+      "selection": "first successfully retrieved RR Lyrae example with all three bands populated",
+      "cuts": "VALID_DATA=TRUE, per-band variability rejection false, finite positive flux/error"
+    },
+    "frequency": {
+      "n": 88887,
+      "fmin": 0.0022498155110738053,
+      "fmax": 19.999959967241697,
+      "df": 0.0002249815511073805
+    },
+    "purpose": "Real-cadence/observed-flux numerical and timing check; not representative population statistics",
+    "generator_sha256": "66490a4ab0971c652c9e1a45a9051434a0de5a32545ae128ff59e25cb0b810f5",
+    "arrays_sha256": "97c4349efc6a5f44d2abb9b64c5b27e45ca78cb81881f8f5722ee1686b783dba"
+  },
+  {
+    "file": "real_ztf_heldout.npz",
+    "sha256": "cfa12cf370838b9c040eb122e94d4dcc661381b61b39bda94b94d11b581ce650",
+    "profile": "real_ztf",
+    "split": "heldout",
+    "nsource": 1,
+    "nband": 2,
+    "simulation": false,
+    "parameters": {
+      "label": "real_ztf",
+      "bands": [
+        "g",
+        "r"
+      ],
+      "baseline": 2743.768345858436,
+      "counts": [
+        622,
+        695
+      ],
+      "cadence": "observed",
+      "heterogeneous": true
+    },
+    "counts": [
+      [
+        622,
+        695
+      ]
+    ],
+    "observed_spans_days": [
+      [
+        2743.768345858436,
+        2730.686451015994
+      ]
+    ],
+    "injected_frequencies": [
+      null
+    ],
+    "source": {
+      "file": "ztf-cadence-multiband.csv",
+      "sha256": "ff93074a10aefcb9beb814afc8b743057823b20cd9f3365625157163ff61f1a3",
+      "source_ids": [
+        "686103400067717",
+        "686203400035122"
+      ],
+      "selection": "most populated object ID per g/r filter within 1.44 arcsec cone",
+      "cuts": "public programid=1; catflags=0; positive finite errors; one field per filter"
+    },
+    "frequency": {
+      "n": 274367,
+      "fmin": 0.0007289245110721127,
+      "fmax": 19.9999391649922,
+      "df": 7.289245110721127e-05
+    },
+    "purpose": "Real-cadence/observed-flux numerical and timing check; not representative population statistics",
+    "generator_sha256": "66490a4ab0971c652c9e1a45a9051434a0de5a32545ae128ff59e25cb0b810f5",
+    "arrays_sha256": "d817c766e60c5ca9a7cbdcaecb43180c3d9a8122457ca9fa6f9f4b8e4c27190a"
+  }
+]

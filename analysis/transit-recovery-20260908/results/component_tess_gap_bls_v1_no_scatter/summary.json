@@ -1,0 +1,131 @@
+{
+  "status": "ok",
+  "profile": "tess_gap",
+  "config": {
+    "backend": "v1_bls_fast",
+    "noverlap": 4,
+    "optimized": true,
+    "qmin_fac": 0.25,
+    "block_size": 128,
+    "no_scatter": true
+  },
+  "input_sha256": "b262bb9a0534e116b43b8d1ba716527af12f5ca1ed94bfa2b3e0bcc1f71f1ccc",
+  "worker_sha256": "aea8c8f7e14a5590bef039625c0055c83cedb113315c4f4d05537ed1234b4937",
+  "instrumented_sha256": "a702d6f362757874dee5ed8413d008c512542276264d03e693b578d06a204c4d",
+  "original_function_sha256": "8e04e0f81450d239812dc90c267c2f8e6dc16fbdf8cd16788258e40bfdbffa98",
+  "native_times_s": [
+    0.03013945370912552,
+    0.024190403521060944,
+    0.023500747978687286
+  ],
+  "native_median_s": 0.024190403521060944,
+  "profiles": [
+    {
+      "Kernel cache lookup": {
+        "calls": 1,
+        "inclusive_s": 2.4847686290740967e-05,
+        "exclusive_s": 2.4847686290740967e-05
+      },
+      "Host preparation and H2D": {
+        "calls": 1,
+        "inclusive_s": 0.002566613256931305,
+        "exclusive_s": 0.002566613256931305
+      },
+      "Memory pool / allocation": {
+        "calls": 1,
+        "inclusive_s": 0.0025939270853996277,
+        "exclusive_s": 2.7313828468322754e-05
+      },
+      "Host maximum-bin scan": {
+        "calls": 17,
+        "inclusive_s": 0.00017851963639259338,
+        "exclusive_s": 0.00017851963639259338
+      },
+      "GPU kernel launches (synchronized)": {
+        "calls": 16,
+        "inclusive_s": 0.006034094840288162,
+        "exclusive_s": 0.006034094840288162
+      },
+      "Spectrum D2H": {
+        "calls": 1,
+        "inclusive_s": 0.000465933233499527,
+        "exclusive_s": 0.000465933233499527
+      },
+      "Common candidate ranking": {
+        "calls": 1,
+        "inclusive_s": 0.014433883130550385,
+        "exclusive_s": 0.014433883130550385
+      },
+      "Remaining public API work": {
+        "calls": 1,
+        "inclusive_s": 0.025853320956230164,
+        "exclusive_s": 0.002122115343809128
+      }
+    },
+    {
+      "Kernel cache lookup": {
+        "calls": 1,
+        "inclusive_s": 2.4434179067611694e-05,
+        "exclusive_s": 2.4434179067611694e-05
+      },
+      "Host preparation and H2D": {
+        "calls": 1,
+        "inclusive_s": 0.002432446926832199,
+        "exclusive_s": 0.002432446926832199
+      },
+      "Memory pool / allocation": {
+        "calls": 1,
+        "inclusive_s": 0.002460721880197525,
+        "exclusive_s": 2.8274953365325928e-05
+      },
+      "Host maximum-bin scan": {
+        "calls": 17,
+        "inclusive_s": 0.00018827244639396667,
+        "exclusive_s": 0.00018827244639396667
+      },
+      "GPU kernel launches (synchronized)": {
+        "calls": 16,
+        "inclusive_s": 0.006014220416545868,
+        "exclusive_s": 0.006014220416545868
+      },
+      "Spectrum D2H": {
+        "calls": 1,
+        "inclusive_s": 0.000395800918340683,
+        "exclusive_s": 0.000395800918340683
+      },
+      "Common candidate ranking": {
+        "calls": 1,
+        "inclusive_s": 0.014098435640335083,
+        "exclusive_s": 0.014098435640335083
+      },
+      "Remaining public API work": {
+        "calls": 1,
+        "inclusive_s": 0.025415338575839996,
+        "exclusive_s": 0.002233453094959259
+      }
+    }
+  ],
+  "native_candidate": {
+    "period": 0.9875201666005101,
+    "score": 12.773492765684555,
+    "finite_fraction": 1.0
+  },
+  "profiled_candidate": {
+    "period": 0.9875201666005101,
+    "score": 12.773492953912642,
+    "finite_fraction": 1.0
+  },
+  "max_abs_power_difference": 5.587935447692871e-09,
+  "grid_times_s": [
+    0.03717491030693054,
+    0.03592348471283913,
+    0.03421366959810257
+  ],
+  "grid_median_s": 0.03592348471283913,
+  "grid_baseline": 734.853796173106,
+  "grid_observed_time_index": 0,
+  "n_auto_freqs": 128964,
+  "grid_float32_equal": true,
+  "output_sha256": "9e452520818f5db89279bef22b316b25d1e4b0be262d5c09db123592bf13f913",
+  "meaning": "Synchronized wall regions, not kernel-busy traces. Grid construction is measured separately and excluded from explicit-grid API timings."
+}

@@ -1,0 +1,43 @@
+START screen_tess_200s_pf_gpu64 2026-09-08T18:12:29.274758+00:00
+END screen_tess_200s_pf_gpu64 0 2.62
+START screen_tess_200s_fbls_native 2026-09-08T18:12:31.899554+00:00
+END screen_tess_200s_fbls_native 0 55.12
+START screen_tess_gap_fbls_native 2026-09-08T18:13:27.019763+00:00
+END screen_tess_gap_fbls_native -15 240.07
+START screen_ztf_fbls_native 2026-09-08T18:17:27.087095+00:00
+END screen_ztf_fbls_native -9 33.5
+START screen_tess_200s_pypi_bls_manual8 2026-09-08T18:18:00.593856+00:00
+END screen_tess_200s_pypi_bls_manual8 0 2.17
+START screen_tess_200s_v1_bls_dense4 2026-09-08T18:18:02.766452+00:00
+END screen_tess_200s_v1_bls_dense4 0 1.32
+START screen_tess_200s_pypi_bls_dense4 2026-09-08T18:18:04.086842+00:00
+END screen_tess_200s_pypi_bls_dense4 0 1.57
+START screen_tess_200s_astropy10_w7 2026-09-08T18:18:05.657835+00:00
+END screen_tess_200s_astropy10_w7 0 4.93
+START screen_tess_gap_pypi_bls_manual8 2026-09-08T18:18:10.587726+00:00
+END screen_tess_gap_pypi_bls_manual8 0 7.49
+START screen_tess_gap_v1_bls_dense4 2026-09-08T18:18:18.076274+00:00
+END screen_tess_gap_v1_bls_dense4 0 4.78
+START screen_tess_gap_pypi_bls_dense4 2026-09-08T18:18:22.856785+00:00
+END screen_tess_gap_pypi_bls_dense4 0 5.88
+START screen_tess_gap_astropy10_w7 2026-09-08T18:18:28.743260+00:00
+END screen_tess_gap_astropy10_w7 0 74.01
+START screen_ztf_pypi_bls_manual8 2026-09-08T18:19:42.758891+00:00
+END screen_ztf_pypi_bls_manual8 0 16.75
+START screen_ztf_v1_bls_dense4 2026-09-08T18:19:59.514509+00:00
+END screen_ztf_v1_bls_dense4 0 13.85
+START screen_ztf_pypi_bls_dense4 2026-09-08T18:20:13.367130+00:00
+END screen_ztf_pypi_bls_dense4 0 15.0
+START screen_ztf_astropy10_w7 2026-09-08T18:20:28.366475+00:00
+END screen_ztf_astropy10_w7 0 150.64
+START screen_tess_200s_gtls_fast 2026-09-08T18:22:59.005449+00:00
+END screen_tess_200s_gtls_fast 0 19.41
+START screen_tess_gap_gtls_fast 2026-09-08T18:23:18.414731+00:00
+END screen_tess_gap_gtls_fast 0 256.34
+START screen_ztf_gtls_fast 2026-09-08T18:27:34.756033+00:00
+END screen_ztf_gtls_fast 0 606.67
+START screen_tess_gap_gtls_w2 2026-09-08T18:37:41.424905+00:00
+END screen_tess_gap_gtls_w2 0 65.77
+START screen_tess_gap_gtls_fast_w2 2026-09-08T18:38:47.195176+00:00
+END screen_tess_gap_gtls_fast_w2 0 54.93
+MANIFEST_COMPLETE screen_remaining.json

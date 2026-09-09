@@ -1,0 +1,166 @@
+{
+  "v1_bls3": {
+    "backend": "v1_bls_fast",
+    "noverlap": 3
+  },
+  "v1_bls4": {
+    "backend": "v1_bls_fast",
+    "noverlap": 4
+  },
+  "v1_bls_opt4": {
+    "backend": "v1_bls_fast",
+    "noverlap": 4,
+    "optimized": true
+  },
+  "pypi_bls3": {
+    "backend": "pypi_bls_fast",
+    "noverlap": 3
+  },
+  "astropy3": {
+    "backend": "astropy",
+    "epoch_os": 3
+  },
+  "astropy10": {
+    "backend": "astropy",
+    "epoch_os": 10
+  },
+  "pf_gpu1": {
+    "backend": "periodfind_gpu",
+    "epoch_os": 1
+  },
+  "pf_cpu1": {
+    "backend": "periodfind_cpu",
+    "epoch_os": 1,
+    "threads": 7
+  },
+  "fbls2": {
+    "backend": "fbls",
+    "epoch_os": 2,
+    "period_os": 2
+  },
+  "v1_tls8": {
+    "backend": "v1_tls",
+    "epoch_os": 8,
+    "durations": 24
+  },
+  "gtls_density": {
+    "backend": "gtls",
+    "gtls_version": "head",
+    "density": true
+  },
+  "gtls_default": {
+    "backend": "gtls",
+    "gtls_version": "head"
+  },
+  "pypi_bls4": {
+    "backend": "pypi_bls_fast",
+    "noverlap": 4
+  },
+  "v1_bls_batch4": {
+    "backend": "v1_bls_batch",
+    "noverlap": 4
+  },
+  "v1_bls_sparse": {
+    "backend": "v1_bls_sparse"
+  },
+  "astropy3_w7": {
+    "backend": "astropy",
+    "epoch_os": 3,
+    "workers": 7
+  },
+  "astropy10_w7": {
+    "backend": "astropy",
+    "epoch_os": 10,
+    "workers": 7
+  },
+  "pf_gpu2": {
+    "backend": "periodfind_gpu",
+    "epoch_os": 2
+  },
+  "pf_cpu2": {
+    "backend": "periodfind_cpu",
+    "epoch_os": 2,
+    "threads": 7
+  },
+  "v1_tls4": {
+    "backend": "v1_tls",
+    "epoch_os": 4,
+    "durations": 16
+  },
+  "gtls_pypi": {
+    "backend": "gtls",
+    "gtls_version": "pypi",
+    "density": true
+  },
+  "pypi_bls_manual3": {
+    "backend": "pypi_bls_fast",
+    "noverlap": 3,
+    "manual_overlap": true
+  },
+  "pypi_bls_manual4": {
+    "backend": "pypi_bls_fast",
+    "noverlap": 4,
+    "manual_overlap": true
+  },
+  "v1_bls1": {
+    "backend": "v1_bls_fast",
+    "noverlap": 1
+  },
+  "v1_bls8": {
+    "backend": "v1_bls_fast",
+    "noverlap": 8,
+    "optimized": true
+  },
+  "v1_bls_unfused4": {
+    "backend": "v1_bls_fast",
+    "noverlap": 4,
+    "unfused": true
+  },
+  "pf_gpu64": {
+    "backend": "periodfind_gpu",
+    "epoch_os": 2,
+    "cap_bins": 64
+  },
+  "fbls_native": {
+    "backend": "fbls",
+    "epoch_os": 1,
+    "period_os": 2,
+    "native_chunks": 4
+  },
+  "pypi_bls_manual8": {
+    "backend": "pypi_bls_fast",
+    "noverlap": 8,
+    "manual_overlap": true
+  },
+  "v1_bls_dense4": {
+    "backend": "v1_bls_fast",
+    "noverlap": 4,
+    "optimized": true,
+    "qmin_fac": 0.25
+  },
+  "pypi_bls_dense4": {
+    "backend": "pypi_bls_fast",
+    "noverlap": 4,
+    "manual_overlap": true,
+    "qmin_fac": 0.25
+  },
+  "gtls_fast": {
+    "backend": "gtls",
+    "gtls_version": "head",
+    "density": true,
+    "fast": true
+  },
+  "gtls_w2": {
+    "backend": "gtls",
+    "gtls_version": "head",
+    "density": true,
+    "workers": 2
+  },
+  "gtls_fast_w2": {
+    "backend": "gtls",
+    "gtls_version": "head",
+    "density": true,
+    "fast": true,
+    "workers": 2
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "args": {
+    "baseline": 1500.0,
+    "n_lcs": 1,
+    "cadence_min": 30,
+    "ensemble": false,
+    "out": "analysis/benchmark-audit-20260906/inputs/tls1500.npz"
+  },
+  "n_periods": 191742,
+  "cases": [
+    {
+      "index": 0,
+      "period": 8.13,
+      "epoch": 2.8455,
+      "impact": 0.0,
+      "depth": 0.004,
+      "noise": 0.004,
+      "red_noise": false,
+      "ndata": 72000,
+      "injected": true,
+      "sha256": "5719092eb6ec5da5bd8414e2f34e87da53a3ded6a86d5e6bf63c71eceab13e0e"
+    }
+  ],
+  "note": "Wide GTLS-style duration window, nominal epoch density 8; templates and discrete duration/epoch grids still differ.",
+  "frequency_sha256": "ea33cf8d8a99492c488e8d04c6e25528b1ea30f387c9c590acdc5580d00ce216",
+  "input_sha256": "3216e44ff567ac633802933f6dd89b7d6b9594e24b84e1810e10744891d1fafd"
+}

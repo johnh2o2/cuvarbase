@@ -1,0 +1,1 @@
+{"status": "error", "total_first_call_s": 159.37405509129167, "completed_search_scalars_before_exception": {"internal_samples": 0.0, "maxwidth_in_samples": 77.0, "duration": 0.04494129955727382, "period": 4.970122036449512, "T0": 4.740584485715762, "SDE": 29.13339176019433, "depth": 0.9875750341426751, "best_row": 24.0}}

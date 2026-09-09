@@ -1,0 +1,25 @@
+{
+  "complete": true,
+  "errors": [],
+  "transfers": [
+    {
+      "node": "original",
+      "transferred_files": 12740
+    },
+    {
+      "node": "validation_a",
+      "transferred_files": 661
+    },
+    {
+      "node": "validation_b",
+      "transferred_files": 661
+    }
+  ],
+  "validated_methods": 48,
+  "timing_jobs": 42,
+  "periodfind_source_changes": [
+    "setup.py"
+  ],
+  "other_original_job_intervals": 257,
+  "note": "GTLS upstream .cu reference snapshots are not installed; runtime CUDA string in GPUFun.py is verified. Derived partition times are excluded from all performance ratios. Timing isolation is verified from controller intervals, not asserted for unrelated host tenants."
+}

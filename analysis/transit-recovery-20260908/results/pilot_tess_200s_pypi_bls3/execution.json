@@ -1,0 +1,20 @@
+{
+  "name": "pilot_tess_200s_pypi_bls3",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 2.721609115600586,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3}",
+    "--indices",
+    "2",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_pypi_bls3"
+  ],
+  "started_epoch": 1788887448.1383412,
+  "finished_epoch": 1788887450.859953
+}

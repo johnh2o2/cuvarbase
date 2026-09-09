@@ -1,0 +1,76 @@
+{
+  "status": "ok",
+  "config": {
+    "backend": "periodfind_gpu",
+    "epoch_os": 1
+  },
+  "input_file": "tess_gap_tune.npz",
+  "input_sha256": "b262bb9a0534e116b43b8d1ba716527af12f5ca1ed94bfa2b3e0bcc1f71f1ccc",
+  "profile": "tess_gap",
+  "split": "tune",
+  "indices": [
+    2
+  ],
+  "worker_sha256": "8ca6b6ccffdfd01597f9f71ace45100460fcde1c4d81f56acaf06d7677eb9c6e",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [
+    {
+      "index": 2,
+      "injected": true,
+      "snr": 10.0,
+      "true_period": 0.9875057384459229,
+      "duration": 0.06993970211832559,
+      "period": 0.9874946088107855,
+      "score": 10.753496608499267,
+      "finite_fraction": 1.0,
+      "recovered": true,
+      "alias_recovered": true,
+      "phase_drift_days": 0.008282133776357163,
+      "n_periods": 128964,
+      "search_s": 0.10481402650475502,
+      "output_file": "case_0002.npz",
+      "output_sha256": "c89dff1203ae31b729238eb0f7b18d4af0828f89024dbce6f4ae05104027ef1c"
+    }
+  ],
+  "initialization_s": 0.025847822427749634,
+  "first_api_s": 0.4061778634786606,
+  "installed_sources": {
+    "periodfind": {
+      "__init__.py": "056942e5a8514e5b2865bd4e8abde9b316eb0c15db0f575a3dc4efb4ce124a81",
+      "_utils.py": "cb64dfcf1ccb29ba24f0415defa538a034a1934a0fb7b85c806bce065e6337dc",
+      "aov.cpython-311-x86_64-linux-gnu.so": "3a95ebd6df439fabd162d2974d47522a1849866b3fae73b6f707c15ece2cd8b2",
+      "bls.cpython-311-x86_64-linux-gnu.so": "d3038474529acc66f99930cad15218bda479adbb1c938d4b386128c950af42d5",
+      "ce.cpython-311-x86_64-linux-gnu.so": "888f6c334e9fec3b3df78a447f565a56ebf0d3f22cc6d9acc7937168b729be06",
+      "fpw.cpython-311-x86_64-linux-gnu.so": "e367df3a05a6e82563329610ac458af74af7fe830769fb39c3db388056fb6363",
+      "ls.cpython-311-x86_64-linux-gnu.so": "f404f890a640b292b3440110cb376e53fdb4a7d4b259882ac3ee56acee85e5fb",
+      "mf.cpython-311-x86_64-linux-gnu.so": "3f7dbf0fa93a7b86bd7850b26b83138cf52a5df67545bd7d361f7daa692e699c",
+      "mhf.cpython-311-x86_64-linux-gnu.so": "38fdd27584f2c94ce240e0c751fdcaeb2b837bd39f6bfd061e382a5f2e3d2e9d",
+      "vn.cpython-311-x86_64-linux-gnu.so": "18fdfad01c96a83b2413e160827d43df800872bc22d3f42237d8186c48f77471",
+      "cpu/__init__.py": "9b5f41481e9b519cb89442bd0d52c8153fe24673c677acabdff0106982e250ab",
+      "cuda/aov.cu": "399a053d1d14cec88a5844332c4b46fccf9ebacb717d2cd4f2b7d80fe3f2c39f",
+      "cuda/bls.cu": "a50f963d274a3e90064a127fce7acc40c28cf97ba79ad773d577f68ccb1b87ef",
+      "cuda/ce.cu": "7f5dc4e4b9963adfeb6b92fe375ae94fd58b459ad769b2c6046f48e3684c40d1",
+      "cuda/errchk.cuh": "9f443aa7b136e5784b5ad98002baf5020c1f74fdc27d8f2806efe5e9095ee380",
+      "cuda/fpw.cu": "0c4cff5ac1c5e48b987df048e925930c4489d0e53495df836d0bfc72b0627ed7",
+      "cuda/ls.cu": "a89b6f580b0c7f7cb94b48f307dcf645b2d95d1276efb983fe5bbfa40d54db44",
+      "cuda/mf.cu": "8eadeb67071d528541026d09eba73a2198fcd093b11a537de6ec86a0f7bb255d",
+      "cuda/mhf.cu": "8275124306aa4d15a671a0c9a4dfaeb72fc73ee7209b2c72a1ac231cb8102d6f",
+      "cuda/vn.cu": "ac6bd2360f98ca7221d35f3c0c2283c94f5a4e70ddb9952b20584717beee9235",
+      "gpu/__init__.py": "442371f3b4372a06e4a9c1d11df1451b05d3a49235b3188289a4835c0b3dfa38"
+    }
+  }
+}

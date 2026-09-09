@@ -1,0 +1,97 @@
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (17, 6, 4, 28)     Iterating: [##        ] - Data Dimensions: (8, 31, 4, 28)     Iterating: [#####     ] - Data Dimensions: (4, 63, 4, 28)     Iterating: [########  ] - Data Dimensions: (2, 127, 4, 28) [2K[1A[2K100%|██████████| 1/1 [00:09<00:00,  9.29s/it]100%|██████████| 1/1 [00:09<00:00,  9.29s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (17, 5, 4, 33)     Iterating: [##        ] - Data Dimensions: (8, 29, 4, 33)     Iterating: [#####     ] - Data Dimensions: (4, 59, 4, 33)     Iterating: [########  ] - Data Dimensions: (2, 118, 4, 33) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.96s/it]100%|██████████| 1/1 [00:01<00:00,  1.96s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (17, 5, 4, 39)     Iterating: [##        ] - Data Dimensions: (8, 27, 4, 39)     Iterating: [#####     ] - Data Dimensions: (4, 55, 4, 39)     Iterating: [########  ] - Data Dimensions: (2, 110, 4, 39) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.96s/it]100%|██████████| 1/1 [00:01<00:00,  1.96s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (9, 7, 4, 45)     Iterating: [###       ] - Data Dimensions: (4, 51, 4, 45)     Iterating: [#######   ] - Data Dimensions: (2, 103, 4, 45) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.94s/it]100%|██████████| 1/1 [00:02<00:00,  2.94s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (9, 6, 4, 53)     Iterating: [###       ] - Data Dimensions: (4, 47, 4, 53)     Iterating: [#######   ] - Data Dimensions: (2, 95, 4, 53) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.97s/it]100%|██████████| 1/1 [00:01<00:00,  1.97s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (9, 6, 4, 62)     Iterating: [###       ] - Data Dimensions: (4, 44, 4, 62)     Iterating: [#######   ] - Data Dimensions: (2, 89, 4, 62) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.03s/it]100%|██████████| 1/1 [00:02<00:00,  2.03s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (5, 9, 4, 72)     Iterating: [#####     ] - Data Dimensions: (2, 82, 4, 72) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.88s/it]100%|██████████| 1/1 [00:02<00:00,  2.88s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (5, 8, 4, 85)     Iterating: [#####     ] - Data Dimensions: (2, 76, 4, 85) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.04s/it]100%|██████████| 1/1 [00:02<00:00,  2.04s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (5, 8, 4, 99)     Iterating: [#####     ] - Data Dimensions: (2, 71, 4, 99) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.99s/it]100%|██████████| 1/1 [00:01<00:00,  1.99s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (3, 11, 4, 115) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.94s/it]100%|██████████| 1/1 [00:02<00:00,  2.94s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (3, 9, 4, 135) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.31s/it]100%|██████████| 1/1 [00:02<00:00,  2.31s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (3, 10, 4, 157) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.11s/it]100%|██████████| 1/1 [00:02<00:00,  2.11s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+[2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.63s/it]100%|██████████| 1/1 [00:01<00:00,  1.63s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+[2K[1A[2K100%|██████████| 1/1 [00:00<00:00,  1.41it/s]100%|██████████| 1/1 [00:00<00:00,  1.41it/s]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+[2K[1A[2K100%|██████████| 1/1 [00:00<00:00,  1.42it/s]100%|██████████| 1/1 [00:00<00:00,  1.42it/s]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+[2K[1A[2K100%|██████████| 1/1 [00:00<00:00,  1.41it/s]100%|██████████| 1/1 [00:00<00:00,  1.41it/s]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (17, 6, 4, 28)     Iterating: [##        ] - Data Dimensions: (8, 31, 4, 28)     Iterating: [#####     ] - Data Dimensions: (4, 63, 4, 28)     Iterating: [########  ] - Data Dimensions: (2, 127, 4, 28) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.98s/it]100%|██████████| 1/1 [00:01<00:00,  1.98s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (17, 5, 4, 33)     Iterating: [##        ] - Data Dimensions: (8, 29, 4, 33)     Iterating: [#####     ] - Data Dimensions: (4, 59, 4, 33)     Iterating: [########  ] - Data Dimensions: (2, 118, 4, 33) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.04s/it]100%|██████████| 1/1 [00:02<00:00,  2.04s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (17, 5, 4, 39)     Iterating: [##        ] - Data Dimensions: (8, 27, 4, 39)     Iterating: [#####     ] - Data Dimensions: (4, 55, 4, 39)     Iterating: [########  ] - Data Dimensions: (2, 110, 4, 39) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.99s/it]100%|██████████| 1/1 [00:01<00:00,  1.99s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (9, 7, 4, 45)     Iterating: [###       ] - Data Dimensions: (4, 51, 4, 45)     Iterating: [#######   ] - Data Dimensions: (2, 103, 4, 45) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.06s/it]100%|██████████| 1/1 [00:02<00:00,  2.06s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (9, 6, 4, 53)     Iterating: [###       ] - Data Dimensions: (4, 47, 4, 53)     Iterating: [#######   ] - Data Dimensions: (2, 95, 4, 53) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  2.00s/it]100%|██████████| 1/1 [00:01<00:00,  2.00s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (9, 6, 4, 62)     Iterating: [###       ] - Data Dimensions: (4, 44, 4, 62)     Iterating: [#######   ] - Data Dimensions: (2, 89, 4, 62) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  2.00s/it]100%|██████████| 1/1 [00:01<00:00,  2.00s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (5, 9, 4, 72)     Iterating: [#####     ] - Data Dimensions: (2, 82, 4, 72) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.06s/it]100%|██████████| 1/1 [00:02<00:00,  2.06s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (5, 8, 4, 85)     Iterating: [#####     ] - Data Dimensions: (2, 76, 4, 85) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.97s/it]100%|██████████| 1/1 [00:01<00:00,  1.97s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (5, 8, 4, 99)     Iterating: [#####     ] - Data Dimensions: (2, 71, 4, 99) [2K[1A[2K100%|██████████| 1/1 [00:01<00:00,  1.98s/it]100%|██████████| 1/1 [00:01<00:00,  1.98s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (3, 11, 4, 115) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.11s/it]100%|██████████| 1/1 [00:02<00:00,  2.11s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (3, 9, 4, 135) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.03s/it]100%|██████████| 1/1 [00:02<00:00,  2.03s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+    Iterating: [          ] - Data Dimensions: (3, 10, 4, 157) [2K[1A[2K100%|██████████| 1/1 [00:02<00:00,  2.03s/it]100%|██████████| 1/1 [00:02<00:00,  2.03s/it]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+[2K[1A[2K100%|██████████| 1/1 [00:00<00:00,  1.34it/s]100%|██████████| 1/1 [00:00<00:00,  1.34it/s]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+[2K[1A[2K100%|██████████| 1/1 [00:00<00:00,  1.42it/s]100%|██████████| 1/1 [00:00<00:00,  1.42it/s]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+[2K[1A[2K100%|██████████| 1/1 [00:00<00:00,  1.41it/s]100%|██████████| 1/1 [00:00<00:00,  1.41it/s]
+Cutting 1 chunks, evenly spaced in frequency.
+  0%|          | 0/1 [00:00<?, ?it/s]
+[2K[1A[2K100%|██████████| 1/1 [00:00<00:00,  1.42it/s]100%|██████████| 1/1 [00:00<00:00,  1.42it/s]
+{"index": 2, "injected": true, "snr": 10.0, "true_period": 1.175971299484738, "duration": 0.08689187529203446, "period": 1.1763860728556645, "score": 8.058595354640135, "finite_fraction": 1.0, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.009084587725189754, "n_periods": 2165, "search_s": 27.264051970094442, "output_file": "case_0002.npz", "output_sha256": "390be033a433e360d276cd2cbde4a52ab102987be1c9399bf0586f50802c8874"}

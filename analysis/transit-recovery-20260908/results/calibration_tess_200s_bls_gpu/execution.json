@@ -1,0 +1,20 @@
+{
+  "name": "calibration_tess_200s_bls_gpu",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 8.538211822509766,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+    "--config",
+    "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2, \"cap_bins\": 64}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_bls_gpu",
+    "--indices",
+    "all"
+  ],
+  "started_epoch": 1788897320.5103536,
+  "finished_epoch": 1788897329.0485666
+}

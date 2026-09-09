@@ -1,0 +1,23 @@
+{
+  "name": "timing_tess_gap_bls_pypi_batch16",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 5.680593729019165,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25, \"block_size\": 128}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/timing_tess_gap_bls_pypi_batch16",
+    "--indices",
+    "128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143",
+    "--timing",
+    "--reps",
+    "3"
+  ],
+  "started_epoch": 1788901386.697369,
+  "finished_epoch": 1788901392.3779643
+}

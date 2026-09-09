@@ -1,0 +1,103 @@
+[
+  {
+    "name": "cpu_schedule_tune_periods",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 8.486982583999634,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/cpu_schedule_tune_periods",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15",
+      "--timing",
+      "--reps",
+      "5"
+    ],
+    "started_epoch": 1788902277.7750838,
+    "finished_epoch": 1788902286.262068
+  },
+  {
+    "name": "cpu_schedule_tune_sources",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 7.682284355163574,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/cpu_batch.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/cpu_schedule_tune_sources",
+      "--timing",
+      "--reps",
+      "5"
+    ],
+    "started_epoch": 1788902286.2637298,
+    "finished_epoch": 1788902293.9460156
+  },
+  {
+    "name": "calibration_tess_200s_bls_cpu_sources",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 10.089132070541382,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/cpu_batch.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_bls_cpu_sources"
+    ],
+    "started_epoch": 1788902293.9477923,
+    "finished_epoch": 1788902304.036926
+  },
+  {
+    "name": "heldout_tess_200s_bls_cpu_sources",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 20.062553882598877,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/cpu_batch.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_200s_bls_cpu_sources"
+    ],
+    "started_epoch": 1788902304.038809,
+    "finished_epoch": 1788902324.1013649
+  },
+  {
+    "name": "timing_tess_200s_bls_cpu_sources_batch16",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 5.529200553894043,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/cpu_batch.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/timing_tess_200s_bls_cpu_sources_batch16",
+      "--timing",
+      "--reps",
+      "3"
+    ],
+    "started_epoch": 1788902324.1035635,
+    "finished_epoch": 1788902329.6327665
+  }
+]

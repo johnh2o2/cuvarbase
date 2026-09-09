@@ -1,0 +1,92 @@
+site_name: periodfind
+site_description: GPU-accelerated period finding for astronomical light curves
+site_author: Ethan Jaszewski
+site_url: https://zwickytransientfacility.github.io/periodfind/
+repo_url: https://github.com/ZwickyTransientFacility/periodfind
+repo_name: ZwickyTransientFacility/periodfind
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - User Guide:
+    - Algorithms: user-guide/algorithms.md
+    - Benchmarks: benchmarks.md
+  - API Reference:
+    - Overview: api/index.md
+    - Core API: api/core.md
+    - CPU Backend: api/cpu.md
+    - GPU Backend: api/gpu.md
+    - Utilities: api/utils.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            heading_level: 3
+            docstring_style: numpy
+            merge_init_into_class: true
+            show_signature_annotations: true
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ZwickyTransientFacility/periodfind

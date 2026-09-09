@@ -1,0 +1,377 @@
+[
+  {
+    "name": "pilot_tess_200s_v1_bls3",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_v1_bls4",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_v1_bls_opt4",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4,
+      "optimized": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_pypi_bls3",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_astropy3",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_astropy10",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 10
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_pf_gpu1",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 1
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_pf_cpu1",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "periodfind_cpu",
+      "epoch_os": 1,
+      "threads": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_fbls2",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "fbls",
+      "epoch_os": 2,
+      "period_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_v1_tls8",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 8,
+      "durations": 24
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_gtls_density",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_200s_gtls_default",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head"
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_v1_bls3",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_v1_bls4",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_v1_bls_opt4",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4,
+      "optimized": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_pypi_bls3",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_astropy3",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_astropy10",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 10
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_pf_gpu1",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 1
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_pf_cpu1",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "periodfind_cpu",
+      "epoch_os": 1,
+      "threads": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_fbls2",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "fbls",
+      "epoch_os": 2,
+      "period_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_v1_tls8",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 8,
+      "durations": 24
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_gtls_density",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_tess_gap_gtls_default",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head"
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_v1_bls3",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_v1_bls4",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_v1_bls_opt4",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4,
+      "optimized": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_pypi_bls3",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_astropy3",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 3
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_astropy10",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 10
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_pf_gpu1",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 1
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_pf_cpu1",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "periodfind_cpu",
+      "epoch_os": 1,
+      "threads": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_fbls2",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "fbls",
+      "epoch_os": 2,
+      "period_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_v1_tls8",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 8,
+      "durations": 24
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_gtls_density",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot_ztf_gtls_default",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head"
+    },
+    "indices": "2",
+    "timeout": 180
+  }
+]

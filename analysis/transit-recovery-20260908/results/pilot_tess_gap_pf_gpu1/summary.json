@@ -1,0 +1,32 @@
+{
+  "status": "error",
+  "config": {
+    "backend": "periodfind_gpu",
+    "epoch_os": 1
+  },
+  "input_file": "tess_gap_tune.npz",
+  "input_sha256": "b262bb9a0534e116b43b8d1ba716527af12f5ca1ed94bfa2b3e0bcc1f71f1ccc",
+  "profile": "tess_gap",
+  "split": "tune",
+  "indices": [
+    2
+  ],
+  "worker_sha256": "fb5643299eb730f65edef68612772adc350288730c5c122f2c131082d8f890ec",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [],
+  "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 170, in main\n    start=time.perf_counter();backend=Backend(cfg,d,max(len(lcs[i][0]) for i in ids));backend.sync()\n                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 59, in __init__\n    self.pf=importlib.import_module('periodfind.'+('gpu' if k.endswith('gpu') else 'cpu'))\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/importlib/__init__.py\", line 126, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen importlib._bootstrap>\", line 1204, in _gcd_import\n  File \"<frozen importlib._bootstrap>\", line 1176, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 1147, in _find_and_load_unlocked\n  File \"<frozen importlib._bootstrap>\", line 690, in _load_unlocked\n  File \"<frozen importlib._bootstrap_external>\", line 940, in exec_module\n  File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/periodfind/gpu/__init__.py\", line 7, in <module>\n    from periodfind.aov import AOV\nModuleNotFoundError: No module named 'periodfind.aov'\n"
+}

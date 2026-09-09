@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/tmp/cuvarbase-benchmark-audit/run_ls.py", line 102, in main
+    stats, power = measure(run, sync, args.reps)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/common.py", line 68, in measure
+    result = fn()
+             ^^^^
+  File "/tmp/cuvarbase-benchmark-audit/run_ls.py", line 85, in run
+    return np.asarray([single(lc) for lc in lcs])
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/run_ls.py", line 85, in <listcomp>
+    return np.asarray([single(lc) for lc in lcs])
+                       ^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/run_ls.py", line 68, in single
+    result = nifty_ls.lombscargle(*lc, **kw).power
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/modern/lib/python3.11/site-packages/nifty_ls/core.py", line 145, in lombscargle
+    power = backend_module.lombscargle(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: lombscargle() got an unexpected keyword argument 'backend_kwargs'
+
+{"status": "error"}

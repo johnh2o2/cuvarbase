@@ -1,0 +1,14 @@
+{
+  "purpose": "Explain TLS timing with synchronized phase profiling and isolated host-loop ablations; reproduce CPU failures",
+  "inputs": "Retained immutable tls_sparse_{ztf,rubin} inputs, source index 4; also PS1/Gaia CPU failure cases",
+  "periods": "Full original Ofir array, no thinning",
+  "selection": "No fastest-configuration selection; pinned previous comparison settings",
+  "timing": "One initial call plus three uninstrumented calls; one synchronized profile call (two for v1)",
+  "interpretation": "Instrumented times are component diagnostics, not replacements for uninstrumented medians. Vectorized GTLS is an experimental Python adapter, never labeled released GTLS.",
+  "cpu": "First public API call, with the original explicit grid factory adapter. On failure retain selected traceback locals; no search/template repair.",
+  "experiment_cap_usd": 5,
+  "prior_estimated_usd": 3.7664614732111117,
+  "total_authorized_usd": 50,
+  "harness_sha256": "8f63391920997073864d29743ef9a164a6b22e98f3ac4be8b542021c60e07f28",
+  "payload_sha256": "6a2420723882fc67a296d1bc180dedab8fabdf594199bcdb7aa2fdd8977339fc"
+}

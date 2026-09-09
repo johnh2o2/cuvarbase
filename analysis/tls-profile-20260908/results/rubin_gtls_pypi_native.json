@@ -1,0 +1,185 @@
+{
+  "status": "ok",
+  "args": {
+    "backend": "gtls",
+    "input": "inputs/tls_sparse_rubin.npz",
+    "out": "results/rubin_gtls_pypi_native.json",
+    "variant": "native",
+    "nsource": 1,
+    "offset": 4,
+    "reps": 3,
+    "profile_reps": 1
+  },
+  "input_sha256": "387a138aedfbaa9218f02a4855b7ad50b6a49d7c4c4c465a64db2cad71604261",
+  "runner_sha256": "7e04c350254734b936ed9efda43aff2d8d1af0abf1a65d732bf91d5669fb82b3",
+  "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+  "platform": "Linux-6.8.0-65-generic-x86_64-with-glibc2.35",
+  "source_files": {
+    "GPUFun.py": "b0fa8e6519b2fc7e2c8ebd03697d9dd058125cafe1723f1664ce1a5a122ff167",
+    "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+    "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+    "constants.py": "5245835369741b6e9054884b5890ea05f1e3d227fd678d18384f235c84318d07",
+    "core.py": "a8f99c7399e915a1d62c37ac2902364938148db54716f0aba949650aafabac9c",
+    "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+    "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+    "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+    "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+    "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+    "main.py": "b7a966509844140234a3590defc4c1d016965b67eab55ede1fdf29b21084cca6",
+    "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+    "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+    "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+    "validate.py": "95c47443a387a8d5c4c948cf5a029b33a5a25cc3108b9b7b56c7947b7567a46a",
+    "version.py": "a2b4a91b8a5af300fcb23be3faaa13830895e67e47f10eb4761d36c4572fcd8a"
+  },
+  "transformations": [
+    {
+      "function": "search_multi_periods",
+      "original_sha256": "2631c8560859ea23670255292ee397d4144409d3c740a1ed32f64f2814b76418",
+      "transformed_sha256": "01bfb3832caea7839ffedc2e2583243c435fb10880166f7c24458fe001b15cb3",
+      "file": "rubin_gtls_pypi_native.search_multi_periods.instrumented.py",
+      "changes": [],
+      "instrumentation": true
+    },
+    {
+      "function": "power",
+      "original_sha256": "59e9ba73fc3411c47f981e5c505cbd35a4e0a06cfc0e87451c4a1b90be29bbc2",
+      "transformed_sha256": "f2e05faba6bd29d84a4d4790c6f2006124aeef9282e62cdbac24cd8d1e163047",
+      "file": "rubin_gtls_pypi_native.power.instrumented.py",
+      "changes": [],
+      "instrumentation": true
+    }
+  ],
+  "interpretation": "New-host component diagnostic. Native API medians are uninstrumented. Phase times include synchronization and instrumentation overhead; ablations are diagnostic Python changes, not released GTLS.",
+  "first_api_s": 24.299411721527576,
+  "warnings": [
+    "Degrees of freedom <= 0 for slice",
+    "invalid value encountered in divide",
+    "invalid value encountered in scalar divide"
+  ],
+  "native_times_s": [
+    25.073554646223783,
+    23.336721900850534,
+    19.792948201298714
+  ],
+  "native_median_s": 23.336721900850534,
+  "native_results": [
+    {
+      "period": 4.970180586560595,
+      "SDE": 28.16333770751953
+    }
+  ],
+  "first_vs_last": {
+    "periods_0": {
+      "same_shape": true,
+      "same_finite_mask": true,
+      "exact": true,
+      "max_abs": 0.0
+    },
+    "chi2_0": {
+      "same_shape": true,
+      "same_finite_mask": true,
+      "exact": false,
+      "max_abs": 0.0005165394395589828
+    }
+  },
+  "native_outputs_finite": true,
+  "profiles": [
+    {
+      "total_s": 20.411881506443024,
+      "phases": {
+        "GTLS setup and allocations": {
+          "calls": 2,
+          "inclusive_s": 0.0032102689146995544,
+          "exclusive_s": 0.0032102689146995544
+        },
+        "GTLS CUDA module lookup/compile": {
+          "calls": 1,
+          "inclusive_s": 9.904056787490845e-05,
+          "exclusive_s": 9.904056787490845e-05
+        },
+        "GTLS duration-mask union": {
+          "calls": 31,
+          "inclusive_s": 3.9108527339994907,
+          "exclusive_s": 3.9108527339994907
+        },
+        "GTLS chunk allocations/transfers": {
+          "calls": 31,
+          "inclusive_s": 0.05428471788764,
+          "exclusive_s": 0.05428471788764
+        },
+        "GTLS folding/sorting": {
+          "calls": 31,
+          "inclusive_s": 0.3357042819261551,
+          "exclusive_s": 0.3357042819261551
+        },
+        "GTLS reorder/weights": {
+          "calls": 31,
+          "inclusive_s": 0.01070912554860115,
+          "exclusive_s": 0.01070912554860115
+        },
+        "GTLS row-wise flux prefix sums": {
+          "calls": 31,
+          "inclusive_s": 12.768409565091133,
+          "exclusive_s": 12.768409565091133
+        },
+        "GTLS transit residual kernel": {
+          "calls": 31,
+          "inclusive_s": 0.22689523175358772,
+          "exclusive_s": 0.22689523175358772
+        },
+        "GTLS reductions/chunk cleanup": {
+          "calls": 31,
+          "inclusive_s": 0.0897066667675972,
+          "exclusive_s": 0.0897066667675972
+        },
+        "GTLS result/statistics processing": {
+          "calls": 3,
+          "inclusive_s": 1.978220671415329,
+          "exclusive_s": 1.978220671415329
+        },
+        "GTLS candidate refinement": {
+          "calls": 2,
+          "inclusive_s": 0.8728385083377361,
+          "exclusive_s": 0.8728385083377361
+        },
+        "GTLS best-period fit/diagnostics": {
+          "calls": 1,
+          "inclusive_s": 0.05590669810771942,
+          "exclusive_s": 0.05590669810771942
+        },
+        "GTLS input/template setup": {
+          "calls": 1,
+          "inclusive_s": 20.40911516174674,
+          "exclusive_s": 0.10227765142917633
+        },
+        "API preparation/remaining host work": {
+          "calls": 1,
+          "inclusive_s": 20.4118425399065,
+          "exclusive_s": 0.002727378159761429
+        }
+      },
+      "output_comparison": {
+        "periods_0": {
+          "same_shape": true,
+          "same_finite_mask": true,
+          "exact": true,
+          "max_abs": 0.0
+        },
+        "chi2_0": {
+          "same_shape": true,
+          "same_finite_mask": true,
+          "exact": false,
+          "max_abs": 0.0005004163831472397
+        }
+      },
+      "results": [
+        {
+          "period": 4.970180586560595,
+          "SDE": 28.35828971862793
+        }
+      ]
+    }
+  ],
+  "output_file_sha256": "79c752bf56cc6e24711b5fb30193cdca2d3a6bb5fb54b4ea1f200859d2cc70cc"
+}

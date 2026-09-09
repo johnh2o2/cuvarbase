@@ -1,0 +1,22 @@
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:223: RuntimeWarning: Degrees of freedom <= 0 for slice
+  ret = _var(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:181: RuntimeWarning: invalid value encountered in divide
+  arrmean = um.true_divide(arrmean, div, out=arrmean,
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:215: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:223: RuntimeWarning: Degrees of freedom <= 0 for slice
+  ret = _var(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:181: RuntimeWarning: invalid value encountered in divide
+  arrmean = um.true_divide(arrmean, div, out=arrmean,
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/_methods.py:215: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+{"index": 0, "injected": true, "snr": 6.0, "true_period": 1.4972895323407993, "duration": 0.05975751026457021, "period": 1.4972888576782686, "score": 9.232026100158691, "epoch": 0.08990469312164628, "finite_fraction": 1.0, "api_result_valid": true, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.0003311172028753807, "n_periods": 99043, "search_s": null, "evaluation_chunk": 4, "power_kind": "chi2", "output_file": "case_0000.npz", "output_sha256": "c71937b7119271ec539217ffa3841177b56e9e3c2025d83d1c3f74b1f81df070"}
+{"index": 1, "injected": true, "snr": 8.0, "true_period": 2.498070875016839, "duration": 0.07473774542698947, "period": 1.3151700022733972, "score": 7.1686224937438965, "epoch": 1.211024240911478, "finite_fraction": 1.0, "api_result_valid": true, "recovered": false, "alias_recovered": false, "phase_drift_days": 347.972191472005, "n_periods": 99043, "search_s": null, "evaluation_chunk": 4, "power_kind": "chi2", "output_file": "case_0001.npz", "output_sha256": "bceab4b3ff69e06833aee8a89c7072103588e3e5bf00277053ad7d77aaf3fa32"}
+{"index": 2, "injected": true, "snr": 10.0, "true_period": 0.9875057384459229, "duration": 0.06993970211832559, "period": 0.9875201666005101, "score": 16.5556583404541, "epoch": 0.24950995698660872, "finite_fraction": 1.0, "api_result_valid": true, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.01073673170431658, "n_periods": 99043, "search_s": null, "evaluation_chunk": 4, "power_kind": "chi2", "output_file": "case_0002.npz", "output_sha256": "5d1396d4bd59e9abddcf9e3019dd42c370ec0bc0a60a934054648363eadf23e0"}
+{"index": 3, "injected": true, "snr": 14.0, "true_period": 4.016907078089238, "duration": 0.12353811196079904, "period": 4.016875501654183, "score": 32.0150146484375, "epoch": 0.29595224478359894, "finite_fraction": 1.0, "api_result_valid": true, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.0057765994380228666, "n_periods": 99043, "search_s": null, "evaluation_chunk": 4, "power_kind": "chi2", "output_file": "case_0003.npz", "output_sha256": "e972fab0c7c1d5ad8ddaa314cc36ca2b45f012bd5f06a541f7d2faa76eb10400"}

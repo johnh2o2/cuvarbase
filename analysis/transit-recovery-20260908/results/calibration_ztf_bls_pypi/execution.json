@@ -1,0 +1,20 @@
+{
+  "name": "calibration_ztf_bls_pypi",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 52.96138095855713,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3, \"manual_overlap\": true}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_bls_pypi",
+    "--indices",
+    "all"
+  ],
+  "started_epoch": 1788898202.5210903,
+  "finished_epoch": 1788898255.482473
+}

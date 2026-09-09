@@ -1,0 +1,20 @@
+{
+  "name": "pilot2_ztf_v1_tls4",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 1.87028169631958,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+    "--config",
+    "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+    "--indices",
+    "2",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/pilot2_ztf_v1_tls4"
+  ],
+  "started_epoch": 1788888198.9098318,
+  "finished_epoch": 1788888200.7801147
+}

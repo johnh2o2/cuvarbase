@@ -1,0 +1,234 @@
+/tmp/cuvarbase-benchmark-audit/inputs/ls_small_distinct.npz
+/tmp/cuvarbase-benchmark-audit/inputs/ls_tess_distinct.npz
+/tmp/cuvarbase-benchmark-audit/inputs/ls_ztf_distinct.npz
+/tmp/cuvarbase-benchmark-audit/inputs/ls_kepler_distinct.npz
+/tmp/cuvarbase-benchmark-audit/inputs/ls_tess_shared.npz
+START tls_27_1_v1_wide
+END tls_27_1_v1_wide exited 0 1.92
+START tls_27_1_v1_default
+END tls_27_1_v1_default exited 0 2.27
+START tls_27_1_gtls_pypi
+END tls_27_1_gtls_pypi exited 1 3.97
+START tls_27_1_gtls_head
+END tls_27_1_gtls_head exited 0 3.77
+START tls_27_1_cpu
+END tls_27_1_cpu exited 0 14.35
+START tls_27_16_v1_wide
+END tls_27_16_v1_wide exited 0 1.87
+START tls_27_16_v1_default
+END tls_27_16_v1_default exited 0 1.32
+START tls_27_16_gtls_pypi
+END tls_27_16_gtls_pypi exited 1 31.45
+START tls_27_16_gtls_head
+END tls_27_16_gtls_head exited 0 33.9
+START tls_27_16_cpu
+END tls_27_16_cpu exited 0 86.66
+START tls_200_1_v1_wide
+END tls_200_1_v1_wide exited 0 4.33
+START tls_200_1_v1_default
+END tls_200_1_v1_default exited 0 2.62
+START tls_200_1_gtls_pypi
+END tls_200_1_gtls_pypi exited 0 19.01
+START tls_200_1_gtls_head
+END tls_200_1_gtls_head exited 0 19.51
+START tls_200_1_cpu
+END tls_200_1_cpu exited 0 225.33
+START tls_1500_1_v1_wide
+END tls_1500_1_v1_wide exited 0 6.53
+START tls_1500_1_v1_default
+END tls_1500_1_v1_default exited 0 3.98
+START tls_1500_1_gtls_head
+END tls_1500_1_gtls_head exited 0 770.87
+START ls_small_1_v1
+END ls_small_1_v1 exited 0 1.37
+START ls_small_1_pypi
+END ls_small_1_pypi exited 0 1.27
+START ls_small_1_v1_double
+END ls_small_1_v1_double exited 0 2.97
+START ls_small_1_pypi_double
+END ls_small_1_pypi_double exited 0 3.22
+START ls_small_1_nifty_gpu
+END ls_small_1_nifty_gpu exited 0 1.22
+START ls_small_1_nifty_gpu_float32
+END ls_small_1_nifty_gpu_float32 exited 0 3.98
+START ls_small_1_nifty_cpu_t1
+END ls_small_1_nifty_cpu_t1 exited 0 0.97
+START ls_small_1_nifty_cpu_t4
+END ls_small_1_nifty_cpu_t4 exited 0 0.92
+START ls_small_1_nifty_cpu_t8
+END ls_small_1_nifty_cpu_t8 exited 0 0.97
+START ls_small_1_astropy
+END ls_small_1_astropy exited 0 0.57
+START ls_small_32_v1
+END ls_small_32_v1 exited 0 1.27
+START ls_small_32_pypi
+END ls_small_32_pypi exited 0 1.52
+START ls_small_32_v1_double
+END ls_small_32_v1_double exited 0 1.17
+START ls_small_32_pypi_double
+END ls_small_32_pypi_double exited 0 1.72
+START ls_small_32_nifty_gpu
+END ls_small_32_nifty_gpu exited 0 2.82
+START ls_small_32_nifty_gpu_float32
+END ls_small_32_nifty_gpu_float32 exited 0 2.47
+START ls_small_32_nifty_cpu_t1
+END ls_small_32_nifty_cpu_t1 exited 0 1.32
+START ls_small_32_nifty_cpu_t4
+END ls_small_32_nifty_cpu_t4 exited 0 1.42
+START ls_small_32_nifty_cpu_t8
+END ls_small_32_nifty_cpu_t8 exited 0 2.33
+START ls_small_32_nifty_cpu_w4
+END ls_small_32_nifty_cpu_w4 exited 0 1.37
+START ls_small_32_nifty_cpu_w8
+END ls_small_32_nifty_cpu_w8 exited 0 1.42
+START ls_small_32_astropy
+END ls_small_32_astropy exited 0 3.18
+START ls_tess_1_v1
+END ls_tess_1_v1 exited 0 1.32
+START ls_tess_1_pypi
+END ls_tess_1_pypi exited 0 1.42
+START ls_tess_1_v1_double
+END ls_tess_1_v1_double exited 0 1.27
+START ls_tess_1_pypi_double
+END ls_tess_1_pypi_double exited 0 1.37
+START ls_tess_1_nifty_gpu
+END ls_tess_1_nifty_gpu exited 0 1.47
+START ls_tess_1_nifty_gpu_float32
+END ls_tess_1_nifty_gpu_float32 exited 0 1.37
+START ls_tess_1_nifty_cpu_t1
+END ls_tess_1_nifty_cpu_t1 exited 0 1.12
+START ls_tess_1_nifty_cpu_t4
+END ls_tess_1_nifty_cpu_t4 exited 0 1.12
+START ls_tess_1_nifty_cpu_t8
+END ls_tess_1_nifty_cpu_t8 exited 0 1.07
+START ls_tess_1_astropy
+END ls_tess_1_astropy exited 0 1.27
+START ls_tess_32_v1
+END ls_tess_32_v1 exited 0 1.52
+START ls_tess_32_pypi
+END ls_tess_32_pypi exited 0 2.87
+START ls_tess_32_v1_double
+END ls_tess_32_v1_double exited 0 1.67
+START ls_tess_32_pypi_double
+END ls_tess_32_pypi_double exited 0 2.77
+START ls_tess_32_nifty_gpu
+END ls_tess_32_nifty_gpu exited 0 2.87
+START ls_tess_32_nifty_gpu_float32
+END ls_tess_32_nifty_gpu_float32 exited 0 2.77
+START ls_tess_32_nifty_cpu_t1
+END ls_tess_32_nifty_cpu_t1 exited 0 2.47
+START ls_tess_32_nifty_cpu_t4
+END ls_tess_32_nifty_cpu_t4 exited 0 2.07
+START ls_tess_32_nifty_cpu_t8
+END ls_tess_32_nifty_cpu_t8 exited 0 3.22
+START ls_tess_32_nifty_cpu_w4
+END ls_tess_32_nifty_cpu_w4 exited 0 3.77
+START ls_tess_32_nifty_cpu_w8
+END ls_tess_32_nifty_cpu_w8 exited 0 3.28
+START ls_tess_32_astropy
+END ls_tess_32_astropy exited 0 23.83
+START ls_ztf_1_v1
+END ls_ztf_1_v1 exited 0 1.27
+START ls_ztf_1_pypi
+END ls_ztf_1_pypi exited 0 1.47
+START ls_ztf_1_v1_double
+END ls_ztf_1_v1_double exited 0 1.27
+START ls_ztf_1_pypi_double
+END ls_ztf_1_pypi_double exited 0 1.52
+START ls_ztf_1_nifty_gpu
+END ls_ztf_1_nifty_gpu exited 0 1.42
+START ls_ztf_1_nifty_gpu_float32
+END ls_ztf_1_nifty_gpu_float32 exited 0 1.37
+START ls_ztf_1_nifty_cpu_t1
+END ls_ztf_1_nifty_cpu_t1 exited 0 1.32
+START ls_ztf_1_nifty_cpu_t4
+END ls_ztf_1_nifty_cpu_t4 exited 0 1.27
+START ls_ztf_1_nifty_cpu_t8
+END ls_ztf_1_nifty_cpu_t8 exited 0 1.27
+START ls_ztf_1_astropy
+END ls_ztf_1_astropy exited 0 11.7
+START ls_ztf_32_v1
+END ls_ztf_32_v1 exited 0 1.97
+START ls_ztf_32_pypi
+END ls_ztf_32_pypi exited 0 4.22
+START ls_ztf_32_v1_double
+END ls_ztf_32_v1_double exited 0 3.08
+START ls_ztf_32_pypi_double
+END ls_ztf_32_pypi_double exited 0 6.59
+START ls_ztf_32_nifty_gpu
+END ls_ztf_32_nifty_gpu exited 0 4.58
+START ls_ztf_32_nifty_gpu_float32
+END ls_ztf_32_nifty_gpu_float32 exited 0 4.23
+START ls_ztf_32_nifty_cpu_t1
+END ls_ztf_32_nifty_cpu_t1 exited 0 12.55
+START ls_ztf_32_nifty_cpu_t4
+END ls_ztf_32_nifty_cpu_t4 exited 0 11.4
+START ls_ztf_32_nifty_cpu_t8
+END ls_ztf_32_nifty_cpu_t8 exited 0 10.99
+START ls_ztf_32_nifty_cpu_w4
+END ls_ztf_32_nifty_cpu_w4 exited 0 5.93
+START ls_ztf_32_nifty_cpu_w8
+END ls_ztf_32_nifty_cpu_w8 exited 0 8.64
+START ls_ztf_32_astropy
+END ls_ztf_32_astropy timeout None 45.01
+START ls_kepler_1_v1
+END ls_kepler_1_v1 exited 0 1.77
+START ls_kepler_1_pypi
+END ls_kepler_1_pypi exited 0 1.97
+START ls_kepler_1_v1_double
+END ls_kepler_1_v1_double exited 0 1.77
+START ls_kepler_1_pypi_double
+END ls_kepler_1_pypi_double exited 0 2.17
+START ls_kepler_1_nifty_gpu
+END ls_kepler_1_nifty_gpu exited 0 1.67
+START ls_kepler_1_nifty_gpu_float32
+END ls_kepler_1_nifty_gpu_float32 exited 0 1.72
+START ls_kepler_1_nifty_cpu_t1
+END ls_kepler_1_nifty_cpu_t1 exited 0 2.22
+START ls_kepler_1_nifty_cpu_t4
+END ls_kepler_1_nifty_cpu_t4 exited 0 1.97
+START ls_kepler_1_nifty_cpu_t8
+END ls_kepler_1_nifty_cpu_t8 exited 0 1.92
+START ls_kepler_1_astropy
+END ls_kepler_1_astropy exited 0 23.68
+START ls_kepler_32_v1
+END ls_kepler_32_v1 exited 0 3.73
+START ls_kepler_32_pypi
+END ls_kepler_32_pypi exited 0 9.44
+START ls_kepler_32_v1_double
+END ls_kepler_32_v1_double exited 0 5.73
+START ls_kepler_32_pypi_double
+END ls_kepler_32_pypi_double exited 0 15.1
+START ls_kepler_32_nifty_gpu
+END ls_kepler_32_nifty_gpu exited 0 7.49
+START ls_kepler_32_nifty_gpu_float32
+END ls_kepler_32_nifty_gpu_float32 exited 0 5.43
+START ls_kepler_32_nifty_cpu_t1
+END ls_kepler_32_nifty_cpu_t1 exited 0 28.44
+START ls_kepler_32_nifty_cpu_t4
+END ls_kepler_32_nifty_cpu_t4 exited 0 27.89
+START ls_kepler_32_nifty_cpu_t8
+END ls_kepler_32_nifty_cpu_t8 exited 0 24.48
+START ls_kepler_32_nifty_cpu_w4
+END ls_kepler_32_nifty_cpu_w4 exited 0 13.9
+START ls_kepler_32_nifty_cpu_w8
+END ls_kepler_32_nifty_cpu_w8 exited 0 17.67
+START ls_kepler_32_astropy
+END ls_kepler_32_astropy timeout None 45.02
+START ls_shared_tess_cuvarbase
+END ls_shared_tess_cuvarbase exited 0 1.83
+START ls_shared_tess_nifty_cpu
+END ls_shared_tess_nifty_cpu exited 0 2.23
+START ls_shared_tess_nifty_gpu
+END ls_shared_tess_nifty_gpu exited 0 1.57
+START ls_shared_tess_pypi
+END ls_shared_tess_pypi exited 0 3.03
+START ensemble_cuvarbase
+END ensemble_cuvarbase exited 0 2.12
+START ensemble_gtls
+END ensemble_gtls exited 0 27.68
+START ensemble_cpu
+END ensemble_cpu exited 0 69.37
+START ensemble_cuvarbase_default
+END ensemble_cuvarbase_default exited 0 1.57
+CAMPAIGN_COMPLETE

@@ -1,0 +1,63 @@
+{
+  "complete": true,
+  "node": "original",
+  "archives": [
+    {
+      "archive": "evidence-prefix.tar",
+      "bytes": 5187592704,
+      "sha256": "533f6a2ae2236609a36f77eedb1ecb71b0618d8b87a6a32acc95abbf3423ba24",
+      "purpose": "Complete, verified members retained from the interrupted original stream"
+    },
+    {
+      "archive": "evidence-shard-00.tar",
+      "bytes": 1644451840,
+      "sha256": "78dcd339b7ed04184f72253ac7e953f0b44653ca31c13ef411cd38704636d100",
+      "files": 895
+    },
+    {
+      "archive": "evidence-shard-01.tar",
+      "bytes": 1644451840,
+      "sha256": "3de4512d3401a9d898445c2f2cfdedc9e3976cb2078cdb7ca1cb85b54607ef85",
+      "files": 895
+    },
+    {
+      "archive": "evidence-shard-02.tar",
+      "bytes": 1644451840,
+      "sha256": "a2318f8ddfe59c3b045e6fef3d1981b1056e9b5c8e757d0966bf2112efb2848e",
+      "files": 895
+    },
+    {
+      "archive": "evidence-shard-03.tar",
+      "bytes": 1644451840,
+      "sha256": "aa5f7514ca91e1fee0ee6e900a266c60a218949f719cc51f7caff8e042c3ce98",
+      "files": 894
+    },
+    {
+      "archive": "evidence-shard-04.tar",
+      "bytes": 1644451840,
+      "sha256": "d56d0142dc3d6b6872a2e08bde737e432bb65d280e0b6563513ecb3662f5cf54",
+      "files": 896
+    },
+    {
+      "archive": "evidence-shard-05.tar",
+      "bytes": 1644451840,
+      "sha256": "2309764c5dac475b115cf7765e49756d2656f6bca622704b02c1aca478e5ba7c",
+      "files": 894
+    },
+    {
+      "archive": "evidence-shard-06.tar",
+      "bytes": 1644451840,
+      "sha256": "01e9932ce2d513aba296db9bec7e0dc8e7eff1d3bc3f9599291da01c73a8b317",
+      "files": 896
+    },
+    {
+      "archive": "evidence-shard-07.tar",
+      "bytes": 1644451840,
+      "sha256": "dc15c48ba062a166b1d86cc9c2b52dac98db3f8c4fcfc0abcabf9430b0a3ea5c",
+      "files": 893
+    }
+  ],
+  "files_verified": 12740,
+  "elapsed_s": 371.377112865448,
+  "note": "One valid tar prefix plus balanced parallel tar shards. Extract all listed archives to reconstruct the complete evidence folder. Every file is independently checked against the immutable remote SHA256 manifest. No scientific job was running during transfer."
+}

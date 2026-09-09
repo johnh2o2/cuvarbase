@@ -1,0 +1,3 @@
+/tmp/cuvarbase-benchmark-audit/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+{"status": "ok", "seconds_per_lc": 153.19213709799806}

@@ -1,0 +1,63 @@
+START screen_tess_200s_astropy_workers1 2026-09-08T18:47:56.685586+00:00
+END screen_tess_200s_astropy_workers1 0 11.4
+START repeat_screen_tess_200s_astropy_workers1 2026-09-08T18:48:08.086919+00:00
+END repeat_screen_tess_200s_astropy_workers1 0 11.3
+START screen_tess_200s_astropy_workers2 2026-09-08T18:48:19.387394+00:00
+END screen_tess_200s_astropy_workers2 0 8.09
+START repeat_screen_tess_200s_astropy_workers2 2026-09-08T18:48:27.478049+00:00
+END repeat_screen_tess_200s_astropy_workers2 0 7.49
+START screen_tess_200s_periodfind_cpu_threads1 2026-09-08T18:48:34.968934+00:00
+END screen_tess_200s_periodfind_cpu_threads1 0 18.02
+START repeat_screen_tess_200s_periodfind_cpu_threads1 2026-09-08T18:48:52.988647+00:00
+END repeat_screen_tess_200s_periodfind_cpu_threads1 0 16.72
+START screen_tess_200s_periodfind_cpu_threads2 2026-09-08T18:49:09.706642+00:00
+END screen_tess_200s_periodfind_cpu_threads2 0 9.89
+START repeat_screen_tess_200s_periodfind_cpu_threads2 2026-09-08T18:49:19.603104+00:00
+END repeat_screen_tess_200s_periodfind_cpu_threads2 0 8.03
+START repeat_tune_tess_200s_astropy3_w7 2026-09-08T18:49:27.639953+00:00
+END repeat_tune_tess_200s_astropy3_w7 0 3.32
+START repeat_screen_tess_200s_pypi_block128 2026-09-08T18:49:30.964201+00:00
+END repeat_screen_tess_200s_pypi_block128 0 1.57
+START repeat_screen_tess_200s_pypi_block64 2026-09-08T18:49:32.534593+00:00
+END repeat_screen_tess_200s_pypi_block64 0 1.57
+START repeat_screen_tess_200s_pypi_bls_dense4 2026-09-08T18:49:34.104808+00:00
+END repeat_screen_tess_200s_pypi_bls_dense4 0 1.57
+START repeat_screen_tess_200s_v1_block128 2026-09-08T18:49:35.674961+00:00
+END repeat_screen_tess_200s_v1_block128 0 0.97
+START repeat_screen_tess_200s_v1_bls_dense4 2026-09-08T18:49:36.644001+00:00
+END repeat_screen_tess_200s_v1_bls_dense4 0 1.12
+START repeat_tune_tess_200s_v1_bls8 2026-09-08T18:49:37.763534+00:00
+END repeat_tune_tess_200s_v1_bls8 0 0.97
+START repeat_tune_tess_200s_v1_bls_opt4 2026-09-08T18:49:38.732366+00:00
+END repeat_tune_tess_200s_v1_bls_opt4 0 1.02
+START repeat_tune_tess_200s_v1_tls4 2026-09-08T18:49:39.752714+00:00
+END repeat_tune_tess_200s_v1_tls4 0 1.77
+START repeat_tune_tess_200s_v1_tls8 2026-09-08T18:49:41.527086+00:00
+END repeat_tune_tess_200s_v1_tls8 0 1.97
+START repeat_screen_tess_gap_pypi_block128 2026-09-08T18:49:43.501970+00:00
+END repeat_screen_tess_gap_pypi_block128 0 3.88
+START repeat_screen_tess_gap_pypi_block64 2026-09-08T18:49:47.382957+00:00
+END repeat_screen_tess_gap_pypi_block64 0 4.03
+START repeat_screen_tess_gap_pypi_bls_dense4 2026-09-08T18:49:51.414111+00:00
+END repeat_screen_tess_gap_pypi_bls_dense4 0 3.88
+START repeat_screen_ztf_pypi_block128 2026-09-08T18:49:55.294912+00:00
+END repeat_screen_ztf_pypi_block128 0 8.49
+START repeat_screen_ztf_pypi_block64 2026-09-08T18:50:03.790755+00:00
+END repeat_screen_ztf_pypi_block64 0 7.79
+START repeat_tune_ztf_pypi_bls_manual3 2026-09-08T18:50:11.581721+00:00
+END repeat_tune_ztf_pypi_bls_manual3 0 7.44
+START repeat_tune_ztf_pypi_bls_manual4 2026-09-08T18:50:19.021401+00:00
+END repeat_tune_ztf_pypi_bls_manual4 0 8.44
+START repeat_screen_ztf_v1_block128 2026-09-08T18:50:27.465572+00:00
+END repeat_screen_ztf_v1_block128 0 5.78
+START repeat_screen_ztf_v1_block64 2026-09-08T18:50:33.250649+00:00
+END repeat_screen_ztf_v1_block64 0 5.88
+START repeat_tune_ztf_v1_bls8 2026-09-08T18:50:39.137046+00:00
+END repeat_tune_ztf_v1_bls8 0 5.88
+START repeat_screen_ztf_gtls_fast 2026-09-08T18:50:45.024470+00:00
+END repeat_screen_ztf_gtls_fast 0 93.53
+START repeat_tune_ztf_gtls_default 2026-09-08T18:52:18.557701+00:00
+END repeat_tune_ztf_gtls_default 0 109.42
+START repeat_tune_ztf_gtls_density 2026-09-08T18:54:07.985816+00:00
+END repeat_tune_ztf_gtls_density 0 106.3
+MANIFEST_COMPLETE repeat_selection.json

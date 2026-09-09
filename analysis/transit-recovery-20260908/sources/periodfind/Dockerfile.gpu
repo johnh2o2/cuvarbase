@@ -1,0 +1,49 @@
+# GPU variant of the periodfind runtime (see Dockerfile for the CPU one).
+#
+# Builds the CUDA Cython extensions (periodfind.gpu) with nvcc from the CUDA
+# `devel` base — compile-only, so this builds on a GPU-less CI runner and runs
+# on a GPU slot. The Rust CPU backend is also installed, so the device API falls
+# back to CPU when no GPU is visible. Route jobs here with request_gpus>=1 and a
+# per-request singularity_image pointing at this image.
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-dev build-essential curl ca-certificates git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Rust toolchain for the periodfind CPU (Rust/pyo3) fallback backend.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# nvcc lives here in the CUDA base; setup.py's locate_cuda() reads CUDA_HOME.
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH="${CUDA_HOME}/bin:${PATH}"
+
+# Build tooling + the GPU backend's pycuda + the bridge's runtime deps. The
+# CUDA base is Ubuntu 22.04, whose pip predates (and doesn't need)
+# --break-system-packages, so a plain system install is correct here.
+RUN pip3 install --no-cache-dir \
+        numpy cython maturin pycuda astropy matplotlib requests
+
+# Install periodfind. The Rust CPU backend (periodfind_cpu) goes first so the
+# editable install below satisfies that dependency locally instead of from
+# PyPI. The editable install compiles the CUDA Cython extensions in place and
+# keeps the source package importable — a plain `pip install .` ships only the
+# built .so's, dropping the pure-python device API (set_device). This mirrors
+# periodfind's own CUDA CI. PYTHONPATH pins imports to the source tree.
+COPY . /opt/periodfind
+RUN pip3 install --no-cache-dir /opt/periodfind/rust \
+    && pip3 install --no-cache-dir -e /opt/periodfind
+ENV PYTHONPATH=/opt/periodfind
+
+# Build-time check runs on a GPU-less runner, so only assert the CPU path here;
+# the GPU kernels are exercised at run time on a GPU slot.
+RUN python3 -c "import numpy as np, periodfind; periodfind.set_device('cpu'); \
+ce = periodfind.ConditionalEntropy(n_phase=10, n_mag=10); \
+t = [np.linspace(0, 10, 200).astype('float32')]; \
+m = [np.sin(2*np.pi*t[0]/1.3).astype('float32')]; \
+p = np.linspace(0.1, 2.0, 500).astype('float32'); \
+print('periodfind (gpu image, cpu check) OK:', len(ce.calc(t, m, p, np.array([0.0], 'float32'), output='peaks', n_peaks=3)[0]))"
+
+ENTRYPOINT ["python3"]

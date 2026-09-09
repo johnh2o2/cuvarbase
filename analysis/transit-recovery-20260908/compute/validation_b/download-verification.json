@@ -1,0 +1,10 @@
+{
+  "node": "validation_b",
+  "archive": "evidence.tar",
+  "bytes": 892200960,
+  "sha256": "8c6cd42841fd3f5a1a05eac4d8cb09fd3fbfc889dc478b7a6ee3c2419c297aa6",
+  "files_verified": 661,
+  "elapsed_transfer_verification_s": 42.19908094406128,
+  "complete": true,
+  "note": "Tar streamed from the finished node; each extracted file independently verified against its remote SHA256 manifest."
+}

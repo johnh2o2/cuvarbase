@@ -1,0 +1,303 @@
+{
+  "utc": "2026-09-08T18:58:57.328341+00:00",
+  "selection_sha256": "5f31dd98786241e1d42f3917ca8210bfb6dca226069d53d9c6109fb7fd3dd0db",
+  "operational_selection_sha256": "1f2f51d9832c8931c4eb8711c3b21f58381ac665edca6b05f1c2c39d82a098fb",
+  "methods": [
+    {
+      "profile": "tess_gap",
+      "tag": "gtls_batch",
+      "family": "GTLS",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 2,
+        "eval_chunk": 16
+      },
+      "selected_from": "screen_tess_gap_gtls_fast",
+      "purpose": "Separate recovery calibration for concurrent GTLS; memory-dependent chunking can alter the spectrum"
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      },
+      "selected_from": "tune_ztf_v1_bls8"
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_v1_batch",
+      "family": "BLS v1",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 8,
+        "optimized": true,
+        "reuse_batch": true,
+        "batch_capacity": 16,
+        "eval_chunk": 16
+      },
+      "selected_from": "tune_ztf_v1_bls8",
+      "purpose": "Validate the public batch implementation at the same selected scientific settings"
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 4,
+        "manual_overlap": true,
+        "qmin_fac": 0.25
+      },
+      "selected_from": "screen_tess_200s_pypi_bls_dense4"
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "config": {
+        "backend": "astropy",
+        "epoch_os": 3,
+        "workers": 7
+      },
+      "selected_from": "tune_tess_200s_astropy3_w7"
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 4,
+        "optimized": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      },
+      "selected_from": "screen_tess_gap_v1_block128"
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "config": {
+        "backend": "periodfind_cpu",
+        "epoch_os": 2,
+        "threads": 7
+      },
+      "selected_from": "tune_tess_gap_pf_cpu2"
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2
+      },
+      "selected_from": "tune_ztf_pf_gpu2"
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2
+      },
+      "selected_from": "tune_tess_gap_pf_gpu2"
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "gtls_batch",
+      "family": "GTLS",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 1,
+        "eval_chunk": 16
+      },
+      "selected_from": "screen_tess_200s_gtls_fast",
+      "purpose": "Separate recovery calibration for concurrent GTLS; memory-dependent chunking can alter the spectrum"
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      },
+      "selected_from": "tune_tess_200s_v1_tls4"
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_v1_batch",
+      "family": "BLS v1",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 8,
+        "optimized": true,
+        "reuse_batch": true,
+        "batch_capacity": 16,
+        "eval_chunk": 16
+      },
+      "selected_from": "tune_tess_200s_v1_bls8",
+      "purpose": "Validate the public batch implementation at the same selected scientific settings"
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_gpu",
+      "family": "BLS GPU",
+      "config": {
+        "backend": "periodfind_gpu",
+        "epoch_os": 2,
+        "cap_bins": 64
+      },
+      "selected_from": "screen_tess_200s_pf_gpu64"
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "gtls",
+      "family": "GTLS",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true
+      },
+      "selected_from": "screen_tess_200s_gtls_fast"
+    },
+    {
+      "profile": "ztf",
+      "tag": "gtls",
+      "family": "GTLS",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true
+      },
+      "selected_from": "screen_ztf_gtls_fast"
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_cpu",
+      "family": "BLS CPU",
+      "config": {
+        "backend": "periodfind_cpu",
+        "epoch_os": 2,
+        "threads": 7
+      },
+      "selected_from": "tune_ztf_pf_cpu2"
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 4,
+        "manual_overlap": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      },
+      "selected_from": "screen_tess_gap_pypi_block128"
+    },
+    {
+      "profile": "tess_200s",
+      "tag": "bls_v1",
+      "family": "BLS v1",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      },
+      "selected_from": "tune_tess_200s_v1_bls8"
+    },
+    {
+      "profile": "ztf",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      },
+      "selected_from": "tune_ztf_v1_tls4"
+    },
+    {
+      "profile": "ztf",
+      "tag": "bls_pypi",
+      "family": "BLS PyPI",
+      "config": {
+        "backend": "pypi_bls_fast",
+        "noverlap": 3,
+        "manual_overlap": true
+      },
+      "selected_from": "tune_ztf_pypi_bls_manual3"
+    },
+    {
+      "profile": "ztf",
+      "tag": "gtls_batch",
+      "family": "GTLS",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true,
+        "workers": 4,
+        "eval_chunk": 16
+      },
+      "selected_from": "screen_ztf_gtls_fast",
+      "purpose": "Separate recovery calibration for concurrent GTLS; memory-dependent chunking can alter the spectrum"
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "tls_v1",
+      "family": "TLS v1",
+      "config": {
+        "backend": "v1_tls",
+        "epoch_os": 4,
+        "durations": 16
+      },
+      "selected_from": "tune_tess_gap_v1_tls4"
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "bls_v1_batch",
+      "family": "BLS v1",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 4,
+        "optimized": true,
+        "qmin_fac": 0.25,
+        "block_size": 128,
+        "reuse_batch": true,
+        "batch_capacity": 16,
+        "eval_chunk": 16
+      },
+      "selected_from": "screen_tess_gap_v1_block128",
+      "purpose": "Validate the public batch implementation at the same selected scientific settings"
+    },
+    {
+      "profile": "tess_gap",
+      "tag": "gtls",
+      "family": "GTLS",
+      "config": {
+        "backend": "gtls",
+        "gtls_version": "head",
+        "density": true,
+        "fast": true
+      },
+      "selected_from": "screen_tess_gap_gtls_fast"
+    }
+  ]
+}

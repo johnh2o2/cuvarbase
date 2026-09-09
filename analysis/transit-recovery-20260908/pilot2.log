@@ -1,0 +1,59 @@
+START pilot2_tess_200s_fbls2 2026-09-08T17:16:42.556381+00:00
+END pilot2_tess_200s_fbls2 0 66.89
+START pilot2_tess_200s_pf_gpu1 2026-09-08T17:17:49.444516+00:00
+END pilot2_tess_200s_pf_gpu1 188 0.82
+START pilot2_tess_200s_pf_gpu2 2026-09-08T17:17:50.263494+00:00
+END pilot2_tess_200s_pf_gpu2 188 0.62
+START pilot2_tess_200s_astropy3_w7 2026-09-08T17:17:50.881509+00:00
+END pilot2_tess_200s_astropy3_w7 0 1.12
+START pilot2_tess_200s_astropy10_w7 2026-09-08T17:17:52.000445+00:00
+END pilot2_tess_200s_astropy10_w7 0 1.17
+START pilot2_tess_200s_v1_tls4 2026-09-08T17:17:53.169962+00:00
+END pilot2_tess_200s_v1_tls4 0 3.07
+START pilot2_tess_200s_gtls_pypi 2026-09-08T17:17:56.242932+00:00
+END pilot2_tess_200s_gtls_pypi 1 2.72
+START pilot2_tess_200s_pypi_bls4 2026-09-08T17:17:58.965741+00:00
+END pilot2_tess_200s_pypi_bls4 0 1.27
+START pilot2_tess_200s_v1_bls_batch4 2026-09-08T17:18:00.235644+00:00
+END pilot2_tess_200s_v1_bls_batch4 0 1.72
+START pilot2_tess_200s_v1_tls8 2026-09-08T17:18:01.956091+00:00
+END pilot2_tess_200s_v1_tls8 0 1.42
+START pilot2_tess_gap_fbls2 2026-09-08T17:18:03.375643+00:00
+END pilot2_tess_gap_fbls2 0 82.09
+START pilot2_tess_gap_pf_gpu1 2026-09-08T17:19:25.466237+00:00
+END pilot2_tess_gap_pf_gpu1 0 0.97
+START pilot2_tess_gap_pf_gpu2 2026-09-08T17:19:26.435106+00:00
+END pilot2_tess_gap_pf_gpu2 0 0.92
+START pilot2_tess_gap_astropy3_w7 2026-09-08T17:19:27.353784+00:00
+END pilot2_tess_gap_astropy3_w7 0 3.57
+START pilot2_tess_gap_astropy10_w7 2026-09-08T17:19:30.927206+00:00
+END pilot2_tess_gap_astropy10_w7 0 5.93
+START pilot2_tess_gap_v1_tls4 2026-09-08T17:19:36.855259+00:00
+END pilot2_tess_gap_v1_tls4 0 1.72
+START pilot2_tess_gap_gtls_pypi 2026-09-08T17:19:38.575803+00:00
+END pilot2_tess_gap_gtls_pypi 0 18.95
+START pilot2_tess_gap_pypi_bls4 2026-09-08T17:19:57.533225+00:00
+END pilot2_tess_gap_pypi_bls4 0 1.47
+START pilot2_tess_gap_v1_bls_batch4 2026-09-08T17:19:59.003237+00:00
+END pilot2_tess_gap_v1_bls_batch4 0 1.37
+START pilot2_ztf_fbls2 2026-09-08T17:20:00.374357+00:00
+END pilot2_ztf_fbls2 -15 180.07
+START pilot2_ztf_pf_gpu1 2026-09-08T17:23:00.442281+00:00
+END pilot2_ztf_pf_gpu1 0 1.52
+START pilot2_ztf_pf_gpu2 2026-09-08T17:23:01.962461+00:00
+END pilot2_ztf_pf_gpu2 0 1.47
+START pilot2_ztf_astropy3_w7 2026-09-08T17:23:03.434137+00:00
+END pilot2_ztf_astropy3_w7 0 5.88
+START pilot2_ztf_astropy10_w7 2026-09-08T17:23:09.316183+00:00
+END pilot2_ztf_astropy10_w7 0 9.59
+START pilot2_ztf_v1_tls4 2026-09-08T17:23:18.909837+00:00
+END pilot2_ztf_v1_tls4 0 1.87
+START pilot2_ztf_gtls_pypi 2026-09-08T17:23:20.783156+00:00
+END pilot2_ztf_gtls_pypi 0 44.1
+START pilot2_ztf_pypi_bls4 2026-09-08T17:24:04.883574+00:00
+END pilot2_ztf_pypi_bls4 0 1.77
+START pilot2_ztf_v1_bls_batch4 2026-09-08T17:24:06.655392+00:00
+END pilot2_ztf_v1_bls_batch4 0 1.62
+START pilot2_ztf_v1_bls_sparse 2026-09-08T17:24:08.277646+00:00
+END pilot2_ztf_v1_bls_sparse -15 180.17
+MANIFEST_COMPLETE pilot2.json

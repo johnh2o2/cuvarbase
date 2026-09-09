@@ -1,0 +1,6 @@
+{
+  "utc": "2026-09-08T20:26:23.263411+00:00",
+  "scope": "Operational CPU scheduling only; scientific Astropy settings frozen. Compare within-period versus across-source multiprocessing on 16 tuning inputs, five repetitions. Prefer across-source batching only if its tuning median is lower and every independently validated calibration/heldout spectrum and candidate is bit-identical. No held-out recovery used for scientific tuning.",
+  "original_timing_methods_sha256": "e4adee6a401ebd89df76aa7b8fced2dc389144d0fcc75db91b3fdceaf2c6a8ab",
+  "jobs_sha256": "e2e894606713813b2cc15023b974b4bb7fe880032ad8e529a494a927fe4ec0ca"
+}

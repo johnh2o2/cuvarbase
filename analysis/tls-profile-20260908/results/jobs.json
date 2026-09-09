@@ -1,0 +1,244 @@
+[
+  {
+    "name": "rubin_gtls_head_both",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_rubin.npz",
+      "--out",
+      "results/rubin_gtls_head_both.json",
+      "--variant",
+      "both",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "head",
+    "timeout": 900
+  },
+  {
+    "name": "ztf_gtls_head_native",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_ztf.npz",
+      "--out",
+      "results/ztf_gtls_head_native.json",
+      "--variant",
+      "native",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "head",
+    "timeout": 900
+  },
+  {
+    "name": "rubin_gtls_head_native",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_rubin.npz",
+      "--out",
+      "results/rubin_gtls_head_native.json",
+      "--variant",
+      "native",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "head",
+    "timeout": 900
+  },
+  {
+    "name": "ztf_gtls_head_both",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_ztf.npz",
+      "--out",
+      "results/ztf_gtls_head_both.json",
+      "--variant",
+      "both",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "head",
+    "timeout": 900
+  },
+  {
+    "name": "rubin_v1_release_native",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "v1",
+      "--input",
+      "inputs/tls_sparse_rubin.npz",
+      "--out",
+      "results/rubin_v1_release_native.json",
+      "--variant",
+      "native",
+      "--profile-reps",
+      "2"
+    ],
+    "version": "release",
+    "timeout": 900
+  },
+  {
+    "name": "ztf_gtls_head_union",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_ztf.npz",
+      "--out",
+      "results/ztf_gtls_head_union.json",
+      "--variant",
+      "union",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "head",
+    "timeout": 900
+  },
+  {
+    "name": "ztf_v1_release_native",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "v1",
+      "--input",
+      "inputs/tls_sparse_ztf.npz",
+      "--out",
+      "results/ztf_v1_release_native.json",
+      "--variant",
+      "native",
+      "--profile-reps",
+      "2"
+    ],
+    "version": "release",
+    "timeout": 900
+  },
+  {
+    "name": "rubin_gtls_pypi_native",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_rubin.npz",
+      "--out",
+      "results/rubin_gtls_pypi_native.json",
+      "--variant",
+      "native",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "pypi",
+    "timeout": 900
+  },
+  {
+    "name": "ztf_gtls_pypi_native",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_ztf.npz",
+      "--out",
+      "results/ztf_gtls_pypi_native.json",
+      "--variant",
+      "native",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "pypi",
+    "timeout": 900
+  },
+  {
+    "name": "rubin_gtls_head_union",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_rubin.npz",
+      "--out",
+      "results/rubin_gtls_head_union.json",
+      "--variant",
+      "union",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "head",
+    "timeout": 900
+  },
+  {
+    "name": "ps1_cpu_failure",
+    "version": "cpu",
+    "timeout": 1200,
+    "command": [
+      "modern/bin/python",
+      "diagnose_cpu.py",
+      "--input",
+      "inputs/tls_sparse_ps1.npz",
+      "--out",
+      "results/ps1_cpu_failure.json"
+    ]
+  },
+  {
+    "name": "gaia_cpu_failure",
+    "version": "cpu",
+    "timeout": 1200,
+    "command": [
+      "modern/bin/python",
+      "diagnose_cpu.py",
+      "--input",
+      "inputs/tls_sparse_gaia.npz",
+      "--out",
+      "results/gaia_cpu_failure.json"
+    ]
+  },
+  {
+    "name": "ztf_cpu_failure",
+    "version": "cpu",
+    "timeout": 1200,
+    "command": [
+      "modern/bin/python",
+      "diagnose_cpu.py",
+      "--input",
+      "inputs/tls_sparse_ztf.npz",
+      "--out",
+      "results/ztf_cpu_failure.json"
+    ]
+  },
+  {
+    "name": "rubin_cpu_failure",
+    "version": "cpu",
+    "timeout": 1200,
+    "command": [
+      "modern/bin/python",
+      "diagnose_cpu.py",
+      "--input",
+      "inputs/tls_sparse_rubin.npz",
+      "--out",
+      "results/rubin_cpu_failure.json"
+    ]
+  }
+]

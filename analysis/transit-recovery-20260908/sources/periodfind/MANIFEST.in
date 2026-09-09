@@ -1,0 +1,6 @@
+recursive-include periodfind/ *.py *.pyx *.pxd *.cu *.cuh *.h *.cpp
+include README.md
+include LICENSE
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.so

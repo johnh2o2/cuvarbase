@@ -1,0 +1,8 @@
+{
+  "reason": "Default ASCII locale cannot write GTLS embedded CUDA comments. Set UTF-8 for unmodified source compilation.",
+  "environment": {
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "PYTHONUTF8": "1"
+  }
+}

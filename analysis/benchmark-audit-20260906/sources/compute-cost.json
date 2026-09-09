@@ -1,0 +1,14 @@
+{
+  "pod_id": "6ews1d7fdu7s1u",
+  "started_utc": "2026-09-06T23:20:54.436Z",
+  "termination_confirmed_utc": "2026-09-07T00:23:26.199679+00:00",
+  "elapsed_seconds": 3751.763679,
+  "rate_usd_per_hour": 0.49,
+  "estimated_compute_cost_usd": 0.5106567229750001,
+  "note": "Elapsed time multiplied by advertised compute rate; estimate, not an invoice. All 432 evidence files verified locally before termination.",
+  "termination_response": {
+    "data": {
+      "podTerminate": null
+    }
+  }
+}

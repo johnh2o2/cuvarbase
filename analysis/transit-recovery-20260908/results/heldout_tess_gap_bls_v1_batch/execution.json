@@ -1,0 +1,20 @@
+{
+  "name": "heldout_tess_gap_bls_v1_batch",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 25.23549509048462,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+    "--config",
+    "{\"backend\": \"v1_bls_batch\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25, \"block_size\": 128, \"reuse_batch\": true, \"batch_capacity\": 16, \"eval_chunk\": 16}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_bls_v1_batch",
+    "--indices",
+    "all"
+  ],
+  "started_epoch": 1788900802.3561785,
+  "finished_epoch": 1788900827.5916753
+}

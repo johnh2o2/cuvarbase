@@ -1,0 +1,59 @@
+{
+  "algorithm": "LS",
+  "args": {
+    "backend": "astropy",
+    "config": "ztf",
+    "n_lcs": 32,
+    "shared_times": false,
+    "threads": 1,
+    "workers": 1,
+    "batch_size": 8,
+    "reps": 5,
+    "double": false,
+    "float32": false,
+    "out": "/tmp/cuvarbase-benchmark-audit/results/ls_ztf_32_astropy.json"
+  },
+  "config": {
+    "ndata": 150,
+    "baseline": 730.0,
+    "nfreq": 365000,
+    "fmax": 100.0
+  },
+  "environment": {
+    "timestamp_utc": "2026-09-07T00:05:47.548248+00:00",
+    "python": "3.11.10",
+    "host": "ae9fe6933d41",
+    "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.35",
+    "packages": {
+      "cuvarbase": "1.0.0",
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2",
+      "astropy": "8.0.1",
+      "nifty-ls": "1.1.0",
+      "finufft": "2.5.1",
+      "cufinufft": "2.5.1",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.4.4",
+      "transitleastsquares": "1.32",
+      "batman-package": "2.5.3",
+      "numba": "0.67.0"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMBA_NUM_THREADS": "1"
+    },
+    "cpu.max": "765000 100000",
+    "cpu.stat": "usage_usec 3230494567\nuser_usec 3004934334\nsystem_usec 225560233\ncore_sched.force_idle_usec 0\nnr_periods 20387\nnr_throttled 49\nthrottled_usec 36886352\nnr_bursts 0\nburst_usec 0",
+    "cpuset.cpus.effective": "0-95",
+    "gpu": "NVIDIA A40, GPU-db05ecc0-699a-af3b-a499-319ac12b6119, 580.159.03, 49140 MiB"
+  },
+  "status": "running",
+  "input_sha256": "edcd60db171d32efffca07c1110f076b88ad311ab3722c188eaf01b8d15579b0",
+  "frequency_sha256": "bdd29a8c90e43679f6c962fd1a6f65a31c3db061aa1be4576b7a863ade87b254",
+  "input_file": "ls_ztf_distinct.npz",
+  "dtype_input": "float64",
+  "boundary": "API wall time, host inputs to full host periodograms; imports, input generation and validation excluded"
+}

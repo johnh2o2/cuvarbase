@@ -1,0 +1,56 @@
+[
+  {
+    "node": "validation_a",
+    "profile": "ztf",
+    "candidate_equal": true,
+    "score_abs_difference": 0.0,
+    "input_hash_equal": true,
+    "installed_sources_equal": true,
+    "summary_sha256": "9db5b86fbb8d9dc1a390ec1f18b14489156b185a67bddc1655638df1bd4e99b2"
+  },
+  {
+    "node": "validation_a",
+    "profile": "tess_gap",
+    "candidate_equal": true,
+    "score_abs_difference": 0.0,
+    "input_hash_equal": true,
+    "installed_sources_equal": true,
+    "summary_sha256": "0d4f32af5ffb4884a56ff3b64dfa2a7c6563cd96693c1ba9506364bc90fb135f"
+  },
+  {
+    "node": "validation_a",
+    "profile": "tess_200s",
+    "candidate_equal": true,
+    "score_abs_difference": 0.0,
+    "input_hash_equal": true,
+    "installed_sources_equal": true,
+    "summary_sha256": "ba332d4120f3aafdc4c9058eb62c94b94ffb04be2965e9193d5c85c9505fa0e6"
+  },
+  {
+    "node": "validation_b",
+    "profile": "ztf",
+    "candidate_equal": true,
+    "score_abs_difference": 0.0,
+    "input_hash_equal": true,
+    "installed_sources_equal": true,
+    "summary_sha256": "672e52873f467420b675cc52c4faaef7e373e3b1feee65199fda30ab4e40c129"
+  },
+  {
+    "node": "validation_b",
+    "profile": "tess_gap",
+    "candidate_equal": true,
+    "score_abs_difference": 0.0,
+    "input_hash_equal": true,
+    "installed_sources_equal": true,
+    "summary_sha256": "b8e4f14ac4f2c0607919a373b9fd99926260257dc76801f7d3a8d0b772052741"
+  },
+  {
+    "node": "validation_b",
+    "profile": "tess_200s",
+    "candidate_equal": true,
+    "score_abs_difference": 0.0,
+    "input_hash_equal": true,
+    "installed_sources_equal": true,
+    "summary_sha256": "96aaa6fd99ced6b1dcece83345c11e9640893eb7ee10e9d9aa472a180d7b7072"
+  }
+]

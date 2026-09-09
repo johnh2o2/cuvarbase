@@ -1,0 +1,10 @@
+{
+  "changed": [
+    {
+      "file": "setup.py",
+      "before": "4ac08554be0cdfc3fbef319d545e2cbc2346841a1aa77d50543ce7c0162c7d36",
+      "after": "f5a675e14b8e222349a6d5d748e31f2900ab058c7c7844930dc300dd47f456cb"
+    }
+  ],
+  "missing": []
+}

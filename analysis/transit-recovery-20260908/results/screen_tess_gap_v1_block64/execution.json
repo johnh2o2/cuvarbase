@@ -1,0 +1,20 @@
+{
+  "name": "screen_tess_gap_v1_block64",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 4.980550765991211,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+    "--config",
+    "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25, \"block_size\": 64}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_v1_block64",
+    "--indices",
+    "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31"
+  ],
+  "started_epoch": 1788892796.6096575,
+  "finished_epoch": 1788892801.5902102
+}

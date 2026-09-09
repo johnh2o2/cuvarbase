@@ -1,0 +1,41 @@
+{
+  "all_terminated": true,
+  "verified_utc": "2026-09-08T21:41:09.823090+00:00",
+  "prior_campaigns_usd": 3.7664614732111117,
+  "rentals": [
+    {
+      "node": "original",
+      "id": "ouga2zvuqjco1q",
+      "rate_usd_per_hour": 0.49,
+      "created_utc": "2026-09-08T16:24:26.094160+00:00",
+      "terminated_utc": "2026-09-08T21:40:04.487578+00:00",
+      "estimated_usd": 2.577839165912072,
+      "termination_verified": true,
+      "state_file": "analysis/tls-profile-20260908/pod.json"
+    },
+    {
+      "node": "validation_a",
+      "id": "4rip2kqarkn5co",
+      "rate_usd_per_hour": 0.49,
+      "created_utc": "2026-09-08T18:54:22.190010+00:00",
+      "terminated_utc": "2026-09-08T20:41:57.754268+00:00",
+      "estimated_usd": 0.8787847267409166,
+      "termination_verified": true,
+      "state_file": "analysis/transit-recovery-20260908/compute/validation_a/pod.json"
+    },
+    {
+      "node": "validation_b",
+      "id": "3x6l4gayo7c7vd",
+      "rate_usd_per_hour": 0.49,
+      "created_utc": "2026-09-08T18:54:45.547188+00:00",
+      "terminated_utc": "2026-09-08T20:33:42.996839+00:00",
+      "estimated_usd": 0.8082639852199289,
+      "termination_verified": true,
+      "state_file": "analysis/transit-recovery-20260908/compute/validation_b/pod.json"
+    }
+  ],
+  "estimated_total_usd": 8.031349351084028,
+  "authorized_usd": 50.0,
+  "note": "Elapsed rental times multiplied by quoted rates, not an invoice. Prior campaigns counted once. The original node served both the component audit and this recovery campaign.",
+  "final_absence_evidence": "analysis/tls-profile-20260908/pods-after-termination.json"
+}

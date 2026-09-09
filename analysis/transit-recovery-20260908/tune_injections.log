@@ -1,0 +1,97 @@
+START tune_tess_200s_v1_bls1 2026-09-08T17:27:09.199949+00:00
+END tune_tess_200s_v1_bls1 0 1.47
+START tune_tess_200s_v1_bls3 2026-09-08T17:27:10.670895+00:00
+END tune_tess_200s_v1_bls3 0 1.62
+START tune_tess_200s_v1_bls_opt4 2026-09-08T17:27:12.292615+00:00
+END tune_tess_200s_v1_bls_opt4 0 1.37
+START tune_tess_200s_v1_bls8 2026-09-08T17:27:13.663793+00:00
+END tune_tess_200s_v1_bls8 0 1.52
+START tune_tess_200s_pypi_bls3 2026-09-08T17:27:15.185626+00:00
+END tune_tess_200s_pypi_bls3 0 1.77
+START tune_tess_200s_pypi_bls_manual3 2026-09-08T17:27:16.959194+00:00
+END tune_tess_200s_pypi_bls_manual3 0 2.27
+START tune_tess_200s_pypi_bls_manual4 2026-09-08T17:27:19.234340+00:00
+END tune_tess_200s_pypi_bls_manual4 0 1.82
+START tune_tess_200s_pf_gpu1 2026-09-08T17:27:21.057959+00:00
+END tune_tess_200s_pf_gpu1 188 0.77
+START tune_tess_200s_pf_gpu2 2026-09-08T17:27:21.827953+00:00
+END tune_tess_200s_pf_gpu2 188 0.72
+START tune_tess_200s_pf_cpu1 2026-09-08T17:27:22.548076+00:00
+END tune_tess_200s_pf_cpu1 0 4.98
+START tune_tess_200s_pf_cpu2 2026-09-08T17:27:27.530395+00:00
+END tune_tess_200s_pf_cpu2 0 4.28
+START tune_tess_200s_astropy3_w7 2026-09-08T17:27:31.809939+00:00
+END tune_tess_200s_astropy3_w7 0 4.08
+START tune_tess_200s_v1_tls4 2026-09-08T17:27:35.888992+00:00
+END tune_tess_200s_v1_tls4 0 1.72
+START tune_tess_200s_v1_tls8 2026-09-08T17:27:37.611160+00:00
+END tune_tess_200s_v1_tls8 0 1.82
+START tune_tess_200s_gtls_density 2026-09-08T17:27:39.434046+00:00
+END tune_tess_200s_gtls_density 0 29.24
+START tune_tess_200s_gtls_default 2026-09-08T17:28:08.681052+00:00
+END tune_tess_200s_gtls_default 0 30.69
+START tune_tess_gap_v1_bls1 2026-09-08T17:28:39.374757+00:00
+END tune_tess_gap_v1_bls1 0 4.68
+START tune_tess_gap_v1_bls3 2026-09-08T17:28:44.055556+00:00
+END tune_tess_gap_v1_bls3 0 5.43
+START tune_tess_gap_v1_bls_opt4 2026-09-08T17:28:49.488241+00:00
+END tune_tess_gap_v1_bls_opt4 0 4.88
+START tune_tess_gap_v1_bls8 2026-09-08T17:28:54.370416+00:00
+END tune_tess_gap_v1_bls8 0 5.03
+START tune_tess_gap_pypi_bls3 2026-09-08T17:28:59.403049+00:00
+END tune_tess_gap_pypi_bls3 0 5.28
+START tune_tess_gap_pypi_bls_manual3 2026-09-08T17:29:04.687630+00:00
+END tune_tess_gap_pypi_bls_manual3 0 6.03
+START tune_tess_gap_pypi_bls_manual4 2026-09-08T17:29:10.724606+00:00
+END tune_tess_gap_pypi_bls_manual4 0 6.29
+START tune_tess_gap_pf_gpu1 2026-09-08T17:29:17.013045+00:00
+END tune_tess_gap_pf_gpu1 0 8.64
+START tune_tess_gap_pf_gpu2 2026-09-08T17:29:25.656111+00:00
+END tune_tess_gap_pf_gpu2 0 8.44
+START tune_tess_gap_pf_cpu1 2026-09-08T17:29:34.098329+00:00
+END tune_tess_gap_pf_cpu1 0 38.61
+START tune_tess_gap_pf_cpu2 2026-09-08T17:30:12.706059+00:00
+END tune_tess_gap_pf_cpu2 0 40.98
+START tune_tess_gap_astropy3_w7 2026-09-08T17:30:53.688093+00:00
+END tune_tess_gap_astropy3_w7 0 42.08
+START tune_tess_gap_v1_tls4 2026-09-08T17:31:35.766900+00:00
+END tune_tess_gap_v1_tls4 0 5.43
+START tune_tess_gap_v1_tls8 2026-09-08T17:31:41.199631+00:00
+END tune_tess_gap_v1_tls8 0 6.73
+START tune_tess_gap_gtls_density 2026-09-08T17:31:47.935040+00:00
+END tune_tess_gap_gtls_density 0 312.85
+START tune_tess_gap_gtls_default 2026-09-08T17:37:00.792327+00:00
+END tune_tess_gap_gtls_default 0 321.23
+START tune_ztf_v1_bls1 2026-09-08T17:42:22.026180+00:00
+END tune_ztf_v1_bls1 0 12.95
+START tune_ztf_v1_bls3 2026-09-08T17:42:34.976237+00:00
+END tune_ztf_v1_bls3 0 14.25
+START tune_ztf_v1_bls_opt4 2026-09-08T17:42:49.232095+00:00
+END tune_ztf_v1_bls_opt4 0 14.4
+START tune_ztf_v1_bls8 2026-09-08T17:43:03.638889+00:00
+END tune_ztf_v1_bls8 0 12.95
+START tune_ztf_pypi_bls3 2026-09-08T17:43:16.591862+00:00
+END tune_ztf_pypi_bls3 0 13.44
+START tune_ztf_pypi_bls_manual3 2026-09-08T17:43:30.039958+00:00
+END tune_ztf_pypi_bls_manual3 0 14.55
+START tune_ztf_pypi_bls_manual4 2026-09-08T17:43:44.590386+00:00
+END tune_ztf_pypi_bls_manual4 0 14.5
+START tune_ztf_pf_gpu1 2026-09-08T17:43:59.090559+00:00
+END tune_ztf_pf_gpu1 0 22.17
+START tune_ztf_pf_gpu2 2026-09-08T17:44:21.263036+00:00
+END tune_ztf_pf_gpu2 0 21.16
+START tune_ztf_pf_cpu1 2026-09-08T17:44:42.428221+00:00
+END tune_ztf_pf_cpu1 0 54.98
+START tune_ztf_pf_cpu2 2026-09-08T17:45:37.415182+00:00
+END tune_ztf_pf_cpu2 0 56.13
+START tune_ztf_astropy3_w7 2026-09-08T17:46:33.544057+00:00
+END tune_ztf_astropy3_w7 0 86.51
+START tune_ztf_v1_tls4 2026-09-08T17:48:00.055615+00:00
+END tune_ztf_v1_tls4 0 14.8
+START tune_ztf_v1_tls8 2026-09-08T17:48:14.859426+00:00
+END tune_ztf_v1_tls8 0 16.11
+START tune_ztf_gtls_density 2026-09-08T17:48:30.968259+00:00
+END tune_ztf_gtls_density 0 728.47
+START tune_ztf_gtls_default 2026-09-08T18:00:39.437432+00:00
+END tune_ztf_gtls_default 0 707.62
+MANIFEST_COMPLETE tune_injections.json

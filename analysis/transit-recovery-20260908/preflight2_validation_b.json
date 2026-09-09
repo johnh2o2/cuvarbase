@@ -1,0 +1,44 @@
+[
+  {
+    "name": "preflight2_validation_b_ztf_gtls",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "indices": "2",
+    "timing": true,
+    "reps": 1,
+    "timeout": 300
+  },
+  {
+    "name": "preflight2_validation_b_tess_gap_gtls",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "indices": "2",
+    "timing": true,
+    "reps": 1,
+    "timeout": 300
+  },
+  {
+    "name": "preflight2_validation_b_tess_200s_gtls",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "indices": "2",
+    "timing": true,
+    "reps": 1,
+    "timeout": 300
+  }
+]

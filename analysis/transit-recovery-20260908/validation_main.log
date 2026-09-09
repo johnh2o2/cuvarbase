@@ -1,0 +1,67 @@
+START calibration_tess_gap_gtls_batch 2026-09-08T19:01:28.487778+00:00
+END calibration_tess_gap_gtls_batch 0 614.46
+START heldout_tess_gap_gtls_batch 2026-09-08T19:11:42.954079+00:00
+END heldout_tess_gap_gtls_batch 0 1255.7
+START calibration_ztf_bls_v1 2026-09-08T19:32:38.660767+00:00
+END calibration_ztf_bls_v1 0 47.13
+START heldout_ztf_bls_v1 2026-09-08T19:33:25.792660+00:00
+END heldout_ztf_bls_v1 0 89.73
+START calibration_ztf_bls_v1_batch 2026-09-08T19:34:55.521690+00:00
+END calibration_ztf_bls_v1_batch 0 45.17
+START heldout_ztf_bls_v1_batch 2026-09-08T19:35:40.693254+00:00
+END heldout_ztf_bls_v1_batch 0 87.26
+START calibration_tess_200s_bls_pypi 2026-09-08T19:37:07.951550+00:00
+END calibration_tess_200s_bls_pypi 0 2.92
+START heldout_tess_200s_bls_pypi 2026-09-08T19:37:10.875615+00:00
+END heldout_tess_200s_bls_pypi 0 5.08
+START calibration_tess_200s_bls_cpu 2026-09-08T19:37:15.959082+00:00
+END calibration_tess_200s_bls_cpu 0 13.5
+START heldout_tess_200s_bls_cpu 2026-09-08T19:37:29.466059+00:00
+END heldout_tess_200s_bls_cpu 0 27.15
+START calibration_tess_gap_bls_v1 2026-09-08T19:37:56.614745+00:00
+END calibration_tess_gap_bls_v1 0 14.1
+START heldout_tess_gap_bls_v1 2026-09-08T19:38:10.720818+00:00
+END heldout_tess_gap_bls_v1 0 26.44
+START calibration_tess_gap_bls_cpu 2026-09-08T19:38:37.159219+00:00
+END calibration_tess_gap_bls_cpu 0 152.72
+START heldout_tess_gap_bls_cpu 2026-09-08T19:41:09.877284+00:00
+END heldout_tess_gap_bls_cpu 0 301.31
+START calibration_ztf_bls_gpu 2026-09-08T19:46:11.195375+00:00
+END calibration_ztf_bls_gpu 0 82.72
+START heldout_ztf_bls_gpu 2026-09-08T19:47:33.917371+00:00
+END heldout_ztf_bls_gpu 0 169.14
+START calibration_tess_gap_bls_gpu 2026-09-08T19:50:23.057331+00:00
+END calibration_tess_gap_bls_gpu 0 29.44
+START heldout_tess_gap_bls_gpu 2026-09-08T19:50:52.497825+00:00
+END heldout_tess_gap_bls_gpu 0 61.16
+START calibration_tess_200s_gtls_batch 2026-09-08T19:51:53.657940+00:00
+END calibration_tess_200s_gtls_batch 0 65.65
+START heldout_tess_200s_gtls_batch 2026-09-08T19:52:59.311035+00:00
+END heldout_tess_200s_gtls_batch 0 129.24
+START calibration_tess_200s_tls_v1 2026-09-08T19:55:08.551901+00:00
+END calibration_tess_200s_tls_v1 0 2.77
+START heldout_tess_200s_tls_v1 2026-09-08T19:55:11.327549+00:00
+END heldout_tess_200s_tls_v1 0 4.88
+START calibration_tess_200s_bls_v1_batch 2026-09-08T19:55:16.209597+00:00
+END calibration_tess_200s_bls_v1_batch 0 1.77
+START heldout_tess_200s_bls_v1_batch 2026-09-08T19:55:17.983770+00:00
+END heldout_tess_200s_bls_v1_batch 0 2.52
+START calibration_tess_200s_bls_gpu 2026-09-08T19:55:20.510360+00:00
+END calibration_tess_200s_bls_gpu 0 8.54
+START heldout_tess_200s_bls_gpu 2026-09-08T19:55:29.051640+00:00
+END heldout_tess_200s_bls_gpu 0 16.36
+START calibration_ztf_bls_cpu 2026-09-08T19:55:45.411877+00:00
+END calibration_ztf_bls_cpu 0 223.27
+START heldout_ztf_bls_cpu 2026-09-08T19:59:28.687688+00:00
+END heldout_ztf_bls_cpu 0 440.04
+START calibration_tess_gap_bls_pypi 2026-09-08T20:06:48.734728+00:00
+END calibration_tess_gap_bls_pypi 0 16.76
+START heldout_tess_gap_bls_pypi 2026-09-08T20:07:05.496767+00:00
+END heldout_tess_gap_bls_pypi 0 30.54
+START calibration_tess_200s_bls_v1 2026-09-08T20:07:36.037352+00:00
+END calibration_tess_200s_bls_v1 0 1.97
+START heldout_tess_200s_bls_v1 2026-09-08T20:07:38.011105+00:00
+END heldout_tess_200s_bls_v1 0 3.22
+START calibration_ztf_tls_v1 2026-09-08T20:07:41.237823+00:00
+END calibration_ztf_tls_v1 0 46.88
+START heldout_ztf_tls_v1 2026-09-08T20:08:28.123984+00:00

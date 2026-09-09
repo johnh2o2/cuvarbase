@@ -1,0 +1,58 @@
+{
+  "status": "error",
+  "config": {
+    "backend": "v1_bls_batch",
+    "noverlap": 4,
+    "optimized": true,
+    "qmin_fac": 0.25,
+    "reuse_batch": true,
+    "batch_capacity": 16
+  },
+  "input_file": "tess_gap_tune.npz",
+  "input_sha256": "b262bb9a0534e116b43b8d1ba716527af12f5ca1ed94bfa2b3e0bcc1f71f1ccc",
+  "profile": "tess_gap",
+  "split": "tune",
+  "indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "worker_sha256": "81dd73052ad49830e6c9fd31a80b6204869be1ed318548cd65a4ce6c974b81fb",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2",
+      "astropy": "8.0.1",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.4.4",
+      "cuvarbase": "1.0.0",
+      "periodfind": "0.1.3"
+    },
+    "cpu_quota": null,
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [],
+  "initialization_s": 0.4371693506836891,
+  "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 234, in main\n    try:backend.search([lcs[ids[0]]]);backend.sync()\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 122, in search\n    powers=self.bls.eebls_gpu_batch(lcs,self.f,memory=self.memory,**kw)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/cuvarbase/bls.py\", line 3705, in eebls_gpu_batch\n    launch_func.prepared_async_call(*args,\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/pycuda/driver.py\", line 640, in function_prepared_async_call\n    func._launch_kernel(grid, block, arg_buf, shared_size, stream)\npycuda._driver.LogicError: cuLaunchKernel failed: invalid resource handle\n"
+}

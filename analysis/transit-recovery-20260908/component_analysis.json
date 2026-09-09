@@ -1,0 +1,2014 @@
+{
+  "components": [
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "native_median_s": 0.005431227385997772,
+      "synchronized_profile_mean_s": 0.003090502694249153,
+      "profile_over_native": 0.5690247295145048,
+      "instrumentation_max_abs_power_difference": 3.725290298461914e-09,
+      "grid_median_s": 0.0018043629825115204,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_tess_200s_bls_pypi",
+      "profile": "tess_200s",
+      "native_median_s": 0.013805769383907318,
+      "synchronized_profile_mean_s": 0.011249450966715813,
+      "profile_over_native": 0.8148369463442381,
+      "instrumentation_max_abs_power_difference": 1.8189894035458565e-12,
+      "grid_median_s": 0.01997949928045273,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_tess_200s_bls_v1_unfused",
+      "profile": "tess_200s",
+      "native_median_s": 0.008508004248142242,
+      "synchronized_profile_mean_s": 0.007050644606351852,
+      "profile_over_native": 0.8287072268318848,
+      "instrumentation_max_abs_power_difference": 3.725290298461914e-09,
+      "grid_median_s": 0.0015385188162326813,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "native_median_s": 0.005118124186992645,
+      "synchronized_profile_mean_s": 0.0030036121606826782,
+      "profile_over_native": 0.5868580071417862,
+      "instrumentation_max_abs_power_difference": 2.7939677238464355e-09,
+      "grid_median_s": 0.0017888061702251434,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "native_median_s": 0.00926678255200386,
+      "synchronized_profile_mean_s": 0.004941130056977272,
+      "profile_over_native": 0.5332088056721258,
+      "instrumentation_max_abs_power_difference": 3.0517578125e-05,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "native_median_s": 0.5102832280099392,
+      "synchronized_profile_mean_s": 0.526410611346364,
+      "profile_over_native": 1.0316047685896326,
+      "instrumentation_max_abs_power_difference": 0.0,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "native_median_s": 0.3687116466462612,
+      "synchronized_profile_mean_s": 0.4005332849919796,
+      "profile_over_native": 1.0863049448943711,
+      "instrumentation_max_abs_power_difference": 0.0,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "native_median_s": 0.02717015892267227,
+      "synchronized_profile_mean_s": 0.029120374470949173,
+      "profile_over_native": 1.071777848404469,
+      "instrumentation_max_abs_power_difference": 5.587935447692871e-09,
+      "grid_median_s": 0.032126251608133316,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_tess_gap_bls_pypi",
+      "profile": "tess_gap",
+      "native_median_s": 0.04441707953810692,
+      "synchronized_profile_mean_s": 0.06076417304575443,
+      "profile_over_native": 1.368036207639964,
+      "instrumentation_max_abs_power_difference": 7.105427357601002e-14,
+      "grid_median_s": 0.5528400354087353,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_tess_gap_bls_v1_unfused",
+      "profile": "tess_gap",
+      "native_median_s": 0.03672560676932335,
+      "synchronized_profile_mean_s": 0.03755619004368782,
+      "profile_over_native": 1.022615916997136,
+      "instrumentation_max_abs_power_difference": 7.450580596923828e-09,
+      "grid_median_s": 0.03138798475265503,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "native_median_s": 0.024190403521060944,
+      "synchronized_profile_mean_s": 0.02563432976603508,
+      "profile_over_native": 1.0596900437695058,
+      "instrumentation_max_abs_power_difference": 5.587935447692871e-09,
+      "grid_median_s": 0.03592348471283913,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "native_median_s": 0.04133009910583496,
+      "synchronized_profile_mean_s": 0.034683845937252045,
+      "profile_over_native": 0.8391909694781109,
+      "instrumentation_max_abs_power_difference": 1.9073486328125e-05,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "native_median_s": 7.475522819906473,
+      "synchronized_profile_mean_s": 7.572496311739087,
+      "profile_over_native": 1.0129721350825636,
+      "instrumentation_max_abs_power_difference": 0.0,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "native_median_s": 2.8081326372921467,
+      "synchronized_profile_mean_s": 2.817207934334874,
+      "profile_over_native": 1.003231790736024,
+      "instrumentation_max_abs_power_difference": 0.0,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "native_median_s": 0.08495102822780609,
+      "synchronized_profile_mean_s": 0.07109778746962547,
+      "profile_over_native": 0.8369267441821712,
+      "instrumentation_max_abs_power_difference": 1.1175870895385742e-08,
+      "grid_median_s": 0.13856496289372444,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_ztf_bls_pypi",
+      "profile": "ztf",
+      "native_median_s": 0.13173441216349602,
+      "synchronized_profile_mean_s": 0.1468922160565853,
+      "profile_over_native": 1.115063358496464,
+      "instrumentation_max_abs_power_difference": 6.039613253960852e-14,
+      "grid_median_s": 1.737047240138054,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_ztf_bls_v1_unfused",
+      "profile": "ztf",
+      "native_median_s": 0.12026598677039146,
+      "synchronized_profile_mean_s": 0.13283202797174454,
+      "profile_over_native": 1.1044854122000747,
+      "instrumentation_max_abs_power_difference": 1.862645149230957e-08,
+      "grid_median_s": 0.12039996683597565,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "native_median_s": 0.06015884131193161,
+      "synchronized_profile_mean_s": 0.06110704131424427,
+      "profile_over_native": 1.015761606800173,
+      "instrumentation_max_abs_power_difference": 9.313225746154785e-09,
+      "grid_median_s": 0.1287476047873497,
+      "grid_float32_equal": true
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "native_median_s": 0.08919495716691017,
+      "synchronized_profile_mean_s": 0.09347881004214287,
+      "profile_over_native": 1.048027971662303,
+      "instrumentation_max_abs_power_difference": 1.1444091796875e-05,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "native_median_s": 16.965853169560432,
+      "synchronized_profile_mean_s": 17.54467465542257,
+      "profile_over_native": 1.0341168510700445,
+      "instrumentation_max_abs_power_difference": 0.0,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "native_median_s": 2.0584252700209618,
+      "synchronized_profile_mean_s": 2.165924809873104,
+      "profile_over_native": 1.0522241644706625,
+      "instrumentation_max_abs_power_difference": 0.0,
+      "grid_median_s": null,
+      "grid_float32_equal": null
+    }
+  ],
+  "phases": [
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.0014457982033491135,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.4678197517961959
+    },
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.0004615914076566696,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.14935803437919817
+    },
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 3.50121408700943e-05,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.011328946884675214
+    },
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.0006653200834989548,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.21527892039602195
+    },
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "phase": "Kernel cache lookup",
+      "exclusive_mean_s": 1.7799437046051025e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.005759398650314217
+    },
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 2.5019049644470215e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.008095462816138611
+    },
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.00035481713712215424,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.1148088748741111
+    },
+    {
+      "job": "component_tess_200s_bls_v1",
+      "profile": "tess_200s",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 8.514523506164551e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.02755061020334486
+    },
+    {
+      "job": "component_tess_200s_bls_pypi",
+      "profile": "tess_200s",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.0017596632242202759,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.1564221426829327
+    },
+    {
+      "job": "component_tess_200s_bls_pypi",
+      "profile": "tess_200s",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.003529401496052742,
+      "calls_mean": 4.0,
+      "fraction_of_profile": 0.31373988886171594
+    },
+    {
+      "job": "component_tess_200s_bls_pypi",
+      "profile": "tess_200s",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.0013583861291408539,
+      "calls_mean": 4.0,
+      "fraction_of_profile": 0.12075132672340753
+    },
+    {
+      "job": "component_tess_200s_bls_pypi",
+      "profile": "tess_200s",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.0038889311254024506,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.34569963786755303
+    },
+    {
+      "job": "component_tess_200s_bls_pypi",
+      "profile": "tess_200s",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.0007130689918994904,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.06338700386439083
+    },
+    {
+      "job": "component_tess_200s_bls_v1_unfused",
+      "profile": "tess_200s",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.0012189913541078568,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.17289076703847478
+    },
+    {
+      "job": "component_tess_200s_bls_v1_unfused",
+      "profile": "tess_200s",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.004324117675423622,
+      "calls_mean": 8.0,
+      "fraction_of_profile": 0.6132939492550893
+    },
+    {
+      "job": "component_tess_200s_bls_v1_unfused",
+      "profile": "tess_200s",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.00010992959141731262,
+      "calls_mean": 8.0,
+      "fraction_of_profile": 0.015591424267545438
+    },
+    {
+      "job": "component_tess_200s_bls_v1_unfused",
+      "profile": "tess_200s",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.0005663968622684479,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.08033263536757856
+    },
+    {
+      "job": "component_tess_200s_bls_v1_unfused",
+      "profile": "tess_200s",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 2.714991569519043e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0038506997886024992
+    },
+    {
+      "job": "component_tess_200s_bls_v1_unfused",
+      "profile": "tess_200s",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.0007249452173709869,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.10281970767862719
+    },
+    {
+      "job": "component_tess_200s_bls_v1_unfused",
+      "profile": "tess_200s",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 7.911399006843567e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.011220816604082228
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.0014533791691064835,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.4838771090792731
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.0003926306962966919,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.13071950547951322
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 3.634020686149597e-05,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.012098834642231692
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.0006233919411897659,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.20754741552520478
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "phase": "Kernel cache lookup",
+      "exclusive_mean_s": 1.7268583178520203e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.005749271961462328
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 2.520531415939331e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.00839166736948638
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.00036853738129138947,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.12269805872926888
+    },
+    {
+      "job": "component_tess_200s_bls_v1_no_scatter",
+      "profile": "tess_200s",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 8.685886859893799e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.028918137213559625
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.0004906486719846725,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.09929887825798822
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 CPU statistics/results",
+      "exclusive_mean_s": 0.0006386563181877136,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.12925308802302818
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 buffer allocations/transfers",
+      "exclusive_mean_s": 0.0003417748957872391,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.06916937863325931
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 candidate selection/refinement/transfers",
+      "exclusive_mean_s": 0.0008424967527389526,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.170506896807802
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 coarse search kernel",
+      "exclusive_mean_s": 0.00072491355240345,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.14671007321084656
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 coarse spectrum transfer",
+      "exclusive_mean_s": 6.70701265335083e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.01357384358640791
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 final packaging",
+      "exclusive_mean_s": 1.7844140529632568e-06,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.00036113480770325426
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 grid/configuration",
+      "exclusive_mean_s": 0.0003332439810037613,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.06744286775718321
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 host lightcurve preparation",
+      "exclusive_mean_s": 0.00022405944764614105,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.045345790348050266
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 kernel lookup/grid transfers",
+      "exclusive_mean_s": 0.0008692238479852676,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.17591600260710683
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 lightcurve transfers",
+      "exclusive_mean_s": 0.000230446457862854,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0466384117004662
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 parameter-spectrum transfers",
+      "exclusive_mean_s": 0.00015328079462051392,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0310214045882215
+    },
+    {
+      "job": "component_tess_200s_tls_v1_native",
+      "profile": "tess_200s",
+      "phase": "v1 template tables",
+      "exclusive_mean_s": 2.353079617023468e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.004762229671936546
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.030899541452527046,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.058698553536938446
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS CUDA module lookup/compile",
+      "exclusive_mean_s": 8.279271423816681e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0001572778216351179
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS chunk allocations/transfers",
+      "exclusive_mean_s": 0.0329737551510334,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.06263884967420909
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS duration-mask union",
+      "exclusive_mean_s": 0.04017096199095249,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.07631107945983459
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS error prefixes/out-of-transit terms",
+      "exclusive_mean_s": 0.012317284941673279,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.02339862585628776
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS folding/sorting",
+      "exclusive_mean_s": 0.0852726474404335,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.16198884597393953
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS full search call",
+      "exclusive_mean_s": 0.0015978123992681503,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0030352967148240726
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS input/template setup",
+      "exclusive_mean_s": 0.0045480262488126755,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.008639693332131932
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS reductions/chunk cleanup",
+      "exclusive_mean_s": 0.018665535375475883,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.035458129021632624
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS reorder/weights",
+      "exclusive_mean_s": 0.011350728571414948,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.02156249955217273
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS result/statistics processing",
+      "exclusive_mean_s": 0.00403103232383728,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.007657581813420113
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS row-wise flux prefix sums",
+      "exclusive_mean_s": 0.1267741583287716,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.24082751296469898
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS setup and allocations",
+      "exclusive_mean_s": 0.002985825762152672,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.005672047063253592
+    },
+    {
+      "job": "component_tess_200s_gtls_native",
+      "profile": "tess_200s",
+      "phase": "GTLS transit residual kernel",
+      "exclusive_mean_s": 0.15474050864577293,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.29395400721502146
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.04094011150300503,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.10221400576939524
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS CUDA module lookup/compile",
+      "exclusive_mean_s": 0.00014571473002433777,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0003638017999609086
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS chunk allocations/transfers",
+      "exclusive_mean_s": 0.041688404977321625,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.10408224869040886
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS duration-mask union",
+      "exclusive_mean_s": 0.003837728872895241,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.00958154794294334
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS error prefixes/out-of-transit terms",
+      "exclusive_mean_s": 0.01274438202381134,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.031818534192649024
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS folding/sorting",
+      "exclusive_mean_s": 0.09245731867849827,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.23083554386834457
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS full search call",
+      "exclusive_mean_s": 0.0019599981606006622,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.004893471364408353
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS input/template setup",
+      "exclusive_mean_s": 0.006785642355680466,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.016941519244315348
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS reductions/chunk cleanup",
+      "exclusive_mean_s": 0.019195588305592537,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.04792507645395042
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS reorder/weights",
+      "exclusive_mean_s": 0.011461375281214714,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.028615287944032466
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS result/statistics processing",
+      "exclusive_mean_s": 0.0051626767963171005,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.01288950753848205
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS row-wise flux prefix sums",
+      "exclusive_mean_s": 0.004711395129561424,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.011762805504805341
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS setup and allocations",
+      "exclusive_mean_s": 0.004503676667809486,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.011244200760742442
+    },
+    {
+      "job": "component_tess_200s_gtls_both",
+      "profile": "tess_200s",
+      "phase": "GTLS transit residual kernel",
+      "exclusive_mean_s": 0.15493927150964737,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.3868324489255616
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.01718251220881939,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.5900512105694542
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.007307970896363258,
+      "calls_mean": 16.0,
+      "fraction_of_profile": 0.2509573118180117
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.0002911631017923355,
+      "calls_mean": 17.0,
+      "fraction_of_profile": 0.00999860431337527
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.0021207649260759354,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.07282752933660366
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "phase": "Kernel cache lookup",
+      "exclusive_mean_s": 1.9006431102752686e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0006526849825270525
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 2.45608389377594e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0008434245569974239
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.0018674489110708237,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.06412860222432279
+    },
+    {
+      "job": "component_tess_gap_bls_v1",
+      "profile": "tess_gap",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 0.00030694715678691864,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.010540632198707909
+    },
+    {
+      "job": "component_tess_gap_bls_pypi",
+      "profile": "tess_gap",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.011737870052456856,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.19317090094550338
+    },
+    {
+      "job": "component_tess_gap_bls_pypi",
+      "profile": "tess_gap",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.02439713664352894,
+      "calls_mean": 4.0,
+      "fraction_of_profile": 0.4015052854444064
+    },
+    {
+      "job": "component_tess_gap_bls_pypi",
+      "profile": "tess_gap",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.021706391125917435,
+      "calls_mean": 4.0,
+      "fraction_of_profile": 0.35722350914860435
+    },
+    {
+      "job": "component_tess_gap_bls_pypi",
+      "profile": "tess_gap",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.001999625936150551,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.03290797580088624
+    },
+    {
+      "job": "component_tess_gap_bls_pypi",
+      "profile": "tess_gap",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.0009231492877006531,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.015192328660599672
+    },
+    {
+      "job": "component_tess_gap_bls_v1_unfused",
+      "profile": "tess_gap",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.012663584202528,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.33719033234726126
+    },
+    {
+      "job": "component_tess_gap_bls_v1_unfused",
+      "profile": "tess_gap",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.021273473277688026,
+      "calls_mean": 4.0,
+      "fraction_of_profile": 0.5664438605977158
+    },
+    {
+      "job": "component_tess_gap_bls_v1_unfused",
+      "profile": "tess_gap",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.00012584775686264038,
+      "calls_mean": 4.0,
+      "fraction_of_profile": 0.003350919161827811
+    },
+    {
+      "job": "component_tess_gap_bls_v1_unfused",
+      "profile": "tess_gap",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.0017589908093214035,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.046836242102173575
+    },
+    {
+      "job": "component_tess_gap_bls_v1_unfused",
+      "profile": "tess_gap",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 2.2085383534431458e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.000588062407521644
+    },
+    {
+      "job": "component_tess_gap_bls_v1_unfused",
+      "profile": "tess_gap",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.0014199819415807724,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0378095312631275
+    },
+    {
+      "job": "component_tess_gap_bls_v1_unfused",
+      "profile": "tess_gap",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 0.0002922266721725464,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.007781052120372412
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.014266159385442734,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.5565255466263479
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.006024157628417015,
+      "calls_mean": 16.0,
+      "fraction_of_profile": 0.23500351612074877
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.00018339604139328003,
+      "calls_mean": 17.0,
+      "fraction_of_profile": 0.007154313885603349
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.002499530091881752,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.09750713651166235
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "phase": "Kernel cache lookup",
+      "exclusive_mean_s": 2.464093267917633e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0009612473937908461
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 2.779439091682434e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0010842643896097216
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.0021777842193841934,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.08495576983134973
+    },
+    {
+      "job": "component_tess_gap_bls_v1_no_scatter",
+      "profile": "tess_gap",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 0.000430867075920105,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.016808205240887334
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.0032449327409267426,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0935574661125321
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 CPU statistics/results",
+      "exclusive_mean_s": 0.009152121841907501,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.2638727509764914
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 buffer allocations/transfers",
+      "exclusive_mean_s": 0.0014069471508264542,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.04056491178549863
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 candidate selection/refinement/transfers",
+      "exclusive_mean_s": 0.0007381774485111237,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.021283033313162284
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 coarse search kernel",
+      "exclusive_mean_s": 0.013218048959970474,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.3811010169945912
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 coarse spectrum transfer",
+      "exclusive_mean_s": 0.0002222154289484024,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.006406885480647716
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 final packaging",
+      "exclusive_mean_s": 2.209097146987915e-06,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 6.369239302309446e-05
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 grid/configuration",
+      "exclusive_mean_s": 0.0028517525643110275,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.08222134792866538
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 host lightcurve preparation",
+      "exclusive_mean_s": 0.00015196017920970917,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.004381295531199928
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 kernel lookup/grid transfers",
+      "exclusive_mean_s": 0.0029579810798168182,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.08528411425792347
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 lightcurve transfers",
+      "exclusive_mean_s": 0.00022634491324424744,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.006525946218701848
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 parameter-spectrum transfers",
+      "exclusive_mean_s": 0.0004830397665500641,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.013926937843742904
+    },
+    {
+      "job": "component_tess_gap_tls_v1_native",
+      "profile": "tess_gap",
+      "phase": "v1 template tables",
+      "exclusive_mean_s": 2.8114765882492065e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0008106011638200571
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.01227208785712719,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0016206132498344924
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS CUDA module lookup/compile",
+      "exclusive_mean_s": 8.981674909591675e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 1.1860916849398845e-05
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS chunk allocations/transfers",
+      "exclusive_mean_s": 0.03378216736018658,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.004461166565088524
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS duration-mask union",
+      "exclusive_mean_s": 1.1300838515162468,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.14923531223968514
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS error prefixes/out-of-transit terms",
+      "exclusive_mean_s": 0.16025540977716446,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.021162824408211624
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS folding/sorting",
+      "exclusive_mean_s": 0.6577333062887192,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.08685818773778514
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS full search call",
+      "exclusive_mean_s": 0.0022016502916812897,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0002907429995400899
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS input/template setup",
+      "exclusive_mean_s": 0.011174468323588371,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.001475665073123299
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS reductions/chunk cleanup",
+      "exclusive_mean_s": 0.1123081911355257,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.014831065808698056
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS reorder/weights",
+      "exclusive_mean_s": 0.021856509149074554,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.002886301722615831
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS result/statistics processing",
+      "exclusive_mean_s": 0.08828630298376083,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.011658810958665907
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS row-wise flux prefix sums",
+      "exclusive_mean_s": 3.683847291395068,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.48647726452956724
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS setup and allocations",
+      "exclusive_mean_s": 0.002687370404601097,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.0003548856670204069
+    },
+    {
+      "job": "component_tess_gap_gtls_native",
+      "profile": "tess_gap",
+      "phase": "GTLS transit residual kernel",
+      "exclusive_mean_s": 1.655917888507247,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.21867529812331485
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.012644346803426743,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.004488254718199207
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS CUDA module lookup/compile",
+      "exclusive_mean_s": 9.878724813461304e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 3.5065657359060405e-05
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS chunk allocations/transfers",
+      "exclusive_mean_s": 0.0357176810503006,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.012678397151658359
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS duration-mask union",
+      "exclusive_mean_s": 0.005258811637759209,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.0018666750060111492
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS error prefixes/out-of-transit terms",
+      "exclusive_mean_s": 0.15920797176659107,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.056512680454373035
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS folding/sorting",
+      "exclusive_mean_s": 0.6598600596189499,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.234224833593882
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS full search call",
+      "exclusive_mean_s": 0.0021453499794006348,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0007615163769965524
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS input/template setup",
+      "exclusive_mean_s": 0.01433069072663784,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.005086841674688535
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS reductions/chunk cleanup",
+      "exclusive_mean_s": 0.11240757070481777,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.03990034577669771
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS reorder/weights",
+      "exclusive_mean_s": 0.021939393132925034,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.007787637137300904
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS result/statistics processing",
+      "exclusive_mean_s": 0.09422308206558228,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.03344555469876162
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS row-wise flux prefix sums",
+      "exclusive_mean_s": 0.039466336369514465,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.014009024995463188
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS setup and allocations",
+      "exclusive_mean_s": 0.002745244652032852,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.0009744558144164776
+    },
+    {
+      "job": "component_tess_gap_gtls_both",
+      "profile": "tess_gap",
+      "phase": "GTLS transit residual kernel",
+      "exclusive_mean_s": 1.6571626085788012,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.5882287169441922
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.04566686227917671,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.6423105964962214
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.010050255805253983,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.1413582076593828
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.0001864694058895111,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.0026227174223835714
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.006062814965844154,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.08527431276865431
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "phase": "Kernel cache lookup",
+      "exclusive_mean_s": 2.64681875705719e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.00037227863921756617
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 3.658421337604523e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0005145619108284459
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.008393488824367523,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.11805555591942161
+    },
+    {
+      "job": "component_ztf_bls_v1",
+      "profile": "ztf",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 0.0006748437881469727,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.009491769183890296
+    },
+    {
+      "job": "component_ztf_bls_pypi",
+      "profile": "ztf",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.05024977773427963,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.34208604841881196
+    },
+    {
+      "job": "component_ztf_bls_pypi",
+      "profile": "ztf",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.031496988609433174,
+      "calls_mean": 3.0,
+      "fraction_of_profile": 0.21442244834334864
+    },
+    {
+      "job": "component_ztf_bls_pypi",
+      "profile": "ztf",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.05443061888217926,
+      "calls_mean": 3.0,
+      "fraction_of_profile": 0.3705480136620152
+    },
+    {
+      "job": "component_ztf_bls_pypi",
+      "profile": "ztf",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.006050091236829758,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.04118728275226757
+    },
+    {
+      "job": "component_ztf_bls_pypi",
+      "profile": "ztf",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.004664739593863487,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.031756206823556614
+    },
+    {
+      "job": "component_ztf_bls_v1_unfused",
+      "profile": "ztf",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.04156269505620003,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.3128966386408033
+    },
+    {
+      "job": "component_ztf_bls_v1_unfused",
+      "profile": "ztf",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.06964085251092911,
+      "calls_mean": 8.0,
+      "fraction_of_profile": 0.5242775674985766
+    },
+    {
+      "job": "component_ztf_bls_v1_unfused",
+      "profile": "ztf",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.0013039801269769669,
+      "calls_mean": 8.0,
+      "fraction_of_profile": 0.009816759910150163
+    },
+    {
+      "job": "component_ztf_bls_v1_unfused",
+      "profile": "ztf",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.007113086059689522,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.053549480259403905
+    },
+    {
+      "job": "component_ztf_bls_v1_unfused",
+      "profile": "ztf",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 3.361143171787262e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0002530371043120888
+    },
+    {
+      "job": "component_ztf_bls_v1_unfused",
+      "profile": "ztf",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.010407499969005585,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.07835083246052242
+    },
+    {
+      "job": "component_ztf_bls_v1_unfused",
+      "profile": "ztf",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 0.0027703028172254562,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.02085568412623154
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "phase": "Common candidate ranking",
+      "exclusive_mean_s": 0.04121182672679424,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.6744202605860352
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "phase": "GPU kernel launches (synchronized)",
+      "exclusive_mean_s": 0.009987063705921173,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.16343556308940707
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "phase": "Host maximum-bin scan",
+      "exclusive_mean_s": 0.00014768727123737335,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.002416861757025486
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "phase": "Host preparation and H2D",
+      "exclusive_mean_s": 0.005354398861527443,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.08762327133451499
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "phase": "Kernel cache lookup",
+      "exclusive_mean_s": 1.9431114196777344e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0003179848635912909
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "phase": "Memory pool / allocation",
+      "exclusive_mean_s": 2.4382025003433228e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.00039900516338286027
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "phase": "Remaining public API work",
+      "exclusive_mean_s": 0.0037697572261095047,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.061691044845772314
+    },
+    {
+      "job": "component_ztf_bls_v1_no_scatter",
+      "profile": "ztf",
+      "phase": "Spectrum D2H",
+      "exclusive_mean_s": 0.0005924943834543228,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.009696008360270755
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.008227681741118431,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.08801654340068259
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 CPU statistics/results",
+      "exclusive_mean_s": 0.0320548340678215,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.34291016384751033
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 buffer allocations/transfers",
+      "exclusive_mean_s": 0.004712600260972977,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.05041356708379583
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 candidate selection/refinement/transfers",
+      "exclusive_mean_s": 0.0015720482915639877,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.016817161994844225
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 coarse search kernel",
+      "exclusive_mean_s": 0.029358403757214546,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.31406479975492796
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 coarse spectrum transfer",
+      "exclusive_mean_s": 0.0003435332328081131,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0036749850864943477
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 final packaging",
+      "exclusive_mean_s": 1.8421560525894165e-06,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 1.970666990475083e-05
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 grid/configuration",
+      "exclusive_mean_s": 0.009270580485463142,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.09917306907612222
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 host lightcurve preparation",
+      "exclusive_mean_s": 0.00016255676746368408,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0017389691566505707
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 kernel lookup/grid transfers",
+      "exclusive_mean_s": 0.006630975753068924,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.07093560294658752
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 lightcurve transfers",
+      "exclusive_mean_s": 0.0002206452190876007,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0023603768489150394
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 parameter-spectrum transfers",
+      "exclusive_mean_s": 0.0008868332952260971,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.00948699812103179
+    },
+    {
+      "job": "component_ztf_tls_v1_native",
+      "profile": "ztf",
+      "phase": "v1 template tables",
+      "exclusive_mean_s": 3.627501428127289e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.00038805601253288414
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.005538733676075935,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0003156931538975029
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS CUDA module lookup/compile",
+      "exclusive_mean_s": 9.682588279247284e-05,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 5.5188189404553404e-06
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS chunk allocations/transfers",
+      "exclusive_mean_s": 0.03372389078140259,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.0019221724793271945
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS duration-mask union",
+      "exclusive_mean_s": 3.6899108346551657,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.21031514730965487
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS error prefixes/out-of-transit terms",
+      "exclusive_mean_s": 0.15672518871724606,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.008932920774840739
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS folding/sorting",
+      "exclusive_mean_s": 0.6371670421212912,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.036316834289335805
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS full search call",
+      "exclusive_mean_s": 0.0024172496050596237,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0001377768270164257
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS input/template setup",
+      "exclusive_mean_s": 0.029394283890724182,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0016753963506321978
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS reductions/chunk cleanup",
+      "exclusive_mean_s": 0.10246017388999462,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.0058399586143552135
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS reorder/weights",
+      "exclusive_mean_s": 0.019939199090003967,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.001136481552471611
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS result/statistics processing",
+      "exclusive_mean_s": 0.2834222801029682,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0161543195111555
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS row-wise flux prefix sums",
+      "exclusive_mean_s": 11.942916456609964,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.6807146151848842
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS setup and allocations",
+      "exclusive_mean_s": 0.0032957233488559723,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.00018784750436152183
+    },
+    {
+      "job": "component_ztf_gtls_native",
+      "profile": "ztf",
+      "phase": "GTLS transit residual kernel",
+      "exclusive_mean_s": 0.6376667730510235,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.03634531762912677
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "API remainder",
+      "exclusive_mean_s": 0.006823141127824783,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.003150220680201975
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS CUDA module lookup/compile",
+      "exclusive_mean_s": 0.00013399124145507812,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 6.186329315048029e-05
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS chunk allocations/transfers",
+      "exclusive_mean_s": 0.046900562942028046,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.021653827837530438
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS duration-mask union",
+      "exclusive_mean_s": 0.011204591020941734,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.005173120955015139
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS error prefixes/out-of-transit terms",
+      "exclusive_mean_s": 0.15666196309030056,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.072330286986961
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS folding/sorting",
+      "exclusive_mean_s": 0.6473332922905684,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.29887154408120653
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS full search call",
+      "exclusive_mean_s": 0.003210758790373802,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.0014823962381971664
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS input/template setup",
+      "exclusive_mean_s": 0.03356537967920303,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.015497019807058556
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS reductions/chunk cleanup",
+      "exclusive_mean_s": 0.10546543635427952,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.0486930275111713
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS reorder/weights",
+      "exclusive_mean_s": 0.02052878402173519,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.00947806864216026
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS result/statistics processing",
+      "exclusive_mean_s": 0.4485912397503853,
+      "calls_mean": 1.0,
+      "fraction_of_profile": 0.2071130252100797
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS row-wise flux prefix sums",
+      "exclusive_mean_s": 0.03856702521443367,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.017806262266644987
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS setup and allocations",
+      "exclusive_mean_s": 0.003832675516605377,
+      "calls_mean": 2.0,
+      "fraction_of_profile": 0.0017695330415601655
+    },
+    {
+      "job": "component_ztf_gtls_both",
+      "profile": "ztf",
+      "phase": "GTLS transit residual kernel",
+      "exclusive_mean_s": 0.6431059688329697,
+      "calls_mean": 31.0,
+      "fraction_of_profile": 0.29691980344906227
+    }
+  ],
+  "ablations": [
+    {
+      "profile": "tess_200s",
+      "baseline": "component_tess_200s_bls_v1",
+      "variant": "component_tess_200s_bls_v1_unfused",
+      "meaning": "Public unfused phase passes versus fused histogram",
+      "baseline_s": 0.005431227385997772,
+      "variant_s": 0.008508004248142242,
+      "variant_over_baseline": 1.5664975232074978,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 1.0244548320770264e-08,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 4.624027670985242e-06,
+      "power_units": "BLS chi2 ratio"
+    },
+    {
+      "profile": "tess_200s",
+      "baseline": "component_tess_200s_bls_v1",
+      "variant": "component_tess_200s_bls_v1_no_scatter",
+      "meaning": "Diagnostic chronological input versus conflict-scattered observation order",
+      "baseline_s": 0.005431227385997772,
+      "variant_s": 0.005118124186992645,
+      "variant_over_baseline": 0.9423512998530797,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 2.7939677238464355e-09,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 9.40100460411486e-06,
+      "power_units": "BLS chi2 ratio"
+    },
+    {
+      "profile": "tess_200s",
+      "baseline": "component_tess_200s_gtls_native",
+      "variant": "component_tess_200s_gtls_both",
+      "meaning": "Diagnostic batching of two GTLS host loops",
+      "baseline_s": 0.5102832280099392,
+      "variant_s": 0.3687116466462612,
+      "variant_over_baseline": 0.7225627385093667,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 0.0008647143840789795,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 2.384185791015625e-05,
+      "power_units": "native SDE"
+    },
+    {
+      "profile": "tess_gap",
+      "baseline": "component_tess_gap_bls_v1",
+      "variant": "component_tess_gap_bls_v1_unfused",
+      "meaning": "Public unfused phase passes versus fused histogram",
+      "baseline_s": 0.02717015892267227,
+      "variant_s": 0.03672560676932335,
+      "variant_over_baseline": 1.3516890671801514,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 1.6763806343078613e-08,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 9.661665565374733e-07,
+      "power_units": "BLS chi2 ratio"
+    },
+    {
+      "profile": "tess_gap",
+      "baseline": "component_tess_gap_bls_v1",
+      "variant": "component_tess_gap_bls_v1_no_scatter",
+      "meaning": "Diagnostic chronological input versus conflict-scattered observation order",
+      "baseline_s": 0.02717015892267227,
+      "variant_s": 0.024190403521060944,
+      "variant_over_baseline": 0.8903298501090159,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 9.313225746154785e-09,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 7.350682400542041e-06,
+      "power_units": "BLS chi2 ratio"
+    },
+    {
+      "profile": "tess_gap",
+      "baseline": "component_tess_gap_gtls_native",
+      "variant": "component_tess_gap_gtls_both",
+      "meaning": "Diagnostic batching of two GTLS host loops",
+      "baseline_s": 7.475522819906473,
+      "variant_s": 2.8081326372921467,
+      "variant_over_baseline": 0.37564364459090493,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 0.03867149353027344,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 0.0001220703125,
+      "power_units": "native SDE"
+    },
+    {
+      "profile": "ztf",
+      "baseline": "component_ztf_bls_v1",
+      "variant": "component_ztf_bls_v1_unfused",
+      "meaning": "Public unfused phase passes versus fused histogram",
+      "baseline_s": 0.08495102822780609,
+      "variant_s": 0.12026598677039146,
+      "variant_over_baseline": 1.4157096068088098,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 2.60770320892334e-08,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 1.928874747036957e-06,
+      "power_units": "BLS chi2 ratio"
+    },
+    {
+      "profile": "ztf",
+      "baseline": "component_ztf_bls_v1",
+      "variant": "component_ztf_bls_v1_no_scatter",
+      "meaning": "Diagnostic chronological input versus conflict-scattered observation order",
+      "baseline_s": 0.08495102822780609,
+      "variant_s": 0.06015884131193161,
+      "variant_over_baseline": 0.7081590719609497,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 9.313225746154785e-09,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 5.190047239977957e-06,
+      "power_units": "BLS chi2 ratio"
+    },
+    {
+      "profile": "ztf",
+      "baseline": "component_ztf_gtls_native",
+      "variant": "component_ztf_gtls_both",
+      "meaning": "Diagnostic batching of two GTLS host loops",
+      "baseline_s": 16.965853169560432,
+      "variant_s": 2.0584252700209618,
+      "variant_over_baseline": 0.12132754241408382,
+      "periods_equal": true,
+      "powers_equal": false,
+      "max_abs_power_difference": 0.12395881116390228,
+      "candidate_period_equal": true,
+      "candidate_score_abs_difference": 0.0018558502197265625,
+      "power_units": "native SDE"
+    }
+  ],
+  "verification": {
+    "complete": true,
+    "errors": []
+  },
+  "note": "Synchronized wall regions perturb execution; attribution uses profile fractions alongside ordinary uninstrumented API timings. Ablations are diagnostic, not released competitors, and their gains cannot simply be multiplied."
+}

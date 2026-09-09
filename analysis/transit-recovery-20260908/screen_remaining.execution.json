@@ -1,0 +1,428 @@
+[
+  {
+    "name": "screen_tess_200s_pf_gpu64",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.623227119445801,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2, \"cap_bins\": 64}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_200s_pf_gpu64"
+    ],
+    "started_epoch": 1788891149.2747269,
+    "finished_epoch": 1788891151.897956
+  },
+  {
+    "name": "screen_tess_200s_fbls_native",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 55.118263721466064,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"fbls\", \"epoch_os\": 1, \"period_os\": 2, \"native_chunks\": 4}",
+      "--indices",
+      "0,1,2,3",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_200s_fbls_native"
+    ],
+    "started_epoch": 1788891151.899548,
+    "finished_epoch": 1788891207.0178132
+  },
+  {
+    "name": "screen_tess_gap_fbls_native",
+    "exit_code": -15,
+    "timeout": true,
+    "elapsed_s": 240.0651683807373,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"fbls\", \"epoch_os\": 1, \"period_os\": 2, \"native_chunks\": 4}",
+      "--indices",
+      "0,1,2,3",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_fbls_native"
+    ],
+    "started_epoch": 1788891207.019757,
+    "finished_epoch": 1788891447.0849264
+  },
+  {
+    "name": "screen_ztf_fbls_native",
+    "exit_code": -9,
+    "timeout": false,
+    "elapsed_s": 33.50459408760071,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"fbls\", \"epoch_os\": 1, \"period_os\": 2, \"native_chunks\": 4}",
+      "--indices",
+      "0,1,2,3",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_ztf_fbls_native"
+    ],
+    "started_epoch": 1788891447.0870907,
+    "finished_epoch": 1788891480.5916865
+  },
+  {
+    "name": "screen_tess_200s_pypi_bls_manual8",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.17077374458313,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 8, \"manual_overlap\": true}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_200s_pypi_bls_manual8"
+    ],
+    "started_epoch": 1788891480.59385,
+    "finished_epoch": 1788891482.7646253
+  },
+  {
+    "name": "screen_tess_200s_v1_bls_dense4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.3184888362884521,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_200s_v1_bls_dense4"
+    ],
+    "started_epoch": 1788891482.7664468,
+    "finished_epoch": 1788891484.0849369
+  },
+  {
+    "name": "screen_tess_200s_pypi_bls_dense4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.5689525604248047,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_200s_pypi_bls_dense4"
+    ],
+    "started_epoch": 1788891484.0868366,
+    "finished_epoch": 1788891485.6557903
+  },
+  {
+    "name": "screen_tess_200s_astropy10_w7",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 4.927642345428467,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 10, \"workers\": 7}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_200s_astropy10_w7"
+    ],
+    "started_epoch": 1788891485.6578305,
+    "finished_epoch": 1788891490.5854735
+  },
+  {
+    "name": "screen_tess_gap_pypi_bls_manual8",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 7.486492156982422,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 8, \"manual_overlap\": true}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_pypi_bls_manual8"
+    ],
+    "started_epoch": 1788891490.5877204,
+    "finished_epoch": 1788891498.074214
+  },
+  {
+    "name": "screen_tess_gap_v1_bls_dense4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 4.778085470199585,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_v1_bls_dense4"
+    ],
+    "started_epoch": 1788891498.0762694,
+    "finished_epoch": 1788891502.8543563
+  },
+  {
+    "name": "screen_tess_gap_pypi_bls_dense4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 5.884084224700928,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_pypi_bls_dense4"
+    ],
+    "started_epoch": 1788891502.8567796,
+    "finished_epoch": 1788891508.7408655
+  },
+  {
+    "name": "screen_tess_gap_astropy10_w7",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 74.01338386535645,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 10, \"workers\": 7}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_astropy10_w7"
+    ],
+    "started_epoch": 1788891508.7432532,
+    "finished_epoch": 1788891582.7566388
+  },
+  {
+    "name": "screen_ztf_pypi_bls_manual8",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 16.753119707107544,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 8, \"manual_overlap\": true}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_ztf_pypi_bls_manual8"
+    ],
+    "started_epoch": 1788891582.7588859,
+    "finished_epoch": 1788891599.512007
+  },
+  {
+    "name": "screen_ztf_v1_bls_dense4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 13.85040020942688,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_ztf_v1_bls_dense4"
+    ],
+    "started_epoch": 1788891599.514504,
+    "finished_epoch": 1788891613.3649054
+  },
+  {
+    "name": "screen_ztf_pypi_bls_dense4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 14.9970064163208,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_ztf_pypi_bls_dense4"
+    ],
+    "started_epoch": 1788891613.3671255,
+    "finished_epoch": 1788891628.3641334
+  },
+  {
+    "name": "screen_ztf_astropy10_w7",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 150.63581371307373,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 10, \"workers\": 7}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_ztf_astropy10_w7"
+    ],
+    "started_epoch": 1788891628.3664699,
+    "finished_epoch": 1788891779.002285
+  },
+  {
+    "name": "screen_tess_200s_gtls_fast",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 19.406832933425903,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_200s_gtls_fast"
+    ],
+    "started_epoch": 1788891779.0054429,
+    "finished_epoch": 1788891798.412277
+  },
+  {
+    "name": "screen_tess_gap_gtls_fast",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 256.3402271270752,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_gtls_fast"
+    ],
+    "started_epoch": 1788891798.4147263,
+    "finished_epoch": 1788892054.7549546
+  },
+  {
+    "name": "screen_ztf_gtls_fast",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 606.6662919521332,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true}",
+      "--indices",
+      "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_ztf_gtls_fast"
+    ],
+    "started_epoch": 1788892054.7560306,
+    "finished_epoch": 1788892661.4223232
+  },
+  {
+    "name": "screen_tess_gap_gtls_w2",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 65.76728177070618,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"workers\": 2}",
+      "--indices",
+      "0,1,2,3",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_gtls_w2",
+      "--timing",
+      "--reps",
+      "1"
+    ],
+    "started_epoch": 1788892661.4249,
+    "finished_epoch": 1788892727.1921835
+  },
+  {
+    "name": "screen_tess_gap_gtls_fast_w2",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 54.93390226364136,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 2}",
+      "--indices",
+      "0,1,2,3",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_gtls_fast_w2",
+      "--timing",
+      "--reps",
+      "1"
+    ],
+    "started_epoch": 1788892727.1951694,
+    "finished_epoch": 1788892782.1290734
+  }
+]

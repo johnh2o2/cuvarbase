@@ -1,0 +1,8 @@
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+Traceback (most recent call last):
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 243, in main
+    if a.timing and not record['first_api_valid']:raise RuntimeError('First timed API warmup returned an invalid result')
+                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: First timed API warmup returned an invalid result
+

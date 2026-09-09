@@ -1,0 +1,20 @@
+{
+  "job": {
+    "name": "gaia_cpu_failure",
+    "version": "cpu",
+    "timeout": 1200,
+    "command": [
+      "modern/bin/python",
+      "diagnose_cpu.py",
+      "--input",
+      "inputs/tls_sparse_gaia.npz",
+      "--out",
+      "results/gaia_cpu_failure.json"
+    ]
+  },
+  "started_epoch": 1788885979.9388885,
+  "elapsed_s": 1.5194354057312012,
+  "exit_code": 0,
+  "timed_out": false,
+  "pid": 536
+}

@@ -1,0 +1,20 @@
+{
+  "name": "pilot_ztf_pypi_bls3",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 1.770078420639038,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3}",
+    "--indices",
+    "2",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_pypi_bls3"
+  ],
+  "started_epoch": 1788887564.1828587,
+  "finished_epoch": 1788887565.9529386
+}

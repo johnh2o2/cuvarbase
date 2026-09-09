@@ -1,0 +1,47 @@
+{
+  "status": "error",
+  "config": {
+    "backend": "gtls",
+    "gtls_version": "head",
+    "density": true,
+    "fast": true
+  },
+  "input_file": "tess_gap_tune.npz",
+  "input_sha256": "b262bb9a0534e116b43b8d1ba716527af12f5ca1ed94bfa2b3e0bcc1f71f1ccc",
+  "profile": "tess_gap",
+  "split": "tune",
+  "indices": [
+    2
+  ],
+  "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.5.1"
+    },
+    "cpu_quota": "765000 100000",
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [],
+  "initialization_s": 1.3463040608912706,
+  "first_api_candidates": [
+    {
+      "period": null,
+      "score": null,
+      "epoch": null,
+      "finite_fraction": 0.0,
+      "api_result_valid": false
+    }
+  ],
+  "first_api_valid": false,
+  "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 243, in main\n    if a.timing and not record['first_api_valid']:raise RuntimeError('First timed API warmup returned an invalid result')\n                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: First timed API warmup returned an invalid result\n"
+}

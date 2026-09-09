@@ -1,0 +1,13 @@
+/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py:15: UserWarning: Warning: converting a masked element to nan.
+  v=float(v);return v if np.isfinite(v) else None
+Traceback (most recent call last):
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 182, in main
+    backend.sync();start=time.perf_counter();backend.search([lcs[ids[0]]]);backend.sync()
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 160, in search
+    if o['candidate']['period'] is None or o['candidate']['score'] is None:raise ValueError('Nonfinite native TLS candidate')
+                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: Nonfinite native TLS candidate
+

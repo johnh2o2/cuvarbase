@@ -1,0 +1,5 @@
+!figures/*.pdf
+
+# Bulk input/output arrays are retained in the local experiment archive.
+/inputs/*.npz
+/results/**/*.npz

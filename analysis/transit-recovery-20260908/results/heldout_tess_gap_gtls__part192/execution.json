@@ -1,0 +1,20 @@
+{
+  "name": "heldout_tess_gap_gtls__part192",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 458.5298225879669,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+    "--config",
+    "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_gtls__part192",
+    "--indices",
+    "192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255"
+  ],
+  "started_epoch": 1788899000.2447796,
+  "finished_epoch": 1788899458.7746043
+}

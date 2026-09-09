@@ -1,0 +1,9 @@
+/tmp/cuvarbase-benchmark-audit/modern/lib/python3.11/site-packages/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+first_api_call_s 6.091278038045857
+warm_sample_s 5.954386386962142
+warm_sample_s 6.058850245026406
+warm_sample_s 5.8190521330107
+/tmp/cuvarbase-benchmark-audit/run_tls.py:142: UserWarning: Warning: converting a masked element to nan.
+  native_sde = float(field('SDE'))
+{"status": "ok", "seconds_per_lc": 0.37214914918513387}

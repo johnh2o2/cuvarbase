@@ -1,0 +1,69 @@
+{
+  "complete": true,
+  "local_links_checked": 33,
+  "missing_links": [],
+  "figure_copies_equal": true,
+  "figure_visually_reviewed": true,
+  "core_package_unchanged": true,
+  "output_sha256": {
+    "README.md": "0d879513c55a023cccaf55a22fadf68f19ae5a598225bc6261b869576204e1c3",
+    "benchmark_story.png": "8e4e0383f5823bc7c081a88967655011fc9953920f81558dfaaf08402e389a5f",
+    "benchmark_story.pdf": "11c2acacd5730eabc2ea8610b92c21357f096a674a65852a18023aaa68af2946",
+    "benchmark_story.svg": "2da3c662a8649e7a77e912d7db2d2dafb04dd9a31325c3ad866697fe5a84e5ae",
+    "recovery_analysis.json": "6b0ec3b65972a0a1f79108fa1de76f71f66ffe55b4ef82b03cf219be534d0e0e",
+    "recovery_summary.csv": "99e00e7f660ad2471e4394d14a9308799fdad73dcbe6e3c95080eeb250736e50",
+    "recovery_by_snr.csv": "2f30a1c0066a046993999cae3a7ebf6554da3320c3569d8db5fc1c72902f2e9c",
+    "paired_comparisons.csv": "02fdb9a1f9f544a3f660d9cbab6ffdea5ed9af3ee0ce8f817c8876abdfe9f4f7",
+    "timing_analysis.json": "787d0c184abc4dc2eaef89fa2448ac87389753c396260310b235bd70da140f99",
+    "timing_summary.csv": "0c38212cc7cdbdd9b7f344357cb3c6de3c59b5858a8750d7e29797de7c29757f",
+    "speedups.csv": "a68649f6a63de7be806ad4e4c32b64cf80745f7c5c41e9b2b5244881657cb910",
+    "component_analysis.json": "447b7f440bed5e5d07e4159fb512d71442d65d84268954b4eb4604dd0ff663b5",
+    "component_phases.csv": "254f8bd1d09a11b07842819be57a2df3731af58c5cf034e555d3a0dd5c05f8f7",
+    "component_summary.csv": "4bf1c12e65307a46978d9a966a2891b3a6751ac19a51b31309eaa0fed6232b80",
+    "component_ablations.csv": "0926114bb02dcf11e7a837e6676850bb55f3d4b41aef119d0eda4bb864ba9b8b",
+    "provenance-verification.json": "2731c41bc59252dc48252a9fce7661581972110717de769844debcf9254217a9",
+    "runtime_cohort_analysis.json": "8cf6a673b8c1398d21de462b35fde76bf8f5420218123a3f6cf2e0c7990ea89e",
+    "runtime_by_cohort.csv": "ff406bce8cc95babe55a455f675b98635f1455ffaffa3ae3658783137c2c98fa",
+    "runtime_cohort_ratios.csv": "0c62ba795f068289ce5d50c103e8ae1a74ed85310006257d4eac9873043ec64d",
+    "rental-ledger.json": "e98f66e38cc09d90c0d2eb4026d05f47ab5e2fcf46ec069183218f011954f175",
+    "cpu-operational-selection.json": "a2180fa00e982dd1cbef69ef72d0290ce0e2574451584205be9bf87ef004a259",
+    "analysis-code-manifest.json": "3a53f6e26449167d405a51223a368150e555faeeb009a25fa69c1fd20532fdcc",
+    "release-doc-preparation.json": "fc44870acfe980ea995efef8ba4b663283431c95605ea7e822d5ad337cd08c57"
+  },
+  "release_outputs": {
+    "README.md": "54f4145d34208b1e32c722a95f0e221c724fca304009a4ddde720eacd48cec94",
+    "CHANGELOG.rst": "66efe0354b528a983bb0e84ec6db1f8855d9b4b55c27fee4f2918e9a72e984eb",
+    "docs/GTLS_COMPARISON.md": "d7ee3a2f0ba9395ef3828c3642cce377d89edcb38ecc12047589b315c70336b2",
+    "docs/BENCHMARK_RESULTS.md": "a9ba866c7e4bdc08741f28666cf2318eef1067d9fd28637991b379d236b37230",
+    "docs/TLS_COST_ANALYSIS.md": "6630b1654349c1db29759990b3f43fd9ff556e6bdc5e558caaa3be54afb971ab",
+    "docs/TRANSIT_BENCHMARKS.md": "3dee1bba39fec7791ebd6d5ab77b0a03f4e3b16bec97b374a1c1ea54b33ca456",
+    "docs/RELEASE_NOTES_v1.0.0.md": "e12eff29c904b4a63f911a02cde35b974f1d0472322fe96f749aa24ca138740a",
+    "docs/figures/transit_benchmarks_20260908.pdf": "11c2acacd5730eabc2ea8610b92c21357f096a674a65852a18023aaa68af2946",
+    "docs/figures/transit_benchmarks_20260908.png": "8e4e0383f5823bc7c081a88967655011fc9953920f81558dfaaf08402e389a5f",
+    "docs/figures/transit_benchmarks_20260908.svg": "2da3c662a8649e7a77e912d7db2d2dafb04dd9a31325c3ad866697fe5a84e5ae"
+  },
+  "science_verification": {
+    "errors": [],
+    "output_arrays_checked": 9216,
+    "arrays_verified": true,
+    "complete": true
+  },
+  "timing_verification": {
+    "errors": [],
+    "arrays_verified": true,
+    "complete": true
+  },
+  "all_pods_terminated": true,
+  "note": "Local review complete; no commit, PR, deployment or publication performed. Timing validity does not imply numerical identity or equivalent sensitivity; inspect the documented candidate/spectrum variations and statistical qualifications.",
+  "readme_followup": {
+    "verified_utc": "2026-09-09T02:33:26.972482+00:00",
+    "description": "User-requested topline figure and explanation of performance gains added to README.",
+    "changed_release_outputs": [
+      "README.md"
+    ],
+    "local_links_checked": 5,
+    "generator_source": "sources/harness/update_release_docs-0d491c819083839577eee14ae1f8f60afa7d6560055bdcc698431aa971c523fc.py",
+    "generator_sha256": "0d491c819083839577eee14ae1f8f60afa7d6560055bdcc698431aa971c523fc",
+    "measurement_artifacts_unchanged": true
+  }
+}

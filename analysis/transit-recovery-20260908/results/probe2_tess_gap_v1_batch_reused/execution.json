@@ -1,0 +1,23 @@
+{
+  "name": "probe2_tess_gap_v1_batch_reused",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 3.423079252243042,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+    "--config",
+    "{\"backend\": \"v1_bls_batch\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25, \"reuse_batch\": true, \"batch_capacity\": 16}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/probe2_tess_gap_v1_batch_reused",
+    "--indices",
+    "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15",
+    "--timing",
+    "--reps",
+    "3"
+  ],
+  "started_epoch": 1788893260.1847131,
+  "finished_epoch": 1788893263.6077945
+}

@@ -1,0 +1,208 @@
+{
+  "status": "ok",
+  "args": {
+    "backend": "gtls",
+    "input": "inputs/tls_sparse_ztf.npz",
+    "out": "results/ztf_gtls_head_both.json",
+    "variant": "both",
+    "nsource": 1,
+    "offset": 4,
+    "reps": 3,
+    "profile_reps": 1
+  },
+  "input_sha256": "6d83d1963e8f2d60fe97ca901cb8b8f5f035d441c4b014e52363aec7280e8a14",
+  "runner_sha256": "7e04c350254734b936ed9efda43aff2d8d1af0abf1a65d732bf91d5669fb82b3",
+  "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+  "platform": "Linux-6.8.0-65-generic-x86_64-with-glibc2.35",
+  "source_files": {
+    "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+    "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+    "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+    "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+    "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+    "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+    "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+    "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+    "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+    "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+    "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+    "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+    "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+    "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+    "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+    "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+    "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+  },
+  "transformations": [
+    {
+      "function": "search_multi_periods",
+      "original_sha256": "04302475fd9ba0a8ab4f3cc9a6518d714b8fc208cc78f3acd035349249a5818a",
+      "transformed_sha256": "e546e019f8ef4722aaf6de50c013664bb852128fe0f9e025fadac3e67ad78c0d",
+      "file": "ztf_gtls_head_both.search_multi_periods.both.py",
+      "changes": [
+        "Boolean duration union: loop to axis reduction",
+        "Boolean duration union: loop to axis reduction",
+        "Flux prefix sums: row loop to batched axis scan"
+      ],
+      "instrumentation": false
+    },
+    {
+      "function": "search_multi_periods",
+      "original_sha256": "e546e019f8ef4722aaf6de50c013664bb852128fe0f9e025fadac3e67ad78c0d",
+      "transformed_sha256": "6e382d5563dbb42cbd745527922c0868b9050939e717ca6fc6e816982cb45acd",
+      "file": "ztf_gtls_head_both.search_multi_periods.instrumented.py",
+      "changes": [],
+      "instrumentation": true
+    },
+    {
+      "function": "power",
+      "original_sha256": "ad68a3ebb9d3983277c0e2353af7a1799a4c5dca992c934ba4cb215c004550f8",
+      "transformed_sha256": "b1660d678b75f2740cda5d30bb8a10eb29a2be91777c089177507d4707cb83f0",
+      "file": "ztf_gtls_head_both.power.instrumented.py",
+      "changes": [],
+      "instrumentation": true
+    }
+  ],
+  "interpretation": "New-host component diagnostic. Native API medians are uninstrumented. Phase times include synchronization and instrumentation overhead; ablations are diagnostic Python changes, not released GTLS.",
+  "first_api_s": 3.2728078439831734,
+  "warnings": [
+    "Degrees of freedom <= 0 for slice",
+    "invalid value encountered in divide",
+    "invalid value encountered in scalar divide"
+  ],
+  "native_times_s": [
+    2.754643104970455,
+    2.6985989324748516,
+    2.5857475884258747
+  ],
+  "native_median_s": 2.6985989324748516,
+  "native_results": [
+    {
+      "period": 1.6689445850788929,
+      "SDE": 29.31653594970703
+    }
+  ],
+  "first_vs_last": {
+    "periods_0": {
+      "same_shape": true,
+      "same_finite_mask": true,
+      "exact": true,
+      "max_abs": 0.0
+    },
+    "chi2_0": {
+      "same_shape": true,
+      "same_finite_mask": true,
+      "exact": true,
+      "max_abs": 0.0
+    }
+  },
+  "native_outputs_finite": true,
+  "profiles": [
+    {
+      "total_s": 2.5555093958973885,
+      "phases": {
+        "GTLS input/template setup": {
+          "calls": 1,
+          "inclusive_s": 0.019568484276533127,
+          "exclusive_s": 0.019568484276533127
+        },
+        "GTLS setup and allocations": {
+          "calls": 2,
+          "inclusive_s": 0.0038705207407474518,
+          "exclusive_s": 0.0038705207407474518
+        },
+        "GTLS CUDA module lookup/compile": {
+          "calls": 1,
+          "inclusive_s": 8.462369441986084e-05,
+          "exclusive_s": 8.462369441986084e-05
+        },
+        "GTLS duration-mask union": {
+          "calls": 31,
+          "inclusive_s": 0.004666734486818314,
+          "exclusive_s": 0.004666734486818314
+        },
+        "GTLS chunk allocations/transfers": {
+          "calls": 31,
+          "inclusive_s": 0.02955678477883339,
+          "exclusive_s": 0.02955678477883339
+        },
+        "GTLS folding/sorting": {
+          "calls": 31,
+          "inclusive_s": 0.14882000908255577,
+          "exclusive_s": 0.14882000908255577
+        },
+        "GTLS reorder/weights": {
+          "calls": 31,
+          "inclusive_s": 0.0049779824912548065,
+          "exclusive_s": 0.0049779824912548065
+        },
+        "GTLS row-wise flux prefix sums": {
+          "calls": 31,
+          "inclusive_s": 0.00782066211104393,
+          "exclusive_s": 0.00782066211104393
+        },
+        "GTLS error prefixes/out-of-transit terms": {
+          "calls": 31,
+          "inclusive_s": 0.028721235692501068,
+          "exclusive_s": 0.028721235692501068
+        },
+        "GTLS transit residual kernel": {
+          "calls": 31,
+          "inclusive_s": 0.07356001809239388,
+          "exclusive_s": 0.07356001809239388
+        },
+        "GTLS reductions/chunk cleanup": {
+          "calls": 31,
+          "inclusive_s": 0.019942138344049454,
+          "exclusive_s": 0.019942138344049454
+        },
+        "GTLS result/statistics processing": {
+          "calls": 3,
+          "inclusive_s": 1.414280954748392,
+          "exclusive_s": 1.414280954748392
+        },
+        "GTLS candidate refinement": {
+          "calls": 2,
+          "inclusive_s": 0.6461798287928104,
+          "exclusive_s": 0.6461798287928104
+        },
+        "GTLS best-period fit/diagnostics": {
+          "calls": 1,
+          "inclusive_s": 0.10503512620925903,
+          "exclusive_s": 0.10503512620925903
+        },
+        "GTLS full search call": {
+          "calls": 1,
+          "inclusive_s": 2.5344713255763054,
+          "exclusive_s": 0.04695470631122589
+        },
+        "API preparation/remaining host work": {
+          "calls": 1,
+          "inclusive_s": 2.5554826967418194,
+          "exclusive_s": 0.0014428868889808655
+        }
+      },
+      "output_comparison": {
+        "periods_0": {
+          "same_shape": true,
+          "same_finite_mask": true,
+          "exact": true,
+          "max_abs": 0.0
+        },
+        "chi2_0": {
+          "same_shape": true,
+          "same_finite_mask": true,
+          "exact": true,
+          "max_abs": 0.0
+        }
+      },
+      "results": [
+        {
+          "period": 1.6689445850788929,
+          "SDE": 29.31653594970703
+        }
+      ]
+    }
+  ],
+  "output_file_sha256": "8eb303900c14b9d216e1b62160110bb8c3e385bced68918b4bd8497ed1e7dc76"
+}

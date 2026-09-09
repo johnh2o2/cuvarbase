@@ -1,0 +1,510 @@
+[
+  {
+    "name": "calibration_tess_gap_gtls_batch",
+    "input": "tess_gap_calibration.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true,
+      "workers": 2,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_gap_gtls_batch",
+    "input": "tess_gap_heldout.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true,
+      "workers": 2,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_ztf_bls_v1",
+    "input": "ztf_calibration.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_ztf_bls_v1",
+    "input": "ztf_heldout.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_ztf_bls_v1_batch",
+    "input": "ztf_calibration.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 8,
+      "optimized": true,
+      "reuse_batch": true,
+      "batch_capacity": 16,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_ztf_bls_v1_batch",
+    "input": "ztf_heldout.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 8,
+      "optimized": true,
+      "reuse_batch": true,
+      "batch_capacity": 16,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_200s_bls_pypi",
+    "input": "tess_200s_calibration.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4,
+      "manual_overlap": true,
+      "qmin_fac": 0.25
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_200s_bls_pypi",
+    "input": "tess_200s_heldout.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4,
+      "manual_overlap": true,
+      "qmin_fac": 0.25
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_200s_bls_cpu",
+    "input": "tess_200s_calibration.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 3,
+      "workers": 7
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_200s_bls_cpu",
+    "input": "tess_200s_heldout.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 3,
+      "workers": 7
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_gap_bls_v1",
+    "input": "tess_gap_calibration.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4,
+      "optimized": true,
+      "qmin_fac": 0.25,
+      "block_size": 128
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_gap_bls_v1",
+    "input": "tess_gap_heldout.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4,
+      "optimized": true,
+      "qmin_fac": 0.25,
+      "block_size": 128
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_gap_bls_cpu",
+    "input": "tess_gap_calibration.npz",
+    "config": {
+      "backend": "periodfind_cpu",
+      "epoch_os": 2,
+      "threads": 7
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_gap_bls_cpu",
+    "input": "tess_gap_heldout.npz",
+    "config": {
+      "backend": "periodfind_cpu",
+      "epoch_os": 2,
+      "threads": 7
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_ztf_bls_gpu",
+    "input": "ztf_calibration.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_ztf_bls_gpu",
+    "input": "ztf_heldout.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_gap_bls_gpu",
+    "input": "tess_gap_calibration.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_gap_bls_gpu",
+    "input": "tess_gap_heldout.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_200s_gtls_batch",
+    "input": "tess_200s_calibration.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true,
+      "workers": 1,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_200s_gtls_batch",
+    "input": "tess_200s_heldout.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true,
+      "workers": 1,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_200s_tls_v1",
+    "input": "tess_200s_calibration.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_200s_tls_v1",
+    "input": "tess_200s_heldout.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_200s_bls_v1_batch",
+    "input": "tess_200s_calibration.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 8,
+      "optimized": true,
+      "reuse_batch": true,
+      "batch_capacity": 16,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_200s_bls_v1_batch",
+    "input": "tess_200s_heldout.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 8,
+      "optimized": true,
+      "reuse_batch": true,
+      "batch_capacity": 16,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_200s_bls_gpu",
+    "input": "tess_200s_calibration.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2,
+      "cap_bins": 64
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_200s_bls_gpu",
+    "input": "tess_200s_heldout.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2,
+      "cap_bins": 64
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_ztf_bls_cpu",
+    "input": "ztf_calibration.npz",
+    "config": {
+      "backend": "periodfind_cpu",
+      "epoch_os": 2,
+      "threads": 7
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_ztf_bls_cpu",
+    "input": "ztf_heldout.npz",
+    "config": {
+      "backend": "periodfind_cpu",
+      "epoch_os": 2,
+      "threads": 7
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_gap_bls_pypi",
+    "input": "tess_gap_calibration.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4,
+      "manual_overlap": true,
+      "qmin_fac": 0.25,
+      "block_size": 128
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_gap_bls_pypi",
+    "input": "tess_gap_heldout.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4,
+      "manual_overlap": true,
+      "qmin_fac": 0.25,
+      "block_size": 128
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_200s_bls_v1",
+    "input": "tess_200s_calibration.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_200s_bls_v1",
+    "input": "tess_200s_heldout.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_ztf_tls_v1",
+    "input": "ztf_calibration.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_ztf_tls_v1",
+    "input": "ztf_heldout.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_ztf_bls_pypi",
+    "input": "ztf_calibration.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 3,
+      "manual_overlap": true
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_ztf_bls_pypi",
+    "input": "ztf_heldout.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 3,
+      "manual_overlap": true
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_ztf_gtls_batch",
+    "input": "ztf_calibration.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true,
+      "workers": 4,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_ztf_gtls_batch",
+    "input": "ztf_heldout.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true,
+      "workers": 4,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_gap_tls_v1",
+    "input": "tess_gap_calibration.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_gap_tls_v1",
+    "input": "tess_gap_heldout.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "calibration_tess_gap_bls_v1_batch",
+    "input": "tess_gap_calibration.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 4,
+      "optimized": true,
+      "qmin_fac": 0.25,
+      "block_size": 128,
+      "reuse_batch": true,
+      "batch_capacity": 16,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  },
+  {
+    "name": "heldout_tess_gap_bls_v1_batch",
+    "input": "tess_gap_heldout.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 4,
+      "optimized": true,
+      "qmin_fac": 0.25,
+      "block_size": 128,
+      "reuse_batch": true,
+      "batch_capacity": 16,
+      "eval_chunk": 16
+    },
+    "indices": "all",
+    "timeout": 14000
+  }
+]

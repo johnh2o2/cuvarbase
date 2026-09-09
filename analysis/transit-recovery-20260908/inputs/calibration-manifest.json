@@ -1,0 +1,88 @@
+[
+  {
+    "file": "ztf_calibration.npz",
+    "sha256": "b1d5f02e1de2e410677fb44b07f5f07459567e9e5d47632b2194e213821620fa",
+    "profile": "ztf",
+    "split": "calibration",
+    "baseline": 2743.768345858436,
+    "pmin": 0.32771700148842975,
+    "pmax": 10.0,
+    "n_injections": 0,
+    "n_nulls": 128,
+    "source_files": [
+      {
+        "file": "analysis/release-benchmarks-20260907/inputs/real_ztf_heldout.npz",
+        "sha256": "cfa12cf370838b9c040eb122e94d4dcc661381b61b39bda94b94d11b581ce650",
+        "use": "Observed times and clipped relative uncertainty pattern, no observed flux"
+      }
+    ],
+    "period_grid": {
+      "bls": 423781,
+      "tls": 312064,
+      "tls_pmin": 0.6000000135516645
+    },
+    "scope": "Controlled recovery conditional on >=5 in-transit observations and >=2 observed transit events; observed cadences, synthetic flux and noise; solar density, circular orbits, known normalized band baselines.",
+    "noise": "Independent Gaussian errors plus OU residual of 0.25 median error amplitude; tau=0.15 days TESS / 1 day ZTF. Quoted SNR is white-noise oracle, not native SDE or pink SNR.",
+    "generator_sha256": "c89f92d111268644192807e6f591ec69dad040d6299b9c57c98a0a05df797c7f",
+    "grid_source_sha256": "523e57aa62fb450f02704463263f891590f45b98444983b0ad352659e5fcbace"
+  },
+  {
+    "file": "tess_200s_calibration.npz",
+    "sha256": "302e99eaa070be9130a99ea9f248172f449eb03a54b4ee96ef87591654f90a73",
+    "profile": "tess_200s",
+    "split": "calibration",
+    "baseline": 25.756750990570254,
+    "pmin": 0.32771700148842975,
+    "pmax": 12.878375495285127,
+    "n_injections": 0,
+    "n_nulls": 128,
+    "source_files": [
+      {
+        "file": "qlp-tic261136679-s0067.fits",
+        "sha256": "94355faec5d89c22b04de4e2669879e2a56f8bea6794fc0dc3684539e89c3ccd",
+        "use": "Observed TIME and QUALITY only; not observed flux"
+      }
+    ],
+    "period_grid": {
+      "bls": 4133,
+      "tls": 3084,
+      "tls_pmin": 0.6002887000880809
+    },
+    "scope": "Controlled recovery conditional on >=5 in-transit observations and >=2 observed transit events; observed cadences, synthetic flux and noise; solar density, circular orbits, known normalized band baselines.",
+    "noise": "Independent Gaussian errors plus OU residual of 0.25 median error amplitude; tau=0.15 days TESS / 1 day ZTF. Quoted SNR is white-noise oracle, not native SDE or pink SNR.",
+    "generator_sha256": "c89f92d111268644192807e6f591ec69dad040d6299b9c57c98a0a05df797c7f",
+    "grid_source_sha256": "523e57aa62fb450f02704463263f891590f45b98444983b0ad352659e5fcbace"
+  },
+  {
+    "file": "tess_gap_calibration.npz",
+    "sha256": "6d3fdf3424009f7e7b950ba70018d2f588b842fe0761390198c08d295a35044b",
+    "profile": "tess_gap",
+    "split": "calibration",
+    "baseline": 734.853796173106,
+    "pmin": 0.32771700148842975,
+    "pmax": 27.457888046800917,
+    "n_injections": 0,
+    "n_nulls": 128,
+    "source_files": [
+      {
+        "file": "qlp-tic261136679-s0001.fits",
+        "sha256": "88717888d4f8be862db8e395ab134cd5e5391a10b0b6e8a81d8a2abac7b9da75",
+        "use": "Observed TIME and QUALITY only; not observed flux"
+      },
+      {
+        "file": "qlp-tic261136679-s0027.fits",
+        "sha256": "4ae15c58eb5d457cb23cf387e207bd5b1208b401c69221d7dbaf9085a039f424",
+        "use": "Observed TIME and QUALITY only; not observed flux"
+      }
+    ],
+    "period_grid": {
+      "bls": 128964,
+      "tls": 99043,
+      "tls_pmin": 0.6000078709398146
+    },
+    "scope": "Controlled recovery conditional on >=5 in-transit observations and >=2 observed transit events; observed cadences, synthetic flux and noise; solar density, circular orbits, known normalized band baselines.",
+    "noise": "Independent Gaussian errors plus OU residual of 0.25 median error amplitude; tau=0.15 days TESS / 1 day ZTF. Quoted SNR is white-noise oracle, not native SDE or pink SNR.",
+    "generator_sha256": "c89f92d111268644192807e6f591ec69dad040d6299b9c57c98a0a05df797c7f",
+    "grid_source_sha256": "523e57aa62fb450f02704463263f891590f45b98444983b0ad352659e5fcbace"
+  }
+]

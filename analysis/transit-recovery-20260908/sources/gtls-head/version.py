@@ -1,0 +1,2 @@
+GTLS_VERSION = '0.5.1'
+GTLS_DATE = 'Jan-2026'

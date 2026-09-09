@@ -1,0 +1,99 @@
+{
+  "status": "ok",
+  "profile": "tess_200s",
+  "config": {
+    "backend": "pypi_bls_fast",
+    "noverlap": 4,
+    "manual_overlap": true,
+    "qmin_fac": 0.25
+  },
+  "input_sha256": "ee72923cb93dacbf4bf059e9f7545938ea8ee3b2db367fca9b53e6f8ff99e051",
+  "worker_sha256": "aea8c8f7e14a5590bef039625c0055c83cedb113315c4f4d05537ed1234b4937",
+  "instrumented_sha256": "bde5feee2341f9154e8e319dc0f8f46f68c6b37d47282f5bbcac6b42b3105ded",
+  "original_function_sha256": "32235f788390cbdea29f88af1e83b3d25dc91bd3a6164b445630d660ed17cebc",
+  "native_times_s": [
+    0.014809414744377136,
+    0.013805769383907318,
+    0.011331092566251755
+  ],
+  "native_median_s": 0.013805769383907318,
+  "profiles": [
+    {
+      "Host preparation and H2D": {
+        "calls": 1,
+        "inclusive_s": 0.003879290074110031,
+        "exclusive_s": 0.003879290074110031
+      },
+      "Host maximum-bin scan": {
+        "calls": 4,
+        "inclusive_s": 0.0013684853911399841,
+        "exclusive_s": 0.0013684853911399841
+      },
+      "GPU kernel launches (synchronized)": {
+        "calls": 4,
+        "inclusive_s": 0.0035355016589164734,
+        "exclusive_s": 0.0035355016589164734
+      },
+      "Common candidate ranking": {
+        "calls": 1,
+        "inclusive_s": 0.0018442235887050629,
+        "exclusive_s": 0.0018442235887050629
+      },
+      "Remaining public API work": {
+        "calls": 1,
+        "inclusive_s": 0.011367391794919968,
+        "exclusive_s": 0.0007398910820484161
+      }
+    },
+    {
+      "Host preparation and H2D": {
+        "calls": 1,
+        "inclusive_s": 0.00389857217669487,
+        "exclusive_s": 0.00389857217669487
+      },
+      "Host maximum-bin scan": {
+        "calls": 4,
+        "inclusive_s": 0.0013482868671417236,
+        "exclusive_s": 0.0013482868671417236
+      },
+      "GPU kernel launches (synchronized)": {
+        "calls": 4,
+        "inclusive_s": 0.0035233013331890106,
+        "exclusive_s": 0.0035233013331890106
+      },
+      "Common candidate ranking": {
+        "calls": 1,
+        "inclusive_s": 0.001675102859735489,
+        "exclusive_s": 0.001675102859735489
+      },
+      "Remaining public API work": {
+        "calls": 1,
+        "inclusive_s": 0.011131510138511658,
+        "exclusive_s": 0.0006862469017505646
+      }
+    }
+  ],
+  "native_candidate": {
+    "period": 1.176585975923969,
+    "score": 8.975264523744421,
+    "finite_fraction": 1.0
+  },
+  "profiled_candidate": {
+    "period": 1.176585975923969,
+    "score": 8.975261800581691,
+    "finite_fraction": 1.0
+  },
+  "max_abs_power_difference": 1.8189894035458565e-12,
+  "grid_times_s": [
+    0.027697212994098663,
+    0.01997949928045273,
+    0.018183838576078415
+  ],
+  "grid_median_s": 0.01997949928045273,
+  "grid_baseline": 25.756750990570254,
+  "grid_observed_time_index": 0,
+  "n_auto_freqs": 4133,
+  "grid_float32_equal": true,
+  "output_sha256": "7e13d0f6c36a077d9981fb57b387ba6b6ae66465a70e6468109a706b9175a302",
+  "meaning": "Synchronized wall regions, not kernel-busy traces. Grid construction is measured separately and excluded from explicit-grid API timings."
+}

@@ -1,0 +1,12 @@
+{
+  "utc": "2026-09-08T18:58:57.258468+00:00",
+  "gtls_batch_workers": {
+    "tess_200s": 1,
+    "tess_gap": 2,
+    "ztf": 4
+  },
+  "basis": "Fastest successful tested worker count without OOM in its probe. TESS-gap 4 workers excluded after OOM. GTLS serial and batch receive independent null calibration and held-out recovery validation because memory-dependent chunking changes some spectra.",
+  "probe_agreement_sha256": "6e3717716df5cd203a0370a958d414611534bdb46a87a45c71a403a98cd39410",
+  "original_timing_host": "ouga2zvuqjco1q",
+  "extra_hosts_purpose": "Independent recovery computation only; no cross-host timings enter performance ratios."
+}

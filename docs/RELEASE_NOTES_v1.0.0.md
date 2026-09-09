@@ -1,5 +1,7 @@
 # cuvarbase 1.0.0
 
+> **Benchmark correction, September 2026.** The transit timing/sensitivity and cost claims below describe historical protocols. Use the [new transit benchmark](TRANSIT_BENCHMARKS.md) for current release claims. Equal scalar SDE did not establish equal sensitivity; some old BLS comparisons used different duration searches; warm GTLS compilation was not the dominant measured bottleneck. Historical values are retained for provenance, not as qualified performance promises.
+
 **First major release.** cuvarbase provides GPU-accelerated period-finding and transit-detection algorithms for astronomical time series: Box Least Squares (BLS), Transit Least Squares (TLS), Lomb–Scargle (including multiharmonic), Phase Dispersion Minimization (PDM), Conditional Entropy (CE), and the non-uniform FFT (NFFT) that powers them.
 
 This is the first release published to PyPI since **0.2.5 (October 2023)** — it contains everything from the tagged-but-never-published 0.2.6 maintenance release (May 2025) plus all of the 1.0 development work. If you `pip install cuvarbase` today you get 0.2.5; 1.0.0 is a substantially different, faster, and more correct package.
@@ -8,9 +10,9 @@ In production: cuvarbase's BLS has powered the TESS Quick-Look Pipeline's planet
 
 ## Highlights
 
-- **New: survey-scale GPU Transit Least Squares — the fastest TLS available.** A batch-native phase-binned kernel with exact top-K refinement searches a TESS-FFI-sector light curve in ~1.2 ms (a Kepler 4-year light curve, 65k points × 172k trial periods, in 0.17 s), with no cap on points per light curve and safe BJD-scale timestamps. Head-to-head on the *same* GPU at matched search settings and equal detection significance (SDE within 1–3% under the pre-1.0 SDE definition, 100% injected recovery), it is **30–171× faster than GTLS** (arXiv:2607.00348) — the only other GPU TLS — and thousands of times faster than the reference CPU `transitleastsquares` package, whose results it reproduces in golden tests.
-- **Standard BLS runs 257–354× faster than astropy's `BoxLeastSquares`** (measured across 7 GPU architectures, V100 through H200; 10,000 observations × 5,000 frequencies). At cloud spot prices that is roughly **$0.14–0.50 per million light curves** (RTX 4000 Ada / V100 / L40).
-- **Versus the previous cuvarbase:** the GPU kernels were already fast and their steady-state throughput is unchanged — the wins are in everything around them. 0.2.6 recompiled its CUDA kernels on **every single call** (~0.25–0.4 s, forever); 1.0.0 compiles once and caches, measuring **34× higher per-lightcurve throughput in a call-per-lightcurve loop** (10× over a 100-lightcurve run including the first compile). Survey-scale Lomb–Scargle is **2.9× faster**, the BLS survey path is a further **2.0–12.7× faster end-to-end** on realistic Keplerian grids (fused-`noverlap` kernels, conflict-scatter staging, occupancy-aware chunking — July 2026), and 0.2.6's LS/PDM paths segfault outright on modern pycuda (≥2025.1) — on a current software stack, 1.0.0 is effectively the only version that runs.
+- **New GPU Transit Least Squares:** a phase-binned batch engine with exact candidate refinement. The [current ZTF/TESS benchmark](TRANSIT_BENCHMARKS.md) reports its timing advantage over public GTLS together with independent recovery and false-positive qualifications.
+- **Faster BLS searches and grid construction:** compare actual PyPI 0.2.5, v1 and tested CPU/GPU alternatives in the [current benchmark](TRANSIT_BENCHMARKS.md). The earlier 257–354× Astropy headline used unequal duration searches and is withdrawn as a fair-comparison claim.
+- **Versus actual PyPI 0.2.5:** fused phase searches, conflict-scatter staging, reusable batch memory, vectorized host scans and grid construction, plus support for the current NumPy/PyCUDA stack. Both releases receive warmed kernels and reusable PyPI memory in the new comparison; its warm speedup is not attributed entirely to compilation caching.
 - **Survey-scale Lomb–Scargle beats the fastest CPU package.** At realistic survey frequency grids, batched GPU LS is 1.5× (TESS-like) to 12.6× (Kepler-like) faster per light curve than nifty-ls, and >15–27× on ZTF/HAT-Net-scale grids where nifty-ls exceeded the benchmark timeout. (Honesty note: for a single light curve at small frequency grids, nifty-ls on CPU is still the better tool — see [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).)
 - **Correct results on absolute (BJD-scale) timestamps.** Pre-1.0, feeding BLS raw BJD times (~2.45 million days) silently destroyed the phase fold in float32. Measured: an injected P=3.46 d transit recovered at power 0.30 on near-zero timestamps collapses to power 0.089 at the wrong frequency when the same data carries BJD timestamps in 0.2.6 — no error, no warning. 1.0.0 returns identical periodograms on both timescales (r=1.000000); all BLS paths epoch-subtract in float64 first.
 - **Deterministic periodograms.** A float32 guard bug let degenerate trial boxes produce run-to-run-varying spurious peaks on single-site ground-based data (reported by @astrobatty against HATPI light curves). Fixed at the root, with regression tests proving 500 ppm transits still survive.
@@ -20,37 +22,9 @@ In production: cuvarbase's BLS has powered the TESS Quick-Look Pipeline's planet
 
 ## Performance
 
-All numbers are measured, with configs and raw JSON archived in [benchmarks/results/](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/benchmarks/results/) and summarized in [docs/BENCHMARK_RESULTS.md](https://github.com/johnh2o2/cuvarbase/blob/v1.0.0/docs/BENCHMARK_RESULTS.md).
+The [current transit benchmark](TRANSIT_BENCHMARKS.md) is the source for BLS/TLS release claims: one figure, single-source and batch timing, independent recovery, null false positives, and search-cost projections. Equal scalar SDE is not an equal-sensitivity guarantee.
 
-| Comparison | Result | Setup |
-|---|---|---|
-| BLS vs astropy `BoxLeastSquares` (CPU) | **257–354× faster** | 10k obs × 5k freqs, 7 GPUs (V100→H200), astropy 7.2.0 |
-| TLS vs GTLS (the only other GPU TLS), same GPU, equal SDE | **30–171× faster**, growing with baseline | 200–2000-d baselines, matched grids + epoch density, RTX A5000 |
-| TLS vs reference `transitleastsquares` (CPU, all cores) | **~10³× at matched SDE fidelity** | Same light curves and period grid, single RTX A5000 |
-| TLS survey throughput | **TESS-FFI 1.2 ms/LC; Kepler-4yr 0.17 s/LC** | 100% injected recovery; RTX A5000. V100 within ~1.3× either way; the RTX 4000 Ada workstation card is 1.2–2.4× slower (2.4× on the TESS-FFI row) |
-| BLS survey path vs pre-optimization v1.0 | **2.0–12.7× end-to-end; 2.9–9.2× kernel-only** | ZTF/HAT-Net/TESS/Kepler-shaped Keplerian grids, RTX A5000 |
-| Lomb–Scargle vs nifty-ls (CPU), survey grids | **1.5× (TESS) → 12.6× (Kepler); >15–27× (HAT-Net/ZTF, timeout)** | Realistic per-survey frequency grids, batched, RTX A5000 |
-| Batched BLS vs looping single light curves | **2.2–10× faster** | 2–10 LCs/batch, ndata 200–20,000, RTX A5000 |
-| Keplerian vs uniform frequency grid | **4–37× fewer frequencies; 1.5–24× wall-time** | ZTF/HAT-Net/TESS/Kepler-shaped surveys, identical recovery |
-| Kernel caching (all BLS entry points) | **first call 1.67 s → 7.6 ms thereafter** | Measured on the RTX A5000 (table below); previously *every* call paid CUDA compilation |
-| Estimated survey costs | ZTF 10M LCs ≈ $0.69 (3.5 h); LS+BLS on ZTF+HAT-Net+TESS+Kepler ≈ $33 | Projection from measured throughput, RTX A5000 @ $0.20/hr |
-
-### Measured head-to-head vs cuvarbase 0.2.6 (RTX A5000, CUDA 12.4, July 2026)
-
-Identical inputs on both sides; v1.0 run at `noverlap=1` for apples-to-apples because 0.2.6 silently ignores `noverlap` (v1.0's default `noverlap=2` buys a finer phase search for ~2× kernel work). Raw JSON, scripts, and full periodograms in `benchmarks/results/v026_head_to_head_jul2026/`.
-
-| Measurement | 0.2.6 | 1.0.0 | Change |
-|---|---|---|---|
-| BLS kernel-only, TESS-scale (20k obs × 13.5k freqs) | 9.8 ms | 9.8 ms | **1.00× — kernel throughput unchanged** |
-| BLS per-call in a lightcurve loop (steady state) | 261 ms | 7.6 ms | **34× faster** (kernel cached vs recompiled every call) |
-| BLS 100-lightcurve run, incl. first compile | 28.4 s | 2.8 s | **10× faster** |
-| BLS cold first call (empty caches) | 2.37 s | 1.67 s | 1.4× faster |
-| BLS warm single call, 10k×5k, end-to-end | 5.9 ms | 7.8 ms | 0.76× — see note |
-| Lomb–Scargle, survey grid (3k obs × 100k freqs) | 33.3 ms | 11.7 ms | **2.85× faster** |
-| Lomb–Scargle, small (10k × 5k) | 8.8 ms | 9.2 ms | parity |
-| PDM (same algorithm / new `_fast` kernel) | 3.7 ms | 3.4 / 2.8 ms | 1.08× / 1.33× |
-
-Honesty notes: we claim **no** raw-kernel speedup — the kernel-only decomposition is identical, and the 34×/10× are architectural wins (compile-once vs compile-always) that any real pipeline experiences. The warm single-call row shows v1.0 spending ~2 ms more host-side work per call (float64 epoch handling, χ²₀ bookkeeping, convention support — the price of the correctness fixes); millisecond-scale timings jitter 2–4× between rounds on cloud pods, so pooled medians are reported. One GPU model; the earlier "21–390× vs pre-v1.0" figures from Feb 2026 conflated compile overhead and are retracted — do not cite them. Running the 0.2.6 baseline at all required numpy 1.23 and a 2022-era pycuda for LS/PDM (segfaults on pycuda 2025.1).
+The former transit headline table and 0.2.6 comparison are retained in the [archived release notes](../analysis/transit-recovery-20260908/sources/claims-before/docs/RELEASE_NOTES_v1.0.0.md). The latest published upgrade baseline is 0.2.5; the 0.2.6 tag was not published to PyPI. Earlier measurements for other algorithms remain in [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md).
 
 ## New features
 
@@ -61,7 +35,7 @@ Honesty notes: we claim **no** raw-kernel speedup — the kernel-only decomposit
 - **Selectable power conventions**: `convention='chi2ratio' | 'snr' | 'loglik'` on all BLS entry points (+ `convert_bls_power()`); `'snr'` verified equal to astropy's `objective='snr'`.
 - **Optimized/adaptive kernels**: `eebls_gpu_fast_optimized()` and `eebls_gpu_fast_adaptive()` (warp-shuffle reductions, automatic block sizing). With a warm kernel cache these measure ~1.0–1.3× over the standard fast kernel — the real win for everyone is the cache itself.
 - `noverlap` is now honored on the fast path (elementwise max over phase-shifted passes; default 2).
-- **Survey-speed kernels (July 2026)**: fused-`noverlap` histograms, conflict-scatter staging of dense cadences, occupancy-aware frequency chunking, and host-path overhead fixes — end-to-end **2.0–12.7×** on realistic Keplerian survey grids, kernel-only 2.9–9.2× (the TESS-scale 12.7× includes curing a default-environment BLAS threadpool pathology in-library; 5.8× against an already-tuned baseline). Periodograms unchanged (parity correlation 1.0000000, identical peaks).
+- **BLS throughput features (July 2026):** fused phase histograms, observation-scatter staging, frequency chunking, and host overhead fixes. The [current benchmark](TRANSIT_BENCHMARKS.md) measures their practical upgrade effect and diagnostic ablations; scattering does not demonstrate a benefit on its three selected cases. Earlier speed ratios are preserved in the archived release notes above.
 
 ### Lomb–Scargle & NFFT
 - **Multiharmonic generalized Lomb–Scargle on GPU** (`nharmonics>1`). The per-frequency solve runs on the host in float64; on device, after the Sep-2026 psi-table and grid-sizing fixes, the NFFT path agrees with the float64 `lomb_scargle_direct_sums` reference to 5.7e-7 in float32 and 7.4e-10 with `use_double=True` for H=2,3 (the host solve itself is exact to float64 roundoff).
@@ -81,7 +55,7 @@ Honesty notes: we claim **no** raw-kernel speedup — the kernel-only decomposit
 - **`tls_search_batch()`** searches whole surveys against a shared period grid: one block per (light curve, period) folds into shared-memory phase bins and scans every (duration, epoch) trial against integrated-template tables with a closed-form χ²; a second kernel re-fits the best `refine_top_k` candidates exactly. The fast path is the default for `tls_search`/`tls_search_gpu`/`tls_transit` (`use_fast=False` keeps the legacy per-point kernel and its ~3,500-point cap).
 - No cap on points per light curve; BJD-scale timestamps are safe (float64 epoch subtraction); the period grid is banded by required phase resolution so long-period searches don't pay the finest band's cost.
 - Limb-darkened templates (optional batman-package), Ofir (2014) period grids, Keplerian per-period duration windows.
-- **Statistics discipline**: the SDE comes from the uniform coarse spectrum while refinement sharpens only the reported parameters; there is no fixed SDE→FAP table (an opt-in null bootstrap on `tls_search_batch(fap_null_draws=...)` replaces it). On the reference package's own period grid the default epoch grid reports the same SDE for the same detection to within the coarse-vs-fine epoch-grid difference (measured 5–15% under the 1.0 SDE definition; the July-2026 “within 1–3%, within 1% at `t0_oversample=33` at ~5–13× cost” figures were measured under the pre-1.0 signal-residue definition), with 100% injected recovery in every tested regime.
+- **Statistics:** SDE uses the coarse spectrum while refinement sharpens candidate parameters. Null calibration and independent recovery are required to compare detection performance; a scalar SDE difference or successful golden tests do not establish population sensitivity. An opt-in null bootstrap is available on `tls_search_batch(fap_null_draws=...)`.
 - Golden-tested against `transitleastsquares`; validated on RTX A5000 (sm86), RTX 4000 Ada (sm89), and V100 (sm70).
 
 ### Experimental (quarantined; not yet recommended for science use)

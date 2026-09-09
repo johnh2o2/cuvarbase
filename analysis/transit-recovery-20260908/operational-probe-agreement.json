@@ -1,0 +1,236 @@
+{
+  "rows": [
+    {
+      "profile": "ztf",
+      "workers": 2,
+      "job": "probe_ztf_gtls_fast_w2",
+      "status": "ok",
+      "seconds_per_source": 9.547065387479961,
+      "oom_in_log": false,
+      "cases": [
+        {
+          "index": 0,
+          "candidate_equal": true,
+          "score_abs_difference": 0.002262115478515625,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.8679027557373047
+        },
+        {
+          "index": 1,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0077648162841796875,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.492809534072876
+        },
+        {
+          "index": 2,
+          "candidate_equal": true,
+          "score_abs_difference": 0.011505126953125,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 3.2919979095458984
+        },
+        {
+          "index": 3,
+          "candidate_equal": true,
+          "score_abs_difference": 0.00853729248046875,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.9420111179351807
+        }
+      ]
+    },
+    {
+      "profile": "ztf",
+      "workers": 4,
+      "job": "probe_ztf_gtls_fast_w4",
+      "status": "ok",
+      "seconds_per_source": 5.879521553404629,
+      "oom_in_log": false,
+      "cases": [
+        {
+          "index": 0,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0005197525024414062,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.685852527618408
+        },
+        {
+          "index": 1,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0059661865234375,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.492396593093872
+        },
+        {
+          "index": 2,
+          "candidate_equal": true,
+          "score_abs_difference": 0.008806228637695312,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.9765026569366455
+        },
+        {
+          "index": 3,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0022430419921875,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.9270386695861816
+        },
+        {
+          "index": 4,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0016202926635742188,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.977933645248413
+        },
+        {
+          "index": 5,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0044116973876953125,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.592219829559326
+        },
+        {
+          "index": 6,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0033311843872070312,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.4256081581115723
+        },
+        {
+          "index": 7,
+          "candidate_equal": true,
+          "score_abs_difference": 0.015995025634765625,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.160456657409668
+        }
+      ]
+    },
+    {
+      "profile": "tess_gap",
+      "workers": 2,
+      "job": "screen_tess_gap_gtls_fast_w2",
+      "status": "ok",
+      "seconds_per_source": 5.039966335520148,
+      "oom_in_log": false,
+      "cases": [
+        {
+          "index": 0,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0,
+          "periods_equal": true,
+          "powers_equal": true,
+          "max_abs_power_difference": 0.0
+        },
+        {
+          "index": 1,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0,
+          "periods_equal": true,
+          "powers_equal": true,
+          "max_abs_power_difference": 0.0
+        },
+        {
+          "index": 2,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0,
+          "periods_equal": true,
+          "powers_equal": true,
+          "max_abs_power_difference": 0.0
+        },
+        {
+          "index": 3,
+          "candidate_equal": true,
+          "score_abs_difference": 0.0,
+          "periods_equal": true,
+          "powers_equal": true,
+          "max_abs_power_difference": 0.0
+        }
+      ]
+    },
+    {
+      "profile": "tess_gap",
+      "workers": 4,
+      "job": "probe_tess_gap_gtls_fast_w4",
+      "status": "ok",
+      "seconds_per_source": 4.4721122537739575,
+      "oom_in_log": true,
+      "cases": [
+        {
+          "index": 0,
+          "candidate_equal": true,
+          "score_abs_difference": 0.03743743896484375,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.895947813987732
+        },
+        {
+          "index": 1,
+          "candidate_equal": true,
+          "score_abs_difference": 0.005902767181396484,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 2.0233631134033203
+        },
+        {
+          "index": 2,
+          "candidate_equal": true,
+          "score_abs_difference": 0.015310287475585938,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.5280356407165527
+        },
+        {
+          "index": 3,
+          "candidate_equal": true,
+          "score_abs_difference": 0.022027969360351562,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.1601841449737549
+        },
+        {
+          "index": 4,
+          "candidate_equal": true,
+          "score_abs_difference": 0.017769813537597656,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.6759787797927856
+        },
+        {
+          "index": 5,
+          "candidate_equal": true,
+          "score_abs_difference": 0.07638788223266602,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.5858793258666992
+        },
+        {
+          "index": 6,
+          "candidate_equal": true,
+          "score_abs_difference": 0.03169822692871094,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.3073039054870605
+        },
+        {
+          "index": 7,
+          "candidate_equal": true,
+          "score_abs_difference": 0.020059585571289062,
+          "periods_equal": true,
+          "powers_equal": false,
+          "max_abs_power_difference": 1.370011329650879
+        }
+      ]
+    }
+  ]
+}

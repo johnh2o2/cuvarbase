@@ -1,0 +1,20 @@
+{
+  "name": "calibration_tess_200s_gtls_batch",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 65.65048003196716,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+    "--config",
+    "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 1, \"eval_chunk\": 16}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_gtls_batch",
+    "--indices",
+    "all"
+  ],
+  "started_epoch": 1788897113.6579342,
+  "finished_epoch": 1788897179.3084154
+}

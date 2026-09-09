@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 172, in main
+    backend.sync();start=time.perf_counter();backend.search([lcs[ids[0]]]);backend.sync()
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 100, in search
+    outputs.append(dict(periods=np.asarray(r.periods),power=np.asarray(r.chi2),
+                                           ^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'periods'
+

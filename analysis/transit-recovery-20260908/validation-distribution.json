@@ -1,0 +1,88 @@
+{
+  "validation_sha256": "461a8484a6182fcdd1d6bb5b39ee9c2bf1fde99729236d8243c48c7a9299e2d7",
+  "parents": [
+    {
+      "parent": "calibration_tess_200s_gtls",
+      "parts": [
+        "calibration_tess_200s_gtls__part000",
+        "calibration_tess_200s_gtls__part064"
+      ],
+      "n": 128
+    },
+    {
+      "parent": "heldout_tess_200s_gtls",
+      "parts": [
+        "heldout_tess_200s_gtls__part000",
+        "heldout_tess_200s_gtls__part064",
+        "heldout_tess_200s_gtls__part128",
+        "heldout_tess_200s_gtls__part192"
+      ],
+      "n": 256
+    },
+    {
+      "parent": "calibration_ztf_gtls",
+      "parts": [
+        "calibration_ztf_gtls__part000",
+        "calibration_ztf_gtls__part064"
+      ],
+      "n": 128
+    },
+    {
+      "parent": "heldout_ztf_gtls",
+      "parts": [
+        "heldout_ztf_gtls__part000",
+        "heldout_ztf_gtls__part064",
+        "heldout_ztf_gtls__part128",
+        "heldout_ztf_gtls__part192"
+      ],
+      "n": 256
+    },
+    {
+      "parent": "calibration_tess_gap_gtls",
+      "parts": [
+        "calibration_tess_gap_gtls__part000",
+        "calibration_tess_gap_gtls__part064"
+      ],
+      "n": 128
+    },
+    {
+      "parent": "heldout_tess_gap_gtls",
+      "parts": [
+        "heldout_tess_gap_gtls__part000",
+        "heldout_tess_gap_gtls__part064",
+        "heldout_tess_gap_gtls__part128",
+        "heldout_tess_gap_gtls__part192"
+      ],
+      "n": 256
+    }
+  ],
+  "assignment": {
+    "validation_a": [
+      "calibration_ztf_gtls__part000",
+      "heldout_ztf_gtls__part000",
+      "heldout_ztf_gtls__part128",
+      "calibration_tess_gap_gtls__part000",
+      "heldout_tess_gap_gtls__part000",
+      "heldout_tess_gap_gtls__part128",
+      "calibration_tess_200s_gtls__part000",
+      "heldout_tess_200s_gtls__part000",
+      "heldout_tess_200s_gtls__part128"
+    ],
+    "validation_b": [
+      "calibration_ztf_gtls__part064",
+      "heldout_ztf_gtls__part064",
+      "heldout_ztf_gtls__part192",
+      "calibration_tess_gap_gtls__part064",
+      "heldout_tess_gap_gtls__part064",
+      "heldout_tess_gap_gtls__part192",
+      "calibration_tess_200s_gtls__part064",
+      "heldout_tess_200s_gtls__part064",
+      "heldout_tess_200s_gtls__part192"
+    ]
+  },
+  "estimated_compute_s": {
+    "validation_a": 5011.2,
+    "validation_b": 5011.2
+  },
+  "note": "Only recovery cases distributed; full inputs, spectra, source hashes and per-part hardware provenance retained. No distributed evaluation times enter speed ratios."
+}

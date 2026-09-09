@@ -1,0 +1,142 @@
+{
+  "status": "ok",
+  "config": {
+    "backend": "pypi_bls_fast",
+    "noverlap": 4,
+    "manual_overlap": true,
+    "qmin_fac": 0.25
+  },
+  "input_file": "tess_200s_heldout.npz",
+  "input_sha256": "e2e42d08417442113072426e366840bb2c276f88b6a70b0b83b303aa35718676",
+  "profile": "tess_200s",
+  "split": "heldout",
+  "indices": [
+    128
+  ],
+  "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "1.23.5",
+      "scipy": "1.10.1",
+      "pycuda": "2022.2.2",
+      "cuvarbase": "0.2.5"
+    },
+    "cpu_quota": null,
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [
+    {
+      "index": 128,
+      "injected": false,
+      "snr": null,
+      "true_period": 2.738169256295329,
+      "duration": 0.10329800225120374,
+      "period": 0.34787209181100875,
+      "score": 4.657490778750118,
+      "finite_fraction": 1.0,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 22.484471592667852,
+      "n_periods": 4133,
+      "search_s": null,
+      "evaluation_chunk": 1,
+      "power_kind": "bls",
+      "output_file": "case_0128.npz",
+      "output_sha256": "2166d073651964d22e8e87808f863e5dbb9ee6299b242f46947b9f2d4dd7b8e3"
+    }
+  ],
+  "initialization_s": 0.5013919807970524,
+  "first_api_candidates": [
+    {
+      "period": 0.34787209181100875,
+      "score": 4.657481037630105,
+      "finite_fraction": 1.0
+    }
+  ],
+  "first_api_valid": true,
+  "first_api_s": 0.3546946309506893,
+  "installed_sources": {
+    "cuvarbase": {
+      "__init__.py": "650be015f77579756ba3b5e69ee1f7e67392bbe210d9c724c765f54b7fcf53ca",
+      "bls.py": "6c47eebf3ebe3c7e458ba21882cfcc8011d91b00fa9f5d493c43b2d44e8bee06",
+      "ce.py": "86627e55058f9c55ae873df376fc9db931f96e5b322607ad905e773b0009c935",
+      "core.py": "57402f88a38826771acaf4579c380d865f21772e81f32389cc5b398f6d4ad53d",
+      "cunfft.py": "58fbfba129e903532c3ef95ceaf0cc90efcb8c25b7b64cc7d3a58ce62f5b6150",
+      "lombscargle.py": "2d0cf8d275e64c52aee59b9044ac816e781145d21e525c4b8d5647bb0fc361a7",
+      "pdm.py": "12accbde84944f0374b73b34f1329da21c12c4fb3df042d3635650b0d06bbb79",
+      "utils.py": "b4301dace105adc7768a218441173612611be2389ed644f50a537834ae47e04f",
+      "kernels/bls.cu": "56c69fc1edd2c11680b2d1ec9feea1cf12f9ecee95a63c908506dd3b690a1710",
+      "kernels/ce.cu": "0eae0531e91ee238770312f5eeac9758860d9aeeac65e519f30716ae326f79d2",
+      "kernels/cunfft.cu": "019c6d2691ea9b712807c59e2cb3ca46f3d1af67aa418724b686d639c4535eaa",
+      "kernels/lomb.cu": "81fd63b98701f83305e75f792aa16c3ce726b4f6df3fb6e72ea980e34246142b",
+      "kernels/pdm.cu": "23ed6a4b0289d622375c9e4c12900cc3af6db44ad874ed7bea488a17e7d702e7",
+      "kernels/wavelet.cu": "a90f9bfff7b582e77b5f9b36e280ab1191aae56afc46d65bff082f1b72998248",
+      "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tests/test_bls.py": "997fe9309379ea38f3a30805fad46bcc920ee896ac02c34d7d29f500bc924f1f",
+      "tests/test_ce.py": "8ece44e8335b340158f42367b3d51c9c219341cd0b6f1d19bc115131c94d5440",
+      "tests/test_lombscargle.py": "11a53e5f42a03d52bc818b6a0cc7acca7f5ac85fb49a73f597f4debd158cb5a0",
+      "tests/test_nfft.py": "b881eabe605469739905cd39c0afab6fd51f2c466248b03ae0b80a727af83584",
+      "tests/test_pdm.py": "382fd30f03fa3d2562d6b7015dedde0bf22f426d2edde6b75e511d0676027369"
+    }
+  },
+  "batch_warmup_candidates": [
+    {
+      "period": 0.34787209181100875,
+      "score": 4.657483682858531,
+      "finite_fraction": 1.0
+    }
+  ],
+  "timed_candidates": [
+    [
+      {
+        "period": 0.34787209181100875,
+        "score": 4.657485792366052,
+        "finite_fraction": 1.0
+      }
+    ],
+    [
+      {
+        "period": 0.34787209181100875,
+        "score": 4.657482559818395,
+        "finite_fraction": 1.0
+      }
+    ],
+    [
+      {
+        "period": 0.34787209181100875,
+        "score": 4.65748664213653,
+        "finite_fraction": 1.0
+      }
+    ],
+    [
+      {
+        "period": 0.34787209181100875,
+        "score": 4.657485213078296,
+        "finite_fraction": 1.0
+      }
+    ],
+    [
+      {
+        "period": 0.34787209181100875,
+        "score": 4.657490778750118,
+        "finite_fraction": 1.0
+      }
+    ]
+  ],
+  "times_s": [
+    0.011594187468290329,
+    0.010296881198883057,
+    0.009594578295946121,
+    0.008978914469480515,
+    0.007814127951860428
+  ],
+  "median_s": 0.009594578295946121,
+  "seconds_per_source": 0.009594578295946121
+}

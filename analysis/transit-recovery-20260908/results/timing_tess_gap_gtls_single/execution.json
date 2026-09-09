@@ -1,0 +1,23 @@
+{
+  "name": "timing_tess_gap_gtls_single",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 53.036014795303345,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+    "--config",
+    "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 1}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/timing_tess_gap_gtls_single",
+    "--indices",
+    "128",
+    "--timing",
+    "--reps",
+    "5"
+  ],
+  "started_epoch": 1788901843.6046746,
+  "finished_epoch": 1788901896.640691
+}

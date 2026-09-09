@@ -1,0 +1,26 @@
+{
+  "job": {
+    "name": "rubin_gtls_pypi_native",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_rubin.npz",
+      "--out",
+      "results/rubin_gtls_pypi_native.json",
+      "--variant",
+      "native",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "pypi",
+    "timeout": 900
+  },
+  "started_epoch": 1788885685.7895257,
+  "elapsed_s": 115.3966953754425,
+  "exit_code": 0,
+  "timed_out": false,
+  "pid": 487
+}

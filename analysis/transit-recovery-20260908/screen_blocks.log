@@ -1,0 +1,43 @@
+START screen_tess_200s_v1_block64 2026-09-08T18:39:44.067517+00:00
+END screen_tess_200s_v1_block64 0 2.42
+START screen_tess_200s_v1_block128 2026-09-08T18:39:46.491647+00:00
+END screen_tess_200s_v1_block128 0 2.32
+START screen_tess_200s_pypi_block64 2026-09-08T18:39:48.815405+00:00
+END screen_tess_200s_pypi_block64 0 2.52
+START screen_tess_200s_pypi_block128 2026-09-08T18:39:51.341140+00:00
+END screen_tess_200s_pypi_block128 0 2.52
+START probe_tess_200s_v1_batch_fresh 2026-09-08T18:39:53.866819+00:00
+END probe_tess_200s_v1_batch_fresh 0 1.42
+START probe_tess_200s_v1_batch_reused 2026-09-08T18:39:55.288339+00:00
+END probe_tess_200s_v1_batch_reused 1 1.32
+START screen_tess_gap_v1_block64 2026-09-08T18:39:56.609663+00:00
+END screen_tess_gap_v1_block64 0 4.98
+START screen_tess_gap_v1_block128 2026-09-08T18:40:01.592553+00:00
+END screen_tess_gap_v1_block128 0 4.78
+START screen_tess_gap_pypi_block64 2026-09-08T18:40:06.372626+00:00
+END screen_tess_gap_pypi_block64 0 5.73
+START screen_tess_gap_pypi_block128 2026-09-08T18:40:12.106006+00:00
+END screen_tess_gap_pypi_block128 0 5.33
+START probe_tess_gap_v1_batch_fresh 2026-09-08T18:40:17.440618+00:00
+END probe_tess_gap_v1_batch_fresh 0 3.98
+START probe_tess_gap_v1_batch_reused 2026-09-08T18:40:21.421773+00:00
+END probe_tess_gap_v1_batch_reused 1 1.27
+START screen_ztf_v1_block64 2026-09-08T18:40:22.692908+00:00
+END screen_ztf_v1_block64 0 13.3
+START screen_ztf_v1_block128 2026-09-08T18:40:35.996297+00:00
+END screen_ztf_v1_block128 0 14.36
+START screen_ztf_pypi_block64 2026-09-08T18:40:50.354102+00:00
+END screen_ztf_pypi_block64 0 14.4
+START screen_ztf_pypi_block128 2026-09-08T18:41:04.757109+00:00
+END screen_ztf_pypi_block128 0 15.21
+START probe_ztf_v1_batch_fresh 2026-09-08T18:41:19.969761+00:00
+END probe_ztf_v1_batch_fresh 0 9.74
+START probe_ztf_v1_batch_reused 2026-09-08T18:41:29.715511+00:00
+END probe_ztf_v1_batch_reused 1 1.37
+START probe_tess_gap_gtls_fast_w4 2026-09-08T18:41:31.086908+00:00
+END probe_tess_gap_gtls_fast_w4 0 143.39
+START probe_ztf_gtls_fast_w2 2026-09-08T18:43:54.479573+00:00
+END probe_ztf_gtls_fast_w2 0 100.39
+START probe_ztf_gtls_fast_w4 2026-09-08T18:45:34.871557+00:00
+END probe_ztf_gtls_fast_w4 0 121.62
+MANIFEST_COMPLETE screen_blocks.json

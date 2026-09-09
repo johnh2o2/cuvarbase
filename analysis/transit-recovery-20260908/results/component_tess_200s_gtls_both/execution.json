@@ -1,0 +1,20 @@
+{
+  "name": "component_tess_200s_gtls_both",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 4.175334692001343,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/components_tls.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+    "--config",
+    "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/component_tess_200s_gtls_both",
+    "--variant",
+    "both"
+  ],
+  "started_epoch": 1788902053.0120583,
+  "finished_epoch": 1788902057.1873946
+}

@@ -1,0 +1,792 @@
+{
+  "version": "1",
+  "pip_version": "26.2.1",
+  "install": [
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/e8/ad/b935c7421657a032fd2a5332eed098f3b9993a155afceb1daa280ff6611f/numpy-1.23.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "58f545efd1108e647604a1b5aa809591ccd2540f468a880bedb97247e72db387"
+          },
+          "hash": "sha256=58f545efd1108e647604a1b5aa809591ccd2540f468a880bedb97247e72db387"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": true,
+      "metadata": {
+        "metadata_version": "2.1",
+        "name": "numpy",
+        "version": "1.23.5",
+        "platform": [
+          "Windows",
+          "Linux",
+          "Solaris",
+          "Mac OS-X",
+          "Unix"
+        ],
+        "summary": "NumPy is the fundamental package for array computing with Python.",
+        "description": "It provides:\n\n- a powerful N-dimensional array object\n- sophisticated (broadcasting) functions\n- tools for integrating C/C++ and Fortran code\n- useful linear algebra, Fourier transform, and random number capabilities\n- and much more\n\nBesides its obvious scientific uses, NumPy can also be used as an efficient\nmulti-dimensional container of generic data. Arbitrary data-types can be\ndefined. This allows NumPy to seamlessly and speedily integrate with a wide\nvariety of databases.\n\nAll NumPy wheels distributed on PyPI are BSD licensed.\n\nNumPy requires ``pytest`` and ``hypothesis``.  Tests can then be run after\ninstallation with::\n\n    python -c 'import numpy; numpy.test()'\n\n\n\n",
+        "home_page": "https://www.numpy.org",
+        "download_url": "https://pypi.python.org/pypi/numpy",
+        "author": "Travis E. Oliphant et al.",
+        "maintainer": "NumPy Developers",
+        "maintainer_email": "numpy-discussion@python.org",
+        "license": "BSD",
+        "license_file": [
+          "LICENSE.txt",
+          "LICENSES_bundled.txt"
+        ],
+        "classifier": [
+          "Development Status :: 5 - Production/Stable",
+          "Intended Audience :: Science/Research",
+          "Intended Audience :: Developers",
+          "License :: OSI Approved :: BSD License",
+          "Programming Language :: C",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.8",
+          "Programming Language :: Python :: 3.9",
+          "Programming Language :: Python :: 3.10",
+          "Programming Language :: Python :: 3.11",
+          "Programming Language :: Python :: 3 :: Only",
+          "Programming Language :: Python :: Implementation :: CPython",
+          "Topic :: Software Development",
+          "Topic :: Scientific/Engineering",
+          "Typing :: Typed",
+          "Operating System :: Microsoft :: Windows",
+          "Operating System :: POSIX",
+          "Operating System :: Unix",
+          "Operating System :: MacOS"
+        ],
+        "requires_python": ">=3.8",
+        "project_url": [
+          "Bug Tracker, https://github.com/numpy/numpy/issues",
+          "Documentation, https://numpy.org/doc/1.23",
+          "Source Code, https://github.com/numpy/numpy"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/21/cd/fe2d4af234b80dc08c911ce63fdaee5badcdde3e9bcd9a68884580652ef0/scipy-1.10.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "15a35c4242ec5f292c3dd364a7c71a61be87a3d4ddcc693372813c0b73c9af1d"
+          },
+          "hash": "sha256=15a35c4242ec5f292c3dd364a7c71a61be87a3d4ddcc693372813c0b73c9af1d"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": true,
+      "metadata": {
+        "metadata_version": "2.1",
+        "name": "scipy",
+        "version": "1.10.1",
+        "summary": "Fundamental algorithms for scientific computing in Python",
+        "description": ".. image:: https://github.com/scipy/scipy/blob/main/doc/source/_static/logo.svg\n  :target: https://scipy.org\n  :width: 110\n  :height: 110\n  :align: left \n\n.. image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A\n  :target: https://numfocus.org\n\n.. image:: https://img.shields.io/pypi/dm/scipy.svg?label=Pypi%20downloads\n  :target: https://pypi.org/project/scipy/\n\n.. image:: https://img.shields.io/conda/dn/conda-forge/scipy.svg?label=Conda%20downloads\n  :target: https://anaconda.org/conda-forge/scipy\n\n.. image:: https://img.shields.io/badge/stackoverflow-Ask%20questions-blue.svg\n  :target: https://stackoverflow.com/questions/tagged/scipy\n\n.. image:: https://img.shields.io/badge/DOI-10.1038%2Fs41592--019--0686--2-blue\n  :target: https://www.nature.com/articles/s41592-019-0686-2\n\nSciPy (pronounced \"Sigh Pie\") is an open-source software for mathematics,\nscience, and engineering. It includes modules for statistics, optimization,\nintegration, linear algebra, Fourier transforms, signal and image processing,\nODE solvers, and more.\n\n- **Website:** https://scipy.org\n- **Documentation:** https://docs.scipy.org/doc/scipy/\n- **Development version of the documentation:** https://scipy.github.io/devdocs\n- **Mailing list:** https://mail.python.org/mailman3/lists/scipy-dev.python.org/\n- **Source code:** https://github.com/scipy/scipy\n- **Contributing:** https://scipy.github.io/devdocs/dev/index.html\n- **Bug reports:** https://github.com/scipy/scipy/issues\n- **Code of Conduct:** https://docs.scipy.org/doc/scipy/dev/conduct/code_of_conduct.html\n- **Report a security vulnerability:** https://tidelift.com/docs/security\n- **Citing in your work:** https://www.scipy.org/citing-scipy/\n\nSciPy is built to work with\nNumPy arrays, and provides many user-friendly and efficient numerical routines,\nsuch as routines for numerical integration and optimization. Together, they\nrun on all popular operating systems, are quick to install, and are free of\ncharge. NumPy and SciPy are easy to use, but powerful enough to be depended\nupon by some of the world's leading scientists and engineers. If you need to\nmanipulate numbers on a computer and display or publish the results, give\nSciPy a try!\n\nFor the installation instructions, see `our install\nguide <https://docs.scipy.org/doc/scipy/getting_started.html#installation>`__.\n\n\nCall for Contributions\n----------------------\n\nWe appreciate and welcome contributions. Small improvements or fixes are always appreciated; issues labeled as \"good\nfirst issue\" may be a good starting point. Have a look at `our contributing\nguide <https://scipy.github.io/devdocs/dev/index.html>`__.\n\nWriting code isn’t the only way to contribute to SciPy. You can also:\n\n- review pull requests\n- triage issues\n- develop tutorials, presentations, and other educational materials\n- maintain and improve `our website <https://github.com/scipy/scipy.org>`__\n- develop graphic design for our brand assets and promotional materials\n- help with outreach and onboard new contributors\n- write grant proposals and help with other fundraising efforts\n\nIf you’re unsure where to start or how your skills fit in, reach out! You can\nask on the mailing list or here, on GitHub, by leaving a\ncomment on a relevant issue that is already open.\n\nIf you are new to contributing to open source, `this\nguide <https://opensource.guide/how-to-contribute/>`__ helps explain why, what,\nand how to get involved.\n",
+        "description_content_type": "text/x-rst",
+        "home_page": "https://scipy.org/",
+        "maintainer_email": "SciPy Developers <scipy-dev@python.org>",
+        "license": "Copyright (c) 2001-2002 Enthought, Inc. 2003-2022, SciPy Developers.\nAll rights reserved.\n\nRedistribution and use in source and binary forms, with or without\nmodification, are permitted provided that the following conditions\nare met:\n\n1. Redistributions of source code must retain the above copyright\n   notice, this list of conditions and the following disclaimer.\n\n2. Redistributions in binary form must reproduce the above\n   copyright notice, this list of conditions and the following\n   disclaimer in the documentation and/or other materials provided\n   with the distribution.\n\n3. Neither the name of the copyright holder nor the names of its\n   contributors may be used to endorse or promote products derived\n   from this software without specific prior written permission.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS\n\"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT\nLIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR\nA PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT\nOWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,\nSPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT\nLIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,\nDATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY\nTHEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT\n(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\nOF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n\n----\n\nThis binary distribution of SciPy also bundles the following software:\n\n\nName: OpenBLAS\nFiles: .libs/libopenb*.so\nDescription: bundled as a dynamically linked library\nAvailability: https://github.com/xianyi/OpenBLAS/\nLicense: 3-clause BSD\n  Copyright (c) 2011-2014, The OpenBLAS Project\n  All rights reserved.\n\n  Redistribution and use in source and binary forms, with or without\n  modification, are permitted provided that the following conditions are\n  met:\n\n     1. Redistributions of source code must retain the above copyright\n        notice, this list of conditions and the following disclaimer.\n\n     2. Redistributions in binary form must reproduce the above copyright\n        notice, this list of conditions and the following disclaimer in\n        the documentation and/or other materials provided with the\n        distribution.\n     3. Neither the name of the OpenBLAS project nor the names of \n        its contributors may be used to endorse or promote products \n        derived from this software without specific prior written \n        permission.\n\n  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\n  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\n  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE\n  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE\n  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\n  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\n  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\n  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\n  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE\n  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n\n\nName: LAPACK\nFiles: .libs/libopenb*.so\nDescription: bundled in OpenBLAS\nAvailability: https://github.com/xianyi/OpenBLAS/\nLicense 3-clause BSD\n  Copyright (c) 1992-2013 The University of Tennessee and The University\n                          of Tennessee Research Foundation.  All rights\n                          reserved.\n  Copyright (c) 2000-2013 The University of California Berkeley. All\n                          rights reserved.\n  Copyright (c) 2006-2013 The University of Colorado Denver.  All rights\n                          reserved.\n\n  $COPYRIGHT$\n\n  Additional copyrights may follow\n\n  $HEADER$\n\n  Redistribution and use in source and binary forms, with or without\n  modification, are permitted provided that the following conditions are\n  met:\n\n  - Redistributions of source code must retain the above copyright\n    notice, this list of conditions and the following disclaimer.\n\n  - Redistributions in binary form must reproduce the above copyright\n    notice, this list of conditions and the following disclaimer listed\n    in this license in the documentation and/or other materials\n    provided with the distribution.\n\n  - Neither the name of the copyright holders nor the names of its\n    contributors may be used to endorse or promote products derived from\n    this software without specific prior written permission.\n\n  The copyright holders provide no reassurances that the source code\n  provided does not infringe any patent, copyright, or any other\n  intellectual property rights of third parties.  The copyright holders\n  disclaim any liability to any recipient for claims brought against\n  recipient by any third party for infringement of that parties\n  intellectual property rights.\n\n  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS\n  \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT\n  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR\n  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT\n  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,\n  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT\n  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,\n  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY\n  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT\n  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\n  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n\n\nName: GCC runtime library\nFiles: .libs/libgfortran*.so\nDescription: dynamically linked to files compiled with gcc\nAvailability: https://gcc.gnu.org/viewcvs/gcc/\nLicense: GPLv3 + runtime exception\n  Copyright (C) 2002-2017 Free Software Foundation, Inc.\n\n  Libgfortran is free software; you can redistribute it and/or modify\n  it under the terms of the GNU General Public License as published by\n  the Free Software Foundation; either version 3, or (at your option)\n  any later version.\n\n  Libgfortran is distributed in the hope that it will be useful,\n  but WITHOUT ANY WARRANTY; without even the implied warranty of\n  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n  GNU General Public License for more details.\n\n  Under Section 7 of GPL version 3, you are granted additional\n  permissions described in the GCC Runtime Library Exception, version\n  3.1, as published by the Free Software Foundation.\n\n  You should have received a copy of the GNU General Public License and\n  a copy of the GCC Runtime Library Exception along with this program;\n  see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see\n  <http://www.gnu.org/licenses/>.\n\n----\n\nFull text of license texts referred to above follows (that they are\nlisted below does not necessarily imply the conditions apply to the\npresent binary release):\n\n----\n\nGCC RUNTIME LIBRARY EXCEPTION\n\nVersion 3.1, 31 March 2009\n\nCopyright (C) 2009 Free Software Foundation, Inc. <http://fsf.org/>\n\nEveryone is permitted to copy and distribute verbatim copies of this\nlicense document, but changing it is not allowed.\n\nThis GCC Runtime Library Exception (\"Exception\") is an additional\npermission under section 7 of the GNU General Public License, version\n3 (\"GPLv3\"). It applies to a given file (the \"Runtime Library\") that\nbears a notice placed by the copyright holder of the file stating that\nthe file is governed by GPLv3 along with this Exception.\n\nWhen you use GCC to compile a program, GCC may combine portions of\ncertain GCC header files and runtime libraries with the compiled\nprogram. The purpose of this Exception is to allow compilation of\nnon-GPL (including proprietary) programs to use, in this way, the\nheader files and runtime libraries covered by this Exception.\n\n0. Definitions.\n\nA file is an \"Independent Module\" if it either requires the Runtime\nLibrary for execution after a Compilation Process, or makes use of an\ninterface provided by the Runtime Library, but is not otherwise based\non the Runtime Library.\n\n\"GCC\" means a version of the GNU Compiler Collection, with or without\nmodifications, governed by version 3 (or a specified later version) of\nthe GNU General Public License (GPL) with the option of using any\nsubsequent versions published by the FSF.\n\n\"GPL-compatible Software\" is software whose conditions of propagation,\nmodification and use would permit combination with GCC in accord with\nthe license of GCC.\n\n\"Target Code\" refers to output from any compiler for a real or virtual\ntarget processor architecture, in executable form or suitable for\ninput to an assembler, loader, linker and/or execution\nphase. Notwithstanding that, Target Code does not include data in any\nformat that is used as a compiler intermediate representation, or used\nfor producing a compiler intermediate representation.\n\nThe \"Compilation Process\" transforms code entirely represented in\nnon-intermediate languages designed for human-written code, and/or in\nJava Virtual Machine byte code, into Target Code. Thus, for example,\nuse of source code generators and preprocessors need not be considered\npart of the Compilation Process, since the Compilation Process can be\nunderstood as starting with the output of the generators or\npreprocessors.\n\nA Compilation Process is \"Eligible\" if it is done using GCC, alone or\nwith other GPL-compatible software, or if it is done without using any\nwork based on GCC. For example, using non-GPL-compatible Software to\noptimize any GCC intermediate representations would not qualify as an\nEligible Compilation Process.\n\n1. Grant of Additional Permission.\n\nYou have permission to propagate a work of Target Code formed by\ncombining the Runtime Library with Independent Modules, even if such\npropagation would otherwise violate the terms of GPLv3, provided that\nall Target Code was generated by Eligible Compilation Processes. You\nmay then convey such a combination under terms of your choice,\nconsistent with the licensing of the Independent Modules.\n\n2. No Weakening of GCC Copyleft.\n\nThe availability of this Exception does not imply any general\npresumption that third-party software is unaffected by the copyleft\nrequirements of the license of GCC.\n\n----\n\n                    GNU GENERAL PUBLIC LICENSE\n                       Version 3, 29 June 2007\n\n Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>\n Everyone is permitted to copy and distribute verbatim copies\n of this license document, but changing it is not allowed.\n\n                            Preamble\n\n  The GNU General Public License is a free, copyleft license for\nsoftware and other kinds of works.\n\n  The licenses for most software and other practical works are designed\nto take away your freedom to share and change the works.  By contrast,\nthe GNU General Public License is intended to guarantee your freedom to\nshare and change all versions of a program--to make sure it remains free\nsoftware for all its users.  We, the Free Software Foundation, use the\nGNU General Public License for most of our software; it applies also to\nany other work released this way by its authors.  You can apply it to\nyour programs, too.\n\n  When we speak of free software, we are referring to freedom, not\nprice.  Our General Public Licenses are designed to make sure that you\nhave the freedom to distribute copies of free software (and charge for\nthem if you wish), that you receive source code or can get it if you\nwant it, that you can change the software or use pieces of it in new\nfree programs, and that you know you can do these things.\n\n  To protect your rights, we need to prevent others from denying you\nthese rights or asking you to surrender the rights.  Therefore, you have\ncertain responsibilities if you distribute copies of the software, or if\nyou modify it: responsibilities to respect the freedom of others.\n\n  For example, if you distribute copies of such a program, whether\ngratis or for a fee, you must pass on to the recipients the same\nfreedoms that you received.  You must make sure that they, too, receive\nor can get the source code.  And you must show them these terms so they\nknow their rights.\n\n  Developers that use the GNU GPL protect your rights with two steps:\n(1) assert copyright on the software, and (2) offer you this License\ngiving you legal permission to copy, distribute and/or modify it.\n\n  For the developers' and authors' protection, the GPL clearly explains\nthat there is no warranty for this free software.  For both users' and\nauthors' sake, the GPL requires that modified versions be marked as\nchanged, so that their problems will not be attributed erroneously to\nauthors of previous versions.\n\n  Some devices are designed to deny users access to install or run\nmodified versions of the software inside them, although the manufacturer\ncan do so.  This is fundamentally incompatible with the aim of\nprotecting users' freedom to change the software.  The systematic\npattern of such abuse occurs in the area of products for individuals to\nuse, which is precisely where it is most unacceptable.  Therefore, we\nhave designed this version of the GPL to prohibit the practice for those\nproducts.  If such problems arise substantially in other domains, we\nstand ready to extend this provision to those domains in future versions\nof the GPL, as needed to protect the freedom of users.\n\n  Finally, every program is threatened constantly by software patents.\nStates should not allow patents to restrict development and use of\nsoftware on general-purpose computers, but in those that do, we wish to\navoid the special danger that patents applied to a free program could\nmake it effectively proprietary.  To prevent this, the GPL assures that\npatents cannot be used to render the program non-free.\n\n  The precise terms and conditions for copying, distribution and\nmodification follow.\n\n                       TERMS AND CONDITIONS\n\n  0. Definitions.\n\n  \"This License\" refers to version 3 of the GNU General Public License.\n\n  \"Copyright\" also means copyright-like laws that apply to other kinds of\nworks, such as semiconductor masks.\n\n  \"The Program\" refers to any copyrightable work licensed under this\nLicense.  Each licensee is addressed as \"you\".  \"Licensees\" and\n\"recipients\" may be individuals or organizations.\n\n  To \"modify\" a work means to copy from or adapt all or part of the work\nin a fashion requiring copyright permission, other than the making of an\nexact copy.  The resulting work is called a \"modified version\" of the\nearlier work or a work \"based on\" the earlier work.\n\n  A \"covered work\" means either the unmodified Program or a work based\non the Program.\n\n  To \"propagate\" a work means to do anything with it that, without\npermission, would make you directly or secondarily liable for\ninfringement under applicable copyright law, except executing it on a\ncomputer or modifying a private copy.  Propagation includes copying,\ndistribution (with or without modification), making available to the\npublic, and in some countries other activities as well.\n\n  To \"convey\" a work means any kind of propagation that enables other\nparties to make or receive copies.  Mere interaction with a user through\na computer network, with no transfer of a copy, is not conveying.\n\n  An interactive user interface displays \"Appropriate Legal Notices\"\nto the extent that it includes a convenient and prominently visible\nfeature that (1) displays an appropriate copyright notice, and (2)\ntells the user that there is no warranty for the work (except to the\nextent that warranties are provided), that licensees may convey the\nwork under this License, and how to view a copy of this License.  If\nthe interface presents a list of user commands or options, such as a\nmenu, a prominent item in the list meets this criterion.\n\n  1. Source Code.\n\n  The \"source code\" for a work means the preferred form of the work\nfor making modifications to it.  \"Object code\" means any non-source\nform of a work.\n\n  A \"Standard Interface\" means an interface that either is an official\nstandard defined by a recognized standards body, or, in the case of\ninterfaces specified for a particular programming language, one that\nis widely used among developers working in that language.\n\n  The \"System Libraries\" of an executable work include anything, other\nthan the work as a whole, that (a) is included in the normal form of\npackaging a Major Component, but which is not part of that Major\nComponent, and (b) serves only to enable use of the work with that\nMajor Component, or to implement a Standard Interface for which an\nimplementation is available to the public in source code form.  A\n\"Major Component\", in this context, means a major essential component\n(kernel, window system, and so on) of the specific operating system\n(if any) on which the executable work runs, or a compiler used to\nproduce the work, or an object code interpreter used to run it.\n\n  The \"Corresponding Source\" for a work in object code form means all\nthe source code needed to generate, install, and (for an executable\nwork) run the object code and to modify the work, including scripts to\ncontrol those activities.  However, it does not include the work's\nSystem Libraries, or general-purpose tools or generally available free\nprograms which are used unmodified in performing those activities but\nwhich are not part of the work.  For example, Corresponding Source\nincludes interface definition files associated with source files for\nthe work, and the source code for shared libraries and dynamically\nlinked subprograms that the work is specifically designed to require,\nsuch as by intimate data communication or control flow between those\nsubprograms and other parts of the work.\n\n  The Corresponding Source need not include anything that users\ncan regenerate automatically from other parts of the Corresponding\nSource.\n\n  The Corresponding Source for a work in source code form is that\nsame work.\n\n  2. Basic Permissions.\n\n  All rights granted under this License are granted for the term of\ncopyright on the Program, and are irrevocable provided the stated\nconditions are met.  This License explicitly affirms your unlimited\npermission to run the unmodified Program.  The output from running a\ncovered work is covered by this License only if the output, given its\ncontent, constitutes a covered work.  This License acknowledges your\nrights of fair use or other equivalent, as provided by copyright law.\n\n  You may make, run and propagate covered works that you do not\nconvey, without conditions so long as your license otherwise remains\nin force.  You may convey covered works to others for the sole purpose\nof having them make modifications exclusively for you, or provide you\nwith facilities for running those works, provided that you comply with\nthe terms of this License in conveying all material for which you do\nnot control copyright.  Those thus making or running the covered works\nfor you must do so exclusively on your behalf, under your direction\nand control, on terms that prohibit them from making any copies of\nyour copyrighted material outside their relationship with you.\n\n  Conveying under any other circumstances is permitted solely under\nthe conditions stated below.  Sublicensing is not allowed; section 10\nmakes it unnecessary.\n\n  3. Protecting Users' Legal Rights From Anti-Circumvention Law.\n\n  No covered work shall be deemed part of an effective technological\nmeasure under any applicable law fulfilling obligations under article\n11 of the WIPO copyright treaty adopted on 20 December 1996, or\nsimilar laws prohibiting or restricting circumvention of such\nmeasures.\n\n  When you convey a covered work, you waive any legal power to forbid\ncircumvention of technological measures to the extent such circumvention\nis effected by exercising rights under this License with respect to\nthe covered work, and you disclaim any intention to limit operation or\nmodification of the work as a means of enforcing, against the work's\nusers, your or third parties' legal rights to forbid circumvention of\ntechnological measures.\n\n  4. Conveying Verbatim Copies.\n\n  You may convey verbatim copies of the Program's source code as you\nreceive it, in any medium, provided that you conspicuously and\nappropriately publish on each copy an appropriate copyright notice;\nkeep intact all notices stating that this License and any\nnon-permissive terms added in accord with section 7 apply to the code;\nkeep intact all notices of the absence of any warranty; and give all\nrecipients a copy of this License along with the Program.\n\n  You may charge any price or no price for each copy that you convey,\nand you may offer support or warranty protection for a fee.\n\n  5. Conveying Modified Source Versions.\n\n  You may convey a work based on the Program, or the modifications to\nproduce it from the Program, in the form of source code under the\nterms of section 4, provided that you also meet all of these conditions:\n\n    a) The work must carry prominent notices stating that you modified\n    it, and giving a relevant date.\n\n    b) The work must carry prominent notices stating that it is\n    released under this License and any conditions added under section\n    7.  This requirement modifies the requirement in section 4 to\n    \"keep intact all notices\".\n\n    c) You must license the entire work, as a whole, under this\n    License to anyone who comes into possession of a copy.  This\n    License will therefore apply, along with any applicable section 7\n    additional terms, to the whole of the work, and all its parts,\n    regardless of how they are packaged.  This License gives no\n    permission to license the work in any other way, but it does not\n    invalidate such permission if you have separately received it.\n\n    d) If the work has interactive user interfaces, each must display\n    Appropriate Legal Notices; however, if the Program has interactive\n    interfaces that do not display Appropriate Legal Notices, your\n    work need not make them do so.\n\n  A compilation of a covered work with other separate and independent\nworks, which are not by their nature extensions of the covered work,\nand which are not combined with it such as to form a larger program,\nin or on a volume of a storage or distribution medium, is called an\n\"aggregate\" if the compilation and its resulting copyright are not\nused to limit the access or legal rights of the compilation's users\nbeyond what the individual works permit.  Inclusion of a covered work\nin an aggregate does not cause this License to apply to the other\nparts of the aggregate.\n\n  6. Conveying Non-Source Forms.\n\n  You may convey a covered work in object code form under the terms\nof sections 4 and 5, provided that you also convey the\nmachine-readable Corresponding Source under the terms of this License,\nin one of these ways:\n\n    a) Convey the object code in, or embodied in, a physical product\n    (including a physical distribution medium), accompanied by the\n    Corresponding Source fixed on a durable physical medium\n    customarily used for software interchange.\n\n    b) Convey the object code in, or embodied in, a physical product\n    (including a physical distribution medium), accompanied by a\n    written offer, valid for at least three years and valid for as\n    long as you offer spare parts or customer support for that product\n    model, to give anyone who possesses the object code either (1) a\n    copy of the Corresponding Source for all the software in the\n    product that is covered by this License, on a durable physical\n    medium customarily used for software interchange, for a price no\n    more than your reasonable cost of physically performing this\n    conveying of source, or (2) access to copy the\n    Corresponding Source from a network server at no charge.\n\n    c) Convey individual copies of the object code with a copy of the\n    written offer to provide the Corresponding Source.  This\n    alternative is allowed only occasionally and noncommercially, and\n    only if you received the object code with such an offer, in accord\n    with subsection 6b.\n\n    d) Convey the object code by offering access from a designated\n    place (gratis or for a charge), and offer equivalent access to the\n    Corresponding Source in the same way through the same place at no\n    further charge.  You need not require recipients to copy the\n    Corresponding Source along with the object code.  If the place to\n    copy the object code is a network server, the Corresponding Source\n    may be on a different server (operated by you or a third party)\n    that supports equivalent copying facilities, provided you maintain\n    clear directions next to the object code saying where to find the\n    Corresponding Source.  Regardless of what server hosts the\n    Corresponding Source, you remain obligated to ensure that it is\n    available for as long as needed to satisfy these requirements.\n\n    e) Convey the object code using peer-to-peer transmission, provided\n    you inform other peers where the object code and Corresponding\n    Source of the work are being offered to the general public at no\n    charge under subsection 6d.\n\n  A separable portion of the object code, whose source code is excluded\nfrom the Corresponding Source as a System Library, need not be\nincluded in conveying the object code work.\n\n  A \"User Product\" is either (1) a \"consumer product\", which means any\ntangible personal property which is normally used for personal, family,\nor household purposes, or (2) anything designed or sold for incorporation\ninto a dwelling.  In determining whether a product is a consumer product,\ndoubtful cases shall be resolved in favor of coverage.  For a particular\nproduct received by a particular user, \"normally used\" refers to a\ntypical or common use of that class of product, regardless of the status\nof the particular user or of the way in which the particular user\nactually uses, or expects or is expected to use, the product.  A product\nis a consumer product regardless of whether the product has substantial\ncommercial, industrial or non-consumer uses, unless such uses represent\nthe only significant mode of use of the product.\n\n  \"Installation Information\" for a User Product means any methods,\nprocedures, authorization keys, or other information required to install\nand execute modified versions of a covered work in that User Product from\na modified version of its Corresponding Source.  The information must\nsuffice to ensure that the continued functioning of the modified object\ncode is in no case prevented or interfered with solely because\nmodification has been made.\n\n  If you convey an object code work under this section in, or with, or\nspecifically for use in, a User Product, and the conveying occurs as\npart of a transaction in which the right of possession and use of the\nUser Product is transferred to the recipient in perpetuity or for a\nfixed term (regardless of how the transaction is characterized), the\nCorresponding Source conveyed under this section must be accompanied\nby the Installation Information.  But this requirement does not apply\nif neither you nor any third party retains the ability to install\nmodified object code on the User Product (for example, the work has\nbeen installed in ROM).\n\n  The requirement to provide Installation Information does not include a\nrequirement to continue to provide support service, warranty, or updates\nfor a work that has been modified or installed by the recipient, or for\nthe User Product in which it has been modified or installed.  Access to a\nnetwork may be denied when the modification itself materially and\nadversely affects the operation of the network or violates the rules and\nprotocols for communication across the network.\n\n  Corresponding Source conveyed, and Installation Information provided,\nin accord with this section must be in a format that is publicly\ndocumented (and with an implementation available to the public in\nsource code form), and must require no special password or key for\nunpacking, reading or copying.\n\n  7. Additional Terms.\n\n  \"Additional permissions\" are terms that supplement the terms of this\nLicense by making exceptions from one or more of its conditions.\nAdditional permissions that are applicable to the entire Program shall\nbe treated as though they were included in this License, to the extent\nthat they are valid under applicable law.  If additional permissions\napply only to part of the Program, that part may be used separately\nunder those permissions, but the entire Program remains governed by\nthis License without regard to the additional permissions.\n\n  When you convey a copy of a covered work, you may at your option\nremove any additional permissions from that copy, or from any part of\nit.  (Additional permissions may be written to require their own\nremoval in certain cases when you modify the work.)  You may place\nadditional permissions on material, added by you to a covered work,\nfor which you have or can give appropriate copyright permission.\n\n  Notwithstanding any other provision of this License, for material you\nadd to a covered work, you may (if authorized by the copyright holders of\nthat material) supplement the terms of this License with terms:\n\n    a) Disclaiming warranty or limiting liability differently from the\n    terms of sections 15 and 16 of this License; or\n\n    b) Requiring preservation of specified reasonable legal notices or\n    author attributions in that material or in the Appropriate Legal\n    Notices displayed by works containing it; or\n\n    c) Prohibiting misrepresentation of the origin of that material, or\n    requiring that modified versions of such material be marked in\n    reasonable ways as different from the original version; or\n\n    d) Limiting the use for publicity purposes of names of licensors or\n    authors of the material; or\n\n    e) Declining to grant rights under trademark law for use of some\n    trade names, trademarks, or service marks; or\n\n    f) Requiring indemnification of licensors and authors of that\n    material by anyone who conveys the material (or modified versions of\n    it) with contractual assumptions of liability to the recipient, for\n    any liability that these contractual assumptions directly impose on\n    those licensors and authors.\n\n  All other non-permissive additional terms are considered \"further\nrestrictions\" within the meaning of section 10.  If the Program as you\nreceived it, or any part of it, contains a notice stating that it is\ngoverned by this License along with a term that is a further\nrestriction, you may remove that term.  If a license document contains\na further restriction but permits relicensing or conveying under this\nLicense, you may add to a covered work material governed by the terms\nof that license document, provided that the further restriction does\nnot survive such relicensing or conveying.\n\n  If you add terms to a covered work in accord with this section, you\nmust place, in the relevant source files, a statement of the\nadditional terms that apply to those files, or a notice indicating\nwhere to find the applicable terms.\n\n  Additional terms, permissive or non-permissive, may be stated in the\nform of a separately written license, or stated as exceptions;\nthe above requirements apply either way.\n\n  8. Termination.\n\n  You may not propagate or modify a covered work except as expressly\nprovided under this License.  Any attempt otherwise to propagate or\nmodify it is void, and will automatically terminate your rights under\nthis License (including any patent licenses granted under the third\nparagraph of section 11).\n\n  However, if you cease all violation of this License, then your\nlicense from a particular copyright holder is reinstated (a)\nprovisionally, unless and until the copyright holder explicitly and\nfinally terminates your license, and (b) permanently, if the copyright\nholder fails to notify you of the violation by some reasonable means\nprior to 60 days after the cessation.\n\n  Moreover, your license from a particular copyright holder is\nreinstated permanently if the copyright holder notifies you of the\nviolation by some reasonable means, this is the first time you have\nreceived notice of violation of this License (for any work) from that\ncopyright holder, and you cure the violation prior to 30 days after\nyour receipt of the notice.\n\n  Termination of your rights under this section does not terminate the\nlicenses of parties who have received copies or rights from you under\nthis License.  If your rights have been terminated and not permanently\nreinstated, you do not qualify to receive new licenses for the same\nmaterial under section 10.\n\n  9. Acceptance Not Required for Having Copies.\n\n  You are not required to accept this License in order to receive or\nrun a copy of the Program.  Ancillary propagation of a covered work\noccurring solely as a consequence of using peer-to-peer transmission\nto receive a copy likewise does not require acceptance.  However,\nnothing other than this License grants you permission to propagate or\nmodify any covered work.  These actions infringe copyright if you do\nnot accept this License.  Therefore, by modifying or propagating a\ncovered work, you indicate your acceptance of this License to do so.\n\n  10. Automatic Licensing of Downstream Recipients.\n\n  Each time you convey a covered work, the recipient automatically\nreceives a license from the original licensors, to run, modify and\npropagate that work, subject to this License.  You are not responsible\nfor enforcing compliance by third parties with this License.\n\n  An \"entity transaction\" is a transaction transferring control of an\norganization, or substantially all assets of one, or subdividing an\norganization, or merging organizations.  If propagation of a covered\nwork results from an entity transaction, each party to that\ntransaction who receives a copy of the work also receives whatever\nlicenses to the work the party's predecessor in interest had or could\ngive under the previous paragraph, plus a right to possession of the\nCorresponding Source of the work from the predecessor in interest, if\nthe predecessor has it or can get it with reasonable efforts.\n\n  You may not impose any further restrictions on the exercise of the\nrights granted or affirmed under this License.  For example, you may\nnot impose a license fee, royalty, or other charge for exercise of\nrights granted under this License, and you may not initiate litigation\n(including a cross-claim or counterclaim in a lawsuit) alleging that\nany patent claim is infringed by making, using, selling, offering for\nsale, or importing the Program or any portion of it.\n\n  11. Patents.\n\n  A \"contributor\" is a copyright holder who authorizes use under this\nLicense of the Program or a work on which the Program is based.  The\nwork thus licensed is called the contributor's \"contributor version\".\n\n  A contributor's \"essential patent claims\" are all patent claims\nowned or controlled by the contributor, whether already acquired or\nhereafter acquired, that would be infringed by some manner, permitted\nby this License, of making, using, or selling its contributor version,\nbut do not include claims that would be infringed only as a\nconsequence of further modification of the contributor version.  For\npurposes of this definition, \"control\" includes the right to grant\npatent sublicenses in a manner consistent with the requirements of\nthis License.\n\n  Each contributor grants you a non-exclusive, worldwide, royalty-free\npatent license under the contributor's essential patent claims, to\nmake, use, sell, offer for sale, import and otherwise run, modify and\npropagate the contents of its contributor version.\n\n  In the following three paragraphs, a \"patent license\" is any express\nagreement or commitment, however denominated, not to enforce a patent\n(such as an express permission to practice a patent or covenant not to\nsue for patent infringement).  To \"grant\" such a patent license to a\nparty means to make such an agreement or commitment not to enforce a\npatent against the party.\n\n  If you convey a covered work, knowingly relying on a patent license,\nand the Corresponding Source of the work is not available for anyone\nto copy, free of charge and under the terms of this License, through a\npublicly available network server or other readily accessible means,\nthen you must either (1) cause the Corresponding Source to be so\navailable, or (2) arrange to deprive yourself of the benefit of the\npatent license for this particular work, or (3) arrange, in a manner\nconsistent with the requirements of this License, to extend the patent\nlicense to downstream recipients.  \"Knowingly relying\" means you have\nactual knowledge that, but for the patent license, your conveying the\ncovered work in a country, or your recipient's use of the covered work\nin a country, would infringe one or more identifiable patents in that\ncountry that you have reason to believe are valid.\n\n  If, pursuant to or in connection with a single transaction or\narrangement, you convey, or propagate by procuring conveyance of, a\ncovered work, and grant a patent license to some of the parties\nreceiving the covered work authorizing them to use, propagate, modify\nor convey a specific copy of the covered work, then the patent license\nyou grant is automatically extended to all recipients of the covered\nwork and works based on it.\n\n  A patent license is \"discriminatory\" if it does not include within\nthe scope of its coverage, prohibits the exercise of, or is\nconditioned on the non-exercise of one or more of the rights that are\nspecifically granted under this License.  You may not convey a covered\nwork if you are a party to an arrangement with a third party that is\nin the business of distributing software, under which you make payment\nto the third party based on the extent of your activity of conveying\nthe work, and under which the third party grants, to any of the\nparties who would receive the covered work from you, a discriminatory\npatent license (a) in connection with copies of the covered work\nconveyed by you (or copies made from those copies), or (b) primarily\nfor and in connection with specific products or compilations that\ncontain the covered work, unless you entered into that arrangement,\nor that patent license was granted, prior to 28 March 2007.\n\n  Nothing in this License shall be construed as excluding or limiting\nany implied license or other defenses to infringement that may\notherwise be available to you under applicable patent law.\n\n  12. No Surrender of Others' Freedom.\n\n  If conditions are imposed on you (whether by court order, agreement or\notherwise) that contradict the conditions of this License, they do not\nexcuse you from the conditions of this License.  If you cannot convey a\ncovered work so as to satisfy simultaneously your obligations under this\nLicense and any other pertinent obligations, then as a consequence you may\nnot convey it at all.  For example, if you agree to terms that obligate you\nto collect a royalty for further conveying from those to whom you convey\nthe Program, the only way you could satisfy both those terms and this\nLicense would be to refrain entirely from conveying the Program.\n\n  13. Use with the GNU Affero General Public License.\n\n  Notwithstanding any other provision of this License, you have\npermission to link or combine any covered work with a work licensed\nunder version 3 of the GNU Affero General Public License into a single\ncombined work, and to convey the resulting work.  The terms of this\nLicense will continue to apply to the part which is the covered work,\nbut the special requirements of the GNU Affero General Public License,\nsection 13, concerning interaction through a network will apply to the\ncombination as such.\n\n  14. Revised Versions of this License.\n\n  The Free Software Foundation may publish revised and/or new versions of\nthe GNU General Public License from time to time.  Such new versions will\nbe similar in spirit to the present version, but may differ in detail to\naddress new problems or concerns.\n\n  Each version is given a distinguishing version number.  If the\nProgram specifies that a certain numbered version of the GNU General\nPublic License \"or any later version\" applies to it, you have the\noption of following the terms and conditions either of that numbered\nversion or of any later version published by the Free Software\nFoundation.  If the Program does not specify a version number of the\nGNU General Public License, you may choose any version ever published\nby the Free Software Foundation.\n\n  If the Program specifies that a proxy can decide which future\nversions of the GNU General Public License can be used, that proxy's\npublic statement of acceptance of a version permanently authorizes you\nto choose that version for the Program.\n\n  Later license versions may give you additional or different\npermissions.  However, no additional obligations are imposed on any\nauthor or copyright holder as a result of your choosing to follow a\nlater version.\n\n  15. Disclaimer of Warranty.\n\n  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY\nAPPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT\nHOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM \"AS IS\" WITHOUT WARRANTY\nOF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,\nTHE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR\nPURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM\nIS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF\nALL NECESSARY SERVICING, REPAIR OR CORRECTION.\n\n  16. Limitation of Liability.\n\n  IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING\nWILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR CONVEYS\nTHE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY\nGENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE\nUSE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS OF\nDATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD\nPARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS),\nEVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF\nSUCH DAMAGES.\n\n  17. Interpretation of Sections 15 and 16.\n\n  If the disclaimer of warranty and limitation of liability provided\nabove cannot be given local legal effect according to their terms,\nreviewing courts shall apply local law that most closely approximates\nan absolute waiver of all civil liability in connection with the\nProgram, unless a warranty or assumption of liability accompanies a\ncopy of the Program in return for a fee.\n\n                     END OF TERMS AND CONDITIONS\n\n            How to Apply These Terms to Your New Programs\n\n  If you develop a new program, and you want it to be of the greatest\npossible use to the public, the best way to achieve this is to make it\nfree software which everyone can redistribute and change under these terms.\n\n  To do so, attach the following notices to the program.  It is safest\nto attach them to the start of each source file to most effectively\nstate the exclusion of warranty; and each file should have at least\nthe \"copyright\" line and a pointer to where the full notice is found.\n\n    <one line to give the program's name and a brief idea of what it does.>\n    Copyright (C) <year>  <name of author>\n\n    This program is free software: you can redistribute it and/or modify\n    it under the terms of the GNU General Public License as published by\n    the Free Software Foundation, either version 3 of the License, or\n    (at your option) any later version.\n\n    This program is distributed in the hope that it will be useful,\n    but WITHOUT ANY WARRANTY; without even the implied warranty of\n    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n    GNU General Public License for more details.\n\n    You should have received a copy of the GNU General Public License\n    along with this program.  If not, see <http://www.gnu.org/licenses/>.\n\nAlso add information on how to contact you by electronic and paper mail.\n\n  If the program does terminal interaction, make it output a short\nnotice like this when it starts in an interactive mode:\n\n    <program>  Copyright (C) <year>  <name of author>\n    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.\n    This is free software, and you are welcome to redistribute it\n    under certain conditions; type `show c' for details.\n\nThe hypothetical commands `show w' and `show c' should show the appropriate\nparts of the General Public License.  Of course, your program's commands\nmight be different; for a GUI interface, you would use an \"about box\".\n\n  You should also get your employer (if you work as a programmer) or school,\nif any, to sign a \"copyright disclaimer\" for the program, if necessary.\nFor more information on this, and how to apply and follow the GNU GPL, see\n<http://www.gnu.org/licenses/>.\n\n  The GNU General Public License does not permit incorporating your program\ninto proprietary programs.  If your program is a subroutine library, you\nmay consider it more useful to permit linking proprietary applications with\nthe library.  If this is what you want to do, use the GNU Lesser General\nPublic License instead of this License.  But first, please read\n<http://www.gnu.org/philosophy/why-not-lgpl.html>.",
+        "classifier": [
+          "Development Status :: 5 - Production/Stable",
+          "Intended Audience :: Science/Research",
+          "Intended Audience :: Developers",
+          "License :: OSI Approved :: BSD License",
+          "Programming Language :: C",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.8",
+          "Programming Language :: Python :: 3.9",
+          "Programming Language :: Python :: 3.10",
+          "Programming Language :: Python :: 3.11",
+          "Topic :: Software Development :: Libraries",
+          "Topic :: Scientific/Engineering",
+          "Operating System :: Microsoft :: Windows",
+          "Operating System :: POSIX :: Linux",
+          "Operating System :: POSIX",
+          "Operating System :: Unix",
+          "Operating System :: MacOS"
+        ],
+        "requires_dist": [
+          "numpy<1.27.0,>=1.19.5",
+          "pytest; extra == \"test\"",
+          "pytest-cov; extra == \"test\"",
+          "pytest-timeout; extra == \"test\"",
+          "pytest-xdist; extra == \"test\"",
+          "asv; extra == \"test\"",
+          "mpmath; extra == \"test\"",
+          "gmpy2; extra == \"test\"",
+          "threadpoolctl; extra == \"test\"",
+          "scikit-umfpack; extra == \"test\"",
+          "pooch; extra == \"test\"",
+          "sphinx!=4.1.0; extra == \"doc\"",
+          "pydata-sphinx-theme==0.9.0; extra == \"doc\"",
+          "sphinx-design>=0.2.0; extra == \"doc\"",
+          "matplotlib>2; extra == \"doc\"",
+          "numpydoc; extra == \"doc\"",
+          "mypy; extra == \"dev\"",
+          "typing_extensions; extra == \"dev\"",
+          "pycodestyle; extra == \"dev\"",
+          "flake8; extra == \"dev\"",
+          "rich-click; extra == \"dev\"",
+          "click; extra == \"dev\"",
+          "doit>=0.36.0; extra == \"dev\"",
+          "pydevtool; extra == \"dev\""
+        ],
+        "requires_python": "<3.12,>=3.8",
+        "project_url": [
+          "Homepage, https://scipy.org/",
+          "Documentation, https://docs.scipy.org/doc/scipy/",
+          "Source, https://github.com/scipy/scipy",
+          "Download, https://github.com/scipy/scipy/releases",
+          "Tracker, https://github.com/scipy/scipy/issues"
+        ],
+        "provides_extra": [
+          "test",
+          "doc",
+          "dev"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/78/09/9df5358ffb74d225243b56a65ffe196de481fcd8f731f55e41f2d5d36015/pycuda-2022.2.2.tar.gz",
+        "archive_info": {
+          "hashes": {
+            "sha256": "cd92e7246bb45ac3452955a110714112674cdf3b4a9e2f4ff25a4159c684e6bb"
+          },
+          "hash": "sha256=cd92e7246bb45ac3452955a110714112674cdf3b4a9e2f4ff25a4159c684e6bb"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": true,
+      "metadata": {
+        "metadata_version": "2.4",
+        "name": "pycuda",
+        "version": "2022.2.2",
+        "dynamic": [
+          "author",
+          "author-email",
+          "classifier",
+          "description",
+          "home-page",
+          "license",
+          "license-file",
+          "project-url",
+          "requires-dist",
+          "requires-python",
+          "summary"
+        ],
+        "summary": "Python wrapper for Nvidia CUDA",
+        "description": "PyCUDA: Pythonic Access to CUDA, with Arrays and Algorithms\n=============================================================\n\n.. image:: https://gitlab.tiker.net/inducer/pycuda/badges/main/pipeline.svg\n    :alt: Gitlab Build Status\n    :target: https://gitlab.tiker.net/inducer/pycuda/commits/main\n.. image:: https://badge.fury.io/py/pycuda.png\n    :target: https://pypi.org/project/pycuda\n.. image:: https://zenodo.org/badge/1575319.svg\n    :alt: Zenodo DOI for latest release\n    :target: https://zenodo.org/badge/latestdoi/1575319\n\nPyCUDA lets you access `Nvidia <https://nvidia.com>`_'s `CUDA\n<https://nvidia.com/cuda/>`_ parallel computation API from Python.\nSeveral wrappers of the CUDA API already exist-so what's so special\nabout PyCUDA?\n\n* Object cleanup tied to lifetime of objects. This idiom, often\n  called\n  `RAII <https://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization>`_\n  in C++, makes it much easier to write correct, leak- and\n  crash-free code. PyCUDA knows about dependencies, too, so (for\n  example) it won't detach from a context before all memory\n  allocated in it is also freed.\n\n* Convenience. Abstractions like pycuda.driver.SourceModule and\n  pycuda.gpuarray.GPUArray make CUDA programming even more\n  convenient than with Nvidia's C-based runtime.\n\n* Completeness. PyCUDA puts the full power of CUDA's driver API at\n  your disposal, if you wish. It also includes code for\n  interoperability with OpenGL.\n\n* Automatic Error Checking. All CUDA errors are automatically\n  translated into Python exceptions.\n\n* Speed. PyCUDA's base layer is written in C++, so all the niceties\n  above are virtually free.\n\n* Helpful `Documentation <https://documen.tician.de/pycuda>`_.\n\nRelatedly, like-minded computing goodness for `OpenCL <https://www.khronos.org/registry/OpenCL/>`_\nis provided by PyCUDA's sister project `PyOpenCL <https://pypi.org/project/pyopencl>`_.\n",
+        "home_page": "http://mathema.tician.de/software/pycuda",
+        "author": "Andreas Kloeckner",
+        "author_email": "inform@tiker.net",
+        "license": "MIT",
+        "license_file": [
+          "LICENSE"
+        ],
+        "classifier": [
+          "Environment :: Console",
+          "Development Status :: 5 - Production/Stable",
+          "Intended Audience :: Developers",
+          "Intended Audience :: Other Audience",
+          "Intended Audience :: Science/Research",
+          "License :: OSI Approved :: MIT License",
+          "Natural Language :: English",
+          "Programming Language :: C++",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 3",
+          "Topic :: Scientific/Engineering",
+          "Topic :: Scientific/Engineering :: Mathematics",
+          "Topic :: Scientific/Engineering :: Physics",
+          "Topic :: Scientific/Engineering :: Visualization"
+        ],
+        "requires_dist": [
+          "pytools>=2011.2",
+          "appdirs>=1.4.0",
+          "mako"
+        ],
+        "requires_python": "~=3.8",
+        "project_url": [
+          "Source, https://github.com/inducer/pycuda"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/98/8b/36d178c3b98524fe5b1cc15d075d34e2e6e291c4b0461f6e901f1e0bc736/scikit_cuda-0.5.3-py2.py3-none-any.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "a89350575709190263833f97701dad8628fb6841616e581b546e63bf0b0085c4"
+          },
+          "hash": "sha256=a89350575709190263833f97701dad8628fb6841616e581b546e63bf0b0085c4"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": true,
+      "metadata": {
+        "metadata_version": "2.1",
+        "name": "scikit-cuda",
+        "version": "0.5.3",
+        "platform": [
+          "UNKNOWN"
+        ],
+        "summary": "Python interface to GPU-powered libraries",
+        "description": "Package Description\n-------------------\nscikit-cuda provides Python interfaces to many of the functions in the CUDA\ndevice/runtime, CUBLAS, CUFFT, and CUSOLVER libraries distributed as part of\nNVIDIA's `CUDA Programming Toolkit <http://www.nvidia.com/cuda/>`_, as well as\ninterfaces to select functions in the `CULA Dense Toolkit <http://www.culatools.com/dense>`_.\nBoth low-level wrapper functions similar to their C counterparts and high-level\nfunctions comparable to those in `NumPy and Scipy <http://www.scipy.org>`_ are provided.\n\n.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.3229433.svg\n    :target: http://dx.doi.org/10.5281/zenodo.3229433\n    :alt: 0.5.3\n.. image:: https://img.shields.io/pypi/v/scikit-cuda.svg\n    :target: https://pypi.python.org/pypi/scikit-cuda\n    :alt: Latest Version\n.. image:: https://img.shields.io/pypi/dm/scikit-cuda.svg\n    :target: https://pypi.python.org/pypi/scikit-cuda\n    :alt: Downloads\n.. image:: http://prime4commit.com/projects/102.svg\n    :target: http://prime4commit.com/projects/102\n    :alt: Support the project\n.. image:: https://www.openhub.net/p/scikit-cuda/widgets/project_thin_badge?format=gif\n    :target: https://www.openhub.net/p/scikit-cuda?ref=Thin+badge\n    :alt: Open Hub\n\nDocumentation\n-------------\nPackage documentation is available at\n`<http://scikit-cuda.readthedocs.org/>`_.  Many of the high-level\nfunctions have examples in their docstrings. More illustrations of how\nto use both the wrappers and high-level functions can be found in the\n``demos/`` and ``tests/`` subdirectories.\n\nDevelopment\n-----------\nThe latest source code can be obtained from\n`<https://github.com/lebedov/scikit-cuda>`_.\n\nWhen submitting bug reports or questions via the `issue tracker \n<https://github.com/lebedov/scikit-cuda/issues>`_, please include the following \ninformation:\n\n- Python version.\n- OS platform.\n- CUDA and PyCUDA version.\n- Version or git revision of scikit-cuda.\n\nCiting\n------\nIf you use scikit-cuda in a scholarly publication, please cite it as follows: ::\n\n    @misc{givon_scikit-cuda_2019,\n              author = {Lev E. Givon and\n                        Thomas Unterthiner and\n                        N. Benjamin Erichson and\n                        David Wei Chiang and\n                        Eric Larson and\n                        Luke Pfister and\n                        Sander Dieleman and\n                        Gregory R. Lee and\n                        Stefan van der Walt and\n                        Bryant Menn and\n                        Teodor Mihai Moldovan and\n                        Fr\\'{e}d\\'{e}ric Bastien and\n                        Xing Shi and\n                        Jan Schl\\\"{u}ter and\n                        Brian Thomas and\n                        Chris Capdevila and\n                        Alex Rubinsteyn and \n                        Michael M. Forbes and\n                        Jacob Frelinger and \n                        Tim Klein and\n                        Bruce Merry and\n                        Nate Merill and\n                        Lars Pastewka and\n                        Li Yong Liu and\n                        S. Clarkson and\n                        Michael Rader and\n                        Steve Taylor and\n                        Arnaud Bergeron and\n                        Nikul H. Ukani and\n                        Feng Wang and\n                        Wing-Kit Lee and\n                        Yiyin Zhou},\n        title        = {scikit-cuda 0.5.3: a {Python} interface to {GPU}-powered libraries},\n        month        = May,\n        year         = 2019,\n        doi          = {10.5281/zenodo.3229433},\n        url          = {http://dx.doi.org/10.5281/zenodo.3229433},\n        note         = {\\url{http://dx.doi.org/10.5281/zenodo.3229433}}\n    }\n\nAuthors & Acknowledgments\n-------------------------\nSee the included `AUTHORS\n<https://github.com/lebedov/scikit-cuda/blob/master/docs/source/authors.rst>`_\nfile for more information.\n\nNote Regarding CULA Availability\n--------------------------------\nAs of 2017, the CULA toolkit is available to premium tier users of\n`Celerity Tools <http://www.celeritytools.com>`_ (EM Photonics' new\nHPC site).\n\nRelated\n-------\nPython wrappers for `cuDNN <https://developer.nvidia.com/cudnn>`_ by Hannes \nBretschneider are available `here\n<https://github.com/hannes-brt/cudnn-python-wrappers>`_.\n\n`ArrayFire <https://github.com/arrayfire/arrayfire>`_ is a free library containing many GPU-based routines with an `officially supported Python interface <https://github.com/arrayfire/arrayfire-python>`_.\n\nLicense\n-------\nThis software is licensed under the `BSD License\n<http://www.opensource.org/licenses/bsd-license.php>`_.  See the included\n`LICENSE\n<https://github.com/lebedov/scikit-cuda/blob/master/docs/source/license.rst>`_\nfile for more information.\n\n\n",
+        "home_page": "https://github.com/lebedov/scikit-cuda/",
+        "author": "Lev E. Givon",
+        "author_email": "lev@columbia.edu",
+        "license": "BSD",
+        "classifier": [
+          "Development Status :: 4 - Beta",
+          "Intended Audience :: Developers",
+          "Intended Audience :: Science/Research",
+          "License :: OSI Approved :: BSD License",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 2",
+          "Programming Language :: Python :: 3",
+          "Topic :: Scientific/Engineering",
+          "Topic :: Software Development"
+        ],
+        "requires_dist": [
+          "mako (>=1.0.1)",
+          "numpy (>=1.2.0)",
+          "pycuda (>=2016.1)",
+          "scipy (>=0.14.0) ; extra == 'scipy'",
+          "sphinx (>=1.3) ; extra == 'sphinx'",
+          "sphinx-rtd-theme (>=0.1.6) ; extra == 'sphinx_rtd_theme'"
+        ],
+        "provides_extra": [
+          "scipy",
+          "sphinx",
+          "sphinx_rtd_theme"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216"
+          },
+          "hash": "sha256=929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": true,
+      "metadata": {
+        "metadata_version": "2.1",
+        "name": "future",
+        "version": "1.0.0",
+        "summary": "Clean single-source support for Python 3 and 2",
+        "description": "\nfuture: Easy, safe support for Python 2/3 compatibility\n=======================================================\n\n``future`` is the missing compatibility layer between Python 2 and Python\n3. It allows you to use a single, clean Python 3.x-compatible codebase to\nsupport both Python 2 and Python 3 with minimal overhead.\n\nIt is designed to be used as follows::\n\n    from __future__ import (absolute_import, division,\n                            print_function, unicode_literals)\n    from builtins import (\n             bytes, dict, int, list, object, range, str,\n             ascii, chr, hex, input, next, oct, open,\n             pow, round, super,\n             filter, map, zip)\n\nfollowed by predominantly standard, idiomatic Python 3 code that then runs\nsimilarly on Python 2.6/2.7 and Python 3.3+.\n\nThe imports have no effect on Python 3. On Python 2, they shadow the\ncorresponding builtins, which normally have different semantics on Python 3\nversus 2, to provide their Python 3 semantics.\n\n\nStandard library reorganization\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n``future`` supports the standard library reorganization (PEP 3108) through the\nfollowing Py3 interfaces:\n\n    >>> # Top-level packages with Py3 names provided on Py2:\n    >>> import html.parser\n    >>> import queue\n    >>> import tkinter.dialog\n    >>> import xmlrpc.client\n    >>> # etc.\n\n    >>> # Aliases provided for extensions to existing Py2 module names:\n    >>> from future.standard_library import install_aliases\n    >>> install_aliases()\n\n    >>> from collections import Counter, OrderedDict   # backported to Py2.6\n    >>> from collections import UserDict, UserList, UserString\n    >>> import urllib.request\n    >>> from itertools import filterfalse, zip_longest\n    >>> from subprocess import getoutput, getstatusoutput\n\n\nAutomatic conversion\n--------------------\n\nAn included script called `futurize\n<https://python-future.org/automatic_conversion.html>`_ aids in converting\ncode (from either Python 2 or Python 3) to code compatible with both\nplatforms. It is similar to ``python-modernize`` but goes further in\nproviding Python 3 compatibility through the use of the backported types\nand builtin functions in ``future``.\n\n\nDocumentation\n-------------\n\nSee: https://python-future.org\n\n\nCredits\n-------\n\n:Author:  Ed Schofield, Jordan M. Adler, et al\n:Sponsor: Python Charmers: https://pythoncharmers.com\n:Others:  See docs/credits.rst or https://python-future.org/credits.html\n\n\nLicensing\n---------\nCopyright 2013-2024 Python Charmers, Australia.\nThe software is distributed under an MIT licence. See LICENSE.txt.\n\n",
+        "keywords": [
+          "future",
+          "past",
+          "python3",
+          "migration",
+          "futurize",
+          "backport",
+          "six",
+          "2to3",
+          "modernize",
+          "pasteurize",
+          "3to2"
+        ],
+        "home_page": "https://python-future.org",
+        "author": "Ed Schofield",
+        "author_email": "ed@pythoncharmers.com",
+        "license": "MIT",
+        "license_file": [
+          "LICENSE.txt"
+        ],
+        "classifier": [
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 2",
+          "Programming Language :: Python :: 2.6",
+          "Programming Language :: Python :: 2.7",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.3",
+          "Programming Language :: Python :: 3.4",
+          "Programming Language :: Python :: 3.5",
+          "Programming Language :: Python :: 3.6",
+          "Programming Language :: Python :: 3.7",
+          "Programming Language :: Python :: 3.8",
+          "Programming Language :: Python :: 3.9",
+          "Programming Language :: Python :: 3.10",
+          "Programming Language :: Python :: 3.11",
+          "Programming Language :: Python :: 3.12",
+          "License :: OSI Approved",
+          "License :: OSI Approved :: MIT License",
+          "Development Status :: 6 - Mature",
+          "Intended Audience :: Developers"
+        ],
+        "requires_python": ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*",
+        "project_url": [
+          "Source, https://github.com/PythonCharmers/python-future"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/32/d5/f9a850d79b0851d1d4ef6456097579a9005b31fea68726a4ae5f2d82ddd9/threadpoolctl-3.6.0-py3-none-any.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "43a0b8fd5a2928500110039e43a5eed8480b918967083ea48dc3ab9f13c4a7fb"
+          },
+          "hash": "sha256=43a0b8fd5a2928500110039e43a5eed8480b918967083ea48dc3ab9f13c4a7fb"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": true,
+      "metadata": {
+        "metadata_version": "2.4",
+        "name": "threadpoolctl",
+        "version": "3.6.0",
+        "summary": "threadpoolctl",
+        "description": "# Thread-pool Controls [![Build Status](https://github.com/joblib/threadpoolctl/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/joblib/threadpoolctl/actions?query=branch%3Amaster) [![codecov](https://codecov.io/gh/joblib/threadpoolctl/branch/master/graph/badge.svg)](https://codecov.io/gh/joblib/threadpoolctl)\n\nPython helpers to limit the number of threads used in the\nthreadpool-backed of common native libraries used for scientific\ncomputing and data science (e.g. BLAS and OpenMP).\n\nFine control of the underlying thread-pool size can be useful in\nworkloads that involve nested parallelism so as to mitigate\noversubscription issues.\n\n## Installation\n\n- For users, install the last published version from PyPI:\n\n  ```bash\n  pip install threadpoolctl\n  ```\n\n- For contributors, install from the source repository in developer\n  mode:\n\n  ```bash\n  pip install -r dev-requirements.txt\n  flit install --symlink\n  ```\n\n  then you run the tests with pytest:\n\n  ```bash\n  pytest\n  ```\n\n## Usage\n\n### Command Line Interface\n\nGet a JSON description of thread-pools initialized when importing python\npackages such as numpy or scipy for instance:\n\n```\npython -m threadpoolctl -i numpy scipy.linalg\n[\n  {\n    \"filepath\": \"/home/ogrisel/miniconda3/envs/tmp/lib/libmkl_rt.so\",\n    \"prefix\": \"libmkl_rt\",\n    \"user_api\": \"blas\",\n    \"internal_api\": \"mkl\",\n    \"version\": \"2019.0.4\",\n    \"num_threads\": 2,\n    \"threading_layer\": \"intel\"\n  },\n  {\n    \"filepath\": \"/home/ogrisel/miniconda3/envs/tmp/lib/libiomp5.so\",\n    \"prefix\": \"libiomp\",\n    \"user_api\": \"openmp\",\n    \"internal_api\": \"openmp\",\n    \"version\": null,\n    \"num_threads\": 4\n  }\n]\n```\n\nThe JSON information is written on STDOUT. If some of the packages are missing,\na warning message is displayed on STDERR.\n\n### Python Runtime Programmatic Introspection\n\nIntrospect the current state of the threadpool-enabled runtime libraries\nthat are loaded when importing Python packages:\n\n```python\n>>> from threadpoolctl import threadpool_info\n>>> from pprint import pprint\n>>> pprint(threadpool_info())\n[]\n\n>>> import numpy\n>>> pprint(threadpool_info())\n[{'filepath': '/home/ogrisel/miniconda3/envs/tmp/lib/libmkl_rt.so',\n  'internal_api': 'mkl',\n  'num_threads': 2,\n  'prefix': 'libmkl_rt',\n  'threading_layer': 'intel',\n  'user_api': 'blas',\n  'version': '2019.0.4'},\n {'filepath': '/home/ogrisel/miniconda3/envs/tmp/lib/libiomp5.so',\n  'internal_api': 'openmp',\n  'num_threads': 4,\n  'prefix': 'libiomp',\n  'user_api': 'openmp',\n  'version': None}]\n\n>>> import xgboost\n>>> pprint(threadpool_info())\n[{'filepath': '/home/ogrisel/miniconda3/envs/tmp/lib/libmkl_rt.so',\n  'internal_api': 'mkl',\n  'num_threads': 2,\n  'prefix': 'libmkl_rt',\n  'threading_layer': 'intel',\n  'user_api': 'blas',\n  'version': '2019.0.4'},\n {'filepath': '/home/ogrisel/miniconda3/envs/tmp/lib/libiomp5.so',\n  'internal_api': 'openmp',\n  'num_threads': 4,\n  'prefix': 'libiomp',\n  'user_api': 'openmp',\n  'version': None},\n {'filepath': '/home/ogrisel/miniconda3/envs/tmp/lib/libgomp.so.1.0.0',\n  'internal_api': 'openmp',\n  'num_threads': 4,\n  'prefix': 'libgomp',\n  'user_api': 'openmp',\n  'version': None}]\n```\n\nIn the above example, `numpy` was installed from the default anaconda channel and comes\nwith MKL and its Intel OpenMP (`libiomp5`) implementation while `xgboost` was installed\nfrom pypi.org and links against GNU OpenMP (`libgomp`) so both OpenMP runtimes are\nloaded in the same Python program.\n\nThe state of these libraries is also accessible through the object oriented API:\n\n```python\n>>> from threadpoolctl import ThreadpoolController, threadpool_info\n>>> from pprint import pprint\n>>> import numpy\n>>> controller = ThreadpoolController()\n>>> pprint(controller.info())\n[{'architecture': 'Haswell',\n  'filepath': '/home/jeremie/miniconda/envs/dev/lib/libopenblasp-r0.3.17.so',\n  'internal_api': 'openblas',\n  'num_threads': 4,\n  'prefix': 'libopenblas',\n  'threading_layer': 'pthreads',\n  'user_api': 'blas',\n  'version': '0.3.17'}]\n\n>>> controller.info() == threadpool_info()\nTrue\n```\n\n### Setting the Maximum Size of Thread-Pools\n\nControl the number of threads used by the underlying runtime libraries\nin specific sections of your Python program:\n\n```python\n>>> from threadpoolctl import threadpool_limits\n>>> import numpy as np\n\n>>> with threadpool_limits(limits=1, user_api='blas'):\n...     # In this block, calls to blas implementation (like openblas or MKL)\n...     # will be limited to use only one thread. They can thus be used jointly\n...     # with thread-parallelism.\n...     a = np.random.randn(1000, 1000)\n...     a_squared = a @ a\n```\n\nThe threadpools can also be controlled via the object oriented API, which is especially\nuseful to avoid searching through all the loaded shared libraries each time. It will\nhowever not act on libraries loaded after the instantiation of the\n`ThreadpoolController`:\n\n```python\n>>> from threadpoolctl import ThreadpoolController\n>>> import numpy as np\n>>> controller = ThreadpoolController()\n\n>>> with controller.limit(limits=1, user_api='blas'):\n...     a = np.random.randn(1000, 1000)\n...     a_squared = a @ a\n```\n\n### Restricting the limits to the scope of a function\n\n`threadpool_limits` and `ThreadpoolController` can also be used as decorators to set\nthe maximum number of threads used by the supported libraries at a function level. The\ndecorators are accessible through their `wrap` method:\n\n```python\n>>> from threadpoolctl import ThreadpoolController, threadpool_limits\n>>> import numpy as np\n>>> controller = ThreadpoolController()\n\n>>> @controller.wrap(limits=1, user_api='blas')\n... # or @threadpool_limits.wrap(limits=1, user_api='blas')\n... def my_func():\n...     # Inside this function, calls to blas implementation (like openblas or MKL)\n...     # will be limited to use only one thread.\n...     a = np.random.randn(1000, 1000)\n...     a_squared = a @ a\n...\n```\n\n### Switching the FlexiBLAS backend\n\n`FlexiBLAS` is a BLAS wrapper for which the BLAS backend can be switched at runtime.\n`threadpoolctl` exposes python bindings for this feature. Here's an example but note\nthat this part of the API is experimental and subject to change without deprecation:\n\n```python\n>>> from threadpoolctl import ThreadpoolController\n>>> import numpy as np\n>>> controller = ThreadpoolController()\n\n>>> controller.info()\n[{'user_api': 'blas',\n  'internal_api': 'flexiblas',\n  'num_threads': 1,\n  'prefix': 'libflexiblas',\n  'filepath': '/usr/local/lib/libflexiblas.so.3.3',\n  'version': '3.3.1',\n  'available_backends': ['NETLIB', 'OPENBLASPTHREAD', 'ATLAS'],\n  'loaded_backends': ['NETLIB'],\n  'current_backend': 'NETLIB'}]\n\n# Retrieve the flexiblas controller\n>>> flexiblas_ct = controller.select(internal_api=\"flexiblas\").lib_controllers[0]\n\n# Switch the backend with one predefined at build time (listed in \"available_backends\")\n>>> flexiblas_ct.switch_backend(\"OPENBLASPTHREAD\")\n>>> controller.info()\n[{'user_api': 'blas',\n  'internal_api': 'flexiblas',\n  'num_threads': 4,\n  'prefix': 'libflexiblas',\n  'filepath': '/usr/local/lib/libflexiblas.so.3.3',\n  'version': '3.3.1',\n  'available_backends': ['NETLIB', 'OPENBLASPTHREAD', 'ATLAS'],\n  'loaded_backends': ['NETLIB', 'OPENBLASPTHREAD'],\n  'current_backend': 'OPENBLASPTHREAD'},\n {'user_api': 'blas',\n  'internal_api': 'openblas',\n  'num_threads': 4,\n  'prefix': 'libopenblas',\n  'filepath': '/usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.8.so',\n  'version': '0.3.8',\n  'threading_layer': 'pthreads',\n  'architecture': 'Haswell'}]\n\n# It's also possible to directly give the path to a shared library\n>>> flexiblas_controller.switch_backend(\"/home/jeremie/miniforge/envs/flexiblas_threadpoolctl/lib/libmkl_rt.so\")\n>>> controller.info()\n[{'user_api': 'blas',\n  'internal_api': 'flexiblas',\n  'num_threads': 2,\n  'prefix': 'libflexiblas',\n  'filepath': '/usr/local/lib/libflexiblas.so.3.3',\n  'version': '3.3.1',\n  'available_backends': ['NETLIB', 'OPENBLASPTHREAD', 'ATLAS'],\n  'loaded_backends': ['NETLIB',\n   'OPENBLASPTHREAD',\n   '/home/jeremie/miniforge/envs/flexiblas_threadpoolctl/lib/libmkl_rt.so'],\n  'current_backend': '/home/jeremie/miniforge/envs/flexiblas_threadpoolctl/lib/libmkl_rt.so'},\n {'user_api': 'openmp',\n  'internal_api': 'openmp',\n  'num_threads': 4,\n  'prefix': 'libomp',\n  'filepath': '/home/jeremie/miniforge/envs/flexiblas_threadpoolctl/lib/libomp.so',\n  'version': None},\n {'user_api': 'blas',\n  'internal_api': 'openblas',\n  'num_threads': 4,\n  'prefix': 'libopenblas',\n  'filepath': '/usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.8.so',\n  'version': '0.3.8',\n  'threading_layer': 'pthreads',\n  'architecture': 'Haswell'},\n {'user_api': 'blas',\n  'internal_api': 'mkl',\n  'num_threads': 2,\n  'prefix': 'libmkl_rt',\n  'filepath': '/home/jeremie/miniforge/envs/flexiblas_threadpoolctl/lib/libmkl_rt.so.2',\n  'version': '2024.0-Product',\n  'threading_layer': 'gnu'}]\n```\n\nYou can observe that the previously linked OpenBLAS shared object stays loaded by\nthe Python program indefinitely, but FlexiBLAS itself no longer delegates BLAS calls\nto OpenBLAS as indicated by the `current_backend` attribute.\n### Writing a custom library controller\n\nCurrently, `threadpoolctl` has support for `OpenMP` and the main `BLAS` libraries.\nHowever it can also be used to control the threadpool of other native libraries,\nprovided that they expose an API to get and set the limit on the number of threads.\nFor that, one must implement a controller for this library and register it to\n`threadpoolctl`.\n\nA custom controller must be a subclass of the `LibController` class and implement\nthe attributes and methods described in the docstring of `LibController`. Then this\nnew controller class must be registered using the `threadpoolctl.register` function.\nAn complete example can be found [here](\n  https://github.com/joblib/threadpoolctl/blob/master/tests/_pyMylib/__init__.py).\n\n### Sequential BLAS within OpenMP parallel region\n\nWhen one wants to have sequential BLAS calls within an OpenMP parallel region, it's\nsafer to set `limits=\"sequential_blas_under_openmp\"` since setting `limits=1` and\n`user_api=\"blas\"` might not lead to the expected behavior in some configurations\n(e.g. OpenBLAS with the OpenMP threading layer\nhttps://github.com/xianyi/OpenBLAS/issues/2985).\n\n### Known Limitations\n\n- `threadpool_limits` can fail to limit the number of inner threads when nesting\n  parallel loops managed by distinct OpenMP runtime implementations (for instance\n  libgomp from GCC and libomp from clang/llvm or libiomp from ICC).\n\n  See the `test_openmp_nesting` function in [tests/test_threadpoolctl.py](\n  https://github.com/joblib/threadpoolctl/blob/master/tests/test_threadpoolctl.py)\n  for an example. More information can be found at:\n  https://github.com/jeremiedbb/Nested_OpenMP\n\n  Note however that this problem does not happen when `threadpool_limits` is\n  used to limit the number of threads used internally by BLAS calls that are\n  themselves nested under OpenMP parallel loops. `threadpool_limits` works as\n  expected, even if the inner BLAS implementation relies on a distinct OpenMP\n  implementation.\n\n- Using Intel OpenMP (ICC) and LLVM OpenMP (clang) in the same Python program\n  under Linux is known to cause problems. See the following guide for more details\n  and workarounds:\n  https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md\n\n- Setting the maximum number of threads of the OpenMP and BLAS libraries has a global\n  effect and impacts the whole Python process. There is no thread level isolation as\n  these libraries do not offer thread-local APIs to configure the number of threads to\n  use in nested parallel calls.\n\n\n## Maintainers\n\nTo make a release:\n\n- Bump the version number (`__version__`) in `threadpoolctl.py` and update the\n  release date in `CHANGES.md`.\n\n- Build the distribution archives:\n\n```bash\npip install flit\nflit build\n```\n\nand check the contents of `dist/`.\n\n- If everything is fine, make a commit for the release, tag it and push the\ntag to github:\n\n```bash\ngit tag -a X.Y.Z\ngit push git@github.com:joblib/threadpoolctl.git X.Y.Z\n```\n\n- Upload the wheels and source distribution to PyPI using flit. Since PyPI doesn't\n  allow password authentication anymore, the username needs to be changed to the\n  generic name `__token__`:\n\n```bash\nFLIT_USERNAME=__token__ flit publish\n```\n\n  and a PyPI token has to be passed in place of the password.\n\n- Create a PR for the release on the [conda-forge feedstock](https://github.com/conda-forge/threadpoolctl-feedstock) (or wait for the bot to make it).\n\n- Publish the release on github.\n\n### Credits\n\nThe initial dynamic library introspection code was written by @anton-malakhov\nfor the smp package available at https://github.com/IntelPython/smp .\n\nthreadpoolctl extends this for other operating systems. Contrary to smp,\nthreadpoolctl does not attempt to limit the size of Python multiprocessing\npools (threads or processes) or set operating system-level CPU affinity\nconstraints: threadpoolctl only interacts with native libraries via their\npublic runtime APIs.\n\n",
+        "description_content_type": "text/markdown",
+        "home_page": "https://github.com/joblib/threadpoolctl",
+        "author": "Thomas Moreau",
+        "author_email": "thomas.moreau.2010@gmail.com",
+        "license": "BSD-3-Clause",
+        "license_file": [
+          "LICENSE"
+        ],
+        "classifier": [
+          "Intended Audience :: Developers",
+          "License :: OSI Approved :: BSD License",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.9",
+          "Programming Language :: Python :: 3.10",
+          "Programming Language :: Python :: 3.11",
+          "Programming Language :: Python :: 3.12",
+          "Programming Language :: Python :: 3.13",
+          "Topic :: Software Development :: Libraries :: Python Modules"
+        ],
+        "requires_python": ">=3.9"
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/3b/00/2344469e2084fb287c2e0b57b72910309874c3245463acd6cf5e3db69324/appdirs-1.4.4-py2.py3-none-any.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"
+          },
+          "hash": "sha256=a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": false,
+      "metadata": {
+        "metadata_version": "2.1",
+        "name": "appdirs",
+        "version": "1.4.4",
+        "platform": [
+          "UNKNOWN"
+        ],
+        "summary": "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\".",
+        "description": "\n.. image:: https://secure.travis-ci.org/ActiveState/appdirs.png\n    :target: http://travis-ci.org/ActiveState/appdirs\n\nthe problem\n===========\n\nWhat directory should your app use for storing user data? If running on Mac OS X, you\nshould use::\n\n    ~/Library/Application Support/<AppName>\n\nIf on Windows (at least English Win XP) that should be::\n\n    C:\\Documents and Settings\\<User>\\Application Data\\Local Settings\\<AppAuthor>\\<AppName>\n\nor possibly::\n\n    C:\\Documents and Settings\\<User>\\Application Data\\<AppAuthor>\\<AppName>\n\nfor `roaming profiles <http://bit.ly/9yl3b6>`_ but that is another story.\n\nOn Linux (and other Unices) the dir, according to the `XDG\nspec <http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html>`_, is::\n\n    ~/.local/share/<AppName>\n\n\n``appdirs`` to the rescue\n=========================\n\nThis kind of thing is what the ``appdirs`` module is for. ``appdirs`` will\nhelp you choose an appropriate:\n\n- user data dir (``user_data_dir``)\n- user config dir (``user_config_dir``)\n- user cache dir (``user_cache_dir``)\n- site data dir (``site_data_dir``)\n- site config dir (``site_config_dir``)\n- user log dir (``user_log_dir``)\n\nand also:\n\n- is a single module so other Python packages can include their own private copy\n- is slightly opinionated on the directory names used. Look for \"OPINION\" in\n  documentation and code for when an opinion is being applied.\n\n\nsome example output\n===================\n\nOn Mac OS X::\n\n    >>> from appdirs import *\n    >>> appname = \"SuperApp\"\n    >>> appauthor = \"Acme\"\n    >>> user_data_dir(appname, appauthor)\n    '/Users/trentm/Library/Application Support/SuperApp'\n    >>> site_data_dir(appname, appauthor)\n    '/Library/Application Support/SuperApp'\n    >>> user_cache_dir(appname, appauthor)\n    '/Users/trentm/Library/Caches/SuperApp'\n    >>> user_log_dir(appname, appauthor)\n    '/Users/trentm/Library/Logs/SuperApp'\n\nOn Windows 7::\n\n    >>> from appdirs import *\n    >>> appname = \"SuperApp\"\n    >>> appauthor = \"Acme\"\n    >>> user_data_dir(appname, appauthor)\n    'C:\\\\Users\\\\trentm\\\\AppData\\\\Local\\\\Acme\\\\SuperApp'\n    >>> user_data_dir(appname, appauthor, roaming=True)\n    'C:\\\\Users\\\\trentm\\\\AppData\\\\Roaming\\\\Acme\\\\SuperApp'\n    >>> user_cache_dir(appname, appauthor)\n    'C:\\\\Users\\\\trentm\\\\AppData\\\\Local\\\\Acme\\\\SuperApp\\\\Cache'\n    >>> user_log_dir(appname, appauthor)\n    'C:\\\\Users\\\\trentm\\\\AppData\\\\Local\\\\Acme\\\\SuperApp\\\\Logs'\n\nOn Linux::\n\n    >>> from appdirs import *\n    >>> appname = \"SuperApp\"\n    >>> appauthor = \"Acme\"\n    >>> user_data_dir(appname, appauthor)\n    '/home/trentm/.local/share/SuperApp\n    >>> site_data_dir(appname, appauthor)\n    '/usr/local/share/SuperApp'\n    >>> site_data_dir(appname, appauthor, multipath=True)\n    '/usr/local/share/SuperApp:/usr/share/SuperApp'\n    >>> user_cache_dir(appname, appauthor)\n    '/home/trentm/.cache/SuperApp'\n    >>> user_log_dir(appname, appauthor)\n    '/home/trentm/.cache/SuperApp/log'\n    >>> user_config_dir(appname)\n    '/home/trentm/.config/SuperApp'\n    >>> site_config_dir(appname)\n    '/etc/xdg/SuperApp'\n    >>> os.environ['XDG_CONFIG_DIRS'] = '/etc:/usr/local/etc'\n    >>> site_config_dir(appname, multipath=True)\n    '/etc/SuperApp:/usr/local/etc/SuperApp'\n\n\n``AppDirs`` for convenience\n===========================\n\n::\n\n    >>> from appdirs import AppDirs\n    >>> dirs = AppDirs(\"SuperApp\", \"Acme\")\n    >>> dirs.user_data_dir\n    '/Users/trentm/Library/Application Support/SuperApp'\n    >>> dirs.site_data_dir\n    '/Library/Application Support/SuperApp'\n    >>> dirs.user_cache_dir\n    '/Users/trentm/Library/Caches/SuperApp'\n    >>> dirs.user_log_dir\n    '/Users/trentm/Library/Logs/SuperApp'\n\n\n\nPer-version isolation\n=====================\n\nIf you have multiple versions of your app in use that you want to be\nable to run side-by-side, then you may want version-isolation for these\ndirs::\n\n    >>> from appdirs import AppDirs\n    >>> dirs = AppDirs(\"SuperApp\", \"Acme\", version=\"1.0\")\n    >>> dirs.user_data_dir\n    '/Users/trentm/Library/Application Support/SuperApp/1.0'\n    >>> dirs.site_data_dir\n    '/Library/Application Support/SuperApp/1.0'\n    >>> dirs.user_cache_dir\n    '/Users/trentm/Library/Caches/SuperApp/1.0'\n    >>> dirs.user_log_dir\n    '/Users/trentm/Library/Logs/SuperApp/1.0'\n\n\n\nappdirs Changelog\n=================\n\nappdirs 1.4.4\n-------------\n- [PR #92] Don't import appdirs from setup.py\n\nProject officially classified as Stable which is important\nfor inclusion in other distros such as ActivePython.\n\nFirst of several incremental releases to catch up on maintenance.\n\nappdirs 1.4.3\n-------------\n- [PR #76] Python 3.6 invalid escape sequence deprecation fixes\n- Fix for Python 3.6 support\n\nappdirs 1.4.2\n-------------\n- [PR #84] Allow installing without setuptools\n- [PR #86] Fix string delimiters in setup.py description\n- Add Python 3.6 support\n\nappdirs 1.4.1\n-------------\n- [issue #38] Fix _winreg import on Windows Py3\n- [issue #55] Make appname optional\n\nappdirs 1.4.0\n-------------\n- [PR #42] AppAuthor is now optional on Windows\n- [issue 41] Support Jython on Windows, Mac, and Unix-like platforms. Windows\n  support requires `JNA <https://github.com/twall/jna>`_.\n- [PR #44] Fix incorrect behaviour of the site_config_dir method\n\nappdirs 1.3.0\n-------------\n- [Unix, issue 16] Conform to XDG standard, instead of breaking it for\n  everybody\n- [Unix] Removes gratuitous case mangling of the case, since \\*nix-es are\n  usually case sensitive, so mangling is not wise\n- [Unix] Fixes the utterly wrong behaviour in ``site_data_dir``, return result\n  based on XDG_DATA_DIRS and make room for respecting the standard which\n  specifies XDG_DATA_DIRS is a multiple-value variable\n- [Issue 6] Add ``*_config_dir`` which are distinct on nix-es, according to\n  XDG specs; on Windows and Mac return the corresponding ``*_data_dir``\n\nappdirs 1.2.0\n-------------\n\n- [Unix] Put ``user_log_dir`` under the *cache* dir on Unix. Seems to be more\n  typical.\n- [issue 9] Make ``unicode`` work on py3k.\n\nappdirs 1.1.0\n-------------\n\n- [issue 4] Add ``AppDirs.user_log_dir``.\n- [Unix, issue 2, issue 7] appdirs now conforms to `XDG base directory spec\n  <http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html>`_.\n- [Mac, issue 5] Fix ``site_data_dir()`` on Mac.\n- [Mac] Drop use of 'Carbon' module in favour of hardcoded paths; supports\n  Python3 now.\n- [Windows] Append \"Cache\" to ``user_cache_dir`` on Windows by default. Use\n  ``opinion=False`` option to disable this.\n- Add ``appdirs.AppDirs`` convenience class. Usage:\n\n        >>> dirs = AppDirs(\"SuperApp\", \"Acme\", version=\"1.0\")\n        >>> dirs.user_data_dir\n        '/Users/trentm/Library/Application Support/SuperApp/1.0'\n\n- [Windows] Cherry-pick Komodo's change to downgrade paths to the Windows short\n  paths if there are high bit chars.\n- [Linux] Change default ``user_cache_dir()`` on Linux to be singular, e.g.\n  \"~/.superapp/cache\".\n- [Windows] Add ``roaming`` option to ``user_data_dir()`` (for use on Windows only)\n  and change the default ``user_data_dir`` behaviour to use a *non*-roaming\n  profile dir (``CSIDL_LOCAL_APPDATA`` instead of ``CSIDL_APPDATA``). Why? Because\n  a large roaming profile can cause login speed issues. The \"only syncs on\n  logout\" behaviour can cause surprises in appdata info.\n\n\nappdirs 1.0.1 (never released)\n------------------------------\n\nStarted this changelog 27 July 2010. Before that this module originated in the\n`Komodo <http://www.activestate.com/komodo>`_ product as ``applib.py`` and then\nas `applib/location.py\n<http://github.com/ActiveState/applib/blob/master/applib/location.py>`_ (used by\n`PyPM <http://code.activestate.com/pypm/>`_ in `ActivePython\n<http://www.activestate.com/activepython>`_). This is basically a fork of\napplib.py 1.0.1 and applib/location.py 1.0.1.\n\n\n\n",
+        "keywords": [
+          "application",
+          "directory",
+          "log",
+          "cache",
+          "user"
+        ],
+        "home_page": "http://github.com/ActiveState/appdirs",
+        "author": "Trent Mick",
+        "author_email": "trentm@gmail.com",
+        "maintainer": "Jeff Rouse",
+        "maintainer_email": "jr@its.to",
+        "license": "MIT",
+        "classifier": [
+          "Development Status :: 5 - Production/Stable",
+          "Intended Audience :: Developers",
+          "License :: OSI Approved :: MIT License",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python :: 2",
+          "Programming Language :: Python :: 2.7",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.4",
+          "Programming Language :: Python :: 3.5",
+          "Programming Language :: Python :: 3.6",
+          "Programming Language :: Python :: 3.7",
+          "Programming Language :: Python :: 3.8",
+          "Programming Language :: Python :: Implementation :: PyPy",
+          "Programming Language :: Python :: Implementation :: CPython",
+          "Topic :: Software Development :: Libraries :: Python Modules"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/a5/54/12ed58d458474aaab5c3d180173e745a4fe131bb330370596876d19ff60f/mako-1.4.1-py3-none-any.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "a359d9a94a541213958742b2698d0a7757bb83551767bc468a74b9905aba9617"
+          },
+          "hash": "sha256=a359d9a94a541213958742b2698d0a7757bb83551767bc468a74b9905aba9617"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": false,
+      "metadata": {
+        "metadata_version": "2.4",
+        "name": "Mako",
+        "version": "1.4.1",
+        "dynamic": [
+          "license-file"
+        ],
+        "summary": "A super-fast templating language that borrows the best ideas from the existing templating languages.",
+        "description": "=========================\nMako Templates for Python\n=========================\n\nMako is a template library written in Python. It provides a familiar, non-XML \nsyntax which compiles into Python modules for maximum performance. Mako's \nsyntax and API borrows from the best ideas of many others, including Django\ntemplates, Cheetah, Myghty, and Genshi. Conceptually, Mako is an embedded \nPython (i.e. Python Server Page) language, which refines the familiar ideas\nof componentized layout and inheritance to produce one of the most \nstraightforward and flexible models available, while also maintaining close \nties to Python calling and scoping semantics.\n\nNutshell\n========\n\n::\n\n    <%inherit file=\"base.html\"/>\n    <%\n        rows = [[v for v in range(0,10)] for row in range(0,10)]\n    %>\n    <table>\n        % for row in rows:\n            ${makerow(row)}\n        % endfor\n    </table>\n\n    <%def name=\"makerow(row)\">\n        <tr>\n        % for name in row:\n            <td>${name}</td>\\\n        % endfor\n        </tr>\n    </%def>\n\nPhilosophy\n===========\n\nPython is a great scripting language. Don't reinvent the wheel...your templates can handle it !\n\nDocumentation\n==============\n\nSee documentation for Mako at https://docs.makotemplates.org/en/latest/\n\nLicense\n========\n\nMako is licensed under an MIT-style license (see LICENSE).\nOther incorporated projects may be licensed under different licenses.\nAll licenses allow for non-commercial and commercial use.\n",
+        "description_content_type": "text/x-rst",
+        "author_email": "Mike Bayer <mike@zzzcomputing.com>",
+        "license_expression": "MIT",
+        "license_file": [
+          "LICENSE"
+        ],
+        "classifier": [
+          "Development Status :: 5 - Production/Stable",
+          "Environment :: Web Environment",
+          "Intended Audience :: Developers",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.10",
+          "Programming Language :: Python :: 3.11",
+          "Programming Language :: Python :: 3.12",
+          "Programming Language :: Python :: 3.13",
+          "Programming Language :: Python :: 3.14",
+          "Programming Language :: Python :: 3.15",
+          "Programming Language :: Python :: Implementation :: CPython",
+          "Programming Language :: Python :: Implementation :: PyPy",
+          "Topic :: Internet :: WWW/HTTP :: Dynamic Content"
+        ],
+        "requires_dist": [
+          "MarkupSafe>=2.0",
+          "pytest; extra == \"testing\"",
+          "Babel; extra == \"babel\"",
+          "lingua>=4.16; extra == \"lingua\""
+        ],
+        "requires_python": ">=3.10",
+        "project_url": [
+          "Homepage, https://www.makotemplates.org/",
+          "Documentation, https://docs.makotemplates.org",
+          "Issue Tracker, https://github.com/sqlalchemy/mako"
+        ],
+        "provides_extra": [
+          "testing",
+          "babel",
+          "lingua"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/30/ac/0273f6fcb5f42e314c6d8cd99effae6a5354604d461b8d392b5ec9530a54/markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "0bf2a864d67e76e5c9a34dc26ec616a66b9888e25e7b9460e1c76d3293bd9dbf"
+          },
+          "hash": "sha256=0bf2a864d67e76e5c9a34dc26ec616a66b9888e25e7b9460e1c76d3293bd9dbf"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": false,
+      "metadata": {
+        "metadata_version": "2.4",
+        "name": "MarkupSafe",
+        "version": "3.0.3",
+        "dynamic": [
+          "license-file"
+        ],
+        "summary": "Safely add untrusted strings to HTML/XML markup.",
+        "description": "<div align=\"center\"><img src=\"https://raw.githubusercontent.com/pallets/markupsafe/refs/heads/stable/docs/_static/markupsafe-name.svg\" alt=\"\" height=\"150\"></div>\n\n# MarkupSafe\n\nMarkupSafe implements a text object that escapes characters so it is\nsafe to use in HTML and XML. Characters that have special meanings are\nreplaced so that they display as the actual characters. This mitigates\ninjection attacks, meaning untrusted user input can safely be displayed\non a page.\n\n\n## Examples\n\n```pycon\n>>> from markupsafe import Markup, escape\n\n>>> # escape replaces special characters and wraps in Markup\n>>> escape(\"<script>alert(document.cookie);</script>\")\nMarkup('&lt;script&gt;alert(document.cookie);&lt;/script&gt;')\n\n>>> # wrap in Markup to mark text \"safe\" and prevent escaping\n>>> Markup(\"<strong>Hello</strong>\")\nMarkup('<strong>hello</strong>')\n\n>>> escape(Markup(\"<strong>Hello</strong>\"))\nMarkup('<strong>hello</strong>')\n\n>>> # Markup is a str subclass\n>>> # methods and operators escape their arguments\n>>> template = Markup(\"Hello <em>{name}</em>\")\n>>> template.format(name='\"World\"')\nMarkup('Hello <em>&#34;World&#34;</em>')\n```\n\n## Donate\n\nThe Pallets organization develops and supports MarkupSafe and other\npopular packages. In order to grow the community of contributors and\nusers, and allow the maintainers to devote more time to the projects,\n[please donate today][].\n\n[please donate today]: https://palletsprojects.com/donate\n\n## Contributing\n\nSee our [detailed contributing documentation][contrib] for many ways to\ncontribute, including reporting issues, requesting features, asking or answering\nquestions, and making PRs.\n\n[contrib]: https://palletsprojects.com/contributing/\n",
+        "description_content_type": "text/markdown",
+        "maintainer_email": "Pallets <contact@palletsprojects.com>",
+        "license_expression": "BSD-3-Clause",
+        "license_file": [
+          "LICENSE.txt"
+        ],
+        "classifier": [
+          "Development Status :: 5 - Production/Stable",
+          "Environment :: Web Environment",
+          "Intended Audience :: Developers",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python",
+          "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+          "Topic :: Text Processing :: Markup :: HTML",
+          "Typing :: Typed"
+        ],
+        "requires_python": ">=3.9",
+        "project_url": [
+          "Donate, https://palletsprojects.com/donate",
+          "Documentation, https://markupsafe.palletsprojects.com/",
+          "Changes, https://markupsafe.palletsprojects.com/page/changes/",
+          "Source, https://github.com/pallets/markupsafe/",
+          "Chat, https://discord.gg/pallets"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/bb/45/32a4b57ff351213094a533067db1846494db9bba5f3348b75223b94f3d22/pytools-2026.1.1-py3-none-any.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "1f6d9a39c871b6dc761893373792f10b67886c83e38f2aa09b66e11f8c021436"
+          },
+          "hash": "sha256=1f6d9a39c871b6dc761893373792f10b67886c83e38f2aa09b66e11f8c021436"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": false,
+      "metadata": {
+        "metadata_version": "2.4",
+        "name": "pytools",
+        "version": "2026.1.1",
+        "summary": "A collection of tools for Python",
+        "description": "Pytools: Lots of Little Utilities\n=================================\n\n.. image:: https://gitlab.tiker.net/inducer/pytools/badges/main/pipeline.svg\n    :alt: Gitlab Build Status\n    :target: https://gitlab.tiker.net/inducer/pytools/commits/main\n.. image:: https://github.com/inducer/pytools/actions/workflows/ci.yml/badge.svg\n    :alt: Github Build Status\n    :target: https://github.com/inducer/pytools/actions/workflows/ci.yml\n.. image:: https://badge.fury.io/py/pytools.svg\n    :alt: Python Package Index Release Page\n    :target: https://pypi.org/project/pytools/\n.. image:: https://zenodo.org/badge/1575270.svg\n    :alt: Zenodo DOI for latest release\n    :target: https://zenodo.org/badge/latestdoi/1575270\n\nPytools is a big bag of things that are \"missing\" from the Python standard\nlibrary. This is mainly a dependency of my other software packages, and is\nprobably of little interest to you unless you use those. If you're curious\nnonetheless, here's what's on offer:\n\n* A ton of small tool functions such as ``len_iterable``, ``argmin``,\n  tuple generation, permutation generation, ASCII table pretty printing,\n  GvR's ``monkeypatch_xxx()`` hack, the elusive ``flatten``, and much more.\n* Batch job submission, ``pytools.batchjob``.\n* A lexer, ``pytools.lex``.\n* A persistent key-value store, ``pytools.persistent_dict``.\n\nLinks:\n\n* `Documentation <https://documen.tician.de/pytools>`__\n* `Github <https://github.com/inducer/pytools>`__\n* ``pytools.log`` has been spun out into a separate project,\n  `logpyle <https://github.com/illinois-ceesd/logpyle>`__.\n",
+        "description_content_type": "text/x-rst",
+        "author_email": "Andreas Kloeckner <inform@tiker.net>",
+        "license_expression": "MIT",
+        "license_file": [
+          "LICENSE"
+        ],
+        "classifier": [
+          "Development Status :: 4 - Beta",
+          "Intended Audience :: Developers",
+          "Intended Audience :: Other Audience",
+          "Intended Audience :: Science/Research",
+          "Natural Language :: English",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 3 :: Only",
+          "Topic :: Scientific/Engineering",
+          "Topic :: Scientific/Engineering :: Information Analysis",
+          "Topic :: Scientific/Engineering :: Mathematics",
+          "Topic :: Scientific/Engineering :: Visualization",
+          "Topic :: Software Development :: Libraries",
+          "Topic :: Utilities"
+        ],
+        "requires_dist": [
+          "platformdirs>=2.2",
+          "siphash24>=1.6",
+          "typing-extensions>=4.5",
+          "numpy>=1.6; extra == 'numpy'",
+          "basedpyright; extra == 'test'",
+          "optype; extra == 'test'",
+          "pytest; extra == 'test'",
+          "ruff; extra == 'test'"
+        ],
+        "requires_python": ">=3.10",
+        "project_url": [
+          "Documentation, https://documen.tician.de/pytools/",
+          "Homepage, https://github.com/inducer/pytools/"
+        ],
+        "provides_extra": [
+          "numpy",
+          "test"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/27/6e/80993e10a0482f630cef528635789233224f36b1ffd11592aa15d13ff9ce/platformdirs-4.11.7-py3-none-any.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "8a02cb259042c79d1cd0450facc2fe6dc9d303ae7901afbe33bf8ea0b188cef6"
+          },
+          "hash": "sha256=8a02cb259042c79d1cd0450facc2fe6dc9d303ae7901afbe33bf8ea0b188cef6"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": false,
+      "metadata": {
+        "metadata_version": "2.5",
+        "name": "platformdirs",
+        "version": "4.11.7",
+        "summary": "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`.",
+        "description": "# platformdirs\n\n[![PyPI version](https://badge.fury.io/py/platformdirs.svg)](https://badge.fury.io/py/platformdirs)\n[![Python versions](https://img.shields.io/pypi/pyversions/platformdirs.svg)](https://pypi.python.org/pypi/platformdirs/)\n[![CI](https://github.com/tox-dev/platformdirs/actions/workflows/check.yaml/badge.svg)](https://github.com/platformdirs/platformdirs/actions)\n[![Downloads](https://static.pepy.tech/badge/platformdirs/month)](https://pepy.tech/project/platformdirs)\n\nA Python package for determining platform-specific directories (e.g. user data, config, cache, logs). Handles the\ndifferences between macOS, Windows, Linux/Unix, and Android so you don't have to.\n\n## Quick start\n\n```python\nfrom platformdirs import PlatformDirs\n\ndirs = PlatformDirs(\"MyApp\", \"MyCompany\")\ndirs.user_data_dir  # ~/.local/share/MyApp (Linux)\ndirs.user_config_dir  # ~/.config/MyApp (Linux)\ndirs.user_cache_dir  # ~/.cache/MyApp (Linux)\ndirs.user_state_dir  # ~/.local/state/MyApp (Linux)\ndirs.user_log_dir  # ~/.local/state/MyApp/log (Linux)\ndirs.user_documents_dir  # ~/Documents\ndirs.user_downloads_dir  # ~/Downloads\ndirs.user_runtime_dir  # /run/user/<uid>/MyApp (Linux)\n```\n\nFor Path objects instead of strings:\n\n```python\nfrom platformdirs import PlatformDirs\n\ndirs = PlatformDirs(\"MyApp\", \"MyCompany\")\ndirs.user_data_path  # pathlib.Path('~/.local/share/MyApp')\ndirs.user_config_path  # pathlib.Path('~/.config/MyApp')\n```\n\nConvenience functions for quick access:\n\n```python\nfrom platformdirs import user_data_dir, user_config_path\n\nuser_data_dir(\"MyApp\", \"MyCompany\")  # returns str\nuser_config_path(\"MyApp\", \"MyCompany\")  # returns pathlib.Path\n```\n\n## Directory types\n\n**Application directories** — scoped to your app name and version:\n\n- **Data**: Persistent application data (`user_data_dir`, `site_data_dir`)\n- **Config**: Configuration files and settings (`user_config_dir`, `site_config_dir`)\n- **Preference**: User preferences, distinct from config on macOS (`user_preference_dir`)\n- **Cache**: Cached data that can be regenerated (`user_cache_dir`, `site_cache_dir`)\n- **State**: Non-essential runtime state like window positions (`user_state_dir`, `site_state_dir`)\n- **Logs**: Log files (`user_log_dir`, `site_log_dir`)\n- **Runtime**: Runtime files like sockets and PIDs (`user_runtime_dir`, `site_runtime_dir`)\n\nApp dirs have both `user_*` (per-user, writable) and `site_*` (system-wide, read-only) variants where applicable.\n\n**User media directories** — standard user-facing folders, not scoped to app name:\n\n- **Documents** (`user_documents_dir`), **Downloads** (`user_downloads_dir`)\n- **Pictures** (`user_pictures_dir`), **Videos** (`user_videos_dir`), **Music** (`user_music_dir`)\n- **Desktop** (`user_desktop_dir`), **Projects** (`user_projects_dir`)\n- **Public share** (`user_publicshare_dir`), **Templates** (`user_templates_dir`)\n- **Fonts** (`user_fonts_dir`) — user-writable font installation directory\n- **Executable** (`user_bin_dir`, `site_bin_dir`), **Applications** (`user_applications_dir`, `site_applications_dir`)\n\n## Documentation\n\nFull documentation is available at [platformdirs.readthedocs.io](https://platformdirs.readthedocs.io):\n\n- **[Getting started tutorial](https://platformdirs.readthedocs.io/en/latest/tutorial.html)** -- learn core concepts\n  through real-world examples\n- **[How-to guides](https://platformdirs.readthedocs.io/en/latest/howto.html)** -- recipes for common tasks and\n  platform-specific tips\n- **[API reference](https://platformdirs.readthedocs.io/en/latest/api.html)** -- complete list of functions and classes\n- **[Platform details](https://platformdirs.readthedocs.io/en/latest/platforms.html)** -- default paths for each\n  operating system\n\nContributions are welcome! See [CONTRIBUTING.md](https://github.com/tox-dev/platformdirs/blob/main/CONTRIBUTING.md) for\ndetails.\n",
+        "description_content_type": "text/markdown",
+        "keywords": [
+          "appdirs",
+          "application",
+          "cache",
+          "directory",
+          "log",
+          "user"
+        ],
+        "maintainer_email": "Bernát Gábor <gaborjbernat@gmail.com>, Julian Berman <Julian@GrayVines.com>, Ofek Lev <oss@ofek.dev>, Ronny Pfannschmidt <opensource@ronnypfannschmidt.de>",
+        "license_expression": "MIT",
+        "license_file": [
+          "LICENSE"
+        ],
+        "classifier": [
+          "Development Status :: 5 - Production/Stable",
+          "Intended Audience :: Developers",
+          "License :: OSI Approved :: MIT License",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 3 :: Only",
+          "Programming Language :: Python :: 3.10",
+          "Programming Language :: Python :: 3.11",
+          "Programming Language :: Python :: 3.12",
+          "Programming Language :: Python :: 3.13",
+          "Programming Language :: Python :: 3.14",
+          "Programming Language :: Python :: 3.15",
+          "Programming Language :: Python :: Implementation :: CPython",
+          "Programming Language :: Python :: Implementation :: PyPy",
+          "Topic :: Software Development :: Libraries :: Python Modules"
+        ],
+        "requires_python": ">=3.10",
+        "project_url": [
+          "Changelog, https://platformdirs.readthedocs.io/en/latest/changelog.html",
+          "Documentation, https://platformdirs.readthedocs.io",
+          "Homepage, https://github.com/tox-dev/platformdirs",
+          "Source, https://github.com/tox-dev/platformdirs",
+          "Tracker, https://github.com/tox-dev/platformdirs/issues"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/d4/9f/09c734833e69badd7e3faed806b4372bd6564ae0946bd250d5239885914f/siphash24-1.8-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "88c1a55ff82b127c5d3b96927a430d8859e6a98846a5b979833ac790682dd91b"
+          },
+          "hash": "sha256=88c1a55ff82b127c5d3b96927a430d8859e6a98846a5b979833ac790682dd91b"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": false,
+      "metadata": {
+        "metadata_version": "2.4",
+        "name": "siphash24",
+        "version": "1.8",
+        "summary": "Streaming-capable SipHash-1-3 and SipHash-2-4 Implementation",
+        "description": ".. SPDX-FileCopyrightText: Daniele Nicolodi <daniele@grinta.net>\n.. SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later\n\nsiphash24: Streaming-capable SipHash Implementation\n===================================================\n\nThis module provides a C-based implementation of `SipHash`__ with an\ninterface compatible with the hash functions provided by the\n`hashlib`__ standard library module.  SipHash-1-3 and SipHash-2-4\nvariants are currently implemented.  The module `documentation`__\nprovides a detailed description of the API.\n\nThis module differs from other similar modules by providing a\nstreaming-capable implementation and an interface compatible to the\nhash functions provided by the ``hashlib`` standard library module and\nby providing binary wheels for all supported Python releases on the\nmost common platforms.  More platforms can be added to the build job\nas needed.\n\nFollowing the ``hashlib`` interface, the return value of the\n``digest()`` method is a ``bytes`` object.  SipHash values are\ncustomarily stored as 64-bit integers.  This module extends the\n``hashlib`` interface with an additional ``intdigest()`` method that\nreturns the hash values as a 64-bit signed int object.\n\nThis module is implemented as a thin `Cython`__-based wrapper around a\nC language SipHash implementation copied, with minimal modifications\nto allow compilation with MSCV, from the `c-siphash library`__ by\nDavid Rheinsberg and co-authors.  The c-siphash library is based on\nthe SipHash `reference implementation`__ by Jean-Philippe Aumasson and\nDaniel J. Bernstein released to the Public Domain.  This module is\ndistributed with the same license as the c-siphash library:\n`Apache-2.0`__ or `LGPL-2.1-or-later`__.\n\n__ https://cr.yp.to/siphash/siphash-20120918.pdf\n__ https://docs.python.org/3/library/hashlib.html\n__ https://dnicolodi.github.io/python-siphash24/\n__ https://cython.org/\n__ https://github.com/c-util/c-siphash\n__ https://github.com/veorq/SipHash\n__ https://spdx.org/licenses/Apache-2.0.html\n__ https://spdx.org/licenses/LGPL-2.1-or-later.html\n",
+        "description_content_type": "text/x-rst",
+        "maintainer_email": "Daniele Nicolodi <daniele@grinta.net>",
+        "license_expression": "Apache-2.0 OR LGPL-2.1-or-later",
+        "classifier": [
+          "Development Status :: 5 - Production/Stable",
+          "Programming Language :: C",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.7",
+          "Programming Language :: Python :: 3.8",
+          "Programming Language :: Python :: 3.9",
+          "Programming Language :: Python :: 3.10",
+          "Programming Language :: Python :: 3.11",
+          "Programming Language :: Python :: 3.12",
+          "Programming Language :: Python :: 3.13",
+          "Programming Language :: Python :: 3.14",
+          "Topic :: Software Development :: Libraries"
+        ],
+        "requires_python": ">=3.7",
+        "project_url": [
+          "Documentation, https://dnicolodi.github.io/python-siphash24/",
+          "Source, https://github.com/dnicolodi/python-siphash24/",
+          "Issue Tracker, https://github.com/dnicolodi/python-siphash24/issues"
+        ]
+      }
+    },
+    {
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+        "archive_info": {
+          "hashes": {
+            "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+          },
+          "hash": "sha256=481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+        }
+      },
+      "is_direct": false,
+      "is_yanked": false,
+      "requested": false,
+      "metadata": {
+        "metadata_version": "2.4",
+        "name": "typing_extensions",
+        "version": "4.16.0",
+        "summary": "Backported and Experimental Type Hints for Python 3.9+",
+        "description": "# Typing Extensions\n\n[![Chat at https://gitter.im/python/typing](https://badges.gitter.im/python/typing.svg)](https://gitter.im/python/typing)\n\n[Documentation](https://typing-extensions.readthedocs.io/en/latest/#) –\n[PyPI](https://pypi.org/project/typing-extensions/)\n\n## Overview\n\nThe `typing_extensions` module serves two related purposes:\n\n- Enable use of new type system features on older Python versions. For example,\n  `typing.TypeGuard` is new in Python 3.10, but `typing_extensions` allows\n  users on previous Python versions to use it too.\n- Enable experimentation with new type system PEPs before they are accepted and\n  added to the `typing` module.\n\n`typing_extensions` is treated specially by static type checkers such as\nmypy and pyright. Objects defined in `typing_extensions` are treated the same\nway as equivalent forms in `typing`.\n\n`typing_extensions` uses\n[Semantic Versioning](https://semver.org/). The\nmajor version will be incremented only for backwards-incompatible changes.\nTherefore, it's safe to depend\non `typing_extensions` like this: `typing_extensions ~=x.y`,\nwhere `x.y` is the first version that includes all features you need.\n[This](https://packaging.python.org/en/latest/specifications/version-specifiers/#compatible-release)\nis equivalent to `typing_extensions >=x.y, <(x+1)`. Do not depend on `~= x.y.z`\nunless you really know what you're doing; that defeats the purpose of\nsemantic versioning.\n\n## Included items\n\nSee [the documentation](https://typing-extensions.readthedocs.io/en/latest/#) for a\ncomplete listing of module contents.\n\n## Contributing\n\nSee [CONTRIBUTING.md](https://github.com/python/typing_extensions/blob/main/CONTRIBUTING.md)\nfor how to contribute to `typing_extensions`.\n\n",
+        "description_content_type": "text/markdown",
+        "keywords": [
+          "annotations",
+          "backport",
+          "checker",
+          "checking",
+          "function",
+          "hinting",
+          "hints",
+          "type",
+          "typechecking",
+          "typehinting",
+          "typehints",
+          "typing"
+        ],
+        "author_email": "\"Guido van Rossum, Jukka Lehtosalo, Łukasz Langa, Michael Lee\" <levkivskyi@gmail.com>",
+        "license_expression": "PSF-2.0",
+        "license_file": [
+          "LICENSE"
+        ],
+        "classifier": [
+          "Development Status :: 5 - Production/Stable",
+          "Environment :: Console",
+          "Intended Audience :: Developers",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3 :: Only",
+          "Programming Language :: Python :: 3.9",
+          "Programming Language :: Python :: 3.10",
+          "Programming Language :: Python :: 3.11",
+          "Programming Language :: Python :: 3.12",
+          "Programming Language :: Python :: 3.13",
+          "Programming Language :: Python :: 3.14",
+          "Programming Language :: Python :: 3.15",
+          "Topic :: Software Development"
+        ],
+        "requires_python": ">=3.9",
+        "project_url": [
+          "Bug Tracker, https://github.com/python/typing_extensions/issues",
+          "Changes, https://github.com/python/typing_extensions/blob/main/CHANGELOG.md",
+          "Documentation, https://typing-extensions.readthedocs.io/",
+          "Home, https://github.com/python/typing_extensions",
+          "Q & A, https://github.com/python/typing/discussions",
+          "Repository, https://github.com/python/typing_extensions"
+        ]
+      }
+    }
+  ],
+  "environment": {
+    "implementation_name": "cpython",
+    "implementation_version": "3.11.10",
+    "os_name": "posix",
+    "platform_machine": "x86_64",
+    "platform_release": "6.8.0-65-generic",
+    "platform_system": "Linux",
+    "platform_version": "#68~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Tue Jul 15 18:06:34 UTC 2",
+    "python_full_version": "3.11.10",
+    "platform_python_implementation": "CPython",
+    "python_version": "3.11",
+    "sys_platform": "linux"
+  }
+}

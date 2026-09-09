@@ -1,0 +1,23 @@
+{
+  "name": "repeat_screen_ztf_pypi_block128",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 8.492846012115479,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3, \"manual_overlap\": true, \"block_size\": 128}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/repeat_screen_ztf_pypi_block128",
+    "--indices",
+    "0,1,2,3,4,5,6,7",
+    "--timing",
+    "--reps",
+    "3"
+  ],
+  "started_epoch": 1788893395.294905,
+  "finished_epoch": 1788893403.7877526
+}

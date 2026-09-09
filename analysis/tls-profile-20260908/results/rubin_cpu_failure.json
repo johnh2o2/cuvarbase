@@ -1,0 +1,166 @@
+{
+  "status": "error",
+  "args": {
+    "input": "inputs/tls_sparse_rubin.npz",
+    "out": "results/rubin_cpu_failure.json",
+    "offset": 4,
+    "threads": 8
+  },
+  "input_sha256": "387a138aedfbaa9218f02a4855b7ad50b6a49d7c4c4c465a64db2cad71604261",
+  "runner_sha256": "17fdb9599a41e8b96dc4cbc53f131d3dd7268dab3f27585003a9fc7da293d8b2",
+  "ndata": 649,
+  "nperiods": 313007,
+  "truth": {
+    "index": 4,
+    "period": 4.970089480854753,
+    "epoch": 4.748612157074309,
+    "impact": 0.0,
+    "rp": 0.1,
+    "injected": true,
+    "ndata": 649,
+    "in_transit_observations": 27,
+    "distinct_transits_sampled": 17,
+    "band_counts": [
+      44,
+      63,
+      145,
+      145,
+      126,
+      126
+    ]
+  },
+  "scope": "CPU failure reproduction; first call including JIT; no failure repair",
+  "main_source_sha256": "35bb8a719e7d49c5696e1818b90016e49b05d3e61686a0d3d6903ee726a93a31",
+  "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/diagnose_cpu.py\", line 63, in main\n    result = transitleastsquares(*lc, verbose=False).power(\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/main.py\", line 327, in power\n    model_transit_single = fractional_transit(\n                           ^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/diagnose_cpu.py\", line 55, in call\n    return original(*a, **kw)\n           ^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/transit.py\", line 63, in fractional_transit\n    reference_flux = reference_transit(\n                     ^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/transit.py\", line 38, in reference_transit\n    rescaled = (numpy.min(downsampled_intransit_flux) - downsampled_intransit_flux) / (\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/fromnumeric.py\", line 3302, in min\n    return _wrapreduction(a, np.minimum, 'min', axis, None, out,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/numpy/_core/fromnumeric.py\", line 86, in _wrapreduction\n    return ufunc.reduce(obj, axis, dtype, out, **passkwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nValueError: zero-size array to reduction operation minimum which has no identity\n",
+  "completed_search_scalars_before_exception": {
+    "internal_samples": 0.0,
+    "maxwidth_in_samples": 77.0,
+    "duration": 0.04494129955727382,
+    "period": 4.970122036449512,
+    "T0": 4.740584485715762,
+    "SDE": 29.13339176019433,
+    "depth": 0.9875750341426751,
+    "best_row": 24.0
+  },
+  "failure_frames": [
+    {
+      "file": "/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/main.py",
+      "function": "power",
+      "line": 327,
+      "scalars": {
+        "internal_samples": 0.0,
+        "maxwidth_in_samples": 77.0,
+        "duration": 0.04494129955727382,
+        "period": 4.970122036449512,
+        "T0": 4.740584485715762,
+        "SDE": 29.13339176019433,
+        "depth": 0.9875750341426751,
+        "best_row": 24.0
+      },
+      "transit_times": {
+        "shape": [
+          696
+        ],
+        "size": 696,
+        "minimum": 4.740584485715762,
+        "maximum": 3458.975399818143
+      }
+    },
+    {
+      "file": "/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/transit.py",
+      "function": "fractional_transit",
+      "line": 63,
+      "scalars": {
+        "samples": 0.0,
+        "duration": 3.460480065910084,
+        "depth": 0.012424965857324888
+      }
+    },
+    {
+      "file": "/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/transitleastsquares/transit.py",
+      "function": "reference_transit",
+      "line": 38,
+      "scalars": {
+        "samples": 0.0,
+        "duration": 1.0
+      },
+      "downsampled_intransit_flux": {
+        "shape": [
+          0
+        ],
+        "size": 0,
+        "minimum": null,
+        "maximum": null
+      }
+    }
+  ],
+  "salvaged_arrays": {
+    "chi2": [
+      313007
+    ],
+    "test_statistic_periods": [
+      313007
+    ],
+    "test_statistic_depths": [
+      313007
+    ],
+    "power": [
+      313007
+    ]
+  },
+  "salvaged_arrays_sha256": "19e5bfec263b913b3fcff59514a27cbb6d52c2eeba5de0aed040aed66c8c6f38",
+  "salvage_warning": "These arrays existed before a public API failure; not a successful API return.",
+  "total_first_call_s": 159.37405509129167,
+  "function_events": [
+    {
+      "function": "get_cache",
+      "event": "enter",
+      "seconds": 0.1234581395983696
+    },
+    {
+      "function": "get_cache",
+      "event": "exit",
+      "seconds": 0.12758688256144524
+    },
+    {
+      "function": "spectra",
+      "event": "enter",
+      "seconds": 157.21059080213308
+    },
+    {
+      "function": "spectra",
+      "event": "exit",
+      "seconds": 158.11946815997362
+    },
+    {
+      "function": "final_T0_fit",
+      "event": "enter",
+      "seconds": 158.11970588564873
+    },
+    {
+      "function": "final_T0_fit",
+      "event": "exit",
+      "seconds": 158.41672799363732
+    },
+    {
+      "function": "fractional_transit",
+      "event": "enter",
+      "seconds": 158.4232791773975
+    },
+    {
+      "function": "fractional_transit",
+      "event": "exit",
+      "seconds": 158.42449840158224
+    },
+    {
+      "function": "fractional_transit",
+      "event": "enter",
+      "seconds": 158.4245050176978
+    },
+    {
+      "function": "fractional_transit",
+      "event": "exit",
+      "seconds": 158.42526673153043
+    }
+  ]
+}

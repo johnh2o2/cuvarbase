@@ -1,0 +1,8 @@
+{
+  "complete": true,
+  "commit": "1032caf029570dc4841db1c594a2cbb1654e8fd8",
+  "source_files": 69,
+  "retained_archive_sha256": "19ff05aeb665bf7b4e8159ea7dc9fd4dc358b82fc7c54e5ba1efebd8a6f909ab",
+  "package_tree": "82781e2dbffc2426ff44dcd1f966a1937ce3b1ca",
+  "note": "Every archived cuvarbase numerical/Python source file matches git archive of the pinned commit, independently of the current worktree."
+}

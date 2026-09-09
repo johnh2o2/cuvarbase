@@ -1,0 +1,307 @@
+[
+  {
+    "name": "pilot2_tess_200s_fbls2",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "fbls",
+      "epoch_os": 2,
+      "period_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_pf_gpu1",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 1
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_pf_gpu2",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_astropy3_w7",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 3,
+      "workers": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_astropy10_w7",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 10,
+      "workers": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_v1_tls4",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_gtls_pypi",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "pypi",
+      "density": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_pypi_bls4",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_v1_bls_batch4",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_200s_v1_tls8",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 8,
+      "durations": 24
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_fbls2",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "fbls",
+      "epoch_os": 2,
+      "period_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_pf_gpu1",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 1
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_pf_gpu2",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_astropy3_w7",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 3,
+      "workers": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_astropy10_w7",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 10,
+      "workers": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_v1_tls4",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_gtls_pypi",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "pypi",
+      "density": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_pypi_bls4",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_tess_gap_v1_bls_batch4",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_fbls2",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "fbls",
+      "epoch_os": 2,
+      "period_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_pf_gpu1",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 1
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_pf_gpu2",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "periodfind_gpu",
+      "epoch_os": 2
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_astropy3_w7",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 3,
+      "workers": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_astropy10_w7",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "astropy",
+      "epoch_os": 10,
+      "workers": 7
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_v1_tls4",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_gtls_pypi",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "pypi",
+      "density": true
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_pypi_bls4",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_v1_bls_batch4",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_bls_batch",
+      "noverlap": 4
+    },
+    "indices": "2",
+    "timeout": 180
+  },
+  {
+    "name": "pilot2_ztf_v1_bls_sparse",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_bls_sparse"
+    },
+    "indices": "2",
+    "timeout": 180
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "job": {
+    "name": "rubin_gtls_head_both",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_rubin.npz",
+      "--out",
+      "results/rubin_gtls_head_both.json",
+      "--variant",
+      "both",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "head",
+    "timeout": 900
+  },
+  "started_epoch": 1788885370.4865532,
+  "elapsed_s": 28.228758573532104,
+  "exit_code": 0,
+  "timed_out": false,
+  "pid": 318
+}

@@ -1,0 +1,39 @@
+{
+  "status": "running",
+  "config": {
+    "backend": "fbls",
+    "epoch_os": 1,
+    "period_os": 2,
+    "native_chunks": 4
+  },
+  "input_file": "tess_gap_tune.npz",
+  "input_sha256": "b262bb9a0534e116b43b8d1ba716527af12f5ca1ed94bfa2b3e0bcc1f71f1ccc",
+  "profile": "tess_gap",
+  "split": "tune",
+  "indices": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "worker_sha256": "c7e862dd155cb3c7f0d7634953e3c0a158fed84c0fc213c705f26c877b066c3c",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [],
+  "initialization_s": 0.516828142106533,
+  "first_api_s": 228.9993062466383,
+  "installed_sources": {}
+}

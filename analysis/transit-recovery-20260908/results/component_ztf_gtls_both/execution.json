@@ -1,0 +1,20 @@
+{
+  "name": "component_ztf_gtls_both",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 15.308652400970459,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/components_tls.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+    "--config",
+    "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/component_ztf_gtls_both",
+    "--variant",
+    "both"
+  ],
+  "started_epoch": 1788902258.8927114,
+  "finished_epoch": 1788902274.2013652
+}

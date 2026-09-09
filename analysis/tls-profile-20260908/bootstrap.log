@@ -1,0 +1,31 @@
+mkdir -p /root/.ssh /run/sshd /tmp/cuvarbase-tls-profile; printf %s '[public key omitted]
+' >> /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys; ssh-keygen -A; /usr/sbin/sshd; echo PROFILE_SSH_READY; exit
+
+-- RUNPOD.IO --
+Enjoy your Pod #ouga2zvuqjco1q ^_^
+
+mkdir -p /root/.ssh /run/sshd /tmp/cuvarbase-tls-profile; printf %s '[public key omitted]
+' >> /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys; ssh-keygen -A; /usr/sbin/sshd; echo PROFILE_SSH_READY; exit
+mkdir -p /root/.ssh /run/sshd /tmp/cuvarbase-tls-profile; printf %s '[public key omitted]
+' >> /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys; ssh-keygen -A; /usr/sbin/sshd; echo PROFILE_SSH_READY; exit
+ ______                 ______            _
+(_____ \               (_____ \          | |
+ _____) ) _   _  ____   _____) )___    __| |
+|  __  / | | | ||  _ \ |  ____// _ \  / _  |
+| |  \ \ | |_| || | | || |    | |_| |( (_| |
+|_|   |_||____/ |_| |_||_|     \___/  \____|
+
+For detailed documentation and guides, please visit:
+[1;34mhttps://docs.runpod.io/[0m and [1;34mhttps://blog.runpod.io/[0m
+
+
+[?2004h]0;root@26e425c21956: /root@26e425c21956:/# mkdir -p /root/.ssh /run/sshd /tmp/cuvarbase-tls-profile; pr
+rintf %s 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMHIvDiCdU4ax8ct8T55DtMJX8YO2cujvTA
+Ab98Za1CtG johnhoffman@Johns-MacBook-Pro.local
+[?2004l
+[?2004h> ' >> /root/.ssh/authorized_keys; chmod 600 /root/.ssh/authorized_keys; ssh-keyg
+gen -A; /usr/sbin/sshd; echo PROFILE_SSH_READY; exit
+[?2004l
+ssh-keygen: generating new host keys: RSA DSA ECDSA ED25519 
+PROFILE_SSH_READY
+exit

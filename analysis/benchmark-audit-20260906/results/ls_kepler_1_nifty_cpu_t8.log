@@ -1,0 +1,28 @@
+[nifty-ls finufft] Warning: nthreads (8) > omp_get_max_threads() (1). Performance may be suboptimal.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+first_api_call_s 0.13097325299168006
+[nifty-ls finufft] Warning: nthreads (8) > omp_get_max_threads() (1). Performance may be suboptimal.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+[nifty-ls finufft] Warning: nthreads (8) > omp_get_max_threads() (1). Performance may be suboptimal.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+warm_sample_s 0.08743213699199259
+[nifty-ls finufft] Warning: nthreads (8) > omp_get_max_threads() (1). Performance may be suboptimal.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+warm_sample_s 0.0987933479482308
+[nifty-ls finufft] Warning: nthreads (8) > omp_get_max_threads() (1). Performance may be suboptimal.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+warm_sample_s 0.10144514904823154
+[nifty-ls finufft] Warning: nthreads (8) > omp_get_max_threads() (1). Performance may be suboptimal.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+warm_sample_s 0.09720887598814443
+[nifty-ls finufft] Warning: nthreads (8) > omp_get_max_threads() (1). Performance may be suboptimal.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+FINUFFT_PLAN_T warning: using opts.nthreads=8, more than the 1 physically cores available; note large nthreads can be slower.
+warm_sample_s 0.11548203398706391
+{"status": "ok", "seconds_per_lc": 0.0987933479482308}

@@ -1,0 +1,20 @@
+{
+  "name": "pilot2_tess_gap_pf_gpu2",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 0.9162991046905518,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+    "--config",
+    "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2}",
+    "--indices",
+    "2",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/pilot2_tess_gap_pf_gpu2"
+  ],
+  "started_epoch": 1788887966.4351006,
+  "finished_epoch": 1788887967.3514006
+}

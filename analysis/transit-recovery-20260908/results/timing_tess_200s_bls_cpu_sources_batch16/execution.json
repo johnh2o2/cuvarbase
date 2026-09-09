@@ -1,0 +1,21 @@
+{
+  "name": "timing_tess_200s_bls_cpu_sources_batch16",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 5.529200553894043,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/cpu_batch.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+    "--config",
+    "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/timing_tess_200s_bls_cpu_sources_batch16",
+    "--timing",
+    "--reps",
+    "3"
+  ],
+  "started_epoch": 1788902324.1035635,
+  "finished_epoch": 1788902329.6327665
+}

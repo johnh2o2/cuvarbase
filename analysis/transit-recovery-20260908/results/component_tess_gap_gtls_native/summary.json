@@ -1,0 +1,221 @@
+{
+  "status": "ok",
+  "profile": "tess_gap",
+  "config": {
+    "backend": "gtls",
+    "gtls_version": "head",
+    "density": true,
+    "fast": true,
+    "workers": 1
+  },
+  "variant": "native",
+  "input_sha256": "b262bb9a0534e116b43b8d1ba716527af12f5ca1ed94bfa2b3e0bcc1f71f1ccc",
+  "worker_sha256": "958e56b73a3b046d27b4ce0c445bea88c3c15ef98aeaa220ae014b519868e965",
+  "instrumentation_sha256": "7e04c350254734b936ed9efda43aff2d8d1af0abf1a65d732bf91d5669fb82b3",
+  "native_times_s": [
+    7.475522819906473,
+    8.087843291461468,
+    7.195575535297394
+  ],
+  "native_median_s": 7.475522819906473,
+  "profiles": [
+    {
+      "phases": {
+        "GTLS input/template setup": {
+          "calls": 1,
+          "inclusive_s": 0.011109601706266403,
+          "exclusive_s": 0.011109601706266403
+        },
+        "GTLS setup and allocations": {
+          "calls": 2,
+          "inclusive_s": 0.002299666404724121,
+          "exclusive_s": 0.002299666404724121
+        },
+        "GTLS CUDA module lookup/compile": {
+          "calls": 1,
+          "inclusive_s": 8.836761116981506e-05,
+          "exclusive_s": 8.836761116981506e-05
+        },
+        "GTLS duration-mask union": {
+          "calls": 31,
+          "inclusive_s": 1.1414060294628143,
+          "exclusive_s": 1.1414060294628143
+        },
+        "GTLS chunk allocations/transfers": {
+          "calls": 31,
+          "inclusive_s": 0.033941272646188736,
+          "exclusive_s": 0.033941272646188736
+        },
+        "GTLS folding/sorting": {
+          "calls": 31,
+          "inclusive_s": 0.6580896340310574,
+          "exclusive_s": 0.6580896340310574
+        },
+        "GTLS reorder/weights": {
+          "calls": 31,
+          "inclusive_s": 0.02186914160847664,
+          "exclusive_s": 0.02186914160847664
+        },
+        "GTLS row-wise flux prefix sums": {
+          "calls": 31,
+          "inclusive_s": 3.696489844471216,
+          "exclusive_s": 3.696489844471216
+        },
+        "GTLS error prefixes/out-of-transit terms": {
+          "calls": 31,
+          "inclusive_s": 0.16065002977848053,
+          "exclusive_s": 0.16065002977848053
+        },
+        "GTLS transit residual kernel": {
+          "calls": 31,
+          "inclusive_s": 1.6559892185032368,
+          "exclusive_s": 1.6559892185032368
+        },
+        "GTLS reductions/chunk cleanup": {
+          "calls": 31,
+          "inclusive_s": 0.11241135373711586,
+          "exclusive_s": 0.11241135373711586
+        },
+        "GTLS result/statistics processing": {
+          "calls": 1,
+          "inclusive_s": 0.08811438456177711,
+          "exclusive_s": 0.08811438456177711
+        },
+        "GTLS full search call": {
+          "calls": 1,
+          "inclusive_s": 7.5736120119690895,
+          "exclusive_s": 0.0022630691528320312
+        },
+        "API remainder": {
+          "calls": 1,
+          "inclusive_s": 7.596791833639145,
+          "exclusive_s": 0.012070219963788986
+        }
+      },
+      "total_s": 7.596791833639145
+    },
+    {
+      "phases": {
+        "GTLS input/template setup": {
+          "calls": 1,
+          "inclusive_s": 0.01123933494091034,
+          "exclusive_s": 0.01123933494091034
+        },
+        "GTLS setup and allocations": {
+          "calls": 2,
+          "inclusive_s": 0.003075074404478073,
+          "exclusive_s": 0.003075074404478073
+        },
+        "GTLS CUDA module lookup/compile": {
+          "calls": 1,
+          "inclusive_s": 9.126588702201843e-05,
+          "exclusive_s": 9.126588702201843e-05
+        },
+        "GTLS duration-mask union": {
+          "calls": 31,
+          "inclusive_s": 1.1187616735696793,
+          "exclusive_s": 1.1187616735696793
+        },
+        "GTLS chunk allocations/transfers": {
+          "calls": 31,
+          "inclusive_s": 0.03362306207418442,
+          "exclusive_s": 0.03362306207418442
+        },
+        "GTLS folding/sorting": {
+          "calls": 31,
+          "inclusive_s": 0.657376978546381,
+          "exclusive_s": 0.657376978546381
+        },
+        "GTLS reorder/weights": {
+          "calls": 31,
+          "inclusive_s": 0.02184387668967247,
+          "exclusive_s": 0.02184387668967247
+        },
+        "GTLS row-wise flux prefix sums": {
+          "calls": 31,
+          "inclusive_s": 3.67120473831892,
+          "exclusive_s": 3.67120473831892
+        },
+        "GTLS error prefixes/out-of-transit terms": {
+          "calls": 31,
+          "inclusive_s": 0.1598607897758484,
+          "exclusive_s": 0.1598607897758484
+        },
+        "GTLS transit residual kernel": {
+          "calls": 31,
+          "inclusive_s": 1.6558465585112572,
+          "exclusive_s": 1.6558465585112572
+        },
+        "GTLS reductions/chunk cleanup": {
+          "calls": 31,
+          "inclusive_s": 0.11220502853393555,
+          "exclusive_s": 0.11220502853393555
+        },
+        "GTLS result/statistics processing": {
+          "calls": 1,
+          "inclusive_s": 0.08845822140574455,
+          "exclusive_s": 0.08845822140574455
+        },
+        "GTLS full search call": {
+          "calls": 1,
+          "inclusive_s": 7.524487499147654,
+          "exclusive_s": 0.002140231430530548
+        },
+        "API remainder": {
+          "calls": 1,
+          "inclusive_s": 7.548200789839029,
+          "exclusive_s": 0.012473955750465393
+        }
+      },
+      "total_s": 7.548200789839029
+    }
+  ],
+  "transformations": [
+    {
+      "function": "search_multi_periods",
+      "original_sha256": "04302475fd9ba0a8ab4f3cc9a6518d714b8fc208cc78f3acd035349249a5818a",
+      "transformed_sha256": "23d4366fde18e22081569a194b650d0531b5e345e544904cd73a56202e7a60dd",
+      "file": "profile.search_multi_periods.instrumented.py",
+      "changes": [],
+      "instrumentation": true
+    },
+    {
+      "function": "power",
+      "original_sha256": "ad68a3ebb9d3983277c0e2353af7a1799a4c5dca992c934ba4cb215c004550f8",
+      "transformed_sha256": "b1660d678b75f2740cda5d30bb8a10eb29a2be91777c089177507d4707cb83f0",
+      "file": "profile.power.instrumented.py",
+      "changes": [],
+      "instrumentation": true
+    }
+  ],
+  "native_candidate": {
+    "period": 0.9875201666005101,
+    "score": 16.380983352661133,
+    "epoch": null,
+    "finite_fraction": 1.0,
+    "api_result_valid": true
+  },
+  "profiled_candidate": {
+    "period": 0.9875201666005101,
+    "score": 16.380983352661133,
+    "epoch": null,
+    "finite_fraction": 1.0,
+    "api_result_valid": true
+  },
+  "output_agreement": {
+    "periods": {
+      "same_shape": true,
+      "same_finite_mask": true,
+      "exact": true,
+      "max_abs": 0.0
+    },
+    "power": {
+      "same_shape": true,
+      "same_finite_mask": true,
+      "exact": true,
+      "max_abs": 0.0
+    }
+  },
+  "output_sha256": "b36d1c10369712c0765e60b5ea1a12b75b8a1a6dbaa5a1951c89fed8222ec1a9",
+  "meaning": "Synchronized wall phases in one worker. Diagnostic Python ablations are not released GTLS."
+}

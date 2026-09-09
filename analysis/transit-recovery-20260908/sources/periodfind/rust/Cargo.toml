@@ -1,0 +1,14 @@
+[package]
+name = "periodfind_cpu"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "periodfind_cpu"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+numpy = "0.23"
+rayon = "1.10"
+normality = "3"

@@ -1,0 +1,20 @@
+{
+  "job": {
+    "name": "ps1_cpu_failure",
+    "version": "cpu",
+    "timeout": 1200,
+    "command": [
+      "modern/bin/python",
+      "diagnose_cpu.py",
+      "--input",
+      "inputs/tls_sparse_ps1.npz",
+      "--out",
+      "results/ps1_cpu_failure.json"
+    ]
+  },
+  "started_epoch": 1788885978.8202984,
+  "elapsed_s": 1.1180860996246338,
+  "exit_code": 0,
+  "timed_out": false,
+  "pid": 535
+}

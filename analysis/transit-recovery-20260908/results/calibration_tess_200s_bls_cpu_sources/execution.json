@@ -1,0 +1,18 @@
+{
+  "name": "calibration_tess_200s_bls_cpu_sources",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 10.089132070541382,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/cpu_batch.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+    "--config",
+    "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7, \"eval_chunk\": 16}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_bls_cpu_sources"
+  ],
+  "started_epoch": 1788902293.9477923,
+  "finished_epoch": 1788902304.036926
+}

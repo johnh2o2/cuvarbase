@@ -1,0 +1,20 @@
+{
+  "name": "component_tess_gap_gtls_both",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 18.958383083343506,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/components_tls.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+    "--config",
+    "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/component_tess_gap_gtls_both",
+    "--variant",
+    "both"
+  ],
+  "started_epoch": 1788902114.4898794,
+  "finished_epoch": 1788902133.448264
+}

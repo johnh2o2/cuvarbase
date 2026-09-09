@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 170, in main
+    start=time.perf_counter();backend=Backend(cfg,d,max(len(lcs[i][0]) for i in ids));backend.sync()
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 62, in __init__
+    from fBLS import fBLS
+  File "/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py", line 19, in <module>
+    import matplotlib.pyplot as plt, matplotlib.cm as cm, sys
+ModuleNotFoundError: No module named 'matplotlib'
+

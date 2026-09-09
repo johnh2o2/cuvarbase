@@ -1,0 +1,21 @@
+{
+  "name": "timing_ztf_bls_v1_fresh_grid",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 2.873389482498169,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/grid_and_search.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+    "--config",
+    "{\"backend\": \"v1_bls_fast\", \"noverlap\": 8, \"optimized\": true}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/timing_ztf_bls_v1_fresh_grid",
+    "--timing",
+    "--reps",
+    "5"
+  ],
+  "started_epoch": 1788902015.389413,
+  "finished_epoch": 1788902018.2628043
+}

@@ -1,0 +1,21 @@
+{
+  "name": "timing_tess_gap_bls_pypi_fresh_grid",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 5.783055543899536,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/grid_and_search.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25, \"block_size\": 128}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/timing_tess_gap_bls_pypi_fresh_grid",
+    "--timing",
+    "--reps",
+    "5"
+  ],
+  "started_epoch": 1788901898.1151857,
+  "finished_epoch": 1788901903.8982425
+}

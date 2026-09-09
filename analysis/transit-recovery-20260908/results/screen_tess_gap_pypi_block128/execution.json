@@ -1,0 +1,20 @@
+{
+  "name": "screen_tess_gap_pypi_block128",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 5.332441568374634,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25, \"block_size\": 128}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_pypi_block128",
+    "--indices",
+    "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31"
+  ],
+  "started_epoch": 1788892812.1060011,
+  "finished_epoch": 1788892817.4384441
+}

@@ -1,0 +1,23 @@
+{
+  "name": "timing_tess_200s_tls_v1_single",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 1.4690873622894287,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+    "--config",
+    "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/timing_tess_200s_tls_v1_single",
+    "--indices",
+    "128",
+    "--timing",
+    "--reps",
+    "5"
+  ],
+  "started_epoch": 1788901896.6434498,
+  "finished_epoch": 1788901898.1125386
+}

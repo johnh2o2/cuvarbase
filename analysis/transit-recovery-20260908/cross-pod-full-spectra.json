@@ -1,0 +1,47 @@
+{
+  "comparisons": [
+    {
+      "node": "validation_a",
+      "profile": "tess_200s",
+      "periods_equal": true,
+      "powers_equal": true,
+      "max_abs_power_difference": 0.0
+    },
+    {
+      "node": "validation_a",
+      "profile": "tess_gap",
+      "periods_equal": true,
+      "powers_equal": true,
+      "max_abs_power_difference": 0.0
+    },
+    {
+      "node": "validation_a",
+      "profile": "ztf",
+      "periods_equal": true,
+      "powers_equal": true,
+      "max_abs_power_difference": 0.0
+    },
+    {
+      "node": "validation_b",
+      "profile": "tess_200s",
+      "periods_equal": true,
+      "powers_equal": true,
+      "max_abs_power_difference": 0.0
+    },
+    {
+      "node": "validation_b",
+      "profile": "tess_gap",
+      "periods_equal": true,
+      "powers_equal": true,
+      "max_abs_power_difference": 0.0
+    },
+    {
+      "node": "validation_b",
+      "profile": "ztf",
+      "periods_equal": true,
+      "powers_equal": true,
+      "max_abs_power_difference": 0.0
+    }
+  ],
+  "note": "Pinned serial GTLS tuning case2, original full spectra versus each auxiliary preflight; recovery throughput times are never cross-node timing denominators."
+}

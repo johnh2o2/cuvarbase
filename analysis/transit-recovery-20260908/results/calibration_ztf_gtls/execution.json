@@ -1,0 +1,11 @@
+{
+  "name": "calibration_ztf_gtls",
+  "exit_code": 0,
+  "derived": true,
+  "parts": [
+    "calibration_ztf_gtls__part000",
+    "calibration_ztf_gtls__part064"
+  ],
+  "elapsed_s": 2584.6742470264435,
+  "note": "Sum of independent recovery worker elapsed times, not latency or throughput."
+}

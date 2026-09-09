@@ -1,0 +1,695 @@
+{
+  "info": {
+    "author": "John Hoffman",
+    "author_email": "johnh2o2@gmail.com",
+    "bugtrack_url": null,
+    "classifiers": [
+      "Development Status :: 4 - Beta",
+      "Environment :: Console",
+      "Intended Audience :: Science/Research",
+      "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+      "Natural Language :: English",
+      "Programming Language :: C",
+      "Programming Language :: C++",
+      "Programming Language :: Python :: 2.7",
+      "Programming Language :: Python :: 3.4",
+      "Programming Language :: Python :: 3.5",
+      "Programming Language :: Python :: 3.6"
+    ],
+    "description": "",
+    "description_content_type": "",
+    "docs_url": null,
+    "download_url": "",
+    "downloads": {
+      "last_day": -1,
+      "last_month": -1,
+      "last_week": -1
+    },
+    "dynamic": null,
+    "home_page": "https://github.com/johnh2o2/cuvarbase",
+    "keywords": "",
+    "license": "",
+    "license_expression": null,
+    "license_files": null,
+    "maintainer": "",
+    "maintainer_email": "",
+    "name": "cuvarbase",
+    "package_url": "https://pypi.org/project/cuvarbase/",
+    "platform": null,
+    "project_url": "https://pypi.org/project/cuvarbase/",
+    "project_urls": {
+      "Homepage": "https://github.com/johnh2o2/cuvarbase"
+    },
+    "provides_extra": null,
+    "release_url": "https://pypi.org/project/cuvarbase/0.2.5/",
+    "requires_dist": [
+      "future",
+      "numpy (>=1.6)",
+      "scipy",
+      "pycuda (>=2017.1.1)",
+      "scikit-cuda"
+    ],
+    "requires_python": "",
+    "summary": "Period-finding and variability on the GPU",
+    "version": "0.2.5",
+    "yanked": false,
+    "yanked_reason": null
+  },
+  "last_serial": 20286011,
+  "ownership": {
+    "organization": null,
+    "roles": [
+      {
+        "role": "Owner",
+        "user": "astrobatty"
+      },
+      {
+        "role": "Owner",
+        "user": "johnh2o2"
+      }
+    ]
+  },
+  "releases": {
+    "0.1.5": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "328537b268d5373047dc16e3216f2cf377e83d24cb3c517d1a1f16bd0b39c50d"
+        },
+        "digests": {
+          "blake2b_256": "987c62eeb7b6f40e80adaee8d5f3c5d6727d894df2dd834d5285e99c56b11874",
+          "md5": "d943c17a9151d5cc25ec16c766b743ef",
+          "sha256": "844dd2b668644a941980a64b6b601097c8f23f1ad3b53c5e2e1b7940b2184a21"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.5-py2-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "d943c17a9151d5cc25ec16c766b743ef",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2",
+        "requires_python": null,
+        "size": 51995,
+        "upload_time": "2017-09-21T18:24:30",
+        "upload_time_iso_8601": "2017-09-21T18:24:30.754151Z",
+        "url": "https://files.pythonhosted.org/packages/98/7c/62eeb7b6f40e80adaee8d5f3c5d6727d894df2dd834d5285e99c56b11874/cuvarbase-0.1.5-py2-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "64e98569f72a749aae50122ee6094a5b100791852e69e8c43ccd4d3ba4481c41",
+          "md5": "6245097e21ae8355e57e69efd97bc489",
+          "sha256": "8c564c3ece72d2b0b5789cb79bc48ed6bf319cbe8fbb3a69e2b6c9cc7b8f4305"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.5.tar.gz",
+        "has_sig": false,
+        "md5_digest": "6245097e21ae8355e57e69efd97bc489",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 44828,
+        "upload_time": "2017-09-21T18:25:18",
+        "upload_time_iso_8601": "2017-09-21T18:25:18.260580Z",
+        "url": "https://files.pythonhosted.org/packages/64/e9/8569f72a749aae50122ee6094a5b100791852e69e8c43ccd4d3ba4481c41/cuvarbase-0.1.5.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.1.6": [
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "2f6c10a7476eec69e96f42c7dbca9ff0fa446e747de1c1c8e959cfdf477a4dbe",
+          "md5": "bf6aa5ed32c70e9f0913a9cabf1bfb7c",
+          "sha256": "bd8ee43bdb21ed3f705baf379715779feea675b6e6200c297b150f81c4238e0d"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.6-py2.7.egg",
+        "has_sig": false,
+        "md5_digest": "bf6aa5ed32c70e9f0913a9cabf1bfb7c",
+        "packagetype": "bdist_egg",
+        "python_version": "2.7",
+        "requires_python": null,
+        "size": 114954,
+        "upload_time": "2017-09-22T01:52:20",
+        "upload_time_iso_8601": "2017-09-22T01:52:20.168094Z",
+        "url": "https://files.pythonhosted.org/packages/2f/6c/10a7476eec69e96f42c7dbca9ff0fa446e747de1c1c8e959cfdf477a4dbe/cuvarbase-0.1.6-py2.7.egg",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "bf0e491f62015d8b49e77fc5f3b2a28d04941284bfd49e040718c1d01c6c3ff4"
+        },
+        "digests": {
+          "blake2b_256": "4a0fd5622d3ad80f47f7148d7cfe7d3d9ce4a0c8c44497a664dac312f40912b1",
+          "md5": "ccdae2a2069db42b892348941bd69822",
+          "sha256": "7ff0307e3cfa4fe20f84023818e9ea3b06e0149bcf0e146c57ba8a8f01944dc9"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.6-py2-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "ccdae2a2069db42b892348941bd69822",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2",
+        "requires_python": null,
+        "size": 52654,
+        "upload_time": "2017-09-22T01:52:18",
+        "upload_time_iso_8601": "2017-09-22T01:52:18.340805Z",
+        "url": "https://files.pythonhosted.org/packages/4a/0f/d5622d3ad80f47f7148d7cfe7d3d9ce4a0c8c44497a664dac312f40912b1/cuvarbase-0.1.6-py2-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "e9097f9fc9996a194cd6f8741e7e151708a7daefe10bb840144aea9baa2bfc80",
+          "md5": "4da00e42bf96c1fb65a1844464930f83",
+          "sha256": "bafd94f5430f04b128e2ec5dc4de20c74710efc502acc7718380478059bfc160"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.6.tar.gz",
+        "has_sig": false,
+        "md5_digest": "4da00e42bf96c1fb65a1844464930f83",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 45253,
+        "upload_time": "2017-09-22T01:52:21",
+        "upload_time_iso_8601": "2017-09-22T01:52:21.228088Z",
+        "url": "https://files.pythonhosted.org/packages/e9/09/7f9fc9996a194cd6f8741e7e151708a7daefe10bb840144aea9baa2bfc80/cuvarbase-0.1.6.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.1.7": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "7e15cd9037388e4fe43b38963ee7e6d6abb7a556937ef8258ad3b6438852a7b1"
+        },
+        "digests": {
+          "blake2b_256": "429b66e369a278dd8df0f23f956523c4a719dea8021f13bf892c9be9aa9f8711",
+          "md5": "25797fdf7c0958ac7fa818e393770d73",
+          "sha256": "0620f1c88e157852a04c2d93dc967c6aafd66a8de39f1636b19d62242aa5f00a"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.7-py2-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "25797fdf7c0958ac7fa818e393770d73",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2",
+        "requires_python": null,
+        "size": 53122,
+        "upload_time": "2017-09-22T02:40:45",
+        "upload_time_iso_8601": "2017-09-22T02:40:45.177168Z",
+        "url": "https://files.pythonhosted.org/packages/42/9b/66e369a278dd8df0f23f956523c4a719dea8021f13bf892c9be9aa9f8711/cuvarbase-0.1.7-py2-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "220079a4927a535e405427bd64ac295ddb1ea9e26975f8ef97126dbe6676975e",
+          "md5": "eb894a6a7299f6ab175bad13b7439f81",
+          "sha256": "b51e20006cba347cc55b12494f3e96c3e1b0dbc7342fcba57669be2c9ec3468a"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.7.tar.gz",
+        "has_sig": false,
+        "md5_digest": "eb894a6a7299f6ab175bad13b7439f81",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 45696,
+        "upload_time": "2017-09-22T02:40:47",
+        "upload_time_iso_8601": "2017-09-22T02:40:47.030400Z",
+        "url": "https://files.pythonhosted.org/packages/22/00/79a4927a535e405427bd64ac295ddb1ea9e26975f8ef97126dbe6676975e/cuvarbase-0.1.7.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.1.8": [
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "09874f54bb40d51d0ba265a86a05457129fc94858d263a1813234c11c042c8c0",
+          "md5": "af0d5b3b8eec3e7f9eed1140afc0ed6b",
+          "sha256": "022716c0d9c236bd9d3694673a5822982adcf000d155efb9c437f55a579e75b5"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.8-py2.7.egg",
+        "has_sig": false,
+        "md5_digest": "af0d5b3b8eec3e7f9eed1140afc0ed6b",
+        "packagetype": "bdist_egg",
+        "python_version": "2.7",
+        "requires_python": null,
+        "size": 116487,
+        "upload_time": "2017-09-22T05:16:57",
+        "upload_time_iso_8601": "2017-09-22T05:16:57.793850Z",
+        "url": "https://files.pythonhosted.org/packages/09/87/4f54bb40d51d0ba265a86a05457129fc94858d263a1813234c11c042c8c0/cuvarbase-0.1.8-py2.7.egg",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "38c33b9b5933432d0cb11cb10ebb28b6c046b39a0e3d8a29831615d783f4ea4f"
+        },
+        "digests": {
+          "blake2b_256": "1c17de705bbd698419612b3527cf290b0b546abef27146fad489890dfe4e040f",
+          "md5": "7992ec82529876bdf8429bd81bcc2e87",
+          "sha256": "7280082448f3ce5e2e56048c12904e4768d7dadb560f5a252d66164381f9a19a"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.8-py2-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "7992ec82529876bdf8429bd81bcc2e87",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2",
+        "requires_python": null,
+        "size": 53268,
+        "upload_time": "2017-09-22T05:16:56",
+        "upload_time_iso_8601": "2017-09-22T05:16:56.355514Z",
+        "url": "https://files.pythonhosted.org/packages/1c/17/de705bbd698419612b3527cf290b0b546abef27146fad489890dfe4e040f/cuvarbase-0.1.8-py2-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "88f11afcd6134f0371d1c6982f42acc5af4e485f3aa40aaf76155dc03d29781c",
+          "md5": "517d4ee734cd0c3721da821e0a48f702",
+          "sha256": "f7e19827faf0a4e2cf0765af8975afbf6ff5683dd32a1a1d624a5b811a01c184"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.8.tar.gz",
+        "has_sig": false,
+        "md5_digest": "517d4ee734cd0c3721da821e0a48f702",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 45903,
+        "upload_time": "2017-09-22T05:16:59",
+        "upload_time_iso_8601": "2017-09-22T05:16:59.394201Z",
+        "url": "https://files.pythonhosted.org/packages/88/f1/1afcd6134f0371d1c6982f42acc5af4e485f3aa40aaf76155dc03d29781c/cuvarbase-0.1.8.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.1.9": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "1d0f63f1379a892801af069af729015d24a9f4a30edfcd823c293b05a4bc391e"
+        },
+        "digests": {
+          "blake2b_256": "78cdd9be009eb880995e6d1374c2a7d5e10cbdbd59e9a7db317f02524c583045",
+          "md5": "5facbd21bb7f71f98b46c68ddf7a3b9a",
+          "sha256": "8ec4c478e2658d816c4ab6969bfa94688d9c67863ea6e3983a5522740234f02c"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.9-py2.py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "5facbd21bb7f71f98b46c68ddf7a3b9a",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2.py3",
+        "requires_python": null,
+        "size": 53553,
+        "upload_time": "2017-09-28T18:21:58",
+        "upload_time_iso_8601": "2017-09-28T18:21:58.980658Z",
+        "url": "https://files.pythonhosted.org/packages/78/cd/d9be009eb880995e6d1374c2a7d5e10cbdbd59e9a7db317f02524c583045/cuvarbase-0.1.9-py2.py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "363d644e93f9c44af89fa57f7fcb7fc3db80b43143cc42909f007c5c403d2798",
+          "md5": "645403a8dfa7c5b8b0d5ac1628f7e0aa",
+          "sha256": "39e384875c9f08aaf7185301bc2a50ec74c1fed838e04d65256a6a54b744d746"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.1.9.tar.gz",
+        "has_sig": false,
+        "md5_digest": "645403a8dfa7c5b8b0d5ac1628f7e0aa",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 44221,
+        "upload_time": "2017-09-28T18:22:00",
+        "upload_time_iso_8601": "2017-09-28T18:22:00.155430Z",
+        "url": "https://files.pythonhosted.org/packages/36/3d/644e93f9c44af89fa57f7fcb7fc3db80b43143cc42909f007c5c403d2798/cuvarbase-0.1.9.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.2.0": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "7aadf209d0c16fc052aa2bc19db02c9945bb3346bd71cc47a71de25720d24250"
+        },
+        "digests": {
+          "blake2b_256": "6b0b63ad090ce43474f4f664056ddd071a4bebb9f902634980c1e36233018aac",
+          "md5": "1b62f2452bf85db8a5d8a1a0b7b594d6",
+          "sha256": "ad7d3dd9ba8cfd3af2aab4827abc9461c6ffa9b54535e4920b11d66b96041419"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.0-py2.py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "1b62f2452bf85db8a5d8a1a0b7b594d6",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2.py3",
+        "requires_python": null,
+        "size": 60394,
+        "upload_time": "2017-10-05T00:59:33",
+        "upload_time_iso_8601": "2017-10-05T00:59:33.698696Z",
+        "url": "https://files.pythonhosted.org/packages/6b/0b/63ad090ce43474f4f664056ddd071a4bebb9f902634980c1e36233018aac/cuvarbase-0.2.0-py2.py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "dedbde58c6defdb8f8c79e076560a2cbe9705f212fa9b239a84a201030e883de",
+          "md5": "910f15b966726701452471c481399307",
+          "sha256": "be784d68b6e67bc4fa289a9364d920e2a958d500ed97f25da76876a502ec3ba0"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.0.tar.gz",
+        "has_sig": false,
+        "md5_digest": "910f15b966726701452471c481399307",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 51007,
+        "upload_time": "2017-10-05T00:59:35",
+        "upload_time_iso_8601": "2017-10-05T00:59:35.666653Z",
+        "url": "https://files.pythonhosted.org/packages/de/db/de58c6defdb8f8c79e076560a2cbe9705f212fa9b239a84a201030e883de/cuvarbase-0.2.0.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.2.1": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "0323349b89b8a4ece79e68a6050b4a6992f7bffd94be36f9e872587b18dbac3f"
+        },
+        "digests": {
+          "blake2b_256": "59a321ea983fd28099e1be7383efbdb7c8697a0ea1805e1bed1a7e2fad08a4a2",
+          "md5": "c8a2d3e260ee8157c3163982f6270bba",
+          "sha256": "2b9996ddb03b4ce9f2fa49da121c7c82a3edad34d2a7617829204727e44003a8"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.1-py2.py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "c8a2d3e260ee8157c3163982f6270bba",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2.py3",
+        "requires_python": null,
+        "size": 71118,
+        "upload_time": "2021-03-28T17:47:45",
+        "upload_time_iso_8601": "2021-03-28T17:47:45.723373Z",
+        "url": "https://files.pythonhosted.org/packages/59/a3/21ea983fd28099e1be7383efbdb7c8697a0ea1805e1bed1a7e2fad08a4a2/cuvarbase-0.2.1-py2.py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "01e681343d6423ebf5dcbee919e81e3789b81495b66c5a990064a1112e79a0e7",
+          "md5": "32f2fe7b4ce1ff885e86d803f90c02ca",
+          "sha256": "6f4d73da16463b7756480236f5a3fbe0496ebf09410fac5955a217f145aced30"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.1.tar.gz",
+        "has_sig": false,
+        "md5_digest": "32f2fe7b4ce1ff885e86d803f90c02ca",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 155210,
+        "upload_time": "2021-03-28T17:47:47",
+        "upload_time_iso_8601": "2021-03-28T17:47:47.140420Z",
+        "url": "https://files.pythonhosted.org/packages/01/e6/81343d6423ebf5dcbee919e81e3789b81495b66c5a990064a1112e79a0e7/cuvarbase-0.2.1.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.2.2": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "b93468827e5c03edf89b64f4c2c0dc34c6ca2093c11026faf37c8f68ffe0bab0"
+        },
+        "digests": {
+          "blake2b_256": "c80d09f8a3016ebefc61aa3f528700ad42488627d322babf51d998ec21d6641d",
+          "md5": "071f111d718a19484ee4c2ca3e4663b1",
+          "sha256": "1c0f5de9926a90f52fbb494451f05802e8b229f57bc1baa791a9607f463c2f32"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.2-py2.py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "071f111d718a19484ee4c2ca3e4663b1",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2.py3",
+        "requires_python": null,
+        "size": 71854,
+        "upload_time": "2021-10-23T15:57:20",
+        "upload_time_iso_8601": "2021-10-23T15:57:20.415181Z",
+        "url": "https://files.pythonhosted.org/packages/c8/0d/09f8a3016ebefc61aa3f528700ad42488627d322babf51d998ec21d6641d/cuvarbase-0.2.2-py2.py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "bb1552f9147e55e10d80f56cd260518cb7a92a565fdb9c04090b81e1d26612e9",
+          "md5": "4e7c7971b43a51cee27fefa56261e5ac",
+          "sha256": "9f8db49ed2e6f2e64128908189e96d8ca60f67f39c3311c4addf728eb0403c43"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.2.tar.gz",
+        "has_sig": false,
+        "md5_digest": "4e7c7971b43a51cee27fefa56261e5ac",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 64897,
+        "upload_time": "2021-10-23T15:57:22",
+        "upload_time_iso_8601": "2021-10-23T15:57:22.005581Z",
+        "url": "https://files.pythonhosted.org/packages/bb/15/52f9147e55e10d80f56cd260518cb7a92a565fdb9c04090b81e1d26612e9/cuvarbase-0.2.2.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.2.3": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "72de9e91685c277ecbfd298ead76ea31ef65333883cb4685d13ae6a9e0467856"
+        },
+        "digests": {
+          "blake2b_256": "26357afe8c85080e0f2cc55d85760520a12369eb54ae76dd225ac12aff44b53f",
+          "md5": "32fb36a4182a6be54acdc6975076b597",
+          "sha256": "b0e2d439433b99d2ee7e0602bc948f783542fc16b864c7cf621da13cdca39b6b"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.3-py2.py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "32fb36a4182a6be54acdc6975076b597",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2.py3",
+        "requires_python": null,
+        "size": 71856,
+        "upload_time": "2022-01-04T15:39:46",
+        "upload_time_iso_8601": "2022-01-04T15:39:46.911272Z",
+        "url": "https://files.pythonhosted.org/packages/26/35/7afe8c85080e0f2cc55d85760520a12369eb54ae76dd225ac12aff44b53f/cuvarbase-0.2.3-py2.py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "96da626093cea50fef8709f1fc036782e4ca7606f635a27a8bd50a3acdb44ddb",
+          "md5": "dc66260539ae27221e2ba13e1b067401",
+          "sha256": "de0bfbe491476642fa616115cecbda36075a857b7711d82594b13d24f4e3448b"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.3.tar.gz",
+        "has_sig": false,
+        "md5_digest": "dc66260539ae27221e2ba13e1b067401",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 564803,
+        "upload_time": "2022-01-04T15:39:49",
+        "upload_time_iso_8601": "2022-01-04T15:39:49.098974Z",
+        "url": "https://files.pythonhosted.org/packages/96/da/626093cea50fef8709f1fc036782e4ca7606f635a27a8bd50a3acdb44ddb/cuvarbase-0.2.3.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.2.4": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "ce0ec7e4b3ba311985f14b8b62f2cf258dd983dda7192e735ddb3ca588e83480"
+        },
+        "digests": {
+          "blake2b_256": "553640c8e5f2036fea6ca994ddb4ced7700c235d65d16bb85b3a9c34dcd82f9d",
+          "md5": "cf8dda91357beaf54594c6ba1808ca85",
+          "sha256": "c2ea185a38e8ad6c510ffeca4519cdea595156a074f2a24bcc397c689bc76171"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.4-py2.py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "cf8dda91357beaf54594c6ba1808ca85",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2.py3",
+        "requires_python": null,
+        "size": 60667,
+        "upload_time": "2022-07-13T14:07:40",
+        "upload_time_iso_8601": "2022-07-13T14:07:40.964793Z",
+        "url": "https://files.pythonhosted.org/packages/55/36/40c8e5f2036fea6ca994ddb4ced7700c235d65d16bb85b3a9c34dcd82f9d/cuvarbase-0.2.4-py2.py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "511f8e5401aaf93e78950ca54b26ebf3de36476e31b6a3db3111645bca6ac898",
+          "md5": "8b4f36be659554e37cde757b86e0b812",
+          "sha256": "3ddaa8d31f89d09e2c99736184cc68933903553f1f2a9a1640fd9c44faf16224"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.4.tar.gz",
+        "has_sig": false,
+        "md5_digest": "8b4f36be659554e37cde757b86e0b812",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 562480,
+        "upload_time": "2022-07-13T14:07:43",
+        "upload_time_iso_8601": "2022-07-13T14:07:43.023836Z",
+        "url": "https://files.pythonhosted.org/packages/51/1f/8e5401aaf93e78950ca54b26ebf3de36476e31b6a3db3111645bca6ac898/cuvarbase-0.2.4.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "0.2.5": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "a3f02172f8c51df7913231af90651372c53741536b59e5a64b0f9497e217b361"
+        },
+        "digests": {
+          "blake2b_256": "28b9130b5f6903357760401f7bcbebcdf0767e67caaa235b3eeb8ec56291c1e1",
+          "md5": "27d6f5c640421ec7cfb5ff7cc62e7d51",
+          "sha256": "135688dd94b7e9674f8102e6c0c24be2ea2877e9f4625f362bce380a20a3137f"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.5-py2.py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "27d6f5c640421ec7cfb5ff7cc62e7d51",
+        "packagetype": "bdist_wheel",
+        "python_version": "py2.py3",
+        "requires_python": null,
+        "size": 72557,
+        "upload_time": "2023-10-23T01:16:02",
+        "upload_time_iso_8601": "2023-10-23T01:16:02.925787Z",
+        "url": "https://files.pythonhosted.org/packages/28/b9/130b5f6903357760401f7bcbebcdf0767e67caaa235b3eeb8ec56291c1e1/cuvarbase-0.2.5-py2.py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "af79bcac7fbafc8d1b7bdd3bb7fe8e3949b6b347a5999be33343130234097e90",
+          "md5": "cc38aa7dcb94e84c799a268e3907d840",
+          "sha256": "d6f5252d1991825c0430ac6c5934e255e7bda15a58431a653e1b97d3c1cd10a0"
+        },
+        "downloads": -1,
+        "filename": "cuvarbase-0.2.5.tar.gz",
+        "has_sig": false,
+        "md5_digest": "cc38aa7dcb94e84c799a268e3907d840",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 565714,
+        "upload_time": "2023-10-23T01:16:05",
+        "upload_time_iso_8601": "2023-10-23T01:16:05.394830Z",
+        "url": "https://files.pythonhosted.org/packages/af/79/bcac7fbafc8d1b7bdd3bb7fe8e3949b6b347a5999be33343130234097e90/cuvarbase-0.2.5.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ]
+  },
+  "urls": [
+    {
+      "comment_text": "",
+      "core-metadata": {
+        "sha256": "a3f02172f8c51df7913231af90651372c53741536b59e5a64b0f9497e217b361"
+      },
+      "digests": {
+        "blake2b_256": "28b9130b5f6903357760401f7bcbebcdf0767e67caaa235b3eeb8ec56291c1e1",
+        "md5": "27d6f5c640421ec7cfb5ff7cc62e7d51",
+        "sha256": "135688dd94b7e9674f8102e6c0c24be2ea2877e9f4625f362bce380a20a3137f"
+      },
+      "downloads": -1,
+      "filename": "cuvarbase-0.2.5-py2.py3-none-any.whl",
+      "has_sig": false,
+      "md5_digest": "27d6f5c640421ec7cfb5ff7cc62e7d51",
+      "packagetype": "bdist_wheel",
+      "python_version": "py2.py3",
+      "requires_python": null,
+      "size": 72557,
+      "upload_time": "2023-10-23T01:16:02",
+      "upload_time_iso_8601": "2023-10-23T01:16:02.925787Z",
+      "url": "https://files.pythonhosted.org/packages/28/b9/130b5f6903357760401f7bcbebcdf0767e67caaa235b3eeb8ec56291c1e1/cuvarbase-0.2.5-py2.py3-none-any.whl",
+      "yanked": false,
+      "yanked_reason": null
+    },
+    {
+      "comment_text": "",
+      "core-metadata": false,
+      "digests": {
+        "blake2b_256": "af79bcac7fbafc8d1b7bdd3bb7fe8e3949b6b347a5999be33343130234097e90",
+        "md5": "cc38aa7dcb94e84c799a268e3907d840",
+        "sha256": "d6f5252d1991825c0430ac6c5934e255e7bda15a58431a653e1b97d3c1cd10a0"
+      },
+      "downloads": -1,
+      "filename": "cuvarbase-0.2.5.tar.gz",
+      "has_sig": false,
+      "md5_digest": "cc38aa7dcb94e84c799a268e3907d840",
+      "packagetype": "sdist",
+      "python_version": "source",
+      "requires_python": null,
+      "size": 565714,
+      "upload_time": "2023-10-23T01:16:05",
+      "upload_time_iso_8601": "2023-10-23T01:16:05.394830Z",
+      "url": "https://files.pythonhosted.org/packages/af/79/bcac7fbafc8d1b7bdd3bb7fe8e3949b6b347a5999be33343130234097e90/cuvarbase-0.2.5.tar.gz",
+      "yanked": false,
+      "yanked_reason": null
+    }
+  ],
+  "vulnerabilities": []
+}

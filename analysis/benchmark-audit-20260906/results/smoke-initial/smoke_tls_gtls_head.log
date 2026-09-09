@@ -1,0 +1,37 @@
+/tmp/cuvarbase-benchmark-audit/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+Traceback (most recent call last):
+  File "/tmp/cuvarbase-benchmark-audit/run_tls.py", line 129, in main
+    stats, results = measure(run, sync, args.reps)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/common.py", line 68, in measure
+    result = fn()
+             ^^^^
+  File "/tmp/cuvarbase-benchmark-audit/run_tls.py", line 104, in run
+    return [gtls(*lc, verbose=False).power(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/run_tls.py", line 104, in <listcomp>
+    return [gtls(*lc, verbose=False).power(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/gtls-head-install/gputls/main.py", line 108, in power
+    = core.search_multi_periods(
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/gtls-head-install/gputls/core.py", line 603, in search_multi_periods
+    module.compile()
+  File "cupy/_core/raw.pyx", line 426, in cupy._core.raw.RawModule.compile
+  File "cupy/_core/raw.pyx", line 404, in cupy._core.raw.RawModule._module
+  File "cupy/_util.pyx", line 67, in cupy._util.memoize.decorator.ret
+  File "cupy/_core/raw.pyx", line 538, in cupy._core.raw._get_raw_module
+  File "cupy/_core/core.pyx", line 2359, in cupy._core.core.compile_with_cache
+  File "cupy/_core/core.pyx", line 2377, in cupy._core.core.compile_with_cache
+  File "/tmp/cuvarbase-benchmark-audit/modern/lib/python3.11/site-packages/cupy/cuda/compiler.py", line 536, in _compile_module_with_cache
+    return _compile_with_cache_cuda(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/modern/lib/python3.11/site-packages/cupy/cuda/compiler.py", line 616, in _compile_with_cache_cuda
+    ptx, mapping = compile_using_nvrtc(
+                   ^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-benchmark-audit/modern/lib/python3.11/site-packages/cupy/cuda/compiler.py", line 368, in compile_using_nvrtc
+    cu_file.write(source)
+UnicodeEncodeError: 'ascii' codec can't encode characters in position 17434-17444: ordinal not in range(128)
+
+{"status": "error"}

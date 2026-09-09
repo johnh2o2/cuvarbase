@@ -1,0 +1,20 @@
+{
+  "name": "calibration_ztf_bls_gpu",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 82.72054743766785,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+    "--config",
+    "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_bls_gpu",
+    "--indices",
+    "all"
+  ],
+  "started_epoch": 1788896771.1953185,
+  "finished_epoch": 1788896853.9158664
+}

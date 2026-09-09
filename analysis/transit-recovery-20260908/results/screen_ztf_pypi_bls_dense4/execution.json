@@ -1,0 +1,20 @@
+{
+  "name": "screen_ztf_pypi_bls_dense4",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 14.9970064163208,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25}",
+    "--indices",
+    "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/screen_ztf_pypi_bls_dense4"
+  ],
+  "started_epoch": 1788891613.3671255,
+  "finished_epoch": 1788891628.3641334
+}

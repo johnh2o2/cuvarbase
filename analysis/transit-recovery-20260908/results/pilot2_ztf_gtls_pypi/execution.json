@@ -1,0 +1,20 @@
+{
+  "name": "pilot2_ztf_gtls_pypi",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 44.097609996795654,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+    "--config",
+    "{\"backend\": \"gtls\", \"gtls_version\": \"pypi\", \"density\": true}",
+    "--indices",
+    "2",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/pilot2_ztf_gtls_pypi"
+  ],
+  "started_epoch": 1788888200.7831497,
+  "finished_epoch": 1788888244.880761
+}

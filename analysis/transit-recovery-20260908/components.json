@@ -1,0 +1,263 @@
+[
+  {
+    "name": "component_tess_200s_bls_v1",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_tess_200s_bls_pypi",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4,
+      "manual_overlap": true,
+      "qmin_fac": 0.25
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_tess_200s_bls_v1_unfused",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true,
+      "unfused": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_tess_200s_bls_v1_no_scatter",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true,
+      "no_scatter": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_tess_200s_tls_v1_native",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "script": "components_tls.py",
+    "variant": "native",
+    "timeout": 600
+  },
+  {
+    "name": "component_tess_200s_gtls_native",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "script": "components_tls.py",
+    "variant": "native",
+    "timeout": 600
+  },
+  {
+    "name": "component_tess_200s_gtls_both",
+    "input": "tess_200s_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "script": "components_tls.py",
+    "variant": "both",
+    "timeout": 600
+  },
+  {
+    "name": "component_tess_gap_bls_v1",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4,
+      "optimized": true,
+      "qmin_fac": 0.25,
+      "block_size": 128
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_tess_gap_bls_pypi",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 4,
+      "manual_overlap": true,
+      "qmin_fac": 0.25,
+      "block_size": 128
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_tess_gap_bls_v1_unfused",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4,
+      "optimized": true,
+      "qmin_fac": 0.25,
+      "block_size": 128,
+      "unfused": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_tess_gap_bls_v1_no_scatter",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 4,
+      "optimized": true,
+      "qmin_fac": 0.25,
+      "block_size": 128,
+      "no_scatter": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_tess_gap_tls_v1_native",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "script": "components_tls.py",
+    "variant": "native",
+    "timeout": 600
+  },
+  {
+    "name": "component_tess_gap_gtls_native",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "script": "components_tls.py",
+    "variant": "native",
+    "timeout": 600
+  },
+  {
+    "name": "component_tess_gap_gtls_both",
+    "input": "tess_gap_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "script": "components_tls.py",
+    "variant": "both",
+    "timeout": 600
+  },
+  {
+    "name": "component_ztf_bls_v1",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_ztf_bls_pypi",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "pypi_bls_fast",
+      "noverlap": 3,
+      "manual_overlap": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_ztf_bls_v1_unfused",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true,
+      "unfused": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_ztf_bls_v1_no_scatter",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_bls_fast",
+      "noverlap": 8,
+      "optimized": true,
+      "no_scatter": true
+    },
+    "script": "components.py",
+    "timeout": 400
+  },
+  {
+    "name": "component_ztf_tls_v1_native",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "v1_tls",
+      "epoch_os": 4,
+      "durations": 16
+    },
+    "script": "components_tls.py",
+    "variant": "native",
+    "timeout": 600
+  },
+  {
+    "name": "component_ztf_gtls_native",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "script": "components_tls.py",
+    "variant": "native",
+    "timeout": 600
+  },
+  {
+    "name": "component_ztf_gtls_both",
+    "input": "ztf_tune.npz",
+    "config": {
+      "backend": "gtls",
+      "gtls_version": "head",
+      "density": true,
+      "fast": true
+    },
+    "script": "components_tls.py",
+    "variant": "both",
+    "timeout": 600
+  }
+]

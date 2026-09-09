@@ -1,0 +1,722 @@
+[
+  {
+    "name": "pilot_tess_200s_v1_bls3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 3.8276000022888184,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_v1_bls3"
+    ],
+    "started_epoch": 1788887440.912777,
+    "finished_epoch": 1788887444.7403789
+  },
+  {
+    "name": "pilot_tess_200s_v1_bls4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.3197636604309082,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_v1_bls4"
+    ],
+    "started_epoch": 1788887444.7420626,
+    "finished_epoch": 1788887446.0618289
+  },
+  {
+    "name": "pilot_tess_200s_v1_bls_opt4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.0723891258239746,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_v1_bls_opt4"
+    ],
+    "started_epoch": 1788887446.0640838,
+    "finished_epoch": 1788887448.136475
+  },
+  {
+    "name": "pilot_tess_200s_pypi_bls3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.721609115600586,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_pypi_bls3"
+    ],
+    "started_epoch": 1788887448.1383412,
+    "finished_epoch": 1788887450.859953
+  },
+  {
+    "name": "pilot_tess_200s_astropy3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.2177236080169678,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_astropy3"
+    ],
+    "started_epoch": 1788887450.8621495,
+    "finished_epoch": 1788887452.0798755
+  },
+  {
+    "name": "pilot_tess_200s_astropy10",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.4684243202209473,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 10}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_astropy10"
+    ],
+    "started_epoch": 1788887452.081765,
+    "finished_epoch": 1788887453.5501919
+  },
+  {
+    "name": "pilot_tess_200s_pf_gpu1",
+    "exit_code": 1,
+    "timeout": false,
+    "elapsed_s": 0.16502666473388672,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 1}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_pf_gpu1"
+    ],
+    "started_epoch": 1788887453.5516355,
+    "finished_epoch": 1788887453.7166638
+  },
+  {
+    "name": "pilot_tess_200s_pf_cpu1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 0.4149799346923828,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"periodfind_cpu\", \"epoch_os\": 1, \"threads\": 7}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_pf_cpu1"
+    ],
+    "started_epoch": 1788887453.717731,
+    "finished_epoch": 1788887454.132712
+  },
+  {
+    "name": "pilot_tess_200s_fbls2",
+    "exit_code": 1,
+    "timeout": false,
+    "elapsed_s": 0.16453886032104492,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"fbls\", \"epoch_os\": 2, \"period_os\": 2}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_fbls2"
+    ],
+    "started_epoch": 1788887454.133788,
+    "finished_epoch": 1788887454.2983282
+  },
+  {
+    "name": "pilot_tess_200s_v1_tls8",
+    "exit_code": 1,
+    "timeout": false,
+    "elapsed_s": 2.821898937225342,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 8, \"durations\": 24}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_v1_tls8"
+    ],
+    "started_epoch": 1788887454.2995582,
+    "finished_epoch": 1788887457.1214583
+  },
+  {
+    "name": "pilot_tess_200s_gtls_density",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 3.9259462356567383,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_gtls_density"
+    ],
+    "started_epoch": 1788887457.1237457,
+    "finished_epoch": 1788887461.049693
+  },
+  {
+    "name": "pilot_tess_200s_gtls_default",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 3.924445867538452,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\"}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_200s_gtls_default"
+    ],
+    "started_epoch": 1788887461.0520098,
+    "finished_epoch": 1788887464.9764569
+  },
+  {
+    "name": "pilot_tess_gap_v1_bls3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.4184257984161377,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_v1_bls3"
+    ],
+    "started_epoch": 1788887464.9794407,
+    "finished_epoch": 1788887466.397868
+  },
+  {
+    "name": "pilot_tess_gap_v1_bls4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.4684195518493652,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_v1_bls4"
+    ],
+    "started_epoch": 1788887466.4003353,
+    "finished_epoch": 1788887467.8687558
+  },
+  {
+    "name": "pilot_tess_gap_v1_bls_opt4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.318070888519287,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_v1_bls_opt4"
+    ],
+    "started_epoch": 1788887467.8698916,
+    "finished_epoch": 1788887469.1879642
+  },
+  {
+    "name": "pilot_tess_gap_pypi_bls3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.369114637374878,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_pypi_bls3"
+    ],
+    "started_epoch": 1788887469.1903336,
+    "finished_epoch": 1788887470.55945
+  },
+  {
+    "name": "pilot_tess_gap_astropy3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 14.415623664855957,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_astropy3"
+    ],
+    "started_epoch": 1788887470.5619967,
+    "finished_epoch": 1788887484.9776227
+  },
+  {
+    "name": "pilot_tess_gap_astropy10",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 24.39894127845764,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 10}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_astropy10"
+    ],
+    "started_epoch": 1788887484.9802313,
+    "finished_epoch": 1788887509.3791747
+  },
+  {
+    "name": "pilot_tess_gap_pf_gpu1",
+    "exit_code": 1,
+    "timeout": false,
+    "elapsed_s": 0.2168722152709961,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 1}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_pf_gpu1"
+    ],
+    "started_epoch": 1788887509.383134,
+    "finished_epoch": 1788887509.6000085
+  },
+  {
+    "name": "pilot_tess_gap_pf_cpu1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.6229162216186523,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"periodfind_cpu\", \"epoch_os\": 1, \"threads\": 7}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_pf_cpu1"
+    ],
+    "started_epoch": 1788887509.6031964,
+    "finished_epoch": 1788887512.2261143
+  },
+  {
+    "name": "pilot_tess_gap_fbls2",
+    "exit_code": 1,
+    "timeout": false,
+    "elapsed_s": 0.21590518951416016,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"fbls\", \"epoch_os\": 2, \"period_os\": 2}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_fbls2"
+    ],
+    "started_epoch": 1788887512.228926,
+    "finished_epoch": 1788887512.4448326
+  },
+  {
+    "name": "pilot_tess_gap_v1_tls8",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.072237014770508,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 8, \"durations\": 24}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_v1_tls8"
+    ],
+    "started_epoch": 1788887512.4476595,
+    "finished_epoch": 1788887514.5198987
+  },
+  {
+    "name": "pilot_tess_gap_gtls_density",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 22.76456356048584,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_gtls_density"
+    ],
+    "started_epoch": 1788887514.522811,
+    "finished_epoch": 1788887537.287376
+  },
+  {
+    "name": "pilot_tess_gap_gtls_default",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 21.119122982025146,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\"}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_tess_gap_gtls_default"
+    ],
+    "started_epoch": 1788887537.2899902,
+    "finished_epoch": 1788887558.4091144
+  },
+  {
+    "name": "pilot_ztf_v1_bls3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.071051836013794,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_v1_bls3"
+    ],
+    "started_epoch": 1788887558.4117928,
+    "finished_epoch": 1788887560.4828463
+  },
+  {
+    "name": "pilot_ztf_v1_bls4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.820572853088379,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_v1_bls4"
+    ],
+    "started_epoch": 1788887560.4861193,
+    "finished_epoch": 1788887562.3066936
+  },
+  {
+    "name": "pilot_ztf_v1_bls_opt4",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.8704702854156494,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_v1_bls_opt4"
+    ],
+    "started_epoch": 1788887562.3096147,
+    "finished_epoch": 1788887564.1800866
+  },
+  {
+    "name": "pilot_ztf_pypi_bls3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.770078420639038,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_pypi_bls3"
+    ],
+    "started_epoch": 1788887564.1828587,
+    "finished_epoch": 1788887565.9529386
+  },
+  {
+    "name": "pilot_ztf_astropy3",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 19.81399369239807,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_astropy3"
+    ],
+    "started_epoch": 1788887565.9559412,
+    "finished_epoch": 1788887585.7699358
+  },
+  {
+    "name": "pilot_ztf_astropy10",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 41.16939306259155,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 10}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_astropy10"
+    ],
+    "started_epoch": 1788887585.7728217,
+    "finished_epoch": 1788887626.942216
+  },
+  {
+    "name": "pilot_ztf_pf_gpu1",
+    "exit_code": 1,
+    "timeout": false,
+    "elapsed_s": 0.2659611701965332,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 1}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_pf_gpu1"
+    ],
+    "started_epoch": 1788887626.9450648,
+    "finished_epoch": 1788887627.2110271
+  },
+  {
+    "name": "pilot_ztf_pf_cpu1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 3.174041986465454,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"periodfind_cpu\", \"epoch_os\": 1, \"threads\": 7}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_pf_cpu1"
+    ],
+    "started_epoch": 1788887627.2142339,
+    "finished_epoch": 1788887630.3882773
+  },
+  {
+    "name": "pilot_ztf_fbls2",
+    "exit_code": 1,
+    "timeout": false,
+    "elapsed_s": 0.266185998916626,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"fbls\", \"epoch_os\": 2, \"period_os\": 2}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_fbls2"
+    ],
+    "started_epoch": 1788887630.3915868,
+    "finished_epoch": 1788887630.6577747
+  },
+  {
+    "name": "pilot_ztf_v1_tls8",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.3221564292907715,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 8, \"durations\": 24}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_v1_tls8"
+    ],
+    "started_epoch": 1788887630.661028,
+    "finished_epoch": 1788887632.9831858
+  },
+  {
+    "name": "pilot_ztf_gtls_density",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 47.82553791999817,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_gtls_density"
+    ],
+    "started_epoch": 1788887632.9862125,
+    "finished_epoch": 1788887680.8117516
+  },
+  {
+    "name": "pilot_ztf_gtls_default",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 46.01918339729309,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\"}",
+      "--indices",
+      "2",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_gtls_default"
+    ],
+    "started_epoch": 1788887680.8148615,
+    "finished_epoch": 1788887726.834046
+  }
+]

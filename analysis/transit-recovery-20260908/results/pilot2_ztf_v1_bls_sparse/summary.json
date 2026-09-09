@@ -1,0 +1,30 @@
+{
+  "status": "running",
+  "config": {
+    "backend": "v1_bls_sparse"
+  },
+  "input_file": "ztf_tune.npz",
+  "input_sha256": "299508b42dab363170e93ee465b24ce609a7f4fdc48e14e6694315f20428f04e",
+  "profile": "ztf",
+  "split": "tune",
+  "indices": [
+    2
+  ],
+  "worker_sha256": "5ab5b4a450079a841fb8678f70a2c8e55bbf5cec54a6208c50e33f54e851dbfd",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": []
+}

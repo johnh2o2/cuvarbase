@@ -1,0 +1,20 @@
+{
+  "name": "screen_tess_gap_fbls_native",
+  "exit_code": -15,
+  "timeout": true,
+  "elapsed_s": 240.0651683807373,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_tune.npz",
+    "--config",
+    "{\"backend\": \"fbls\", \"epoch_os\": 1, \"period_os\": 2, \"native_chunks\": 4}",
+    "--indices",
+    "0,1,2,3",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/screen_tess_gap_fbls_native"
+  ],
+  "started_epoch": 1788891207.019757,
+  "finished_epoch": 1788891447.0849264
+}

@@ -1,0 +1,33 @@
+{
+  "status": "error",
+  "config": {
+    "backend": "fbls",
+    "epoch_os": 2,
+    "period_os": 2
+  },
+  "input_file": "ztf_tune.npz",
+  "input_sha256": "299508b42dab363170e93ee465b24ce609a7f4fdc48e14e6694315f20428f04e",
+  "profile": "ztf",
+  "split": "tune",
+  "indices": [
+    2
+  ],
+  "worker_sha256": "fb5643299eb730f65edef68612772adc350288730c5c122f2c131082d8f890ec",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [],
+  "error": "Traceback (most recent call last):\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 170, in main\n    start=time.perf_counter();backend=Backend(cfg,d,max(len(lcs[i][0]) for i in ids));backend.sync()\n                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py\", line 62, in __init__\n    from fBLS import fBLS\n  File \"/tmp/cuvarbase-tls-profile/fBLS-source/fBLS.py\", line 19, in <module>\n    import matplotlib.pyplot as plt, matplotlib.cm as cm, sys\nModuleNotFoundError: No module named 'matplotlib'\n"
+}

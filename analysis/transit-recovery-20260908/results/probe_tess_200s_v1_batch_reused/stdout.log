@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 234, in main
+    try:backend.search([lcs[ids[0]]]);backend.sync()
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py", line 122, in search
+    powers=self.bls.eebls_gpu_batch(lcs,self.f,memory=self.memory,**kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/cuvarbase/bls.py", line 3705, in eebls_gpu_batch
+    launch_func.prepared_async_call(*args,
+  File "/tmp/cuvarbase-tls-profile/modern/lib/python3.11/site-packages/pycuda/driver.py", line 640, in function_prepared_async_call
+    func._launch_kernel(grid, block, arg_buf, shared_size, stream)
+pycuda._driver.LogicError: cuLaunchKernel failed: invalid resource handle
+

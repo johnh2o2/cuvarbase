@@ -1,0 +1,23 @@
+{
+  "name": "timing_tess_200s_bls_pypi_batch16",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 1.7688353061676025,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+    "--config",
+    "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/timing_tess_200s_bls_pypi_batch16",
+    "--indices",
+    "128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143",
+    "--timing",
+    "--reps",
+    "3"
+  ],
+  "started_epoch": 1788901992.6681972,
+  "finished_epoch": 1788901994.437034
+}

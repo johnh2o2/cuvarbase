@@ -1,0 +1,170 @@
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+/tmp/cuvarbase-tls-profile/gtls-head-install/gputls/core.py:8: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Exception ignored in: 'cupy.cuda.thrust.cupy_malloc'
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Exception ignored in: 'cupy.cuda.thrust.cupy_malloc'
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Exception ignored in: 'cupy.cuda.thrust.cupy_malloc'
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Exception ignored in: 'cupy.cuda.thrust.cupy_malloc'
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Exception ignored in: 'cupy.cuda.thrust.cupy_malloc'
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Exception ignored in: 'cupy.cuda.thrust.cupy_malloc'
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Exception ignored in: 'cupy.cuda.thrust.cupy_malloc'
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+Exception ignored in: 'cupy.cuda.thrust.cupy_malloc'
+Traceback (most recent call last):
+  File "cupy/cuda/memory.pyx", line 875, in cupy.cuda.memory.alloc
+  File "cupy/cuda/memory.pyx", line 1579, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1600, in cupy.cuda.memory.MemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc
+  File "cupy/cuda/memory.pyx", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc
+  File "cupy/cuda/memory.pyx", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+  File "cupy/cuda/memory.pyx", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc
+cupy.cuda.memory.OutOfMemoryError: Out of memory allocating 33,101,312 bytes (allocated so far: 4,879,024,640 bytes).
+{"index": 0, "injected": true, "snr": 6.0, "true_period": 1.4972895323407993, "duration": 0.05975751026457021, "period": 1.4972888576782686, "score": 9.135172843933105, "epoch": null, "finite_fraction": 1.0, "api_result_valid": true, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.0003311172028753807, "n_periods": 99043, "search_s": null, "evaluation_chunk": 8, "power_kind": "native_sde_spectrum", "output_file": "case_0000.npz", "output_sha256": "72d4d26fbcebda365616493e99ff5ef3881703e8c6c1331bd0d87d84e93cbecb"}
+{"index": 1, "injected": true, "snr": 8.0, "true_period": 2.498070875016839, "duration": 0.07473774542698947, "period": 1.3176369442988713, "score": 7.053812503814697, "epoch": null, "finite_fraction": 1.0, "api_result_valid": true, "recovered": false, "alias_recovered": false, "phase_drift_days": 347.24649480323194, "n_periods": 99043, "search_s": null, "evaluation_chunk": 8, "power_kind": "native_sde_spectrum", "output_file": "case_0001.npz", "output_sha256": "d2df72e398e520a24a1fd95627a35a9edeceb5fc11af4d3aab6c8febc4dd82bd"}
+{"index": 2, "injected": true, "snr": 10.0, "true_period": 0.9875057384459229, "duration": 0.06993970211832559, "period": 0.9875201666005101, "score": 16.39629364013672, "epoch": null, "finite_fraction": 1.0, "api_result_valid": true, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.01073673170431658, "n_periods": 99043, "search_s": null, "evaluation_chunk": 8, "power_kind": "native_sde_spectrum", "output_file": "case_0002.npz", "output_sha256": "77b0801ed588c81b847c06700093fff10ba2a570517b0c98dd247babeab8faad"}
+{"index": 3, "injected": true, "snr": 14.0, "true_period": 4.016907078089238, "duration": 0.12353811196079904, "period": 4.016875501654183, "score": 31.438709259033203, "epoch": null, "finite_fraction": 1.0, "api_result_valid": true, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.0057765994380228666, "n_periods": 99043, "search_s": null, "evaluation_chunk": 8, "power_kind": "native_sde_spectrum", "output_file": "case_0003.npz", "output_sha256": "6adbc1b262898ab3f774f605d3d23e5f1da2491879ad3ade455c76d7904fb1f7"}
+{"index": 4, "injected": true, "snr": 6.0, "true_period": 1.1017200756305812, "duration": 0.05192919550578165, "period": 6.1040774348225995, "score": 8.018033027648926, "epoch": null, "finite_fraction": 1.0, "api_result_valid": true, "recovered": false, "alias_recovered": false, "phase_drift_days": 3336.6018978212137, "n_periods": 99043, "search_s": null, "evaluation_chunk": 8, "power_kind": "native_sde_spectrum", "output_file": "case_0004.npz", "output_sha256": "3fc266591478ac7e85f3467d25d6962f254e8e482b07c3df16ca1d0bd2ff76f8"}
+{"index": 5, "injected": true, "snr": 8.0, "true_period": 6.307379262427845, "duration": 0.14120465653365946, "period": 13.114858620329548, "score": 7.5584211349487305, "epoch": null, "finite_fraction": 1.0, "api_result_valid": true, "recovered": false, "alias_recovered": false, "phase_drift_days": 793.1189548602719, "n_periods": 99043, "search_s": null, "evaluation_chunk": 8, "power_kind": "native_sde_spectrum", "output_file": "case_0005.npz", "output_sha256": "5eec579a0569dc4de7b602bfcfccbe53367b4f619e695542f8ced60cf7cacdb6"}
+{"index": 6, "injected": true, "snr": 10.0, "true_period": 0.9396664390027749, "duration": 0.08027085312569233, "period": 0.9396795350075716, "score": 21.180551528930664, "epoch": null, "finite_fraction": 1.0, "api_result_valid": true, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.010241558536213988, "n_periods": 99043, "search_s": null, "evaluation_chunk": 8, "power_kind": "native_sde_spectrum", "output_file": "case_0006.npz", "output_sha256": "7b6567f9d7a7610b68eea528a46dc037bf4f57652f5c22b6cbbd5925c19155fc"}
+{"index": 7, "injected": true, "snr": 14.0, "true_period": 6.184481244409154, "duration": 0.13417518976904064, "period": 6.1843699732633945, "score": 19.50408363342285, "epoch": null, "finite_fraction": 1.0, "api_result_valid": true, "recovered": true, "alias_recovered": true, "phase_drift_days": 0.013221484654010175, "n_periods": 99043, "search_s": null, "evaluation_chunk": 8, "power_kind": "native_sde_spectrum", "output_file": "case_0007.npz", "output_sha256": "75205e9a6c43595ff92f7dd050a1133f189f7fb75e951b265471072e703b91d4"}

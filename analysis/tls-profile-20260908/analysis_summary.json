@@ -1,0 +1,169 @@
+{
+  "timings": [
+    {
+      "job": "rubin_gtls_head_both",
+      "native_median_s": 4.0561326295137405,
+      "native_min_s": 3.957253374159336,
+      "native_max_s": 4.120800603181124,
+      "first_api_s": 9.62958874180913,
+      "profile_mean_s": 3.947136726230383
+    },
+    {
+      "job": "ztf_gtls_head_native",
+      "native_median_s": 15.779030878096819,
+      "native_min_s": 14.526475351303816,
+      "native_max_s": 16.528089467436075,
+      "first_api_s": 14.870834633708,
+      "profile_mean_s": 13.912187345325947
+    },
+    {
+      "job": "rubin_gtls_head_native",
+      "native_median_s": 23.36214793100953,
+      "native_min_s": 22.09135302901268,
+      "native_max_s": 24.13728368282318,
+      "first_api_s": 23.783879909664392,
+      "profile_mean_s": 21.454068809747696
+    },
+    {
+      "job": "ztf_gtls_head_both",
+      "native_median_s": 2.6985989324748516,
+      "native_min_s": 2.5857475884258747,
+      "native_max_s": 2.754643104970455,
+      "first_api_s": 3.2728078439831734,
+      "profile_mean_s": 2.5555093958973885
+    },
+    {
+      "job": "rubin_v1_release_native",
+      "native_median_s": 0.6832563430070877,
+      "native_min_s": 0.6779014393687248,
+      "native_max_s": 0.6908206939697266,
+      "first_api_s": 2.957486543804407,
+      "profile_mean_s": 0.6868196651339531
+    },
+    {
+      "job": "ztf_gtls_head_union",
+      "native_median_s": 11.829535190016031,
+      "native_min_s": 11.275036677718163,
+      "native_max_s": 14.284316055476665,
+      "first_api_s": 12.331406474113464,
+      "profile_mean_s": 11.197082705795765
+    },
+    {
+      "job": "ztf_v1_release_native",
+      "native_median_s": 0.48888593167066574,
+      "native_min_s": 0.47084595263004303,
+      "native_max_s": 0.49337057024240494,
+      "first_api_s": 0.8699922561645508,
+      "profile_mean_s": 0.4926929362118244
+    },
+    {
+      "job": "rubin_gtls_pypi_native",
+      "native_median_s": 23.336721900850534,
+      "native_min_s": 19.792948201298714,
+      "native_max_s": 25.073554646223783,
+      "first_api_s": 24.299411721527576,
+      "profile_mean_s": 20.411881506443024
+    },
+    {
+      "job": "ztf_gtls_pypi_native",
+      "native_median_s": 17.516636807471514,
+      "native_min_s": 16.92928121238947,
+      "native_max_s": 17.542989261448383,
+      "first_api_s": 16.465052902698517,
+      "profile_mean_s": 16.50819793716073
+    },
+    {
+      "job": "rubin_gtls_head_union",
+      "native_median_s": 18.262864843010902,
+      "native_min_s": 16.479172106832266,
+      "native_max_s": 18.305770684033632,
+      "first_api_s": 19.1515152156353,
+      "profile_mean_s": 16.427344106137753
+    }
+  ],
+  "ablations": [
+    {
+      "profile": "ztf",
+      "variant": "union",
+      "original_s": 15.779030878096819,
+      "modified_s": 11.829535190016031,
+      "original_over_modified": 1.3338673603519189,
+      "exact_periods_and_chi2": true,
+      "same_finite_mask": true,
+      "max_abs_chi2_difference": 0.0,
+      "max_relative_chi2_difference": 0.0,
+      "original_period": 1.6689445850788929,
+      "modified_period": 1.6689445850788929,
+      "delta_sde": 0.0
+    },
+    {
+      "profile": "ztf",
+      "variant": "both",
+      "original_s": 15.779030878096819,
+      "modified_s": 2.6985989324748516,
+      "original_over_modified": 5.847119662063331,
+      "exact_periods_and_chi2": false,
+      "same_finite_mask": true,
+      "max_abs_chi2_difference": 2.0815059542655945e-06,
+      "max_relative_chi2_difference": 0.00032710272167026994,
+      "original_period": 1.6689445850788929,
+      "modified_period": 1.6689445850788929,
+      "delta_sde": 0.0002231597900390625
+    },
+    {
+      "profile": "rubin",
+      "variant": "union",
+      "original_s": 23.36214793100953,
+      "modified_s": 18.262864843010902,
+      "original_over_modified": 1.2792159462292738,
+      "exact_periods_and_chi2": true,
+      "same_finite_mask": true,
+      "max_abs_chi2_difference": 0.0,
+      "max_relative_chi2_difference": 0.0,
+      "original_period": 4.970180586560595,
+      "modified_period": 4.970180586560595,
+      "delta_sde": 0.0
+    },
+    {
+      "profile": "rubin",
+      "variant": "both",
+      "original_s": 23.36214793100953,
+      "modified_s": 4.0561326295137405,
+      "original_over_modified": 5.759710064956689,
+      "exact_periods_and_chi2": false,
+      "same_finite_mask": true,
+      "max_abs_chi2_difference": 3.840774297714233e-06,
+      "max_relative_chi2_difference": 0.00022093440251869505,
+      "original_period": 4.970180586560595,
+      "modified_period": 4.970180586560595,
+      "delta_sde": 0.002964019775390625
+    }
+  ],
+  "verification": {
+    "transferred_files": 95,
+    "jobs": 14,
+    "source_files": {
+      "v1": 69,
+      "gtls_head": 19,
+      "gtls_pypi": 16,
+      "cpu_tls": 14
+    },
+    "errors": [],
+    "noninstalled_upstream_reference_files": [
+      {
+        "group": "gtls_head",
+        "file": "GPUFun.cu",
+        "upstream_sha256": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+        "reason": "Upstream reference file omitted by package installation; runtime CUDA source is embedded in GPUFun.py, whose installed hash is verified. useLocalPTXCUBIN=False in this protocol."
+      },
+      {
+        "group": "gtls_head",
+        "file": "GPUFun_bak.cu",
+        "upstream_sha256": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+        "reason": "Upstream reference file omitted by package installation; runtime CUDA source is embedded in GPUFun.py, whose installed hash is verified. useLocalPTXCUBIN=False in this protocol."
+      }
+    ],
+    "all_pass": true,
+    "meaning": "Evidence consistency; CPU API errors remain errors. Ablation numerical differences are reported, not reclassified as equivalent."
+  }
+}

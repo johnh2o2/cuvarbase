@@ -1,0 +1,20 @@
+{
+  "name": "pilot_ztf_astropy3",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 19.81399369239807,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_tune.npz",
+    "--config",
+    "{\"backend\": \"astropy\", \"epoch_os\": 3}",
+    "--indices",
+    "2",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/pilot_ztf_astropy3"
+  ],
+  "started_epoch": 1788887565.9559412,
+  "finished_epoch": 1788887585.7699358
+}

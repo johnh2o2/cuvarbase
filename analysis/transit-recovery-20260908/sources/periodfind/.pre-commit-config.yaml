@@ -1,0 +1,40 @@
+repos:
+  # -- General file hygiene --------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.cpp$    # Cython-generated
+      - id: end-of-file-fixer
+        exclude: \.cpp$
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+  # -- Python (ruff) ---------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # -- Rust (rustfmt) --------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: rustfmt
+        name: rustfmt
+        entry: cargo fmt --manifest-path rust/Cargo.toml
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # -- CUDA / C++ (clang-format) ---------------------------------------------
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.7
+    hooks:
+      - id: clang-format
+        types_or: [c, c++, cuda]
+        files: ^periodfind/cuda/

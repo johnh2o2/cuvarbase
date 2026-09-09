@@ -1,0 +1,11 @@
+{
+  "name": "calibration_tess_gap_gtls",
+  "exit_code": 0,
+  "derived": true,
+  "parts": [
+    "calibration_tess_gap_gtls__part000",
+    "calibration_tess_gap_gtls__part064"
+  ],
+  "elapsed_s": 924.3478336334229,
+  "note": "Sum of independent recovery worker elapsed times, not latency or throughput."
+}

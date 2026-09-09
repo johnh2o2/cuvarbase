@@ -1,0 +1,26 @@
+{
+  "job": {
+    "name": "ztf_gtls_head_union",
+    "command": [
+      "modern/bin/python",
+      "profile_tls.py",
+      "--backend",
+      "gtls",
+      "--input",
+      "inputs/tls_sparse_ztf.npz",
+      "--out",
+      "results/ztf_gtls_head_union.json",
+      "--variant",
+      "union",
+      "--profile-reps",
+      "1"
+    ],
+    "version": "head",
+    "timeout": 900
+  },
+  "started_epoch": 1788885617.6002243,
+  "elapsed_s": 63.2611358165741,
+  "exit_code": 0,
+  "timed_out": false,
+  "pid": 448
+}

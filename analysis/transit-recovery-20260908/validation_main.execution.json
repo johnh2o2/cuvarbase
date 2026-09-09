@@ -1,0 +1,842 @@
+[
+  {
+    "name": "calibration_tess_gap_gtls_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 614.4645659923553,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_calibration.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 2, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_gap_gtls_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788894088.4877667,
+    "finished_epoch": 1788894702.9523358
+  },
+  {
+    "name": "heldout_tess_gap_gtls_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1255.7027723789215,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 2, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_gtls_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788894702.9540725,
+    "finished_epoch": 1788895958.656851
+  },
+  {
+    "name": "calibration_ztf_bls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 47.129966020584106,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 8, \"optimized\": true}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_bls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788895958.660688,
+    "finished_epoch": 1788896005.7906573
+  },
+  {
+    "name": "heldout_ztf_bls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 89.72718453407288,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 8, \"optimized\": true}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_ztf_bls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896005.792653,
+    "finished_epoch": 1788896095.5198402
+  },
+  {
+    "name": "calibration_ztf_bls_v1_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 45.16964077949524,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_batch\", \"noverlap\": 8, \"optimized\": true, \"reuse_batch\": true, \"batch_capacity\": 16, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_bls_v1_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896095.5216832,
+    "finished_epoch": 1788896140.6913266
+  },
+  {
+    "name": "heldout_ztf_bls_v1_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 87.25633931159973,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_batch\", \"noverlap\": 8, \"optimized\": true, \"reuse_batch\": true, \"batch_capacity\": 16, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_ztf_bls_v1_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896140.6932485,
+    "finished_epoch": 1788896227.9495904
+  },
+  {
+    "name": "calibration_tess_200s_bls_pypi",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.9217758178710938,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_bls_pypi",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896227.9515424,
+    "finished_epoch": 1788896230.8733218
+  },
+  {
+    "name": "heldout_tess_200s_bls_pypi",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 5.0811097621917725,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_200s_bls_pypi",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896230.8756018,
+    "finished_epoch": 1788896235.9567134
+  },
+  {
+    "name": "calibration_tess_200s_bls_cpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 13.504551887512207,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_bls_cpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896235.959074,
+    "finished_epoch": 1788896249.463628
+  },
+  {
+    "name": "heldout_tess_200s_bls_cpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 27.14616560935974,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"astropy\", \"epoch_os\": 3, \"workers\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_200s_bls_cpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896249.4660518,
+    "finished_epoch": 1788896276.612219
+  },
+  {
+    "name": "calibration_tess_gap_bls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 14.103829145431519,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25, \"block_size\": 128}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_gap_bls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896276.6147385,
+    "finished_epoch": 1788896290.7185698
+  },
+  {
+    "name": "heldout_tess_gap_bls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 26.436151027679443,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25, \"block_size\": 128}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_bls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896290.7208116,
+    "finished_epoch": 1788896317.156964
+  },
+  {
+    "name": "calibration_tess_gap_bls_cpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 152.7158007621765,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_calibration.npz",
+      "--config",
+      "{\"backend\": \"periodfind_cpu\", \"epoch_os\": 2, \"threads\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_gap_bls_cpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896317.1592135,
+    "finished_epoch": 1788896469.8750165
+  },
+  {
+    "name": "heldout_tess_gap_bls_cpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 301.3137652873993,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+      "--config",
+      "{\"backend\": \"periodfind_cpu\", \"epoch_os\": 2, \"threads\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_bls_cpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896469.8772788,
+    "finished_epoch": 1788896771.1910453
+  },
+  {
+    "name": "calibration_ztf_bls_gpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 82.72054743766785,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_bls_gpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896771.1953185,
+    "finished_epoch": 1788896853.9158664
+  },
+  {
+    "name": "heldout_ztf_bls_gpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 169.13904547691345,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_ztf_bls_gpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788896853.9173684,
+    "finished_epoch": 1788897023.0564144
+  },
+  {
+    "name": "calibration_tess_gap_bls_gpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 29.438332319259644,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_calibration.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_gap_bls_gpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897023.0573292,
+    "finished_epoch": 1788897052.4956632
+  },
+  {
+    "name": "heldout_tess_gap_bls_gpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 61.15758562088013,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_bls_gpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897052.49782,
+    "finished_epoch": 1788897113.655407
+  },
+  {
+    "name": "calibration_tess_200s_gtls_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 65.65048003196716,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 1, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_gtls_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897113.6579342,
+    "finished_epoch": 1788897179.3084154
+  },
+  {
+    "name": "heldout_tess_200s_gtls_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 129.23829913139343,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 1, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_200s_gtls_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897179.3110304,
+    "finished_epoch": 1788897308.5493312
+  },
+  {
+    "name": "calibration_tess_200s_tls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.77292799949646,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_tls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897308.5518963,
+    "finished_epoch": 1788897311.3248258
+  },
+  {
+    "name": "heldout_tess_200s_tls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 4.879077196121216,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_200s_tls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897311.3275437,
+    "finished_epoch": 1788897316.206623
+  },
+  {
+    "name": "calibration_tess_200s_bls_v1_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.7711372375488281,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_batch\", \"noverlap\": 8, \"optimized\": true, \"reuse_batch\": true, \"batch_capacity\": 16, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_bls_v1_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897316.2095912,
+    "finished_epoch": 1788897317.98073
+  },
+  {
+    "name": "heldout_tess_200s_bls_v1_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 2.5236096382141113,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_batch\", \"noverlap\": 8, \"optimized\": true, \"reuse_batch\": true, \"batch_capacity\": 16, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_200s_bls_v1_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897317.983764,
+    "finished_epoch": 1788897320.5073745
+  },
+  {
+    "name": "calibration_tess_200s_bls_gpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 8.538211822509766,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2, \"cap_bins\": 64}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_bls_gpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897320.5103536,
+    "finished_epoch": 1788897329.0485666
+  },
+  {
+    "name": "heldout_tess_200s_bls_gpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 16.35749101638794,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"periodfind_gpu\", \"epoch_os\": 2, \"cap_bins\": 64}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_200s_bls_gpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897329.0516357,
+    "finished_epoch": 1788897345.4091277
+  },
+  {
+    "name": "calibration_ztf_bls_cpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 223.2729296684265,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+      "--config",
+      "{\"backend\": \"periodfind_cpu\", \"epoch_os\": 2, \"threads\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_bls_cpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897345.4118721,
+    "finished_epoch": 1788897568.6848035
+  },
+  {
+    "name": "heldout_ztf_bls_cpu",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 440.04399585723877,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+      "--config",
+      "{\"backend\": \"periodfind_cpu\", \"epoch_os\": 2, \"threads\": 7}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_ztf_bls_cpu",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788897568.6876836,
+    "finished_epoch": 1788898008.7316809
+  },
+  {
+    "name": "calibration_tess_gap_bls_pypi",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 16.759136199951172,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_calibration.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25, \"block_size\": 128}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_gap_bls_pypi",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898008.7347226,
+    "finished_epoch": 1788898025.4938598
+  },
+  {
+    "name": "heldout_tess_gap_bls_pypi",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 30.538119792938232,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 4, \"manual_overlap\": true, \"qmin_fac\": 0.25, \"block_size\": 128}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_bls_pypi",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898025.4967623,
+    "finished_epoch": 1788898056.0348833
+  },
+  {
+    "name": "calibration_tess_200s_bls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1.9705314636230469,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 8, \"optimized\": true}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_200s_bls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898056.037348,
+    "finished_epoch": 1788898058.0078814
+  },
+  {
+    "name": "heldout_tess_200s_bls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 3.2237749099731445,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_200s_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_fast\", \"noverlap\": 8, \"optimized\": true}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_200s_bls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898058.011099,
+    "finished_epoch": 1788898061.2348754
+  },
+  {
+    "name": "calibration_ztf_tls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 46.882864475250244,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_tls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898061.2378187,
+    "finished_epoch": 1788898108.1206849
+  },
+  {
+    "name": "heldout_ztf_tls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 94.39402794837952,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_ztf_tls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898108.1239786,
+    "finished_epoch": 1788898202.518008
+  },
+  {
+    "name": "calibration_ztf_bls_pypi",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 52.96138095855713,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3, \"manual_overlap\": true}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_bls_pypi",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898202.5210903,
+    "finished_epoch": 1788898255.482473
+  },
+  {
+    "name": "heldout_ztf_bls_pypi",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 105.117107629776,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/legacy/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+      "--config",
+      "{\"backend\": \"pypi_bls_fast\", \"noverlap\": 3, \"manual_overlap\": true}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_ztf_bls_pypi",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898255.4857054,
+    "finished_epoch": 1788898360.6028137
+  },
+  {
+    "name": "calibration_ztf_gtls_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 811.1063187122345,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_calibration.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 4, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_ztf_gtls_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788898360.604891,
+    "finished_epoch": 1788899171.7112114
+  },
+  {
+    "name": "heldout_ztf_gtls_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 1573.3919732570648,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+      "--config",
+      "{\"backend\": \"gtls\", \"gtls_version\": \"head\", \"density\": true, \"fast\": true, \"workers\": 4, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_ztf_gtls_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788899171.7145805,
+    "finished_epoch": 1788900745.1065555
+  },
+  {
+    "name": "calibration_tess_gap_tls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 15.554020404815674,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_gap_tls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788900745.1099648,
+    "finished_epoch": 1788900760.6639867
+  },
+  {
+    "name": "heldout_tess_gap_tls_v1",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 28.480533123016357,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_tls\", \"epoch_os\": 4, \"durations\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_tls_v1",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788900760.6673803,
+    "finished_epoch": 1788900789.1479158
+  },
+  {
+    "name": "calibration_tess_gap_bls_v1_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 13.200749635696411,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_calibration.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_batch\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25, \"block_size\": 128, \"reuse_batch\": true, \"batch_capacity\": 16, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/calibration_tess_gap_bls_v1_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788900789.1516714,
+    "finished_epoch": 1788900802.3524232
+  },
+  {
+    "name": "heldout_tess_gap_bls_v1_batch",
+    "exit_code": 0,
+    "timeout": false,
+    "elapsed_s": 25.23549509048462,
+    "command": [
+      "/tmp/cuvarbase-tls-profile/modern/bin/python",
+      "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+      "--input",
+      "/tmp/cuvarbase-tls-profile/recovery/inputs/tess_gap_heldout.npz",
+      "--config",
+      "{\"backend\": \"v1_bls_batch\", \"noverlap\": 4, \"optimized\": true, \"qmin_fac\": 0.25, \"block_size\": 128, \"reuse_batch\": true, \"batch_capacity\": 16, \"eval_chunk\": 16}",
+      "--out",
+      "/tmp/cuvarbase-tls-profile/recovery/results/heldout_tess_gap_bls_v1_batch",
+      "--indices",
+      "all"
+    ],
+    "started_epoch": 1788900802.3561785,
+    "finished_epoch": 1788900827.5916753
+  }
+]

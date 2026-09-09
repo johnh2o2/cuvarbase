@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  cpu-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Create virtualenv and install dependencies
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install numpy cython pytest maturin
+
+      - name: Run Rust unit tests
+        working-directory: rust
+        run: |
+          . ../.venv/bin/activate
+          cargo test
+
+      - name: Build Rust CPU backend
+        working-directory: rust
+        run: |
+          . ../.venv/bin/activate
+          maturin develop --release
+
+      - name: Run unit and CPU tests
+        run: |
+          . .venv/bin/activate
+          pytest tests/test_periodfind.py tests/test_cpu_standalone.py tests/test_fourier.py tests/test_batch_features.py -v
+
+  # cuda-tests:
+  #   runs-on: [self-hosted, gpu]
+  #   if: github.event_name == 'push'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Set up Python 3.10
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.10"
+  #
+  #     - name: Install Rust toolchain
+  #       uses: dtolnay/rust-toolchain@stable
+  #
+  #     - name: Create virtualenv and install dependencies
+  #       run: |
+  #         python -m venv .venv
+  #         . .venv/bin/activate
+  #         pip install numpy cython pytest maturin
+  #
+  #     - name: Build CUDA extensions
+  #       run: |
+  #         . .venv/bin/activate
+  #         pip install -e .
+  #
+  #     - name: Build Rust CPU backend
+  #       working-directory: rust
+  #       run: |
+  #         . ../.venv/bin/activate
+  #         maturin develop --release
+  #
+  #     - name: Run full test suite
+  #       run: |
+  #         . .venv/bin/activate
+  #         pytest tests/ -v --ignore=tests/bench_cuda_opts.py --ignore=tests/bench_cpu_vs_cuda.py

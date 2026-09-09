@@ -1,0 +1,116 @@
+{
+  "status": "ok",
+  "config": {
+    "backend": "fbls",
+    "epoch_os": 1,
+    "period_os": 2,
+    "native_chunks": 4
+  },
+  "input_file": "tess_200s_tune.npz",
+  "input_sha256": "ee72923cb93dacbf4bf059e9f7545938ea8ee3b2db367fca9b53e6f8ff99e051",
+  "profile": "tess_200s",
+  "split": "tune",
+  "indices": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "worker_sha256": "c7e862dd155cb3c7f0d7634953e3c0a158fed84c0fc213c705f26c877b066c3c",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2"
+    },
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [
+    {
+      "index": 0,
+      "injected": true,
+      "snr": 6.0,
+      "true_period": 1.0076701087514797,
+      "duration": 0.07530566123830836,
+      "period": 1.0080101109575932,
+      "score": 3.2455887841903692,
+      "finite_fraction": 1.0,
+      "recovered": true,
+      "alias_recovered": true,
+      "phase_drift_days": 0.008690693594117834,
+      "n_periods": 12904,
+      "search_s": 8.303210705518723,
+      "evaluation_chunk": 1,
+      "power_kind": "bls",
+      "output_file": "case_0000.npz",
+      "output_sha256": "ba813e31b428ae7477845fb97c21c5bca2e91d7fe7c49ce4dfd80f9ad65b5f87"
+    },
+    {
+      "index": 1,
+      "injected": true,
+      "snr": 8.0,
+      "true_period": 1.6884916197761952,
+      "duration": 0.07378983666807379,
+      "period": 3.3775143491721895,
+      "score": 6.165912030258999,
+      "finite_fraction": 1.0,
+      "recovered": false,
+      "alias_recovered": true,
+      "phase_drift_days": 25.764852693928233,
+      "n_periods": 12904,
+      "search_s": 9.621505945920944,
+      "evaluation_chunk": 1,
+      "power_kind": "bls",
+      "output_file": "case_0001.npz",
+      "output_sha256": "3d03a18355d992fd3c588a474152a4284d91a7a8416da9ebfd2ae41c904f7ac9"
+    },
+    {
+      "index": 2,
+      "injected": true,
+      "snr": 10.0,
+      "true_period": 1.175971299484738,
+      "duration": 0.08689187529203446,
+      "period": 1.1768044853641042,
+      "score": 10.146770046108426,
+      "finite_fraction": 1.0,
+      "recovered": true,
+      "alias_recovered": true,
+      "phase_drift_days": 0.01824888178231697,
+      "n_periods": 12904,
+      "search_s": 7.635105032473803,
+      "evaluation_chunk": 1,
+      "power_kind": "bls",
+      "output_file": "case_0002.npz",
+      "output_sha256": "740808430ab557f8f7267628dd44a92079b1f2262f4a5e6b86bf1ff50374ed01"
+    },
+    {
+      "index": 3,
+      "injected": true,
+      "snr": 14.0,
+      "true_period": 4.061978479228696,
+      "duration": 0.12661763654027838,
+      "period": 2.0104527566628967,
+      "score": 7.987571219282624,
+      "finite_fraction": 1.0,
+      "recovered": false,
+      "alias_recovered": false,
+      "phase_drift_days": 13.008596046749757,
+      "n_periods": 12901,
+      "search_s": 10.917740002274513,
+      "evaluation_chunk": 1,
+      "power_kind": "bls",
+      "output_file": "case_0003.npz",
+      "output_sha256": "5c6770e216349473baa275ed7604330d28df8f79c60828e3d34cee2ea8dbbeaf"
+    }
+  ],
+  "initialization_s": 0.45874470844864845,
+  "first_api_s": 17.61276938766241,
+  "installed_sources": {}
+}

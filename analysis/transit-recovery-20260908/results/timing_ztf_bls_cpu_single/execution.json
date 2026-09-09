@@ -1,0 +1,23 @@
+{
+  "name": "timing_ztf_bls_cpu_single",
+  "exit_code": 0,
+  "timeout": false,
+  "elapsed_s": 9.391937494277954,
+  "command": [
+    "/tmp/cuvarbase-tls-profile/modern/bin/python",
+    "/tmp/cuvarbase-tls-profile/recovery/scripts/worker.py",
+    "--input",
+    "/tmp/cuvarbase-tls-profile/recovery/inputs/ztf_heldout.npz",
+    "--config",
+    "{\"backend\": \"periodfind_cpu\", \"epoch_os\": 2, \"threads\": 7}",
+    "--out",
+    "/tmp/cuvarbase-tls-profile/recovery/results/timing_ztf_bls_cpu_single",
+    "--indices",
+    "128",
+    "--timing",
+    "--reps",
+    "5"
+  ],
+  "started_epoch": 1788900974.5638719,
+  "finished_epoch": 1788900983.955811
+}

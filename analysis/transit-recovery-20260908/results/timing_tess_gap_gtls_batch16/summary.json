@@ -1,0 +1,890 @@
+{
+  "status": "ok",
+  "config": {
+    "backend": "gtls",
+    "gtls_version": "head",
+    "density": true,
+    "fast": true,
+    "workers": 2
+  },
+  "input_file": "tess_gap_heldout.npz",
+  "input_sha256": "13d2ca720adda683cbc326eb099858aa1e41410459d01e2a22a5e64be8624150",
+  "profile": "tess_gap",
+  "split": "heldout",
+  "indices": [
+    128,
+    129,
+    130,
+    131,
+    132,
+    133,
+    134,
+    135,
+    136,
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143
+  ],
+  "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+  "boundary": "Prepared host lightcurves and explicit period grid to host periodograms and candidate/score. Imports/context excluded; first call reported; no disk output included.",
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2",
+      "astropy": "8.0.1",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.5.1",
+      "cuvarbase": "1.0.0",
+      "periodfind": "0.1.3"
+    },
+    "cpu_quota": null,
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "cases": [
+    {
+      "index": 128,
+      "injected": false,
+      "snr": null,
+      "true_period": 2.6847817984624545,
+      "duration": 0.08239368272465585,
+      "period": 9.29261549138112,
+      "score": 7.656479835510254,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 1808.6355012175272,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0128.npz",
+      "output_sha256": "f46e17c7551f89e5dfb2c7213c9fd61b64096485e7546421155f5790fc197f9e"
+    },
+    {
+      "index": 129,
+      "injected": false,
+      "snr": null,
+      "true_period": 10.301739815593615,
+      "duration": 0.1632846787332945,
+      "period": 4.275811336320902,
+      "score": 8.394436836242676,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 429.84743331978837,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0129.npz",
+      "output_sha256": "cf1d804113473474b14e55c8358da7df8239287375da34edbf516f2d4d65cb4e"
+    },
+    {
+      "index": 130,
+      "injected": false,
+      "snr": null,
+      "true_period": 1.3828937492847428,
+      "duration": 0.09112268112466504,
+      "period": 9.441066858363863,
+      "score": 6.980378150939941,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 4282.0202943932445,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0130.npz",
+      "output_sha256": "6f94b6aa9f6ea3f2bc6fe414a7e94b343c0cfb29505e2fb25f637ac171eb165d"
+    },
+    {
+      "index": 131,
+      "injected": false,
+      "snr": null,
+      "true_period": 6.410248275957574,
+      "duration": 0.13735623902242922,
+      "period": 10.562238556671693,
+      "score": 8.612218856811523,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 475.97311182160576,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0131.npz",
+      "output_sha256": "9830efd2ecae65d809fd279fb611cab0dd5dad3cb0d80e0dd752b77297eadda1"
+    },
+    {
+      "index": 132,
+      "injected": false,
+      "snr": null,
+      "true_period": 8.941044932063651,
+      "duration": 0.16061520108781296,
+      "period": 0.6903653209527105,
+      "score": 7.640498161315918,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 678.1134956038668,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0132.npz",
+      "output_sha256": "d7628717345cae3901f8b0af7bdc77e342646da280e12378f1e008b1017adb57"
+    },
+    {
+      "index": 133,
+      "injected": false,
+      "snr": null,
+      "true_period": 0.812870359424763,
+      "duration": 0.06185919356613363,
+      "period": 8.690665971632288,
+      "score": 7.2648138999938965,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 7121.711283953335,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0133.npz",
+      "output_sha256": "27fbd9e9d734af7a36c6b3875d6837e67b0fca52a4d55069e8fcbe7d246a9921"
+    },
+    {
+      "index": 134,
+      "injected": false,
+      "snr": null,
+      "true_period": 0.9460541431032929,
+      "duration": 0.07237286904138414,
+      "period": 5.859661699920654,
+      "score": 9.647391319274902,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 3816.6770817025667,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0134.npz",
+      "output_sha256": "e91b5414ee91b8c38c92d250ecf626bac5acc5ca426efa8a19cd0268d3dd4fe5"
+    },
+    {
+      "index": 135,
+      "injected": false,
+      "snr": null,
+      "true_period": 6.304045929544804,
+      "duration": 0.09934165469734829,
+      "period": 6.803045715894693,
+      "score": 8.829751014709473,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 58.167705531812686,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0135.npz",
+      "output_sha256": "0e1a53ef3f9c2811980e480e460f7e0585bf129df8b07750c75b7a52278649b4"
+    },
+    {
+      "index": 136,
+      "injected": false,
+      "snr": null,
+      "true_period": 0.8178352892770205,
+      "duration": 0.05307095336543032,
+      "period": 1.2130548584575316,
+      "score": 9.641805648803711,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 355.11869509928044,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0136.npz",
+      "output_sha256": "c4ac8b27d96dff37d7815a37aeee0d380bbc6f4e3bf1b7a93fe280687a6a4bda"
+    },
+    {
+      "index": 137,
+      "injected": false,
+      "snr": null,
+      "true_period": 7.755314143947455,
+      "duration": 0.14944147762254156,
+      "period": 14.205990049454106,
+      "score": 7.595647811889648,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 611.2329673638644,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0137.npz",
+      "output_sha256": "5c6657e256c767fcbd667b924853abd456be8c30dc8dfc70332addb3f698c287"
+    },
+    {
+      "index": 138,
+      "injected": false,
+      "snr": null,
+      "true_period": 1.896861945446107,
+      "duration": 0.09043991139548872,
+      "period": 5.1841160808138795,
+      "score": 8.213174819946289,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 1273.4986782565413,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0138.npz",
+      "output_sha256": "ca6b86699009eb88ba6ed5df48becba3a905bcaacafcbcb85147994a2ee253a9"
+    },
+    {
+      "index": 139,
+      "injected": false,
+      "snr": null,
+      "true_period": 1.5309340009857917,
+      "duration": 0.0703776494085595,
+      "period": 7.820561596105827,
+      "score": 7.726923942565918,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 3019.0437418026727,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0139.npz",
+      "output_sha256": "9cf50ea4385b742d2586733191c5c310a8da2c360cf6972c3befdd401dddc59a"
+    },
+    {
+      "index": 140,
+      "injected": false,
+      "snr": null,
+      "true_period": 1.5493690268465605,
+      "duration": 0.08445941925422781,
+      "period": 6.682964746812954,
+      "score": 8.292540550231934,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 2434.8249109596486,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0140.npz",
+      "output_sha256": "66cc24b3b039d49ecf532ab7249c0c6ab1197e86ce4899b21cf9e87f37d335b8"
+    },
+    {
+      "index": 141,
+      "injected": false,
+      "snr": null,
+      "true_period": 2.3343185689014043,
+      "duration": 0.09621584155544956,
+      "period": 14.020729578895564,
+      "score": 6.3178791999816895,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 3678.9338048127047,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0141.npz",
+      "output_sha256": "b640fe2b21a7e21bec1243600b206e59188509898f0581824cbf49ce94cb4bf8"
+    },
+    {
+      "index": 142,
+      "injected": false,
+      "snr": null,
+      "true_period": 11.847813779248805,
+      "duration": 0.18591210517040374,
+      "period": 6.311221968081945,
+      "score": 8.850690841674805,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 343.4039043914533,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0142.npz",
+      "output_sha256": "c3a46ec065a0a142994a699d2028e1873e22b57d2a8de88c697923709b4be0ca"
+    },
+    {
+      "index": 143,
+      "injected": false,
+      "snr": null,
+      "true_period": 2.1762696749370734,
+      "duration": 0.09055937449862299,
+      "period": 5.966805254130981,
+      "score": 7.912339687347412,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true,
+      "recovered": null,
+      "alias_recovered": null,
+      "phase_drift_days": 1279.9376345582762,
+      "n_periods": 99043,
+      "search_s": null,
+      "evaluation_chunk": 16,
+      "power_kind": "native_sde_spectrum",
+      "output_file": "case_0143.npz",
+      "output_sha256": "318d6e2f9fb4be0c084fd34cdd4a3b8fa601a84fd48b345ee81d400b28b8ee32"
+    }
+  ],
+  "initialization_s": 1.6365491077303886,
+  "first_api_candidates": [
+    {
+      "period": 9.29261549138112,
+      "score": 7.650139808654785,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    }
+  ],
+  "first_api_valid": true,
+  "first_api_s": 10.565233658999205,
+  "installed_sources": {
+    "gputls": {
+      "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+      "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+      "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+      "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+      "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+      "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+      "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+      "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+      "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+      "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+      "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+      "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+      "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+      "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+      "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+      "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+      "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+    }
+  },
+  "batch_warmup_candidates": [
+    {
+      "period": 9.29261549138112,
+      "score": 7.650139808654785,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 4.275811336320902,
+      "score": 8.40522575378418,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 9.441066858363863,
+      "score": 6.982237339019775,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 10.562238556671693,
+      "score": 8.611547470092773,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 0.6903653209527105,
+      "score": 7.619029521942139,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 8.690665971632288,
+      "score": 7.252370834350586,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 5.859661699920654,
+      "score": 9.65333080291748,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 6.803045715894693,
+      "score": 8.82894515991211,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 1.2130548584575316,
+      "score": 9.646236419677734,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 14.205990049454106,
+      "score": 7.598745822906494,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 5.1841160808138795,
+      "score": 8.203548431396484,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 7.820561596105827,
+      "score": 7.7308735847473145,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 6.682964746812954,
+      "score": 8.294560432434082,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 14.020729578895564,
+      "score": 6.324517250061035,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 6.311221968081945,
+      "score": 8.846022605895996,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    },
+    {
+      "period": 5.966805254130981,
+      "score": 7.903754711151123,
+      "epoch": null,
+      "finite_fraction": 1.0,
+      "api_result_valid": true
+    }
+  ],
+  "timed_candidates": [
+    [
+      {
+        "period": 9.29261549138112,
+        "score": 7.658300399780273,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 4.275811336320902,
+        "score": 8.394824028015137,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 9.441066858363863,
+        "score": 6.983787536621094,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 10.562238556671693,
+        "score": 8.61142635345459,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 0.6903653209527105,
+        "score": 7.6297688484191895,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 8.690665971632288,
+        "score": 7.254945278167725,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.859661699920654,
+        "score": 9.661506652832031,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.803045715894693,
+        "score": 8.829923629760742,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 1.2130548584575316,
+        "score": 9.649185180664062,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 14.205990049454106,
+        "score": 7.588482856750488,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.1841160808138795,
+        "score": 8.215516090393066,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 7.820561596105827,
+        "score": 7.73227071762085,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.682964746812954,
+        "score": 8.292337417602539,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 14.020729578895564,
+        "score": 6.320706844329834,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.311221968081945,
+        "score": 8.847447395324707,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.966805254130981,
+        "score": 7.910013198852539,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      }
+    ],
+    [
+      {
+        "period": 9.29261549138112,
+        "score": 7.6556220054626465,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 4.275811336320902,
+        "score": 8.393939971923828,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 9.441066858363863,
+        "score": 6.978464126586914,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 10.562238556671693,
+        "score": 8.611654281616211,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 0.6903653209527105,
+        "score": 7.631389141082764,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 8.690665971632288,
+        "score": 7.25958776473999,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.859661699920654,
+        "score": 9.641382217407227,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.803045715894693,
+        "score": 8.8306245803833,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 1.2130548584575316,
+        "score": 9.649185180664062,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 14.205990049454106,
+        "score": 7.58838415145874,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.1841160808138795,
+        "score": 8.215516090393066,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 7.820561596105827,
+        "score": 7.73227071762085,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.682964746812954,
+        "score": 8.293974876403809,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 7.218588880851887,
+        "score": 6.6512556076049805,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.311221968081945,
+        "score": 8.850358963012695,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.966805254130981,
+        "score": 7.908646583557129,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      }
+    ],
+    [
+      {
+        "period": 9.29261549138112,
+        "score": 7.656479835510254,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 4.275811336320902,
+        "score": 8.394436836242676,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 9.441066858363863,
+        "score": 6.980378150939941,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 10.562238556671693,
+        "score": 8.612218856811523,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 0.6903653209527105,
+        "score": 7.640498161315918,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 8.690665971632288,
+        "score": 7.2648138999938965,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.859661699920654,
+        "score": 9.647391319274902,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.803045715894693,
+        "score": 8.829751014709473,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 1.2130548584575316,
+        "score": 9.641805648803711,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 14.205990049454106,
+        "score": 7.595647811889648,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.1841160808138795,
+        "score": 8.213174819946289,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 7.820561596105827,
+        "score": 7.726923942565918,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.682964746812954,
+        "score": 8.292540550231934,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 14.020729578895564,
+        "score": 6.3178791999816895,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 6.311221968081945,
+        "score": 8.850690841674805,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      },
+      {
+        "period": 5.966805254130981,
+        "score": 7.912339687347412,
+        "epoch": null,
+        "finite_fraction": 1.0,
+        "api_result_valid": true
+      }
+    ]
+  ],
+  "times_s": [
+    74.65334658697248,
+    74.70101902633905,
+    73.74857684969902
+  ],
+  "median_s": 74.65334658697248,
+  "seconds_per_source": 4.66583416168578
+}

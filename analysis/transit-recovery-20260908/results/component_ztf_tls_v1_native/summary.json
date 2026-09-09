@@ -1,0 +1,202 @@
+{
+  "status": "ok",
+  "profile": "ztf",
+  "config": {
+    "backend": "v1_tls",
+    "epoch_os": 4,
+    "durations": 16,
+    "workers": 1
+  },
+  "variant": "native",
+  "input_sha256": "299508b42dab363170e93ee465b24ce609a7f4fdc48e14e6694315f20428f04e",
+  "worker_sha256": "958e56b73a3b046d27b4ce0c445bea88c3c15ef98aeaa220ae014b519868e965",
+  "instrumentation_sha256": "7e04c350254734b936ed9efda43aff2d8d1af0abf1a65d732bf91d5669fb82b3",
+  "native_times_s": [
+    0.09932046756148338,
+    0.08919495716691017,
+    0.08858849853277206
+  ],
+  "native_median_s": 0.08919495716691017,
+  "profiles": [
+    {
+      "phases": {
+        "v1 grid/configuration": {
+          "calls": 1,
+          "inclusive_s": 0.00917753204703331,
+          "exclusive_s": 0.00917753204703331
+        },
+        "v1 kernel lookup/grid transfers": {
+          "calls": 1,
+          "inclusive_s": 0.0055677518248558044,
+          "exclusive_s": 0.0055677518248558044
+        },
+        "v1 template tables": {
+          "calls": 1,
+          "inclusive_s": 3.48798930644989e-05,
+          "exclusive_s": 3.48798930644989e-05
+        },
+        "v1 host lightcurve preparation": {
+          "calls": 1,
+          "inclusive_s": 0.0001617632806301117,
+          "exclusive_s": 0.0001617632806301117
+        },
+        "v1 buffer allocations/transfers": {
+          "calls": 1,
+          "inclusive_s": 0.005346965044736862,
+          "exclusive_s": 0.005346965044736862
+        },
+        "v1 lightcurve transfers": {
+          "calls": 1,
+          "inclusive_s": 0.0002309456467628479,
+          "exclusive_s": 0.0002309456467628479
+        },
+        "v1 coarse search kernel": {
+          "calls": 1,
+          "inclusive_s": 0.029354695230722427,
+          "exclusive_s": 0.029354695230722427
+        },
+        "v1 coarse spectrum transfer": {
+          "calls": 1,
+          "inclusive_s": 0.00040093064308166504,
+          "exclusive_s": 0.00040093064308166504
+        },
+        "v1 candidate selection/refinement/transfers": {
+          "calls": 1,
+          "inclusive_s": 0.0014854073524475098,
+          "exclusive_s": 0.0014854073524475098
+        },
+        "v1 parameter-spectrum transfers": {
+          "calls": 1,
+          "inclusive_s": 0.0008893273770809174,
+          "exclusive_s": 0.0008893273770809174
+        },
+        "v1 CPU statistics/results": {
+          "calls": 1,
+          "inclusive_s": 0.03156339004635811,
+          "exclusive_s": 0.03156339004635811
+        },
+        "v1 final packaging": {
+          "calls": 1,
+          "inclusive_s": 1.7955899238586426e-06,
+          "exclusive_s": 1.7955899238586426e-06
+        },
+        "API remainder": {
+          "calls": 1,
+          "inclusive_s": 0.09425627440214157,
+          "exclusive_s": 0.01004089042544365
+        }
+      },
+      "total_s": 0.09425627440214157
+    },
+    {
+      "phases": {
+        "v1 grid/configuration": {
+          "calls": 1,
+          "inclusive_s": 0.009363628923892975,
+          "exclusive_s": 0.009363628923892975
+        },
+        "v1 kernel lookup/grid transfers": {
+          "calls": 1,
+          "inclusive_s": 0.0076941996812820435,
+          "exclusive_s": 0.0076941996812820435
+        },
+        "v1 template tables": {
+          "calls": 1,
+          "inclusive_s": 3.7670135498046875e-05,
+          "exclusive_s": 3.7670135498046875e-05
+        },
+        "v1 host lightcurve preparation": {
+          "calls": 1,
+          "inclusive_s": 0.00016335025429725647,
+          "exclusive_s": 0.00016335025429725647
+        },
+        "v1 buffer allocations/transfers": {
+          "calls": 1,
+          "inclusive_s": 0.004078235477209091,
+          "exclusive_s": 0.004078235477209091
+        },
+        "v1 lightcurve transfers": {
+          "calls": 1,
+          "inclusive_s": 0.00021034479141235352,
+          "exclusive_s": 0.00021034479141235352
+        },
+        "v1 coarse search kernel": {
+          "calls": 1,
+          "inclusive_s": 0.029362112283706665,
+          "exclusive_s": 0.029362112283706665
+        },
+        "v1 coarse spectrum transfer": {
+          "calls": 1,
+          "inclusive_s": 0.00028613582253456116,
+          "exclusive_s": 0.00028613582253456116
+        },
+        "v1 candidate selection/refinement/transfers": {
+          "calls": 1,
+          "inclusive_s": 0.0016586892306804657,
+          "exclusive_s": 0.0016586892306804657
+        },
+        "v1 parameter-spectrum transfers": {
+          "calls": 1,
+          "inclusive_s": 0.0008843392133712769,
+          "exclusive_s": 0.0008843392133712769
+        },
+        "v1 CPU statistics/results": {
+          "calls": 1,
+          "inclusive_s": 0.0325462780892849,
+          "exclusive_s": 0.0325462780892849
+        },
+        "v1 final packaging": {
+          "calls": 1,
+          "inclusive_s": 1.8887221813201904e-06,
+          "exclusive_s": 1.8887221813201904e-06
+        },
+        "API remainder": {
+          "calls": 1,
+          "inclusive_s": 0.09270134568214417,
+          "exclusive_s": 0.006414473056793213
+        }
+      },
+      "total_s": 0.09270134568214417
+    }
+  ],
+  "transformations": [
+    {
+      "function": "tls_search_batch",
+      "original_sha256": "3de7c7fbab58b24032d8875246cb4ad8e40a64d9955116ed9306998511c41adb",
+      "transformed_sha256": "a957438453d46d9f2e2eb68045b4e460591d975a613b6469230bd88724622216",
+      "file": "profile.tls_search_batch.instrumented.py",
+      "changes": [],
+      "instrumentation": true
+    }
+  ],
+  "native_candidate": {
+    "period": 1.8684654235839844,
+    "score": 24.542594688123426,
+    "epoch": 1.719901337097781,
+    "finite_fraction": 1.0,
+    "api_result_valid": true
+  },
+  "profiled_candidate": {
+    "period": 1.8684654235839844,
+    "score": 24.542594650810535,
+    "epoch": 1.719901337097781,
+    "finite_fraction": 1.0,
+    "api_result_valid": true
+  },
+  "output_agreement": {
+    "periods": {
+      "same_shape": true,
+      "same_finite_mask": true,
+      "exact": true,
+      "max_abs": 0.0
+    },
+    "power": {
+      "same_shape": true,
+      "same_finite_mask": true,
+      "exact": false,
+      "max_abs": 1.1444091796875e-05
+    }
+  },
+  "output_sha256": "2af36526c6343d230510cafb062945efe9db06b4766142ca4e60d2cfbaac5044",
+  "meaning": "Synchronized wall phases in one worker. Diagnostic Python ablations are not released GTLS."
+}

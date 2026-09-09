@@ -1,0 +1,128 @@
+{
+  "status": "ok",
+  "profile": "ztf",
+  "config": {
+    "backend": "v1_bls_fast",
+    "noverlap": 8,
+    "optimized": true
+  },
+  "input_sha256": "299508b42dab363170e93ee465b24ce609a7f4fdc48e14e6694315f20428f04e",
+  "worker_sha256": "aea8c8f7e14a5590bef039625c0055c83cedb113315c4f4d05537ed1234b4937",
+  "instrumented_sha256": "a702d6f362757874dee5ed8413d008c512542276264d03e693b578d06a204c4d",
+  "original_function_sha256": "8e04e0f81450d239812dc90c267c2f8e6dc16fbdf8cd16788258e40bfdbffa98",
+  "native_times_s": [
+    0.08966261893510818,
+    0.08495102822780609,
+    0.06788261979818344
+  ],
+  "native_median_s": 0.08495102822780609,
+  "profiles": [
+    {
+      "Kernel cache lookup": {
+        "calls": 1,
+        "inclusive_s": 2.7000904083251953e-05,
+        "exclusive_s": 2.7000904083251953e-05
+      },
+      "Host preparation and H2D": {
+        "calls": 1,
+        "inclusive_s": 0.00524047389626503,
+        "exclusive_s": 0.00524047389626503
+      },
+      "Memory pool / allocation": {
+        "calls": 1,
+        "inclusive_s": 0.005275126546621323,
+        "exclusive_s": 3.4652650356292725e-05
+      },
+      "Host maximum-bin scan": {
+        "calls": 2,
+        "inclusive_s": 0.000181637704372406,
+        "exclusive_s": 0.000181637704372406
+      },
+      "GPU kernel launches (synchronized)": {
+        "calls": 1,
+        "inclusive_s": 0.010054398328065872,
+        "exclusive_s": 0.010054398328065872
+      },
+      "Spectrum D2H": {
+        "calls": 1,
+        "inclusive_s": 0.0006695874035358429,
+        "exclusive_s": 0.0006695874035358429
+      },
+      "Common candidate ranking": {
+        "calls": 1,
+        "inclusive_s": 0.04271060973405838,
+        "exclusive_s": 0.04271060973405838
+      },
+      "Remaining public API work": {
+        "calls": 1,
+        "inclusive_s": 0.06403433531522751,
+        "exclusive_s": 0.005115974694490433
+      }
+    },
+    {
+      "Kernel cache lookup": {
+        "calls": 1,
+        "inclusive_s": 2.5935471057891846e-05,
+        "exclusive_s": 2.5935471057891846e-05
+      },
+      "Host preparation and H2D": {
+        "calls": 1,
+        "inclusive_s": 0.006885156035423279,
+        "exclusive_s": 0.006885156035423279
+      },
+      "Memory pool / allocation": {
+        "calls": 1,
+        "inclusive_s": 0.0069236718118190765,
+        "exclusive_s": 3.851577639579773e-05
+      },
+      "Host maximum-bin scan": {
+        "calls": 2,
+        "inclusive_s": 0.0001913011074066162,
+        "exclusive_s": 0.0001913011074066162
+      },
+      "GPU kernel launches (synchronized)": {
+        "calls": 1,
+        "inclusive_s": 0.010046113282442093,
+        "exclusive_s": 0.010046113282442093
+      },
+      "Spectrum D2H": {
+        "calls": 1,
+        "inclusive_s": 0.0006801001727581024,
+        "exclusive_s": 0.0006801001727581024
+      },
+      "Common candidate ranking": {
+        "calls": 1,
+        "inclusive_s": 0.048623114824295044,
+        "exclusive_s": 0.048623114824295044
+      },
+      "Remaining public API work": {
+        "calls": 1,
+        "inclusive_s": 0.07816123962402344,
+        "exclusive_s": 0.011671002954244614
+      }
+    }
+  ],
+  "native_candidate": {
+    "period": 1.8684814058387758,
+    "score": 12.832148904417322,
+    "finite_fraction": 1.0
+  },
+  "profiled_candidate": {
+    "period": 1.8684814058387758,
+    "score": 12.832147497854667,
+    "finite_fraction": 1.0
+  },
+  "max_abs_power_difference": 1.1175870895385742e-08,
+  "grid_times_s": [
+    0.14959945529699326,
+    0.13856496289372444,
+    0.12765733152627945
+  ],
+  "grid_median_s": 0.13856496289372444,
+  "grid_baseline": 2743.768345858436,
+  "grid_observed_time_index": 0,
+  "n_auto_freqs": 423781,
+  "grid_float32_equal": true,
+  "output_sha256": "03bcf3a9d5741f0f9c0e79c340232d17bd3760890c28ed8ad1ec2099e75553a8",
+  "meaning": "Synchronized wall regions, not kernel-busy traces. Grid construction is measured separately and excluded from explicit-grid API timings."
+}
