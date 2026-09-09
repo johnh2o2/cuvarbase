@@ -5,7 +5,10 @@ These tools analyze and reproduce parts of the [September 2026 transit experimen
 Regenerate the timing figure without a GPU:
 
 ```bash
-python benchmarks/transit/plot_main.py --root benchmarks/results/transit_2026-09-08 --output-dir /tmp/cuvarbase-figure
+python benchmarks/transit/plot_main.py \
+  --root benchmarks/results/transit_2026-09-08 \
+  --tls-study benchmarks/results/tls_sensitivity_2026-09-09 \
+  --output-dir /tmp/cuvarbase-figure
 ```
 
 | Tool | Purpose |
@@ -19,6 +22,8 @@ python benchmarks/transit/plot_main.py --root benchmarks/results/transit_2026-09
 | `generate.py` | Construct seeded synthetic flux/noise on the retained observed cadences |
 
 The committed [inputs](../results/transit_2026-09-08/inputs) and [selection record](../results/transit_2026-09-08/selection.json) define the measured experiment. Use each worker's `--help` for arguments; `worker.py --config` takes a JSON configuration from the selected method records. Install the selected backend in its own environment, including fBLS on the import path when selecting that backend. The original cloud controller and environment setup are retained in the pinned Git archive described below; no cloud resources are started by the analysis or plotting tools.
+
+The current figure combines this experiment's BLS measurements with the [independent TLS follow-up](../results/tls_sensitivity_2026-09-09/README.md). Omit `--tls-study` to recreate the earlier TLS timing comparison.
 
 Analysis scripts write into `--root`. Use a scratch copy to recompute tables. Without `--verify-arrays`, recovery and timing analysis checks committed per-job summaries and inputs; it does not re-verify the omitted periodograms, and records that distinction in its output. `analyze_components.py` and full-array recovery/timing validation require restoring the periodogram archive. Do not overwrite the published verification receipts with a summary-only rerun.
 

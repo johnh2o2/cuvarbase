@@ -38,6 +38,8 @@ def main():
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--output-dir', type=Path,
                         help='Defaults to the benchmark result directory.')
+    parser.add_argument('--tls-study', type=Path,
+                        help='Use the independent follow-up TLS timing_analysis.json and supported settings.')
     args = parser.parse_args()
     recovery = json.loads((args.root / 'recovery_analysis.json').read_text())
     timing = json.loads((args.root / 'timing_analysis.json').read_text())
@@ -46,6 +48,23 @@ def main():
         assert record['verification']['arrays_verified']
     methods = {(r['profile'], r['method']): r for r in recovery['methods']}
     times = {(r['profile'], r['method'], r['mode']): r for r in timing['timings']}
+    tls_selection = {}
+    if args.tls_study:
+        followup = json.loads((args.tls_study / 'timing_analysis.json').read_text())
+        assert followup['verification']['complete']
+        assert followup['verification']['exclusive_processes']
+        tls_selection = {r['profile']: r for r in followup['selected']}
+        followup_times = {(r['profile'], r['method'], r['mode']): r for r in followup['timings']}
+        for profile in PROFILES:
+            for displayed, measured in [('tls_v1', tls_selection[profile]['method']), ('gtls', f'gtls_{profile}')]:
+                for mode in ('single', 'batch16'):
+                    row = followup_times[profile, measured, mode]
+                    # The plot consumes per-source values; n=1 keeps its range
+                    # conversion consistent without pretending these are raw calls.
+                    times[profile, displayed, mode] = dict(
+                        seconds_per_source=row['seconds_per_source'], n=1,
+                        min_total_s=row['min_seconds_per_source'],
+                        max_total_s=row['max_seconds_per_source'])
     plt.rcParams.update({
         'font.family': 'DejaVu Sans', 'font.size': 12, 'svg.fonttype': 'none',
         'axes.spines.top': False, 'axes.spines.right': False,
@@ -96,6 +115,14 @@ def main():
                 ax.scatter(values[1], index, s=52, color=color, zorder=5)
                 if method == v1:
                     label = 'cuvarbase v1'
+                    if family == 'TLS' and tls_selection:
+                        choice = tls_selection[profile]
+                        if choice['method'] == 'v1_fine':
+                            label += '\nfine grid'
+                        elif choice['method'] == 'v1_resolved':
+                            label += '\nintermediate grid'
+                        if not choice['recovery_supported']:
+                            label += ' *'
                 elif method == 'bls_pypi':
                     label = 'cuvarbase 0.2.5'
                 elif method == 'bls_cpu':
@@ -127,14 +154,21 @@ def main():
                          fontsize=14, weight='bold', color='#172a3a', pad=33)
             ax.text(0, 1.10, SUBTITLES[profile], transform=ax.transAxes,
                     fontsize=10.5, color='#526270')
+    repetitions = ('BLS: 5 single / 3 batch repetitions; TLS: 5 per mode.' if tls_selection
+                   else 'Medians of 5 single / 3 batch calls;')
     fig.text(.035, .069,
-             'Labels give batch time and the time ratio to v1. Medians of 5 single / 3 batch calls; whiskers span repetitions. Logarithmic axes.',
+             f'Labels give batch time and the ratio to v1. {repetitions} Whiskers span repetitions; logarithmic axes.',
              fontsize=11, color='#394d5d')
     fig.text(.035, .047,
              'A40 + 7.65 CPU-equivalent allocation. Warm searches from prepared arrays; grid construction and preprocessing excluded.',
              fontsize=11, color='#526270')
-    fig.text(.035, .025,
-             'Recovery qualifications are in the benchmark report. Equivalent TLS detection sensitivity is not established.',
+    qualification = 'Recovery qualifications are in the benchmark report. Equivalent TLS detection sensitivity is not established.'
+    if tls_selection:
+        passed = sum(s['recovery_supported'] for s in tls_selection.values())
+        qualification = (f'TLS: {passed}/3 cadences meet the recovery / false-positive matching criterion. '
+                         + ('* Matching inconclusive. ' if passed < 3 else '')
+                         + 'BLS qualifications: see report.')
+    fig.text(.035, .025, qualification,
              fontsize=11, color='#394d5d')
     output = args.output_dir or args.root
     output.mkdir(parents=True, exist_ok=True)

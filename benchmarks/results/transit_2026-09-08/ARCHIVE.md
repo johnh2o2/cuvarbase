@@ -1,6 +1,6 @@
 # Transit evidence archive
 
-This directory contains the current report, timing figure, analysis tables, all nine frozen input datasets, per-job JSON results and logs, selected configurations, upstream source snapshots and original verification receipts. These support inspection of the timing arithmetic, recovery decisions and configuration selection. The public analysis tools are in [benchmarks/transit](../../transit/README.md).
+This directory contains the BLS and initial TLS report, timing figure, analysis tables, all nine frozen input datasets, per-job JSON results and logs, selected configurations, upstream source snapshots and original verification receipts. These support inspection of the timing arithmetic, recovery decisions and configuration selection. The public analysis tools are in [benchmarks/transit](../../transit/README.md).
 
 The files were originally published under `analysis/transit-recovery-20260908` at commit `f0dc981`. The reorganization preserves the input, result and analysis-record bytes. The report and timing figure have been updated for readability; removing recovery panels does not change the underlying recovery results.
 

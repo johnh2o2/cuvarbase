@@ -1,0 +1,2 @@
+# Matplotlib SVGs retain the serializer's whitespace inside path data.
+*.svg -whitespace
