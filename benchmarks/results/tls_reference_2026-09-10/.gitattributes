@@ -1,0 +1,3 @@
+# Preserve original evidence bytes, including csv.writer CRLF terminators.
+* -text
+*.csv whitespace=cr-at-eol

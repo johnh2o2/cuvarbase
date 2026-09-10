@@ -303,8 +303,9 @@ class BLSSearch:
 
 class TLSSearch:
     def __init__(self, periods, qvals):
-        from cuvarbase.tls import tls_search_batch
-        self._tls = tls_search_batch
+        from cuvarbase import tls
+        # Preserve the dated NUFFT-LRT campaign's binned comparator.
+        self._tls = getattr(tls, '_tls_search_batch_binned', tls.tls_search_batch)
         self.periods = np.asarray(periods, dtype=np.float64)
         q = np.full(len(self.periods), qvals[0]), \
             np.full(len(self.periods), qvals[1])

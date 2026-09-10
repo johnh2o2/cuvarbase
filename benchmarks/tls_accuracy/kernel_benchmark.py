@@ -174,6 +174,7 @@ def main():
         repetitions=[], comparisons=[], original_repeat_diff=[])
     dump(a.out, output)
 
+    binned_search = getattr(tls, '_tls_search_batch_binned', tls.tls_search_batch)
     reader = tls._module_reader
     original_getter = tls._get_cached_fast_kernels
     cache = {}
@@ -199,7 +200,7 @@ def main():
     reference_first = None
     try:
         for mode in (0, 1):
-            tls.tls_search_batch(lcs, **kwargs)
+            binned_search(lcs, **kwargs)
             cuda.Context.synchronize()
         for rep in range(a.reps):
             pair = {}
@@ -207,7 +208,7 @@ def main():
             for mode in order:
                 cuda.Context.synchronize()
                 start = time.perf_counter()
-                pair[mode] = tls.tls_search_batch(lcs, **kwargs)
+                pair[mode] = binned_search(lcs, **kwargs)
                 cuda.Context.synchronize()
                 elapsed[mode].append(time.perf_counter() - start)
             if reference_first is None:

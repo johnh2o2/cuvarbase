@@ -314,7 +314,8 @@ def run(args):
     package = importlib.import_module(expected_package)
     sources = verify_sources(package, design['expected_sources'][expected_package])
     if expected_package == 'cuvarbase':
-        from cuvarbase.tls import tls_search_batch
+        from cuvarbase import tls
+        tls_search_batch = getattr(tls, '_tls_search_batch_binned', tls.tls_search_batch)
         from cuvarbase.base import ensure_context
         from cuvarbase import tls_models
         import pycuda.driver as driver

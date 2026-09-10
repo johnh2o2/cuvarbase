@@ -35,4 +35,6 @@ git show de0037dd8d2f81cd9296fc02f4ef73478b0b8908:docs/GTLS_COMPARISON.md
 
 The [historical raw benchmark records](https://github.com/johnh2o2/cuvarbase/tree/f0dc98136ae34b34465b152be1af84faf063eb44/benchmarks/results) and [complete audit snapshot](https://github.com/johnh2o2/cuvarbase/tree/f0dc98136ae34b34465b152be1af84faf063eb44/analysis/benchmark-audit-20260906) remain available in Git history. Superseded writeups, exploratory figures and cloud orchestration records are no longer part of the current documentation.
 
-Current source pins, inputs, configuration selection, timing records and recovery analysis are retained in the [transit evidence archive](../benchmarks/results/transit_2026-09-08/ARCHIVE.md). The [TLS component report](../benchmarks/results/tls_profile_2026-09-08/README.md) supplies the later profiling evidence for host-loop overhead and CPU failure stages.
+The September 8 source pins, inputs, configuration selection, timing records and recovery analysis are retained in the historical [transit evidence archive](../benchmarks/results/transit_2026-09-08/ARCHIVE.md). The [TLS component report](../benchmarks/results/tls_profile_2026-09-08/README.md) supplies the later profiling evidence for host-loop overhead and CPU failure stages.
+
+The [current transit report](TRANSIT_BENCHMARKS.md) supersedes those TLS timing headlines with the observation-level default and full-to-full GTLS comparison. The old binned-engine studies remain dated evidence, not default-engine claims.

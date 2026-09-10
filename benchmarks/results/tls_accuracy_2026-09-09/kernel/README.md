@@ -1,5 +1,11 @@
 # TLS kernel efficiency at fixed search settings
 
+These 9 September 2026 measurements concern the earlier phase-binned TLS
+engine, retained as `method='binned'`. API defaults below refer to that
+engine; the [current transit report](../../../../docs/TRANSIT_BENCHMARKS.md)
+covers the observation-level default. The timings below remain historical
+measurements of this specific kernel optimization.
+
 The optimized search skips empty phase-bin runs when the lightcurve has fewer
 than one observation per four bins. It retains the reference kernel's
 successive float32 coordinate additions, weighted histogram, template,

@@ -39,6 +39,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+tls = [
+    "cupy-cuda12x>=13.6,<14",
+    "batman-package>=2.5",
+]
 # Test extra: what `pytest --pyargs cuvarbase` needs beyond the runtime
 # deps. matplotlib is not needed (every plotting import sits behind
 # plot=False); batman-package and transitleastsquares exercise the

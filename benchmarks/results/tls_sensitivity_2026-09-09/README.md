@@ -1,5 +1,10 @@
 # Independent TLS recovery and timing study
 
+This 9 September 2026 study measures the earlier phase-binned TLS engine,
+retained as `method='binned'`. Its tables and figures remain historical
+evidence. The [current transit report](../../../docs/TRANSIT_BENCHMARKS.md)
+covers the observation-level default and current release claims.
+
 The predeclared recovery / false-positive matching criterion passes for **separated TESS with the original grid** and **dense TESS with the fine grid**. The ZTF comparison remains inconclusive under the strict two-sided false-positive margin. Every v1 setting passes the recovery-loss bound on every cadence.
 
 These results support bounded, workload-specific comparisons of complete searches. They do not establish identical algorithms or exactly equal detection sensitivity. The study uses 4,096 calibration nulls, 2,048 independent injections and 4,096 independent test nulls per cadence, with four primary methods: **122,880 search outcomes**. The secondary BLS control adds 30,720 outcomes.
@@ -12,7 +17,7 @@ These results support bounded, workload-specific comparisons of complete searche
 | Separated TESS sectors | Original | 26.4 ms | 4.64 s | 175.5× | Pass |
 | ZTF g/r | Original | 67.9 ms | 10.6 s | 155.6× | Inconclusive |
 
-The [combined timing figure](../../../docs/TRANSIT_BENCHMARKS.md) uses the fastest predeclared passing v1 setting for each TESS cadence. ZTF retains an explicitly unqualified original-grid timing. The old 93–284× TLS headline is superseded by these settings and measurements. BLS competitor measurements remain in the [earlier experiment](../transit_2026-09-08/README.md).
+The [historical combined timing figure](../../../docs/figures/transit_benchmarks_20260909.png) used the fastest predeclared passing binned setting for each TESS cadence. ZTF retained an explicitly unqualified original-grid timing. These settings superseded the earlier 93–284× binned-TLS headline; they do not measure the current observation-level default. BLS competitor measurements remain in the [earlier experiment](../transit_2026-09-08/README.md).
 
 ## Independent detection results
 

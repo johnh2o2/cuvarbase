@@ -27,7 +27,8 @@ def main():
         transforms.append(rebuild(gtls,'power',path,instrument=True,kind='power',profiler=profiler))
     else:
         from cuvarbase import tls
-        transforms.append(rebuild(tls,'tls_search_batch',path,instrument=True,kind='v1',profiler=profiler));b.tls=tls.tls_search_batch
+        name = '_tls_search_batch_binned' if hasattr(tls, '_tls_search_batch_binned') else 'tls_search_batch'
+        transforms.append(rebuild(tls,name,path,instrument=True,kind='v1',profiler=profiler));b.tls=getattr(tls,name)
     profiles=[]
     for rep in range(2):
         profiler.clear()

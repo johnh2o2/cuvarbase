@@ -1,5 +1,10 @@
 # TLS accuracy and computational efficiency
 
+This 9 September 2026 audit evaluates the earlier phase-binned TLS engine,
+retained as `method='binned'`. “Defaults” below refers to that frozen engine.
+See the [current transit report](../../../docs/TRANSIT_BENCHMARKS.md) for the
+observation-level default. These measurements remain historical evidence.
+
 This audit separates the sensitivity cost of cuvarbase's fast TLS approximation
 from the effect of optimizing its implementation. Binning is inexpensive in
 many ordinary transit examples, but a universal 1–2% SNR-loss bound is false.
@@ -9,7 +14,7 @@ The duration prior and search grids can matter more than binning alone.
 |---|---|
 | [Expected-SNR diagnostic](accuracy/README.md) | What do the fixed template, phase bins and coarse grids lose at the true period across physical transit regimes? |
 | [Kernel validation](kernel/README.md) | Does skipping empty bins accelerate the same search while preserving its numerical results? |
-| [High-impact recovery pilot](high-impact/README.md) | On new noisy TESS inputs, can GTLS recover narrow transits that the default cuvarbase search misses, and how do alternative cuvarbase settings behave? |
+| [High-impact recovery pilot](high-impact/README.md) | On new noisy TESS inputs, can GTLS recover narrow transits that the then-default binned search misses, and how do alternative cuvarbase settings behave? |
 
 The CPU diagnostic uses 19 physical regimes and three search configurations,
 plus observed TESS/ZTF cadences. The focused GPU pilot independently calibrates
@@ -32,7 +37,8 @@ sources, input hashes, configuration and validation applicable to its claims.
 Large generated lightcurve arrays are kept outside the release repository and
 can be regenerated using the frozen protocol.
 
-[Practical interpretation and search settings](../../../docs/TLS_NUMERICS.md)
-explain the bin cap, duration prior, template differences and limits of the
-measurements. The README's main speed figure continues to use the separately
-[calibrated survey benchmark](../tls_sensitivity_2026-09-09/README.md).
+[The TLS numerical guide](../../../docs/TLS_NUMERICS.md) distinguishes the
+current default from the retained binned engine. The separate
+[calibrated survey benchmark](../tls_sensitivity_2026-09-09/README.md) supplied
+the historical binned-TLS speed figure; current release claims are in the
+[transit report](../../../docs/TRANSIT_BENCHMARKS.md).

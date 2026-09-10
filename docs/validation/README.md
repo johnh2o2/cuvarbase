@@ -1,6 +1,8 @@
 # v1.0 release validation
 
-The checks below ran on 6 September 2026 against frozen source `1032caf029570dc4841db1c594a2cbb1654e8fd8`. They establish correctness and packaging checks for that source, separately from the [performance benchmark](../TRANSIT_BENCHMARKS.md). Documentation and repository organization changed afterward; these are the original GPU results, not a claim that the later documentation commits were rerun on a GPU.
+The new observation-level TLS engine has its own [10 September validation](tls-default-20260910/README.md): **265 TLS tests passed on an A40**, plus installed-wheel checks. The [independent numerical study](../../benchmarks/results/tls_reference_2026-09-10/README.md) validates its search outputs and supplies the timing comparison.
+
+The checks below ran on 6 September 2026 against frozen source `1032caf029570dc4841db1c594a2cbb1654e8fd8`. They establish correctness and packaging checks for that source, separately from the [performance benchmark](../TRANSIT_BENCHMARKS.md). Later implementation and documentation changes are not covered by these original full-suite counts.
 
 | Check | Outcome | Evidence |
 |---|---|---|

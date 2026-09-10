@@ -7,7 +7,8 @@ cuvarbase
 
 **GPU-accelerated period-finding and transit-detection algorithms for
 astronomical time series**, built on `PyCUDA
-<https://documen.tician.de/pycuda/>`_. cuvarbase is designed for
+<https://documen.tician.de/pycuda/>`_ and `CuPy
+<https://docs.cupy.dev/en/v13.6.0/install.html>`_. cuvarbase is designed for
 processing whole surveys -- millions of irregularly sampled lightcurves
 -- on a single NVIDIA GPU, and its BLS has powered the TESS Quick-Look
 Pipeline's planet search since Sector 59 (Kunimoto et al. 2023).
@@ -20,9 +21,9 @@ Methods
   paths, sparse BLS for small datasets, Keplerian frequency grids and
   selectable power conventions.
 * :doc:`Transit Least Squares (TLS) <tls>` -- limb-darkened transit
-  templates with a survey-scale batch engine and no cap on lightcurve
-  length; golden-tested against the reference ``transitleastsquares``
-  package.
+  templates with a GTLS-compatible observation-level search, full candidate
+  and harmonic refinement, and a survey batch wrapper. Thin transits use
+  the same default search without phase binning.
 * :doc:`Generalized Lomb-Scargle <lomb>` -- NFFT-accelerated, with
   multiharmonic models and Baluev false-alarm probabilities.
 * :doc:`Phase Dispersion Minimization (PDM) <pdm>` -- binned and
@@ -40,9 +41,12 @@ Methods
 Installation
 ------------
 
+Install the v1 candidate from ``v1.0-fixes``. As of 10 September 2026,
+PyPI still provides the older 0.2.5 release.
+
 .. code-block:: bash
 
-    pip install cuvarbase
+    pip install 'cuvarbase @ git+https://github.com/johnh2o2/cuvarbase@v1.0-fixes'
 
 requires an NVIDIA GPU, the CUDA toolkit (``nvcc`` on your ``PATH``) and
 Python 3.9-3.14; see :doc:`install` for the details, the optional
