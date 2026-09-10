@@ -278,8 +278,10 @@ def main():
                 if p.suffix in ['.py', '.cu', '.cuh']:
                     record['source_files'][str(p.relative_to(package))] = sha(p)
 
+            binned_name = '_tls_search_batch_binned' if hasattr(tls, '_tls_search_batch_binned') else 'tls_search_batch'
+
             def run():
-                return tls.tls_search_batch(prepare(), periods=periods,
+                return getattr(tls, binned_name)(prepare(), periods=periods,
                     qmin=data['qmin'], qmax=data['qmax'], n_durations=38,
                     t0_oversample=8, refine_top_k=50, refine_oversample=33,
                     R_star=1, M_star=1, oversampling_factor=3, return_arrays=True,
@@ -314,7 +316,7 @@ def main():
                 record['transformations'].append(rebuild(gtls, 'power', args.out,
                     instrument=True, kind='power', profiler=profiler))
             else:
-                record['transformations'].append(rebuild(tls, 'tls_search_batch', args.out,
+                record['transformations'].append(rebuild(tls, binned_name, args.out,
                     instrument=True, kind='v1', profiler=profiler))
         profiles = []
         for _ in range(args.profile_reps):

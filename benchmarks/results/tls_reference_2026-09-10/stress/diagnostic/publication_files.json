@@ -1,0 +1,46 @@
+{
+  "README.md": {
+    "sha256": "8c61b2c59d78cc08f34246c8aded3eb63654fc15ee48198a8128da9041966273",
+    "bytes": 7077
+  },
+  "dependencies.txt": {
+    "sha256": "b609f3f7278e826841967433f66e3e853e2649396d03f5aba46f70a37b09cab8",
+    "bytes": 1105
+  },
+  "environment.json": {
+    "sha256": "2415a629a0870c7ecf431fb485a0d4e202436f7ef3132ac2d50817a388b7326e",
+    "bytes": 888
+  },
+  "execution-sources-v3.tar.gz": {
+    "sha256": "0e3cb85b90d689afe430069154b38b3113a7354f041ff431805826389f6413db",
+    "bytes": 21184
+  },
+  "files.json": {
+    "sha256": "88716c6c4b5d4ff58d9b27765eaf6e68eb6b9d5a89c42f877aa5300d8a742843",
+    "bytes": 1052
+  },
+  "postprocessing_sources.tar.gz": {
+    "sha256": "789fda614866f926ef3932902bc7d1f2557ef88049881e17dc4aa9ef9921d80e",
+    "bytes": 4771
+  },
+  "records.tar.gz": {
+    "sha256": "e6bbfc2959a309708b7245e9688f28f1a6ee13b22d607d066950ebfd5922ac54",
+    "bytes": 281448
+  },
+  "replay_staging_validation.json": {
+    "sha256": "9e6ab47ef0777496ece97393b4c079c3d0012f0cbfa5823ddebce0280f4ecdca",
+    "bytes": 330
+  },
+  "runs.csv": {
+    "sha256": "8a06458118ad252da54cc5e42d82a555dcc7e40c709057e8d59417202c329b07",
+    "bytes": 2420
+  },
+  "source_manifest.json": {
+    "sha256": "86b9cb7425e2a3059db0b79c7dae4db58e862e8e6e01342586681181958fa7df",
+    "bytes": 1460
+  },
+  "summary.json": {
+    "sha256": "60a9d45a073a0b2046286c512065e7122a756a6a6b12dad2b1cb489f67235322",
+    "bytes": 12131
+  }
+}

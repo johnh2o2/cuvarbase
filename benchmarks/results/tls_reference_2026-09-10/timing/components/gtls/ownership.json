@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "status": "complete",
+  "passed": true,
+  "before_start": {
+    "allowed_pids": [],
+    "observed_pids": [],
+    "foreign_pids": [],
+    "missing_pids": [],
+    "exclusive": true,
+    "monotonic": 2004055.870164369,
+    "utc": 1789065557.4513927
+  },
+  "workers": [
+    {
+      "kind": "ready",
+      "pid": 1180,
+      "namespace_pids": [
+        1180
+      ],
+      "sources": {
+        "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+        "files": {
+          "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+          "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+          "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+          "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+          "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+          "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+          "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+          "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+          "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+          "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+          "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+          "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+          "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+          "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+          "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+          "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+          "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+          "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+          "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+        }
+      },
+      "cuda_context_allocation_bytes": 1,
+      "cuda_context_synchronized": true
+    }
+  ],
+  "owned_worker_pids": [
+    1180
+  ],
+  "bindings": [
+    {
+      "worker_pid": 1180,
+      "namespace_pids": [
+        1180
+      ],
+      "host_pid": 2904915,
+      "method": "single_worker_lifecycle"
+    }
+  ],
+  "host_pids": [
+    2904915
+  ],
+  "identity_scope": "individual",
+  "live_workers_at_binding": [
+    1180
+  ],
+  "startup_observations": [
+    {
+      "allowed_pids": [],
+      "observed_pids": [
+        2904915
+      ],
+      "foreign_pids": [
+        2904915
+      ],
+      "missing_pids": [],
+      "exclusive": false,
+      "monotonic": 2004057.323788991,
+      "utc": 1789065558.9050171
+    }
+  ],
+  "after_start": {
+    "allowed_pids": [
+      2904915
+    ],
+    "observed_pids": [
+      2904915
+    ],
+    "foreign_pids": [],
+    "missing_pids": [],
+    "exclusive": true,
+    "monotonic": 2004057.335275458,
+    "utc": 1789065558.9165032
+  },
+  "worker_exits": [
+    {
+      "worker_pid": 1180,
+      "exit_code": 0,
+      "alive": false,
+      "forced": false
+    }
+  ],
+  "exit_observations": [
+    {
+      "allowed_pids": [],
+      "observed_pids": [],
+      "foreign_pids": [],
+      "missing_pids": [],
+      "exclusive": true,
+      "monotonic": 2004198.713966597,
+      "utc": 1789065700.295195
+    }
+  ],
+  "after_exit": {
+    "allowed_pids": [],
+    "observed_pids": [],
+    "foreign_pids": [],
+    "missing_pids": [],
+    "exclusive": true,
+    "monotonic": 2004198.713966597,
+    "utc": 1789065700.295195
+  }
+}

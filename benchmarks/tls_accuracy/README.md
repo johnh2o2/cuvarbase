@@ -1,10 +1,15 @@
-# TLS accuracy and efficiency tools
+# Binned TLS accuracy and efficiency tools (2026-09-09)
+
+These tools characterize the earlier binned TLS engine, retained as
+`method='binned'`. Their binning losses, kernel speedups and high-impact pilot
+do not describe the standard observation-level TLS search. See the
+[current benchmark and validation](../../docs/TRANSIT_BENCHMARKS.md).
 
 `diagnose.py` measures expected signal-to-noise retention at the **true period**.
 It separates template shape, phase compression, and coarse epoch/duration
 sampling. It does not measure detection completeness, a false-positive rate,
-native SDE, GTLS sensitivity, or execution-time speedups. The maintained GPU
-recovery benchmark remains in `../tls_sensitivity`.
+native SDE, GTLS sensitivity, or execution-time speedups. The corresponding
+historical complete-search study is in `../tls_sensitivity`.
 
 The [2026-09-09 published diagnostic](../results/tls_accuracy_2026-09-09/accuracy/README.md)
 contains the validated regime table, numerical outputs and provenance.

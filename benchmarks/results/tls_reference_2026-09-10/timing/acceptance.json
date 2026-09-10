@@ -1,0 +1,107 @@
+{
+  "measurement_scope": "full",
+  "status": "rejected",
+  "publication_gate": {
+    "pass": false,
+    "problems": [
+      "tess_gap: gtls_graph_4worker: Configuration did not complete successfully",
+      "tess_gap: gtls_graph_4worker: Warmup did not complete",
+      "tess_gap: gtls_graph_4worker: Batch repetition count is not three"
+    ]
+  },
+  "created_utc": "2026-09-10T19:20:59.253644+00:00",
+  "regimes": {
+    "tess_solar": {
+      "actual_batch_size": 16,
+      "requested_batch_size": 16,
+      "single_case": "tess_solar_null_0000.npz",
+      "single_replaced": false,
+      "excluded_originals": [],
+      "corrected_native_timing_required": false,
+      "strongest_tested_native_workers": 4,
+      "pool_eligibility": {
+        "1": {
+          "eligible": true,
+          "output_problems": []
+        },
+        "2": {
+          "eligible": true,
+          "output_problems": []
+        },
+        "4": {
+          "eligible": true,
+          "output_problems": []
+        }
+      },
+      "problems": []
+    },
+    "tess_gap": {
+      "actual_batch_size": 16,
+      "requested_batch_size": 16,
+      "single_case": "tess_gap_null_0000.npz",
+      "single_replaced": false,
+      "excluded_originals": [],
+      "corrected_native_timing_required": false,
+      "strongest_tested_native_workers": 2,
+      "pool_eligibility": {
+        "1": {
+          "eligible": true,
+          "output_problems": []
+        },
+        "2": {
+          "eligible": true,
+          "output_problems": []
+        },
+        "4": {
+          "eligible": false,
+          "output_problems": [
+            {
+              "reason": "Missing declared repetitions",
+              "actual": 0,
+              "expected": 3
+            },
+            {
+              "reason": "Configuration did not complete"
+            }
+          ]
+        }
+      },
+      "problems": [
+        "gtls_graph_4worker: Configuration did not complete successfully",
+        "gtls_graph_4worker: Warmup did not complete",
+        "gtls_graph_4worker: Batch repetition count is not three"
+      ]
+    },
+    "ztf_solar": {
+      "actual_batch_size": 16,
+      "requested_batch_size": 16,
+      "single_case": "ztf_solar_null_0000.npz",
+      "single_replaced": false,
+      "excluded_originals": [],
+      "corrected_native_timing_required": false,
+      "strongest_tested_native_workers": 4,
+      "pool_eligibility": {
+        "1": {
+          "eligible": true,
+          "output_problems": []
+        },
+        "2": {
+          "eligible": true,
+          "output_problems": []
+        },
+        "4": {
+          "eligible": true,
+          "output_problems": []
+        }
+      },
+      "problems": []
+    }
+  },
+  "manifest_sha256": "31982fa202e0c52272b11de63b520dd4818a3c60cb0331f5467dcc4b9d02ff8a",
+  "summary_sha256": "ea0765ce93bbe52b7c1834250fe390c428f5e50c636917f16581d671aa2cd10a",
+  "public_plan_sha256": "b073315641b55e3502ad6ea233c5b2a2d73760810fcf6b9bf460505af45d1352",
+  "timing_analysis_sha256": "2faa9cff04b1a472a6893095e28008c514768a106ea8947b7654cdb396573c0f",
+  "scope": "Complete public timings and separate common-search components; scientific equivalence comes from the independently accepted studies, while timing verifies frozen outputs and literal-native pool eligibility",
+  "failed_times_are_speed_denominators": false,
+  "source_counts_are_actual": true
+}

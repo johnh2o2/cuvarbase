@@ -1,0 +1,834 @@
+{
+  "config": {
+    "manifest": "/workspace/tls-default/diagnostic/results/timing_manifest.json",
+    "regime": "tess_gap",
+    "backend": "gtls",
+    "prefix": "graph",
+    "correction_adapter": "/workspace/tls-default/validation/corrected_reference.py",
+    "names": [
+      "tess_gap_null_0000.npz",
+      "tess_gap_null_0001.npz",
+      "tess_gap_null_0002.npz",
+      "tess_gap_null_0003.npz",
+      "tess_gap_null_0004.npz",
+      "tess_gap_null_0005.npz",
+      "tess_gap_null_0006.npz",
+      "tess_gap_null_0007.npz",
+      "tess_gap_null_0008.npz",
+      "tess_gap_null_0009.npz",
+      "tess_gap_null_0010.npz",
+      "tess_gap_null_0011.npz",
+      "tess_gap_null_0012.npz",
+      "tess_gap_null_0013.npz",
+      "tess_gap_null_0014.npz",
+      "tess_gap_null_0015.npz"
+    ],
+    "measurement_scope": "full"
+  },
+  "pool_width": 4,
+  "single": [],
+  "batch": [],
+  "pool_startup_seconds": 2.026186613831669,
+  "workers": [
+    {
+      "kind": "ready",
+      "pid": 3912,
+      "namespace_pids": [
+        3912
+      ],
+      "sources": {
+        "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+        "files": {
+          "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+          "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+          "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+          "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+          "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+          "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+          "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+          "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+          "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+          "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+          "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+          "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+          "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+          "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+          "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+          "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+          "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+          "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+          "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+        }
+      },
+      "cuda_context_allocation_bytes": 1,
+      "cuda_context_synchronized": true
+    },
+    {
+      "kind": "ready",
+      "pid": 3913,
+      "namespace_pids": [
+        3913
+      ],
+      "sources": {
+        "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+        "files": {
+          "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+          "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+          "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+          "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+          "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+          "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+          "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+          "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+          "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+          "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+          "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+          "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+          "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+          "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+          "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+          "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+          "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+          "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+          "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+        }
+      },
+      "cuda_context_allocation_bytes": 1,
+      "cuda_context_synchronized": true
+    },
+    {
+      "kind": "ready",
+      "pid": 3914,
+      "namespace_pids": [
+        3914
+      ],
+      "sources": {
+        "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+        "files": {
+          "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+          "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+          "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+          "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+          "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+          "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+          "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+          "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+          "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+          "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+          "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+          "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+          "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+          "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+          "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+          "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+          "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+          "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+          "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+        }
+      },
+      "cuda_context_allocation_bytes": 1,
+      "cuda_context_synchronized": true
+    },
+    {
+      "kind": "ready",
+      "pid": 3915,
+      "namespace_pids": [
+        3915
+      ],
+      "sources": {
+        "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+        "files": {
+          "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+          "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+          "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+          "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+          "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+          "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+          "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+          "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+          "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+          "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+          "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+          "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+          "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+          "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+          "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+          "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+          "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+          "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+          "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+        }
+      },
+      "cuda_context_allocation_bytes": 1,
+      "cuda_context_synchronized": true
+    }
+  ],
+  "warmup": {
+    "status": "error",
+    "elapsed_seconds": 12.061940625077114,
+    "denominator_seconds": null,
+    "validation_seconds": 0.00909498706459999,
+    "worker_public_calls": [
+      {
+        "kind": "complete",
+        "pid": 3912,
+        "started": 2004885.807947857,
+        "ended": 2004894.535043861,
+        "api_seconds": 8.727096003945917,
+        "completed_cases": 0,
+        "error": null,
+        "case_failures": [
+          {
+            "case": "tess_gap_null_0000.npz",
+            "failure_seconds": 8.725318802054971,
+            "traceback": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/tools/timing/benchmark.py\", line 100, in worker\n    result = public_single(config['backend'], cases[index])\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/latency/tools/timing/common.py\", line 172, in public_single\n    return model.power(periods=data['periods'], fast=False,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/gputls/main.py\", line 108, in power\n    = core.search_multi_periods(\n      ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/gputls/core.py\", line 768, in search_multi_periods\n    ootrGPU = cp.empty((singleCalcPeriods,len(singleDurations),(tSize)),dtype=cp.float32)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/cupy/_creation/basic.py\", line 32, in empty\n    return cupy.ndarray(shape, dtype, order=order)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"cupy/_core/core.pyx\", line 167, in cupy._core.core.ndarray.__new__\n  File \"cupy/_core/core.pyx\", line 254, in cupy._core.core._ndarray_base._init\n  File \"cupy/cuda/memory.pyx\", line 875, in cupy.cuda.memory.alloc\n  File \"cupy/cuda/memory.pyx\", line 1579, in cupy.cuda.memory.MemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1600, in cupy.cuda.memory.MemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc\n  File \"cupy/cuda/memory.pyx\", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc\n  File \"cupy/cuda/memory.pyx\", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc\ncupy.cuda.memory.OutOfMemoryError: Out of memory allocating 1,623,613,440 bytes (allocated so far: 3,667,990,016 bytes).\n"
+          }
+        ]
+      },
+      {
+        "kind": "complete",
+        "pid": 3913,
+        "started": 2004885.807780545,
+        "ended": 2004897.830886835,
+        "api_seconds": 12.0231062900275,
+        "completed_cases": 1,
+        "error": null,
+        "case_failures": []
+      },
+      {
+        "kind": "complete",
+        "pid": 3914,
+        "started": 2004885.807846645,
+        "ended": 2004897.136827971,
+        "api_seconds": 11.32898132619448,
+        "completed_cases": 1,
+        "error": null,
+        "case_failures": []
+      },
+      {
+        "kind": "complete",
+        "pid": 3915,
+        "started": 2004885.807879447,
+        "ended": 2004897.869266024,
+        "api_seconds": 12.061386577086523,
+        "completed_cases": 1,
+        "error": null,
+        "case_failures": []
+      }
+    ],
+    "errors": [
+      {
+        "case": "tess_gap_null_0000.npz",
+        "failure_seconds": 8.725318802054971,
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/tools/timing/benchmark.py\", line 100, in worker\n    result = public_single(config['backend'], cases[index])\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/latency/tools/timing/common.py\", line 172, in public_single\n    return model.power(periods=data['periods'], fast=False,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/gputls/main.py\", line 108, in power\n    = core.search_multi_periods(\n      ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/gputls/core.py\", line 768, in search_multi_periods\n    ootrGPU = cp.empty((singleCalcPeriods,len(singleDurations),(tSize)),dtype=cp.float32)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/cupy/_creation/basic.py\", line 32, in empty\n    return cupy.ndarray(shape, dtype, order=order)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"cupy/_core/core.pyx\", line 167, in cupy._core.core.ndarray.__new__\n  File \"cupy/_core/core.pyx\", line 254, in cupy._core.core._ndarray_base._init\n  File \"cupy/cuda/memory.pyx\", line 875, in cupy.cuda.memory.alloc\n  File \"cupy/cuda/memory.pyx\", line 1579, in cupy.cuda.memory.MemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1600, in cupy.cuda.memory.MemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc\n  File \"cupy/cuda/memory.pyx\", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc\n  File \"cupy/cuda/memory.pyx\", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc\ncupy.cuda.memory.OutOfMemoryError: Out of memory allocating 1,623,613,440 bytes (allocated so far: 3,667,990,016 bytes).\n"
+      },
+      {
+        "reason": "Post-barrier result membership differs from the assigned inputs",
+        "expected": [
+          "tess_gap_null_0000.npz",
+          "tess_gap_null_0000.npz",
+          "tess_gap_null_0000.npz",
+          "tess_gap_null_0000.npz"
+        ],
+        "observed": [
+          "tess_gap_null_0000.npz",
+          "tess_gap_null_0000.npz",
+          "tess_gap_null_0000.npz"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "case": "tess_gap_null_0000.npz",
+        "strict": {
+          "periods": {
+            "data": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "power": {
+            "data": "1b4f79cbf957ab8bc47b78c23d1371a8c16463f5c82d62117917a20ebd0e8e3e",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "period": "71497ac5463845d45ae0e5561c945bcd2803747032087660cedf4a226cd40e21",
+          "SDE": "32aa862eefb6f62efd655d5e59e16af41cf8095812711a50ac9f963725eff0b5"
+        },
+        "common": {
+          "periods": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+          "power": "ce9d160ee81759fb3dc1f11f5b04ca13cd4aaeaed7cee57a6000f741df093ec6",
+          "chi2": "2557cb8f84d9e71f71adb02f32620ce839d4d913dd57709ef714e95e1a57f7d2",
+          "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc",
+          "period": "71497ac5463845d45ae0e5561c945bcd2803747032087660cedf4a226cd40e21",
+          "SDE": "32aa862eefb6f62efd655d5e59e16af41cf8095812711a50ac9f963725eff0b5"
+        },
+        "fields": {
+          "SDE": 7.611256122589111,
+          "T0": 5.761590085746263,
+          "chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "depth": 0.00013928783973549933,
+          "duration": 0.518365248820032,
+          "durationPoints": 119,
+          "period": 21.917637383265895,
+          "periods": {
+            "data": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "possiblePeriods": {
+            "data": "642783d86b7b53c9fae34be2da17bfd842a1da8b597eebb382c99b1f22a0b89f",
+            "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+          },
+          "possiblePeriodsIndices": {
+            "data": "3154b76c37fb605b781afd8d1395163df12197edf9b2a482c18ef5f93fb4108f",
+            "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+          },
+          "power": {
+            "data": "1b4f79cbf957ab8bc47b78c23d1371a8c16463f5c82d62117917a20ebd0e8e3e",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "rawDuration": 0.027733804468686504,
+          "rawDurations": {
+            "data": "ad1e8d5413c4595424e2fad7c9b3cdc865a5c592105cea97ae27bd5d15535411",
+            "mask": "c913a003a23ccb24eb459e646e44363dae3d2d901490c8927a71a5644a52ab42"
+          },
+          "raw_chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "raw_power": {
+            "data": "37d616629b4b44d519b135f8b42e09661b160f596b2ec9d89c892201d9522eb5",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "snr": 5.9403091005342095,
+          "snrFit": 50143.252675266966,
+          "snrFitPink": 48162.12340408837,
+          "snrPink": 0.6533770202246258,
+          "transitTimes": {
+            "data": "8addd9973b6b760c81ee59b8e13d717a85679b02c3f7e7b81f4236651ac1e9ac",
+            "mask": "9472f76e55da2f7e807f6ffec5a25a410702a9616350c917bd6e0ea11c1228b1"
+          }
+        },
+        "full_digest": "b7332c978fbee0502951eb196b17ef805c866520ca7911d433f94c2b52b8efdb",
+        "primary_period": 21.917637383265895,
+        "SDE": 7.611256122589111,
+        "nperiods": 74616
+      },
+      {
+        "case": "tess_gap_null_0000.npz",
+        "strict": {
+          "periods": {
+            "data": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "power": {
+            "data": "1b4f79cbf957ab8bc47b78c23d1371a8c16463f5c82d62117917a20ebd0e8e3e",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "period": "71497ac5463845d45ae0e5561c945bcd2803747032087660cedf4a226cd40e21",
+          "SDE": "32aa862eefb6f62efd655d5e59e16af41cf8095812711a50ac9f963725eff0b5"
+        },
+        "common": {
+          "periods": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+          "power": "ce9d160ee81759fb3dc1f11f5b04ca13cd4aaeaed7cee57a6000f741df093ec6",
+          "chi2": "2557cb8f84d9e71f71adb02f32620ce839d4d913dd57709ef714e95e1a57f7d2",
+          "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc",
+          "period": "71497ac5463845d45ae0e5561c945bcd2803747032087660cedf4a226cd40e21",
+          "SDE": "32aa862eefb6f62efd655d5e59e16af41cf8095812711a50ac9f963725eff0b5"
+        },
+        "fields": {
+          "SDE": 7.611256122589111,
+          "T0": 5.761590085746263,
+          "chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "depth": 0.00013928783973549933,
+          "duration": 0.518365248820032,
+          "durationPoints": 119,
+          "period": 21.917637383265895,
+          "periods": {
+            "data": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "possiblePeriods": {
+            "data": "642783d86b7b53c9fae34be2da17bfd842a1da8b597eebb382c99b1f22a0b89f",
+            "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+          },
+          "possiblePeriodsIndices": {
+            "data": "3154b76c37fb605b781afd8d1395163df12197edf9b2a482c18ef5f93fb4108f",
+            "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+          },
+          "power": {
+            "data": "1b4f79cbf957ab8bc47b78c23d1371a8c16463f5c82d62117917a20ebd0e8e3e",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "rawDuration": 0.027733804468686504,
+          "rawDurations": {
+            "data": "ad1e8d5413c4595424e2fad7c9b3cdc865a5c592105cea97ae27bd5d15535411",
+            "mask": "c913a003a23ccb24eb459e646e44363dae3d2d901490c8927a71a5644a52ab42"
+          },
+          "raw_chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "raw_power": {
+            "data": "37d616629b4b44d519b135f8b42e09661b160f596b2ec9d89c892201d9522eb5",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "snr": 5.9403091005342095,
+          "snrFit": 50143.252675266966,
+          "snrFitPink": 48162.12340408837,
+          "snrPink": 0.6533770202246258,
+          "transitTimes": {
+            "data": "8addd9973b6b760c81ee59b8e13d717a85679b02c3f7e7b81f4236651ac1e9ac",
+            "mask": "9472f76e55da2f7e807f6ffec5a25a410702a9616350c917bd6e0ea11c1228b1"
+          }
+        },
+        "full_digest": "b7332c978fbee0502951eb196b17ef805c866520ca7911d433f94c2b52b8efdb",
+        "primary_period": 21.917637383265895,
+        "SDE": 7.611256122589111,
+        "nperiods": 74616
+      },
+      {
+        "case": "tess_gap_null_0000.npz",
+        "strict": {
+          "periods": {
+            "data": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "power": {
+            "data": "1b4f79cbf957ab8bc47b78c23d1371a8c16463f5c82d62117917a20ebd0e8e3e",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "period": "71497ac5463845d45ae0e5561c945bcd2803747032087660cedf4a226cd40e21",
+          "SDE": "32aa862eefb6f62efd655d5e59e16af41cf8095812711a50ac9f963725eff0b5"
+        },
+        "common": {
+          "periods": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+          "power": "ce9d160ee81759fb3dc1f11f5b04ca13cd4aaeaed7cee57a6000f741df093ec6",
+          "chi2": "2557cb8f84d9e71f71adb02f32620ce839d4d913dd57709ef714e95e1a57f7d2",
+          "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc",
+          "period": "71497ac5463845d45ae0e5561c945bcd2803747032087660cedf4a226cd40e21",
+          "SDE": "32aa862eefb6f62efd655d5e59e16af41cf8095812711a50ac9f963725eff0b5"
+        },
+        "fields": {
+          "SDE": 7.611256122589111,
+          "T0": 5.761590085746263,
+          "chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "depth": 0.00013928783973549933,
+          "duration": 0.518365248820032,
+          "durationPoints": 119,
+          "period": 21.917637383265895,
+          "periods": {
+            "data": "dc80c3435936f7b630ab7fc312f08e29ebf76350fd17bdda736459fc5ff678fe",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "possiblePeriods": {
+            "data": "642783d86b7b53c9fae34be2da17bfd842a1da8b597eebb382c99b1f22a0b89f",
+            "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+          },
+          "possiblePeriodsIndices": {
+            "data": "3154b76c37fb605b781afd8d1395163df12197edf9b2a482c18ef5f93fb4108f",
+            "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+          },
+          "power": {
+            "data": "1b4f79cbf957ab8bc47b78c23d1371a8c16463f5c82d62117917a20ebd0e8e3e",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "rawDuration": 0.027733804468686504,
+          "rawDurations": {
+            "data": "ad1e8d5413c4595424e2fad7c9b3cdc865a5c592105cea97ae27bd5d15535411",
+            "mask": "c913a003a23ccb24eb459e646e44363dae3d2d901490c8927a71a5644a52ab42"
+          },
+          "raw_chi2": {
+            "data": "ef2d26322a01dfef1070e8c297cd87951c1de0d7317d0401d1781a647b003a74",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "raw_power": {
+            "data": "37d616629b4b44d519b135f8b42e09661b160f596b2ec9d89c892201d9522eb5",
+            "mask": "58366dfb9d156086062faa59651d6bbc049ccc6a88e7a42190df6a4fc6a689bc"
+          },
+          "snr": 5.9403091005342095,
+          "snrFit": 50143.252675266966,
+          "snrFitPink": 48162.12340408837,
+          "snrPink": 0.6533770202246258,
+          "transitTimes": {
+            "data": "8addd9973b6b760c81ee59b8e13d717a85679b02c3f7e7b81f4236651ac1e9ac",
+            "mask": "9472f76e55da2f7e807f6ffec5a25a410702a9616350c917bd6e0ea11c1228b1"
+          }
+        },
+        "full_digest": "b7332c978fbee0502951eb196b17ef805c866520ca7911d433f94c2b52b8efdb",
+        "primary_period": 21.917637383265895,
+        "SDE": 7.611256122589111,
+        "nperiods": 74616
+      }
+    ],
+    "assignments": [
+      [
+        0
+      ],
+      [
+        0
+      ],
+      [
+        0
+      ],
+      [
+        0
+      ]
+    ],
+    "source_count": 4,
+    "warmup": true,
+    "exclusive_before": {
+      "allowed_pids": [
+        2962476,
+        2962477,
+        2962478,
+        2962479
+      ],
+      "observed_pids": [
+        2962476,
+        2962477,
+        2962478,
+        2962479
+      ],
+      "foreign_pids": [],
+      "missing_pids": [],
+      "exclusive": true,
+      "monotonic": 2004885.807626901,
+      "utc": 1789066387.3888547
+    },
+    "exclusive_after": {
+      "allowed_pids": [
+        2962476,
+        2962477,
+        2962478,
+        2962479
+      ],
+      "observed_pids": [
+        2962476,
+        2962477,
+        2962478,
+        2962479
+      ],
+      "foreign_pids": [],
+      "missing_pids": [],
+      "exclusive": true,
+      "monotonic": 2004897.870788307,
+      "utc": 1789066399.4520164
+    }
+  },
+  "status": "error",
+  "error": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/tools/timing/benchmark.py\", line 570, in run\n    raise RuntimeError('Warmup did not complete correctly')\nRuntimeError: Warmup did not complete correctly\n",
+  "parity": {
+    "eligible": false,
+    "problems": [
+      {
+        "reason": "runner failure"
+      }
+    ]
+  },
+  "gpu_ownership": {
+    "version": 1,
+    "status": "complete",
+    "passed": true,
+    "before_start": {
+      "allowed_pids": [],
+      "observed_pids": [],
+      "foreign_pids": [],
+      "missing_pids": [],
+      "exclusive": true,
+      "monotonic": 2004883.780841103,
+      "utc": 1789066385.3620691
+    },
+    "workers": [
+      {
+        "kind": "ready",
+        "pid": 3912,
+        "namespace_pids": [
+          3912
+        ],
+        "sources": {
+          "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+          "files": {
+            "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+            "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+            "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+            "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+            "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+            "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+            "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+            "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+            "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+            "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+            "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+            "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+            "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+            "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+            "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+            "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+            "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+            "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+            "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+          }
+        },
+        "cuda_context_allocation_bytes": 1,
+        "cuda_context_synchronized": true
+      },
+      {
+        "kind": "ready",
+        "pid": 3913,
+        "namespace_pids": [
+          3913
+        ],
+        "sources": {
+          "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+          "files": {
+            "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+            "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+            "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+            "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+            "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+            "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+            "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+            "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+            "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+            "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+            "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+            "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+            "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+            "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+            "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+            "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+            "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+            "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+            "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+          }
+        },
+        "cuda_context_allocation_bytes": 1,
+        "cuda_context_synchronized": true
+      },
+      {
+        "kind": "ready",
+        "pid": 3914,
+        "namespace_pids": [
+          3914
+        ],
+        "sources": {
+          "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+          "files": {
+            "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+            "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+            "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+            "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+            "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+            "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+            "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+            "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+            "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+            "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+            "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+            "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+            "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+            "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+            "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+            "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+            "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+            "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+            "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+          }
+        },
+        "cuda_context_allocation_bytes": 1,
+        "cuda_context_synchronized": true
+      },
+      {
+        "kind": "ready",
+        "pid": 3915,
+        "namespace_pids": [
+          3915
+        ],
+        "sources": {
+          "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+          "files": {
+            "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+            "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+            "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+            "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+            "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+            "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+            "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+            "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+            "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+            "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+            "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+            "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+            "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+            "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+            "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+            "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+            "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+            "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+            "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+          }
+        },
+        "cuda_context_allocation_bytes": 1,
+        "cuda_context_synchronized": true
+      }
+    ],
+    "owned_worker_pids": [
+      3912,
+      3913,
+      3914,
+      3915
+    ],
+    "bindings": [
+      {
+        "worker_pid": 3912,
+        "namespace_pids": [
+          3912
+        ],
+        "host_pid": null,
+        "method": "pool_lifecycle_member"
+      },
+      {
+        "worker_pid": 3913,
+        "namespace_pids": [
+          3913
+        ],
+        "host_pid": null,
+        "method": "pool_lifecycle_member"
+      },
+      {
+        "worker_pid": 3914,
+        "namespace_pids": [
+          3914
+        ],
+        "host_pid": null,
+        "method": "pool_lifecycle_member"
+      },
+      {
+        "worker_pid": 3915,
+        "namespace_pids": [
+          3915
+        ],
+        "host_pid": null,
+        "method": "pool_lifecycle_member"
+      }
+    ],
+    "host_pids": [
+      2962476,
+      2962477,
+      2962478,
+      2962479
+    ],
+    "identity_scope": "owned_pool_set",
+    "live_workers_at_binding": [
+      3912,
+      3913,
+      3914,
+      3915
+    ],
+    "startup_observations": [
+      {
+        "allowed_pids": [],
+        "observed_pids": [
+          2962476,
+          2962477,
+          2962478,
+          2962479
+        ],
+        "foreign_pids": [
+          2962476,
+          2962477,
+          2962478,
+          2962479
+        ],
+        "missing_pids": [],
+        "exclusive": false,
+        "monotonic": 2004885.806195122,
+        "utc": 1789066387.3874233
+      }
+    ],
+    "after_start": {
+      "allowed_pids": [
+        2962476,
+        2962477,
+        2962478,
+        2962479
+      ],
+      "observed_pids": [
+        2962476,
+        2962477,
+        2962478,
+        2962479
+      ],
+      "foreign_pids": [],
+      "missing_pids": [],
+      "exclusive": true,
+      "monotonic": 2004885.807025481,
+      "utc": 1789066387.3882532
+    },
+    "worker_exits": [
+      {
+        "worker_pid": 3912,
+        "exit_code": 0,
+        "alive": false,
+        "forced": false
+      },
+      {
+        "worker_pid": 3913,
+        "exit_code": 0,
+        "alive": false,
+        "forced": false
+      },
+      {
+        "worker_pid": 3914,
+        "exit_code": 0,
+        "alive": false,
+        "forced": false
+      },
+      {
+        "worker_pid": 3915,
+        "exit_code": 0,
+        "alive": false,
+        "forced": false
+      }
+    ],
+    "exit_observations": [
+      {
+        "allowed_pids": [],
+        "observed_pids": [],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 2004898.489536248,
+        "utc": 1789066400.0707643
+      }
+    ],
+    "after_exit": {
+      "allowed_pids": [],
+      "observed_pids": [],
+      "foreign_pids": [],
+      "missing_pids": [],
+      "exclusive": true,
+      "monotonic": 2004898.489536248,
+      "utc": 1789066400.0707643
+    }
+  }
+}

@@ -10,6 +10,6 @@ series tools used in astronomy on GPUs (BLS, Lomb-Scargle, conditional
 entropy, PDM, and more).
 
 The full project README is `README.md
-<https://github.com/johnh2o2/cuvarbase/blob/master/README.md>`_ (the
+<https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/README.md>`_ (the
 canonical document; this file is just a pointer). Documentation:
 https://johnh2o2.github.io/cuvarbase/

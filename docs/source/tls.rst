@@ -1,256 +1,203 @@
 Transit Least Squares (TLS)
 ===========================
 
-Transit Least Squares [HH2019]_ searches for periodic transits with a
-physically-motivated, limb-darkened transit template instead of the box
-of :doc:`BLS <bls>`. The template matters most for small planets: the
-smooth ingress/egress of a real transit is a measurably better match to
-the data than a box, which translates into a higher detection
-significance at fixed depth.
+The standard ``cuvarbase.tls`` search evaluates individual observations using
+the numerical search implemented by public GTLS. It retains the transit-shaped
+template, broad duration domain, sample-window trials, depth estimation,
+spectrum ranking, and full candidate/harmonic refinement. It does not phase-bin
+observations, and a GPU memory limit does not reduce the searched durations.
 
-``cuvarbase.tls`` implements a GPU TLS with two execution paths:
-
-* **The fast path (default)** — a batch-native, phase-binned kernel:
-  each (lightcurve, period) pair is one CUDA block that folds the
-  lightcurve once into shared-memory phase bins and evaluates every
-  (duration, epoch) trial against precomputed integrated-template
-  tables, with a closed-form :math:`\chi^2`. A second kernel then
-  re-fits the best ``refine_top_k`` candidate periods per lightcurve
-  against individual observations on a finer local grid. The reported
-  SDE still uses the coarse spectrum; refinement cannot rescue periods
-  excluded by the first stage.
-  There is **no cap on the number of points per lightcurve**, absolute
-  BJD-scale timestamps are safe (the epoch is subtracted in float64
-  internally), and whole surveys can be searched in one call.
-* **The legacy path** (``use_fast=False``) — the original per-point
-  kernel. It caps lightcurves at ~3,500 points (48 KB shared-memory
-  budget). The epoch ``floor(min(t))`` is subtracted in float64 before
-  the float32 cast (so BJD-scale timestamps are safe), but the fold
-  itself is float32, so its phase precision degrades with the baseline
-  (about 1e-4 d at 1400 d). It remains available as a reference
-  implementation and for the low-level plumbing (custom streams,
-  pre-compiled kernels, externally-managed memory) that the batch
-  engine does not expose.
-
-Accuracy is validated two ways in the test suite: golden tests against
-the reference `transitleastsquares
-<https://github.com/hippke/tls>`_ package, and injected-transit
-recovery tests across cadence regimes. SDE uses the reference package's
-formula (see below), but the numerical search and resulting spectrum
-differ. Equal scalar SDE does not establish equivalent detection
-sensitivity. The `current transit benchmark
+The implementation removes repeated calculation and large intermediate
+residual arrays. See the `current benchmark and numerical validation
 <https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md>`_
-reports timing, independent recovery and false-positive qualifications.
-The `phase-binning explanation
-<https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TLS_NUMERICS.md>`_
-shows the retained transit shape and the measured resolution tradeoff.
+for the measured speed and the tested regimes.
 
-.. note::
+Installation
+------------
 
-   **Input validation.** Since 1.0 every entry point rejects
-   non-finite ``t``/``y``/``dy``, ``dy <= 0``, mismatched array
-   lengths, too-short light curves and non-finite or non-positive
-   frequency grids with a ``ValueError`` raised on the host, before
-   any GPU work. See :ref:`Input validation <input-validation>` for
-   the full rules and the pre-1.0 behaviour they replace.
+For CUDA 12, install the v1 candidate with the TLS extra. PyPI 0.2.5 does not
+contain TLS; these measurements use the ``v1.0-fixes`` branch:
 
-Input conventions
------------------
+.. code-block:: bash
 
-* ``t``: observation times in days. BJD-scale absolute times are safe
-  on the default fast path.
-* ``y``: fluxes **normalized so the out-of-transit baseline is ~1.0**.
-  The transit model is :math:`1 - \delta\,T(x)` with the out-of-transit
-  level **fixed at exactly 1** — there is no free baseline term (as in
-  the reference package). No TLS path rescales the input, so
-  unnormalized fluxes (e.g. raw counts) produce meaningless depths, and
-  even a small normalization offset matters: for a P = 7.3 d transit at
-  sigma = 1e-3 per point, an offset of +5e-4 raised the SDE from 21.5 to
-  29.3 with the depth 20% low, -5e-4 halved it to 10.1, and -1e-3 gave
-  the wrong period. Normalize to a *median* out-of-transit level of 1
-  (to ~0.1 sigma per point) before searching.
-* ``dy``: per-point flux uncertainties (same units as ``y``).
-* ``periods``: any order is accepted (the grid is sorted internally and
-  every per-period output array is returned in the caller's order).
+    pip install 'cuvarbase[tls] @ git+https://github.com/johnh2o2/cuvarbase@v1.0-fixes'
 
-Searching a single lightcurve
------------------------------
+It supplies CuPy 13 and ``batman-package``; this TLS extra supports Python
+3.9–3.13. The current GPU validation uses Python 3.11 and CuPy 13.6. For another CUDA runtime, install
+its matching CuPy wheel and ``batman-package`` separately. Install only one
+CuPy distribution in an environment; see the `CuPy installation guide
+<https://docs.cupy.dev/en/v13.6.0/install.html>`_. PyCUDA and CuPy use the same device's
+primary context; select the device with ``CUDA_DEVICE`` before the first call.
+The default TLS engine requires batman and does not silently substitute a
+box-shaped or analytic template when that dependency is missing.
+
+Single light curves
+-------------------
 
 .. code-block:: python
 
-    import numpy as np
-    from cuvarbase.tls import tls_search_gpu
+    from cuvarbase.tls import tls_search
 
-    # t (days), y (normalized flux), dy (uncertainties)
-    results = tls_search_gpu(t, y, dy)
+    result = tls_search(t, flux, flux_error,
+                        R_star=1.0, M_star=1.0,
+                        period_min=0.5, period_max=15.0)
+    print(result['period'], result['SDE'], result['T0'])
 
-    print(results['period'])    # best-fit period (days)
-    print(results['T0'])        # mid-transit time (days): first transit
-                                # at or after min(t)
-    print(results['t0_phase'])  # the same epoch as a phase in [0, 1)
-                                # relative to floor(min(t))
-    print(results['duration'])  # transit duration (days)
-    print(results['depth'])     # fractional transit depth
-    print(results['SDE'])       # signal detection efficiency
+Times and periods are in days. Input arrays must be finite, aligned and contain
+at least three observations with positive uncertainties and a positive time
+span. Flux must be positive and normalized to an out-of-transit baseline of one;
+the search does not fit a free baseline. Normalize each passband before combining
+multiband observations. There is no separate per-band depth or baseline model.
 
-    # fold so the transit sits at phase 0
-    phase = ((t - results['T0']) / results['period']) % 1.0
+A float64 time-origin shift preserves relative, negative and absolute BJD times
+without dropping observations. ``T0`` is restored to the input time system and
+is the first mid-transit at or after ``min(t)``. ``t0_phase`` is its fold phase
+relative to ``floor(min(t))``.
 
-``T0`` is an absolute time on the same scale as ``t`` on every path
-(``min(t) <= T0 < min(t) + period``, the convention of the reference
-package).
+The automatic Ofir period grid uses ``R_star`` and ``M_star`` in solar units,
+``n_transits_min=2`` and ``oversampling_factor=3``. An explicit ``periods`` array
+retains float64 precision; returned arrays retain its original order.
+``tls_search_gpu`` and ``tls_transit`` use the same default policy.
 
-The trial period grid is generated automatically following [Ofir2014]_
-(pass ``period_min``/``period_max`` to bound it, or ``periods`` for an
-explicit grid). At every trial period the search scans ``n_durations``
-log-spaced durations inside a **Keplerian duration window**
-``[0.5, 2] x q_kep(P; R_star, M_star, R_planet)`` built by
-:func:`cuvarbase.tls_grids.duration_window` from the stellar parameters
-the function takes (``qmin_fac``/``qmax_fac``/``R_planet`` adjust it;
-explicit per-period ``qmin``/``qmax`` arrays override it). The window
-follows :math:`P^{-2/3}`. It is a central, circular-orbit prior: high
-impact parameters or eccentric periastron transits can be shorter than
-its default minimum. Widen the duration window for those populations;
-increasing phase bins alone cannot supply missing trial durations. Before
-1.0 the default was a constant window ``[0.005, 0.15]`` at every period,
-which excludes the Keplerian duration beyond P ~ 60 d for a Sun-like
-star (18.5 d for an M dwarf) — a P = 365 d transit on a 1400-d baseline
-came back at 182.5 d with half the depth. That window is still available
-as ``duration_window='fixed'`` and warns whenever it is unphysical for
-the grid. :func:`cuvarbase.tls.tls_transit` is the explicit-name wrapper
-for the same Keplerian search:
+Small requested grids remain small: unlike pinned GTLS, cuvarbase does not
+silently replace a grid of fewer than 100 periods with default solar-host
+bounds. Automatic grids require ``0.01 <= R_star <= 10000`` and
+``0.01 <= M_star <= 1000``; out-of-range values raise ``ValueError`` rather
+than being clamped. Explicit periods accept other finite positive stellar
+values. These input-policy differences do not change a search supplied with
+the same valid period array.
 
-.. code-block:: python
+Thin transits and the automatic duration domain
+-----------------------------------------------
 
-    from cuvarbase.tls import tls_transit
+Omitting duration controls selects the broad native GTLS duration grid. There
+is no phase-bin cap and no default half-central-duration cutoff. Narrow
+transits therefore do not require a separate accuracy preset.
 
-    results = tls_transit(t, y, dy, R_star=1.0, M_star=1.0)
+The numerical search remains a GTLS-style sample-window/template search. It is
+not an exposure-integrated physical fit to arbitrary irregular sampling. The
+usual limits shared with GTLS remain: a transit must be sampled, lie inside the
+period/template domain, and have sufficient signal relative to noise. The
+validation compares implementations on the same data and search domain; it
+cannot promise that either algorithm detects every physical transit.
 
-Searching many lightcurves (surveys)
-------------------------------------
+Optional controls change the scientific search:
 
-:func:`cuvarbase.tls.tls_search_batch` is the survey entry point: all
-lightcurves share one trial-period grid and are searched together with
-a small number of kernel launches, which is what the fast path is
-optimized for.
+* ``duration_grid_step=1.1`` sets the native duration-grid spacing.
+* Scalar or aligned ``qmin`` and ``qmax`` explicitly replace the duration domain.
+  They mean nominal duration/period. Their bounds are honored per period,
+  including during refinement, independently of GPU workspace chunks.
+* ``duration_window='keplerian'`` explicitly selects the older stellar-duration
+  prior, with default factors 0.5 and 2.0. Use it only when that prior is intended.
+* ``n_durations`` with an explicit window sets a minimum geometric density;
+  additional admissible integer sample widths can be shared across periods.
+* ``u``, ``limb_dark`` and ``transit_template`` configure the native template.
+  Template choices are ``'default'``, ``'grazing'`` and ``'box'``.
+
+Surveys
+-------
 
 .. code-block:: python
 
     from cuvarbase.tls import tls_search_batch
 
-    lightcurves = [(t1, y1, dy1), (t2, y2, dy2), ...]
     results = tls_search_batch(lightcurves,
                                period_min=0.5, period_max=15.0)
 
-    for r in results:
-        print(r['period'], r['SDE'], r['T0'])
+Each light curve is a ``(t, flux, flux_error)`` tuple. The standard batch wrapper
+processes curves sequentially while parallelizing each period search on the
+GPU and reusing bounded scan plans. The longest input baseline determines the
+shared automatic grid. Pass ``periods`` to fix it explicitly.
+``return_arrays=True`` includes every period spectrum. ``work_chunk=256`` sets
+an upper limit on periods in a physical workspace; it changes allocation and
+runtime while retaining the duration and epoch trial policies. The native
+floating-point scans do not guarantee bitwise repeatability on every input;
+the `numerical accuracy guide
+<https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TLS_NUMERICS.md>`_
+records that shared limit.
 
-Each result dict carries the best-fit parameters (``period``,
-``period_uncertainty``, ``T0`` — the absolute time of the first
-mid-transit at or after ``min(t)`` — ``t0_phase``, ``duration``,
-``depth``, ``chi2_min``) and the detection statistics (``SDE``,
-``SDE_raw``, ``SNR``, ``n_transits``). Pass ``return_arrays=True`` to
-also get the per-period :math:`\chi^2` spectrum and derived quantities.
-A lightcurve with no valid solution at any trial period (flat or
-noiseless flux) gets ``SDE = 0``, NaN best-fit parameters and the
-message under ``'error'``, with a warning.
+The estimated workspace budget is the smaller of 512 MiB and one quarter
+of free device memory. If one period's full preparation exceeds that budget,
+the call raises ``MemoryError``; reducing ``work_chunk`` cannot solve that
+single-period case. Memory limits never silently narrow the duration search.
 
-Detection statistics and refinement
------------------------------------
+Results and significance
+------------------------
 
-**SDE.** The signal residue is :math:`\mathrm{SR} = \chi^2_{\min} /
-\chi^2` (1 at the best trial period), and
+Results include ``period``, ``period_uncertainty``, ``T0``, ``t0_phase``,
+``duration``, ``depth``, ``chi2_min``, ``SDE``, ``SDE_raw``, ``SNR`` and
+``n_transits``. ``search_configuration`` records the numerical policy.
 
-.. math::
+SDE follows the native GTLS arithmetic and full refinement policy. Invalid
+masked/nonfinite candidates are excluded before ranking; this corrects a native
+host-mask defect without changing the template or its resolution. The coarse
+scan uses its epoch stride; the top-ranked candidates and harmonics are searched
+at every sample start and their residuals enter the final detection spectrum.
+``full=False`` explicitly selects GTLS's fast-mode detection policy. cuvarbase
+additionally fits the selected winner to supply its parameter-result contract;
+public GTLS fast mode returns only the coarse periodogram.
 
-    \mathrm{SDE}_{\rm raw} = \frac{1 - \langle \mathrm{SR} \rangle}
-    {\sigma(\mathrm{SR})}, \qquad
-    \mathrm{SDE} = \frac{\max(D) - \langle D \rangle}{\sigma(D)},
-    \quad D = \mathrm{SR} - \mathrm{runmed}(\mathrm{SR}),
+The default SDE median window derives from ``30 * oversampling_factor`` and
+must have an integer width. For other fractional factors, supply an explicit
+positive integer ``sde_kernel_size``; even widths are increased by one. Such
+an override changes the detection statistic, so use the same setting for
+observed and null searches.
 
-with an edge-extended running median of 91 points (``sde_kernel_size``;
-length-scaled below 910 periods). These are exactly the statistics of
-the reference ``transitleastsquares`` package, so its published SDE
-thresholds apply to cuvarbase's numbers. (Before 1.0 the SR was
-:math:`1 - \chi^2/\max\chi^2`, which agrees under the null but gave
-about half the SDE for strong signals, and the running median was
-zero-padded, which inflated the detrended power at the grid edges.)
+SNR retains cuvarbase's definition, the square root of the nonnegative
+improvement in chi-squared over the fixed baseline, in the supplied uncertainty
+units. It is different from GTLS's historically reported SNR formula. Compare
+detection decisions using the full period spectrum and a common detection rule,
+not equality of differently defined scalar SNR fields.
 
-**SNR** is :math:`\sqrt{\chi^2_0 - \chi^2_{\min}}`, the
-delta-chi-squared significance of the best fit over the constant model
-(``chi2_min`` from the exact refinement); it is not the reference's
-``depth / std * sqrt(n_in_transit)``.
+SDE summarizes the full detection spectrum; ``period``, ``T0`` and ``SNR``
+describe the selected full-stage fit. Native harmonic selection can make
+these correspond to different peaks.
 
-**There is no calibrated FAP.** The SDE is a contrast statistic whose
-null distribution moves with the number of trial periods and the
-baseline: for pure noise the audit measured a mean of 6.4 and std 1.0
-(6157 periods, 60 d), with 23% of noise-only lightcurves above SDE = 7,
-and 92% above 7 at 365 d with 43,780 periods; the reference package's
-fixed SDE-to-FAP table is miscalibrated for the same reason. Before 1.0
-every result carried a ``'FAP'`` computed from a fixed function of the
-SDE; that key is gone. For an honest number use the opt-in null
-bootstrap of :func:`cuvarbase.tls.tls_search_batch`:
+Per-period duration, depth and epoch arrays describe nominal sample-window
+search diagnostics. On an irregular cadence, the native final duration/T0
+estimator can differ from these nominal values. ``parameter_valid_periods``
+distinguishes fitted windows from skipped/gated numerical sentinels;
+``n_masked_periods`` counts periods excluded by the spectrum mask.
+A degenerate spectrum returns SDE=SNR=0, NaN fitted parameters and an ``error``.
+If only the final physical-duration estimator fails, the selected period and
+spectrum remain available with ``parameter_error`` and NaN duration/T0.
+
+SDE is not a universal false-alarm probability. An optional white-noise
+permutation calibration runs the same complete search on every null:
 
 .. code-block:: python
 
     results = tls_search_batch(lightcurves, periods=periods,
                                fap_null_draws=200, fap_seed=1)
-    r = results[0]
-    r['FAP']       # (1 + #null SDE >= observed) / (fap_null_draws + 1)
-    r['SDE_null']  # the null SDEs, for choosing your own threshold
+    results[0]['FAP']
+    results[0]['SDE_null']
 
-The bootstrap is batch-only: ``tls_search``, ``tls_search_gpu`` and
-``tls_transit`` raise ``TypeError`` on ``fap_null_draws``/``fap_seed``
-(or any other unknown keyword) rather than silently ignoring them.
-Each draw permutes a lightcurve's (y, dy) pairs over its times (a
-white-noise null: same sampling and noise distribution, no coherent
-signal, no red noise) and searches the identical grid with the same
-settings; 400 such searches of 2880 points x 6157 periods took 1.6 s
-on an A40. The smallest resolvable FAP is ``1 / (fap_null_draws + 1)``.
+The add-one estimator is ``(1 + n_exceed) / (1 + fap_null_draws)``. Permuting the
+flux/error pairs preserves sampling and the marginal error distribution but
+destroys correlated noise. This is not a systematics model. FAP controls are
+available only on the batch wrapper.
 
-**Refinement.** The per-period spectrum that feeds the SDE comes from
-the *coarse* phase-binned scan at uniform fidelity. The exact
-refinement pass only sharpens the reported best-fit parameters (period
-choice among the top candidates, ``T0``, ``duration``, ``depth``,
-``chi2_min``) — refined :math:`\chi^2` values are never mixed into the
-spectrum. A finer trial grid digs deeper minima *everywhere, noise
-included*, so refining only the peak would inflate the SDE; keeping the
-spectrum uniform preserves the statistic's scale. Consequently
-``chi2_min`` can sit slightly below the minimum of the returned
-spectrum — that is by design.
+Older engines
+-------------
 
-Tuning
-------
+``method='binned'`` explicitly selects the earlier phase-binned batch engine.
+It accepts ``nbins``, ``block_size``, ``t0_oversample``, ``n_durations``,
+``refine_top_k`` and ``refine_oversample``. Its coarse statistic approximates
+the observation-level search; its sensitivity limits and historical large
+speed ratios apply only to that engine. See the `binned-engine audit
+<https://github.com/johnh2o2/cuvarbase/tree/v1.0-fixes/benchmarks/results/tls_accuracy_2026-09-09>`_.
 
-``t0_oversample`` (default 3)
-    Trial epochs per transit duration in the coarse scan. The default
-    favors speed. Finer sampling can improve the response to narrow
-    transits and increases the search work. Exact refinement sharpens
-    selected candidates but does not enter the SDE spectrum or recover
-    a period missed by the coarse candidate selection. Choose this
-    setting using independent injections and null calibration for the
-    intended cadence; neither a particular oversampling value nor a
-    close SDE match guarantees comparable sensitivity.
-``refine_top_k`` (default 50) / ``refine_oversample`` (default 33)
-    How many candidate periods per lightcurve are re-fit exactly, and
-    the epoch resolution of that re-fit.
-``n_durations`` (default 15)
-    Log-spaced trial durations per period within the (Keplerian or
-    fixed) duration window.
-``nbins`` / ``block_size``
-    Phase-bin and CUDA block-size overrides. By default the period
-    grid is split into bands that each compile with their own bin
-    count (long-period bands generally need more bins), sized to the
-    narrowest allowed duration and capped by the device's shared-memory
-    limit. Finer bins preserve more phase information, but cannot repair
-    an unsuitable duration window or an inadequately sampled epoch grid.
+``method='legacy'`` on the single-curve wrapper selects the old shared-memory
+per-observation kernel, including its light-curve-length limit and low-level
+memory/stream controls. The deprecated ``use_fast`` keyword selects these older
+engines: True means binned and False means legacy.
 
 References
 ----------
 
-.. [HH2019] Hippke & Heller (2019), "Optimized transit detection
-    algorithm to search for periodic transits of small planets", A&A
-    623, A39
-
-.. [Ofir2014] Ofir (2014), "Optimizing the search for transiting
-    planets in long time series", A&A 561, A138
+* Hippke & Heller (2019), A&A 623, A39, `Transit Least Squares
+  <https://doi.org/10.1051/0004-6361/201834672>`_.
+* Ofir (2014), A&A 561, A138, `Optimizing the search for transiting planets
+  <https://doi.org/10.1051/0004-6361/201220860>`_.
+* `Pinned GTLS implementation
+  <https://github.com/Farthing-0/GTLS/tree/74e449c325792a763dde4fbffab98039c5e8c111>`_.

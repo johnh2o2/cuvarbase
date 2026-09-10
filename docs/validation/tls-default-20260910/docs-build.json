@@ -1,0 +1,16 @@
+{
+  "status": "pass_with_expected_gpu_plot_warnings",
+  "command": [
+    "python",
+    "-m",
+    "sphinx",
+    "-b",
+    "html",
+    "docs/source",
+    "docs/build/html"
+  ],
+  "warning_count": 5,
+  "all_warnings": "GPU plot directives cannot import PyCUDA on this CPU-only documentation host. No other build warnings.",
+  "build_log_sha256": "017b53cc29e448926f57606c11876041d6734c99dd80c285f0aff6be60028dd2",
+  "warnings_sha256": "65ffe55c1731ac952633bebaac604961886f63328ce5568a2435b4897e329895"
+}

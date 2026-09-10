@@ -1,0 +1,53 @@
+/Users/johnhoffman/Documents/cuvarbase/docs/source/bls.rst:20: WARNING: Exception occurred in plotting bls_example
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/plots/bls_example.py:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 1, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/bls.py", line 19, in <module>
+    import pycuda.driver as cuda
+ModuleNotFoundError: No module named 'pycuda'
+/Users/johnhoffman/Documents/cuvarbase/docs/source/bls.rst:75: WARNING: Exception occurred in plotting bls_example_transit
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/plots/bls_example_transit.py:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 1, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/bls.py", line 19, in <module>
+    import pycuda.driver as cuda
+ModuleNotFoundError: No module named 'pycuda'
+/Users/johnhoffman/Documents/cuvarbase/docs/source/ce.rst:47: WARNING: Exception occurred in plotting ce_example
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/plots/ce_example.py:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 1, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/ce.py", line 16, in <module>
+    import pycuda.driver as cuda
+ModuleNotFoundError: No module named 'pycuda'
+/Users/johnhoffman/Documents/cuvarbase/docs/source/lomb.rst:241: WARNING: Exception occurred in plotting lomb-1
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/lomb.rst:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 12, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/lombscargle.py", line 943, in __init__
+    super(LombScargleAsyncProcess, self).__init__(*args, **kwargs)
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/base/async_process.py", line 21, in __init__
+    ensure_context()
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/base/context.py", line 38, in ensure_context
+    import pycuda.autoprimaryctx as autoctx
+ModuleNotFoundError: No module named 'pycuda'
+/Users/johnhoffman/Documents/cuvarbase/docs/source/lomb.rst:282: WARNING: Exception occurred in plotting lomb-2
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/lomb.rst:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 18, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/lombscargle.py", line 943, in __init__
+    super(LombScargleAsyncProcess, self).__init__(*args, **kwargs)
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/base/async_process.py", line 21, in __init__
+    ensure_context()
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/base/context.py", line 38, in ensure_context
+    import pycuda.autoprimaryctx as autoctx
+ModuleNotFoundError: No module named 'pycuda'

@@ -1,0 +1,46 @@
+........................................................................ [ 27%]
+........................................................................ [ 54%]
+........................................................................ [ 81%]
+.................................................                        [100%]
+=============================== warnings summary ===============================
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_dy_none_rejected_on_every_entry_point
+  /workspace/tls-default/candidate/cuvarbase/tests/test_tls_basic.py:1646: FutureWarning: use_fast selects an older TLS engine; use method='legacy' explicitly. The default observation-level engine is method='reference'.
+    tls.tls_search_gpu(t, y, None, periods=periods, use_fast=False)
+
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[1-True]
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[0-True]
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[-3-True]
+  /workspace/tls-default/candidate/cuvarbase/tests/test_tls_basic.py:1665: FutureWarning: use_fast selects an older TLS engine; use method='binned' explicitly. The default observation-level engine is method='reference'.
+    tls.tls_search_gpu(t, y, dy, periods=np.array([2.0, 3.0]),
+
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[1-False]
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[0-False]
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[-3-False]
+  /workspace/tls-default/candidate/cuvarbase/tests/test_tls_basic.py:1665: FutureWarning: use_fast selects an older TLS engine; use method='legacy' explicitly. The default observation-level engine is method='reference'.
+    tls.tls_search_gpu(t, y, dy, periods=np.array([2.0, 3.0]),
+
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_must_be_an_integer
+  /workspace/tls-default/candidate/cuvarbase/tests/test_tls_basic.py:1672: FutureWarning: use_fast selects an older TLS engine; use method='legacy' explicitly. The default observation-level engine is method='reference'.
+    tls.tls_search_gpu(t, y, dy, periods=np.array([2.0, 3.0]),
+
+cuvarbase/tests/test_tls_fast.py::TestDurationWindowDefault::test_fixed_window_optin_warns_and_default_does_not
+  /workspace/tls-default/modern/lib/python3.11/site-packages/_pytest/unraisableexception.py:67: PytestUnraisableExceptionWarning: Exception ignored in: <_io.FileIO name='/workspace/tls-default/candidate/cuvarbase/kernels/tls_fast.cu' mode='rb' closefd=True>
+  
+  Traceback (most recent call last):
+    File "/workspace/tls-default/candidate/cuvarbase/utils.py", line 308, in _module_reader
+      txt = open(fname, 'r').read()
+            ^^^^^^^^^^^^^^^^^^^^^^^
+  ResourceWarning: unclosed file <_io.TextIOWrapper name='/workspace/tls-default/candidate/cuvarbase/kernels/tls_fast.cu' mode='r' encoding='utf-8'>
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))
+
+cuvarbase/tests/test_tls_golden.py::TestGoldenVsTransitLeastSquares::test_recovery_matches_reference[3.0-0.04-0.01]
+cuvarbase/tests/test_tls_golden.py::TestGoldenVsTransitLeastSquares::test_recovery_matches_reference[12.0-0.014-0.012]
+cuvarbase/tests/test_tls_golden.py::TestSDEParityWithReference::test_strong_signal_sde_matches_reference
+  /workspace/tls-default/modern/lib/python3.11/site-packages/transitleastsquares/stats.py:458: RuntimeWarning: divide by zero encountered in scalar divide
+    snr_pink_per_transit[i] = (1 - mean_flux) / pinknoise
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+265 passed, 12 warnings in 13.94s

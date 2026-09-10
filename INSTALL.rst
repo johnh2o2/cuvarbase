@@ -1,6 +1,11 @@
 Install instructions
 ********************
 
+These instructions describe the v1 candidate on ``v1.0-fixes``. As of
+10 September 2026, `PyPI <https://pypi.org/project/cuvarbase/>`_ still provides
+0.2.5, which has no TLS implementation. The commands below install the candidate
+from its Git branch.
+
 Requirements
 ------------
 
@@ -29,39 +34,54 @@ In a fresh virtual environment (venv or conda, Python 3.9+):
 
 .. code:: bash
 
-    pip install cuvarbase
+    pip install 'cuvarbase @ git+https://github.com/johnh2o2/cuvarbase@v1.0-fixes'
 
-That's it. numpy, scipy and pycuda are installed automatically (astropy is only needed by the test suite). PyCUDA builds against your CUDA toolkit during installation, so the environment variables above must be set first — ``pip install cuvarbase`` cannot succeed on a machine without the CUDA toolkit.
+numpy, scipy and pycuda are installed automatically (astropy is only needed by the test suite). PyCUDA builds against your CUDA toolkit during installation, so set the environment variables above first. See *GPU-less installs* for the path without CUDA dependencies.
 
 Optional extras:
 
 .. code:: bash
 
-    pip install cuvarbase[cufinufft]     # optional cuFINUFFT backend for Lomb-Scargle
-    pip install cuvarbase[test]          # test-suite dependencies (pytest, nfft, astropy,
-                                         # batman-package, transitleastsquares)
-    pip install -r docs/requirements.txt # Sphinx + matplotlib, to build the documentation
+    pip install 'cuvarbase[tls] @ git+https://github.com/johnh2o2/cuvarbase@v1.0-fixes'
+    pip install 'cuvarbase[cufinufft] @ git+https://github.com/johnh2o2/cuvarbase@v1.0-fixes'
+    pip install 'cuvarbase[test] @ git+https://github.com/johnh2o2/cuvarbase@v1.0-fixes'
 
-``batman-package`` (part of the ``test`` extra) enables limb-darkened TLS templates; without it TLS falls back to a trapezoid template with a warning.
+``tls`` installs the standard TLS dependencies; ``cufinufft`` enables the optional
+cuFINUFFT Lomb-Scargle backend; ``test`` supplies pytest, nfft, astropy, batman and
+transitleastsquares. In a checkout, ``pip install -r docs/requirements.txt``
+installs Sphinx and matplotlib for building the documentation.
+
+The standard TLS engine requires both CuPy and ``batman-package`` and does not
+substitute an approximate template when either is absent. The ``tls`` extra
+uses CuPy 13 and supports Python 3.9–3.13; the current GPU validation uses
+Python 3.11, CuPy 13.6 and CUDA 12.4. For a different CUDA runtime, install its
+matching CuPy 13 wheel and ``batman-package`` separately (only one CuPy
+distribution per environment). See the `CuPy installation guide
+<https://docs.cupy.dev/en/v13.6.0/install.html>`_.
+
+``method='binned'`` keeps the earlier TLS engine and its optional analytic
+template fallback. For GPU testing of all engines, install ``.[test,tls]``.
 
 Installing from source
 ----------------------
 
 .. code:: bash
 
-    git clone https://github.com/johnh2o2/cuvarbase
+    git clone --branch v1.0-fixes https://github.com/johnh2o2/cuvarbase
     cd cuvarbase
     pip install -e .
 
 GPU-less installs
 -----------------
 
-Because ``pip install cuvarbase`` builds pycuda against the CUDA toolkit, it fails on a machine without one. To use the pure helpers (frequency grids, TLS duration grids and statistics, ``check_lightcurve``, ...) on such a machine, skip the dependency resolution:
+To use the pure helpers (frequency grids, TLS duration grids and statistics,
+``check_lightcurve``, ...) without installing CUDA dependencies, skip dependency
+resolution:
 
 .. code:: bash
 
     pip install numpy scipy
-    pip install --no-deps cuvarbase
+    pip install --no-deps 'cuvarbase @ git+https://github.com/johnh2o2/cuvarbase@v1.0-fixes'
 
 ``import cuvarbase`` and the pure modules listed under *Requirements* then work; importing a method module (``cuvarbase.bls``, ``cuvarbase.lombscargle``, ...) raises ``ImportError`` because pycuda is absent. The test suite ships its own pycuda stub (``cuvarbase/tests/conftest.py``), so ``pytest --pyargs cuvarbase`` also runs on such a machine: the CPU tests pass and the GPU tests skip.
 
@@ -77,7 +97,7 @@ For a real end-to-end check on a GPU machine, install the test extra and run the
 
 .. code:: bash
 
-    pip install cuvarbase[test]
+    pip install 'cuvarbase[test] @ git+https://github.com/johnh2o2/cuvarbase@v1.0-fixes'
     pytest --pyargs cuvarbase
 
 Troubleshooting

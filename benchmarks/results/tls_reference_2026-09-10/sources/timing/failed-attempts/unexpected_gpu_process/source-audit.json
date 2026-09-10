@@ -1,0 +1,460 @@
+{
+  "created_utc": "2026-09-10T18:34:36.375256+00:00",
+  "scope": "Read-only audit; no measurements or numerical gates changed",
+  "conclusion": "Unexplained additional GPU PID appeared across native4 preflight; retain exclusivity rejection and retry unchanged campaign on fresh allocation.",
+  "scientific_failure": false,
+  "headline_repetitions_executed": 0,
+  "component_measurements_executed": 0,
+  "preflight_rows": {
+    "candidate_1worker": {
+      "status": "ok",
+      "ownership_passed": true,
+      "host_pids": [
+        1574147
+      ],
+      "owned_worker_pids": [
+        1163
+      ],
+      "before_start": {
+        "allowed_pids": [],
+        "observed_pids": [],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409179.870186675,
+        "utc": 1789064995.6278615
+      },
+      "warmup_before": {
+        "allowed_pids": [
+          1574147
+        ],
+        "observed_pids": [
+          1574147
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409180.829496335,
+        "utc": 1789064996.5871701
+      },
+      "warmup_after": {
+        "allowed_pids": [
+          1574147
+        ],
+        "observed_pids": [
+          1574147
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409182.552831028,
+        "utc": 1789064998.3105052
+      },
+      "run_before": {
+        "allowed_pids": [
+          1574147
+        ],
+        "observed_pids": [
+          1574147
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409182.563498065,
+        "utc": 1789064998.321172
+      },
+      "run_after": {
+        "allowed_pids": [
+          1574147
+        ],
+        "observed_pids": [
+          1574147
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409183.244821368,
+        "utc": 1789064999.0024955
+      },
+      "after_exit": {
+        "allowed_pids": [],
+        "observed_pids": [],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409183.479187274,
+        "utc": 1789064999.2368615
+      },
+      "worker_exits": [
+        {
+          "worker_pid": 1163,
+          "exit_code": 0,
+          "alive": false,
+          "forced": false
+        }
+      ],
+      "all_returned_cases_match_frozen_strict": true,
+      "returned_cases": 4
+    },
+    "gtls_1worker": {
+      "status": "ok",
+      "ownership_passed": true,
+      "host_pids": [
+        1574224
+      ],
+      "owned_worker_pids": [
+        1181
+      ],
+      "before_start": {
+        "allowed_pids": [],
+        "observed_pids": [],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409183.489711488,
+        "utc": 1789064999.2473853
+      },
+      "warmup_before": {
+        "allowed_pids": [
+          1574224
+        ],
+        "observed_pids": [
+          1574224
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409184.780755345,
+        "utc": 1789065000.5384293
+      },
+      "warmup_after": {
+        "allowed_pids": [
+          1574224
+        ],
+        "observed_pids": [
+          1574224
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409188.0655644,
+        "utc": 1789065003.8232386
+      },
+      "run_before": {
+        "allowed_pids": [
+          1574224
+        ],
+        "observed_pids": [
+          1574224
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409188.095978187,
+        "utc": 1789065003.8536518
+      },
+      "run_after": {
+        "allowed_pids": [
+          1574224
+        ],
+        "observed_pids": [
+          1574224
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409190.388494913,
+        "utc": 1789065006.1461692
+      },
+      "after_exit": {
+        "allowed_pids": [],
+        "observed_pids": [],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409190.720827252,
+        "utc": 1789065006.478501
+      },
+      "worker_exits": [
+        {
+          "worker_pid": 1181,
+          "exit_code": 0,
+          "alive": false,
+          "forced": false
+        }
+      ],
+      "all_returned_cases_match_frozen_strict": true,
+      "returned_cases": 4
+    },
+    "gtls_2worker": {
+      "status": "ok",
+      "ownership_passed": true,
+      "host_pids": [
+        1575905,
+        1575906
+      ],
+      "owned_worker_pids": [
+        1233,
+        1234
+      ],
+      "before_start": {
+        "allowed_pids": [],
+        "observed_pids": [],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409190.75136614,
+        "utc": 1789065006.5090399
+      },
+      "warmup_before": {
+        "allowed_pids": [
+          1575905,
+          1575906
+        ],
+        "observed_pids": [
+          1575905,
+          1575906
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409192.2992915,
+        "utc": 1789065008.0569656
+      },
+      "warmup_after": {
+        "allowed_pids": [
+          1575905,
+          1575906
+        ],
+        "observed_pids": [
+          1575905,
+          1575906
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409193.352190629,
+        "utc": 1789065009.1098654
+      },
+      "run_before": {
+        "allowed_pids": [
+          1575905,
+          1575906
+        ],
+        "observed_pids": [
+          1575905,
+          1575906
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409193.384014525,
+        "utc": 1789065009.1416883
+      },
+      "run_after": {
+        "allowed_pids": [
+          1575905,
+          1575906
+        ],
+        "observed_pids": [
+          1575905,
+          1575906
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409195.110669306,
+        "utc": 1789065010.8683436
+      },
+      "after_exit": {
+        "allowed_pids": [],
+        "observed_pids": [],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409195.537877632,
+        "utc": 1789065011.295552
+      },
+      "worker_exits": [
+        {
+          "worker_pid": 1233,
+          "exit_code": 0,
+          "alive": false,
+          "forced": false
+        },
+        {
+          "worker_pid": 1234,
+          "exit_code": 0,
+          "alive": false,
+          "forced": false
+        }
+      ],
+      "all_returned_cases_match_frozen_strict": true,
+      "returned_cases": 4
+    },
+    "gtls_4worker": {
+      "status": "ownership_failure",
+      "ownership_passed": false,
+      "host_pids": [
+        1576405,
+        1576406,
+        1576407,
+        1576408
+      ],
+      "owned_worker_pids": [
+        1265,
+        1266,
+        1267,
+        1268
+      ],
+      "before_start": {
+        "allowed_pids": [],
+        "observed_pids": [],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409195.572341656,
+        "utc": 1789065011.3300154
+      },
+      "warmup_before": {
+        "allowed_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408
+        ],
+        "observed_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409197.236563312,
+        "utc": 1789065012.994237
+      },
+      "warmup_after": {
+        "allowed_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408
+        ],
+        "observed_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409199.546509445,
+        "utc": 1789065015.3041835
+      },
+      "run_before": {
+        "allowed_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408
+        ],
+        "observed_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408
+        ],
+        "foreign_pids": [],
+        "missing_pids": [],
+        "exclusive": true,
+        "monotonic": 14409199.557907924,
+        "utc": 1789065015.3155818
+      },
+      "run_after": {
+        "allowed_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408
+        ],
+        "observed_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408,
+          1576794
+        ],
+        "foreign_pids": [
+          1576794
+        ],
+        "missing_pids": [],
+        "exclusive": false,
+        "monotonic": 14409201.078556009,
+        "utc": 1789065016.8362315
+      },
+      "after_exit": {
+        "allowed_pids": [],
+        "observed_pids": [
+          1576794
+        ],
+        "foreign_pids": [
+          1576794
+        ],
+        "missing_pids": [],
+        "exclusive": false,
+        "monotonic": 14409201.628121415,
+        "utc": 1789065017.3857958
+      },
+      "worker_exits": [
+        {
+          "worker_pid": 1265,
+          "exit_code": 0,
+          "alive": false,
+          "forced": false
+        },
+        {
+          "worker_pid": 1266,
+          "exit_code": 0,
+          "alive": false,
+          "forced": false
+        },
+        {
+          "worker_pid": 1267,
+          "exit_code": 0,
+          "alive": false,
+          "forced": false
+        },
+        {
+          "worker_pid": 1268,
+          "exit_code": 0,
+          "alive": false,
+          "forced": false
+        }
+      ],
+      "all_returned_cases_match_frozen_strict": true,
+      "returned_cases": 4
+    }
+  },
+  "source_audit": {
+    "GTLS_internal_gpu_subprocesses": "Only under search_multi_periods_multiGPU; main.power requires GPUDeviceIDs non-None and length>1. Frozen search kwargs omit GPUDeviceIDs, validate.py defaults None, so that branch is inactive.",
+    "harness_children": "Only explicit spawn Process objects; no replacement workers or spawned GPU processes on cleanup. CUDA fingerprint validation remains inside those same children. Pool cleanup addresses only its owned Process objects.",
+    "bootstrap": "Only CPU data/source validation and child pipeline supervision during execution; setup hardware query ended before timing.",
+    "device": "Recorded nvidia-smi XML exposes exactly one A6000, UUID GPU-f7ecce75-13ba-2421-d347-0e3495fc91a5, physical minor3. Both backends select CuPy device0; checker uses NVML index0. Successful prior pool birth/exit observations are consistent with the same device, but no direct per-worker CUDA/NVML UUID pair was archived."
+  },
+  "limits": [
+    "NVML snapshots retain PIDs but not process names or parentage; the source of PID1576794 is unestablished.",
+    "Preflight had no1Hz Monitor; exact boundary snapshots are the retained process telemetry.",
+    "Complete API results on the rejected call do not make its elapsed time an eligible benchmark denominator."
+  ],
+  "evidence": {
+    "timing/preflight.json": "7308d33a6076c7e012597e2fe5e2cd7962fe0822a947e4f979017ce3b70d10bb",
+    "timing/prepared.json": "54d5296134e60b6d00ef0fc47f7b90147a3b6a5971c544154896b958e1ecd125",
+    "timing/terminal.json": "885500e74f29f58fa53ef2319dcc9e4d31ef5310db52228678d5228a9d127bf0",
+    "timing/logs/preflight.log": "86ba7376b7ee487699b6ed33cc24d07cd305cf054d90bb189f9c72c1fdaf2367",
+    "environment/gpu.xml": "2e842885c98c4ad47ef7e7d423735c64df35f80b4b90e7076fe7e14064a52df0",
+    "environment/runtime.json": "1b1dc0dd38a9a290f1854598d97f91fc457448cb2c40b8931706b9dd94dbd404"
+  }
+}

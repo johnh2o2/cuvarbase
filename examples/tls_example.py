@@ -8,7 +8,8 @@ implementation to detect planetary transits in photometric time series.
 Requirements:
 - PyCUDA
 - NumPy
-- batman-package (optional, for generating synthetic transits)
+- CuPy and batman-package (install cuvarbase[tls] for CUDA 12)
+- matplotlib (for the example plot)
 """
 
 import numpy as np
@@ -17,18 +18,20 @@ import matplotlib.pyplot as plt
 # Check if we can import TLS modules
 try:
     from cuvarbase import tls_grids, tls_models, tls
+    import cupy  # Standard TLS dependency; this does not initialize a GPU.
     TLS_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: Could not import TLS modules: {e}")
     TLS_AVAILABLE = False
 
-# Check if batman is available for generating synthetic data
+# Batman supplies both the search template and the synthetic signal.
 try:
     import batman
     BATMAN_AVAILABLE = True
 except ImportError:
     BATMAN_AVAILABLE = False
-    print("batman-package not available. Using simple synthetic transit.")
+    TLS_AVAILABLE = False
+    print("Standard TLS requires batman-package; install cuvarbase[tls].")
 
 
 def generate_synthetic_transit(period=10.0, depth=0.01, duration=0.1,
@@ -65,29 +68,22 @@ def generate_synthetic_transit(period=10.0, depth=0.01, duration=0.1,
     # Start with flat light curve
     y = np.ones(ndata)
 
-    if BATMAN_AVAILABLE:
-        # Use Batman for realistic transit
-        params = batman.TransitParams()
-        params.t0 = t0
-        params.per = period
-        params.rp = np.sqrt(depth)  # Radius ratio
-        params.a = 15.0  # Semi-major axis
-        params.inc = 90.0  # Edge-on
-        params.ecc = 0.0
-        params.w = 90.0
-        params.limb_dark = "quadratic"
-        params.u = [0.4804, 0.1867]
+    if not BATMAN_AVAILABLE:
+        raise ImportError('This example requires batman-package (cuvarbase[tls])')
+    # Use Batman for realistic transit
+    params = batman.TransitParams()
+    params.t0 = t0
+    params.per = period
+    params.rp = np.sqrt(depth)  # Radius ratio
+    params.a = 15.0  # Semi-major axis
+    params.inc = 90.0  # Edge-on
+    params.ecc = 0.0
+    params.w = 90.0
+    params.limb_dark = "quadratic"
+    params.u = [0.4804, 0.1867]
 
-        m = batman.TransitModel(params, t)
-        y = m.light_curve(params)
-    else:
-        # Simple box transit
-        phases = (t % period) / period
-        duration_phase = duration / period
-
-        # Transit at phase 0
-        in_transit = (phases < duration_phase / 2) | (phases > 1 - duration_phase / 2)
-        y[in_transit] -= depth
+    m = batman.TransitModel(params, t)
+    y = m.light_curve(params)
 
     # Add noise
     noise = np.random.normal(0, noise_level, ndata)
@@ -160,7 +156,7 @@ def run_tls_example(use_gpu=True):
             print("   ✓ GPU search completed")
         except Exception as e:
             print(f"   ✗ GPU search failed: {e}")
-            print("   Tip: Make sure you have a CUDA-capable GPU and PyCUDA installed")
+            print("   Tip: Use a CUDA-capable GPU and install cuvarbase[tls] for CUDA 12")
             return
     else:
         print("   CPU implementation not yet available")

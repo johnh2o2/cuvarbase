@@ -1,0 +1,131 @@
+{
+  "classification": "development numerical stress and fixed-noise controls",
+  "total_cases": 25,
+  "backend_records": 75,
+  "input_file_hashes_verified": true,
+  "retained_npz_and_all_array_digests_verified": 63,
+  "uncollected_retained_outputs": [
+    {
+      "name": "dense_long_solar_snr20",
+      "backend": "gtls",
+      "original_record_sha256": "0645669214640b1f6da93ed6e88f1f91b783aa98c7fb4b146e9e754d8ffcda58",
+      "arrays_file_sha256": "84f63745461634d0a20db68ec70f1ed6c1eec5e68739c41fd6abd1f23e49f439"
+    },
+    {
+      "name": "dense_long_solar_snr20",
+      "backend": "gtls_corrected",
+      "original_record_sha256": "29af732d8b621793a7b05a2be9312fe8a09df9def9001f8a4265dd0a3c58ca56",
+      "arrays_file_sha256": "ad6f320b1c6c9da8e3fbe6b573a02a21ede888337586fbaebe39054023f3fd90"
+    },
+    {
+      "name": "dense_long_solar_snr20",
+      "backend": "candidate",
+      "original_record_sha256": "ef7e452fd36237ac54b1da696a40d5eeec31f514e411eba5075ebde2cdeb2e7a",
+      "arrays_file_sha256": "608c5a01b0be16d745640864661ad58f7337244dda629c7606c01b982d836597"
+    }
+  ],
+  "compacted_result_fields": [
+    {
+      "name": "cleaning_edges",
+      "backend": "gtls",
+      "field": "result.final_fit.transit_times",
+      "identity": {
+        "dtype": "float64",
+        "shape": [
+          534984
+        ],
+        "sha256": "314efe80e5b0d56b26e4800fef5e461f70f6227b15f566d2d79c15cbcf9acb3d",
+        "original_json_value_sha256": "600f3c9417f8859a03d19a1f0db5c90acdb407c75b8abdfcfe6724811e3eca1a",
+        "representation": "Float64 numerical identity; original list values omitted from compact publication"
+      }
+    },
+    {
+      "name": "cleaning_edges",
+      "backend": "gtls_corrected",
+      "field": "result.final_fit.transit_times",
+      "identity": {
+        "dtype": "float64",
+        "shape": [
+          534984
+        ],
+        "sha256": "314efe80e5b0d56b26e4800fef5e461f70f6227b15f566d2d79c15cbcf9acb3d",
+        "original_json_value_sha256": "600f3c9417f8859a03d19a1f0db5c90acdb407c75b8abdfcfe6724811e3eca1a",
+        "representation": "Float64 numerical identity; original list values omitted from compact publication"
+      }
+    }
+  ],
+  "controls_collection_index_sha256": "eed4bfe3343179ec99cf82e3a922f856bf2c8a90aa86db4903e41383e6b77088",
+  "corrected_pairs": 19,
+  "literal_pairs": 17,
+  "exceptions": [
+    {
+      "name": "flat",
+      "statuses": {
+        "gtls": "ok",
+        "gtls_corrected": "error",
+        "candidate": "ok"
+      }
+    },
+    {
+      "name": "cleaning_edges",
+      "statuses": {
+        "gtls": "ok",
+        "gtls_corrected": "ok",
+        "candidate": "error"
+      }
+    },
+    {
+      "name": "long_solar",
+      "statuses": {
+        "gtls": "error",
+        "gtls_corrected": "error",
+        "candidate": "ok"
+      }
+    },
+    {
+      "name": "long_dense_m",
+      "statuses": {
+        "gtls": "error",
+        "gtls_corrected": "error",
+        "candidate": "ok"
+      }
+    },
+    {
+      "name": "sparse_long_native_extension",
+      "statuses": {
+        "gtls": "error",
+        "gtls_corrected": "error",
+        "candidate": "ok"
+      }
+    },
+    {
+      "name": "dense_long_solar_snr20",
+      "statuses": {
+        "gtls": "ok",
+        "gtls_corrected": "ok",
+        "candidate": "ok"
+      }
+    }
+  ],
+  "inputs": {
+    "selected_grid": {
+      "sha256": "24f4c21691b5b604416eeb8d48cf02f52c8548ab1992c49f4819a4ea98fa88d9",
+      "file": "selected_grid_inputs.json"
+    },
+    "long_period": {
+      "sha256": "622f5e7aa611bc58ccd370d1c8e61b549190f088285d22eb1cc9860528b0c465",
+      "file": "long_period_inputs.json"
+    },
+    "stronger_controls": {
+      "sha256": "4f4d9023691a46b69f89ceeb6599d487009c0762ea6ce0504a756d41eb82985e",
+      "file": "stronger_controls_inputs.json"
+    }
+  },
+  "packaging_source_sha256": "2a910873935070f5039604f37b0817cb5b17c16e650f260d821a00c1c49f980d",
+  "limits": [
+    "Selected-period grids contain truth and aliases and are not blind recovery trials",
+    "No SDE8 acceptance threshold is applied to the two stronger controls",
+    "A matched missed signal is numerical parity, not useful sensitivity evidence",
+    "Different development source identities remain explicit in each record"
+  ]
+}

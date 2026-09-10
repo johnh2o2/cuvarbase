@@ -1,0 +1,12 @@
+{
+  "recorded_utc": "2026-09-10T18:36:11.318623+00:00",
+  "node": "timing02",
+  "source_file": "pod-timing02-before-timing.json",
+  "source_sha256": "bf07f8aa3c0288325f037193e1b816d4f5c256e4395c99361b674f19851bdb00",
+  "rate_usd_per_hour": 0.53,
+  "requested_gpu": "NVIDIA RTX A6000",
+  "protocol_sha256": "0f28803ebda37a555053968cc9708abca53a0b9647f23d675766af8295924eb0",
+  "deployment_sha256": "a3a90cda6f673d3073ce2644f5153c7a5d2923d8c0f63d8353346778b78ab4e7",
+  "retry_authorization_sha256": "c267cbf6f2c442d633431ea9b6fdfb20f09cc9b2ae640dbfb6f1f4deb30f2cd7",
+  "note": "Fresh allocation for unchanged campaign; recorded before setup completed. Actual device and cgroup identities are retained separately."
+}

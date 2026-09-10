@@ -23,6 +23,16 @@ NUFFT-LRT: whitened matched-filter transit detection (experimental)
    has far less operational mileage than cuvarbase's BLS and TLS. Use
    it with those caveats, and quote only the measured numbers below.
 
+.. note::
+
+   **Historical TLS comparator.** Every TLS recovery and timing result on
+   this page comes from the 2026-09-06 campaign's phase-binned TLS engine,
+   retained today as ``method='binned'``. The standard TLS engine now uses
+   individual observations and full refinement. These tables have not been
+   rerun against that default; see the `current transit benchmark
+   <https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/docs/TRANSIT_BENCHMARKS.md>`_
+   for its validation and speed claims.
+
 What this is
 ============
 
@@ -143,7 +153,7 @@ null light curves per threshold, 600-point ground-based sampling over
   non-zero-mean basis changes nothing (5.5e-7).
 * **Cost**: 3.4-5.7 s per search of 32 periods x 3 durations on the A40
   (~7,500 templates; 0.23 ms per template single-process) against 1.2 ms
-  for BLS and 9 ms for TLS.
+  for BLS and 9 ms for the historical binned TLS comparator.
 
 So, based on that evidence, **reach for NUFFT-LRT when all of these
 hold:**
@@ -168,7 +178,8 @@ hold:**
 
 **BLS** is designed for blind box searches over large period grids;
 **TLS** uses limb-darkened transit templates. The validation tables
-below compare recovery and cost for the specified NUFFT-LRT experiment.
+below compare recovery and cost for the specified NUFFT-LRT experiment,
+including its historical binned TLS comparator.
 Use the current transit benchmark for BLS/TLS release speed claims.
 (Lomb-Scargle is not a transit
 competitor at all -- a short-duty-cycle box leaves only a small
@@ -356,8 +367,9 @@ public default path**, one ``run(t, y, periods, durations=...)`` call
 with ``epochs=None`` and every other argument at its default;
 ``lrt_flat`` = PSD set to ones (no whitening); ``lrt_marg`` = Detector
 A; ``lrt_seq`` = least-squares cotrend then the filter; ``bls`` =
-``eebls_gpu_fast`` (q in 0.005..0.08); ``tls`` = ``tls_search_batch``
-scored by its un-normalized delta-chi-squared statistic (an SDE over a
+``eebls_gpu_fast`` (q in 0.005..0.08); ``tls`` = the 2026-09-06 binned
+``tls_search_batch`` implementation, scored by its un-normalized
+delta-chi-squared statistic (an SDE over a
 32-point spectrum is bounded by sqrt(31) and would saturate). The LRT
 arms search durations {0.12, 0.21, 0.30} d; against the 0.22 d box the
 nearest template recovers 97.7 % of the matched statistic when centred.

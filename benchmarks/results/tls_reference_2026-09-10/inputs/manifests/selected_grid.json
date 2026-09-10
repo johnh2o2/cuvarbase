@@ -1,0 +1,1682 @@
+{
+  "suite": "stress",
+  "stream": "development:20260910-v1",
+  "source_identity": {
+    "generator_sha256": "7f0c22876cfe108c731e0da8a176e5d817a5ccc71e6c4e7f6fdb9cc2a5680a6f",
+    "harness_sha256": "0cfa5149411cbea78cf125d6dd4d09eed52b4e8e73b48cbc5e0cb236a50d2894",
+    "diagnostic_sha256": "cbeaf0ed786f888f5b5f3f048988962cb0f3b56ca21c5f1538fc9435d255201a",
+    "engine_sources": {
+      "kernel/tls_reference.cu": "b060dbd2063b03d3295f8469ecb4293a1118131d41a1c55fa0399d0a24fc7d97",
+      "kernel/tls_reference_prepare.cu": "ab4df4b72aba4d39b93071755978a3706df98b99092546364357873f0c930b9c",
+      "reference_engine.py": "ec3bf0f1261cdc4d56635fae02b056383664f1aa5f938b17f65fd59043838eca",
+      "reference_math.py": "c6fb775daa687eb310ebb3066ce3b3301b892905002e7273a5e79a0b0863478d"
+    },
+    "cadences": {
+      "tess_200s.npz": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+      "tess_gap.npz": "2b9746cf9a0f961967208843ecf6b5de949941bfd1f4e9861cf6dce0d0012634",
+      "ztf.npz": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa"
+    }
+  },
+  "seal_sha256": null,
+  "cases": [
+    {
+      "file": "solar_ordinary.npz",
+      "sha256": "25fa290bb697bf53784b279388191e4ebd8aa4f3c90528d723dbf2298928a71b",
+      "metadata": {
+        "name": "solar_ordinary",
+        "regime": "tess_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "solar_ordinary",
+          "period": 3.3638969731567063,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.26697528094000633,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 3.3638969731567063,
+        "truth_epoch": 2457002.3760808683,
+        "duration_days": 0.1105376161996084,
+        "full_duration_days": 0.10837095648155169,
+        "semimajor_stellar_radii": 9.44783274069764,
+        "periastron_stellar_radii": 9.44783274069764,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 292,
+        "observed_events": 6,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 3.756869594266128e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.9646286271475173,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "solar_ordinary",
+          "regime": "tess_solar"
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "a882af3abd0b34577f851b3dcc67c18d1f9acde2b8bc6071605d2499ece19f17",
+        "dy": "d24e4d70e5a0fe9b621648c94c5dfcfc5de9dc51522a4d911a941333c8a7dd8e",
+        "periods": "1596248ca088dfa0c537343207fa57a668a8c53bb0213441496fd331476de409",
+        "signal": "52b3d008c2f74f884941a5f2ccde03a5b51b799deff306c8bc3b17ce79d7a4bf",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "solar_highimpact.npz",
+      "sha256": "398597348dfc127ce714de2037ae82c2ccb040afcaad1ead30f04549a19b274e",
+      "metadata": {
+        "name": "solar_highimpact",
+        "regime": "tess_highimpact",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "solar_highimpact",
+          "period": 3.870787960691381,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.9556731383416222,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 3.870787960691381,
+        "truth_epoch": 2457002.3170258477,
+        "duration_days": 0.038671203444963095,
+        "full_duration_days": 0.03120842863679912,
+        "semimajor_stellar_radii": 10.374567320314595,
+        "periastron_stellar_radii": 10.374567320314595,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 121,
+        "observed_events": 7,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 1.3704462193991638e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.32215203362669825,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "solar_highimpact",
+          "regime": "tess_highimpact"
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "895cec74db22af60061c8bd0298726f3f45cc074588000cf58df24736615dd48",
+        "dy": "cc0e2d20356c5abe08cca885662ac06422ec9c18f0f2cc9c3ff59d3dde8072ba",
+        "periods": "6497c256f47396abe6206fc7374a85f649a89c745e05851ca7771c9a25f31b41",
+        "signal": "c02705bedd265b7c2384f54f9be135d7a691a09a754331e206a8865f65a8b588",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "solar_eccentric.npz",
+      "sha256": "7e7aef19c3026bc35abb9b69c1b3a9a81c600b34ecbe19f5933b62d8950975e9",
+      "metadata": {
+        "name": "solar_eccentric",
+        "regime": "tess_eccentric",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "solar_eccentric",
+          "period": 8.4789930608551,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.5700214740321423,
+          "eccentricity": 0.7055581395712245,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 8.4789930608551,
+        "truth_epoch": 2457006.7168639987,
+        "duration_days": 0.05369761581527588,
+        "full_duration_days": 0.05225272702027095,
+        "semimajor_stellar_radii": 17.49846387748481,
+        "periastron_stellar_radii": 5.152280258732352,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 72,
+        "observed_events": 3,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 1.7256308535809052e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.3447938069105444,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          16.9579861217102
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "solar_eccentric",
+          "regime": "tess_eccentric"
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "5e4afa7738ad784b5ac6b74d7b24d4723f8be302d2408aab0bd306e99d945700",
+        "dy": "c37883ea45fe2e88cbf37106056880f379b4d42f4428d26a89376d9df42334ac",
+        "periods": "78241c78dbc9235a481fc877640fa9e4098366b6c10a1d5660def7f2a7c9b7fc",
+        "signal": "0652021bc3bfd7e689b2ea4cfcbe16febc9cb0f42b33e4fcc63e28d2c5615a1a",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "dense_m_ordinary.npz",
+      "sha256": "0eae10d52ccb2a981eae8851f6c4c5c1781e60fd1dc1f4915ea21ccd8538c5da",
+      "metadata": {
+        "name": "dense_m_ordinary",
+        "regime": "tess_mdwarf",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "dense_m_ordinary",
+          "period": 2.9125105056846947,
+          "radius": 0.1,
+          "mass": 0.1,
+          "rp": 0.09159999999999999,
+          "impact": 0.6030885006262043,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 2.9125105056846947,
+        "truth_epoch": 2457000.7167543117,
+        "duration_days": 0.02117899960666894,
+        "full_duration_days": 0.015811766396650044,
+        "semimajor_stellar_radii": 39.83658235129995,
+        "periastron_stellar_radii": 39.83658235129995,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 60,
+        "observed_events": 6,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 0.0014039125739668506,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.19383729361777263,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 0.1,
+          "M_star": 0.1,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "dense_m_ordinary",
+          "regime": "tess_mdwarf"
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "96273c9ed00b32e4b46de598def3c6b1a2752538335cbf95516579a561950bbd",
+        "dy": "b2f33f1864d1e9b3f10790e55873734ccab8fb46a8db374cee2ab7ac7ba5a3b1",
+        "periods": "e606a72471832c6e9a5fa928fcab8a60e72c535cd1ca064c3bc2e3013c296e3f",
+        "signal": "f3f121c78756eef7d904e39f0b4905395b3f63248cce43e418f8bf6fa4f6da2c",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "dense_m_highimpact.npz",
+      "sha256": "93eb44770efc409e5532f34a45f9b8eff72ad7511ea1c3c005a72e68784e0523",
+      "metadata": {
+        "name": "dense_m_highimpact",
+        "regime": "tess_mdwarf",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "dense_m_highimpact",
+          "period": 3.916407717778475,
+          "radius": 0.1,
+          "mass": 0.1,
+          "rp": 0.09159999999999999,
+          "impact": 0.95,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 3.916407717778475,
+        "truth_epoch": 2457000.9903099076,
+        "duration_days": 0.013813956495491633,
+        "full_duration_days": 0.0,
+        "semimajor_stellar_radii": 48.532091074509594,
+        "periastron_stellar_radii": 48.532091074509594,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 37,
+        "observed_events": 6,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 0.00047157489625354696,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.11463197937780328,
+        "below_approx_native_duration_envelope": true,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 0.1,
+          "M_star": 0.1,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "dense_m_highimpact",
+          "regime": "tess_mdwarf",
+          "impact": 0.95
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "7e0b5bbab022763086672ccad53a11684633d58dd10607bdd01d68bc199419e3",
+        "dy": "f1d9ab0d389cc0cbffb796ee75a5948bab2a61050480c8c86f3ece5febf81fbb",
+        "periods": "9e9c865fdb8116e65f5768ad8ee0098bd3da3fc00156a07e04c15a1152b9f5e7",
+        "signal": "9b22874eafa65880bd73080633a8e02edce663af9ca9152c07db27a461119f0d",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "solar_grazing.npz",
+      "sha256": "83d4f4f1cec4af739c2a5ad637f429e01ec1c1172416aad8bcbc6e31116ec3b2",
+      "metadata": {
+        "name": "solar_grazing",
+        "regime": "tess_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "solar_grazing",
+          "period": 3.9488373356842903,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 1.0,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 3.9488373356842903,
+        "truth_epoch": 2457000.1071581566,
+        "duration_days": 0.016293338578164788,
+        "full_duration_days": 0.0,
+        "semimajor_stellar_radii": 10.513562518996055,
+        "periastron_stellar_radii": 10.513562518996055,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 46,
+        "observed_events": 6,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 2.213330052012784e-06,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.13483772958883508,
+        "below_approx_native_duration_envelope": true,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "solar_grazing",
+          "regime": "tess_solar",
+          "impact": 1.0
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "0ff0a9a1160d9f7296a0861b9724fccd2aa9619a1156c734912baf19f88257df",
+        "dy": "f63ba06f4ce9d2aaa89be2516912befffafa0655cf1719cac44f282bfaf98ea5",
+        "periods": "e67c30cbbbf170ded20044d4f215b370962e72182d3fa5298338c43cbf2058ea",
+        "signal": "8e162419862983989be76d5f5a0bc92bf9a43b6508cc67b0d3a14a2a8aa3770c",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "sparse_ordinary.npz",
+      "sha256": "a2fe7ed5d232897da7f36c286674a3cea9d2ea231dafb44418d7b5f9ffe32264",
+      "metadata": {
+        "name": "sparse_ordinary",
+        "regime": "ztf_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "sparse_ordinary",
+          "period": 2.692036753454656,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.5742937523943321,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 2.692036753454656,
+        "truth_epoch": 2457002.6646860032,
+        "duration_days": 0.08768554780503457,
+        "full_duration_days": 0.08531282604117957,
+        "semimajor_stellar_radii": 8.143749292783317,
+        "periastron_stellar_radii": 8.143749292783317,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 45,
+        "observed_events": 37,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 1.2306214754978132e-05,
+          "ou_tau_days": 1.0,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.8236514666290123,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "ztf",
+        "cadence_sha256": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+        "ndata": 1317,
+        "baseline_days": 2743.768345858436,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 10.0
+        },
+        "stress_settings": {
+          "name": "sparse_ordinary",
+          "regime": "ztf_solar"
+        }
+      },
+      "arrays": {
+        "t": "03881c5d4b3395c7fd3e5e3d04eae56e8e407c2fe8d3e43a64e6f9334a52e1f7",
+        "y": "c3d03b21befbd22e385f32d03f6c51b93f6e55e82b9eb3cb63222adafc2725a1",
+        "dy": "d23190cc4c24fc473d95e25354c290447e3926062f282f7de6a406bf1c1abcad",
+        "periods": "e0ade13f2435191c0a706b38b92167730e0a666f7b71c4e88fbec1c3950966f0",
+        "signal": "d8754bc04a2e229ff3accdae4a9b0b0249ca0f9a00b6e6034cc5b11bbbb12ea4",
+        "exposure_days": "c23961b02c2d88f92b835cf1d4c641d16d4f8ea13a293b5c999398401f9eafc8",
+        "band": "40eee60754817c79b59154751be64a18ba90a781cf05598f02407b91d1dbe34a"
+      }
+    },
+    {
+      "file": "sparse_highimpact.npz",
+      "sha256": "dd6acd52cf2ea312cbee891d9e9cc649a72e12430109c358ecb7e250af4e015d",
+      "metadata": {
+        "name": "sparse_highimpact",
+        "regime": "ztf_highimpact",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "sparse_highimpact",
+          "period": 2.9466556126461017,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.9597142981514083,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 2.9466556126461017,
+        "truth_epoch": 2457002.157603426,
+        "duration_days": 0.03405243322481191,
+        "full_duration_days": 0.026889180195581192,
+        "semimajor_stellar_radii": 8.649479880962913,
+        "periastron_stellar_radii": 8.649479880962913,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 10,
+        "observed_events": 10,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 3.46190274422311e-06,
+          "ou_tau_days": 1.0,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.3104619211418038,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "ztf",
+        "cadence_sha256": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+        "ndata": 1317,
+        "baseline_days": 2743.768345858436,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 10.0
+        },
+        "stress_settings": {
+          "name": "sparse_highimpact",
+          "regime": "ztf_highimpact"
+        }
+      },
+      "arrays": {
+        "t": "03881c5d4b3395c7fd3e5e3d04eae56e8e407c2fe8d3e43a64e6f9334a52e1f7",
+        "y": "147bebbfc5c5adf83ff9fff69b38d1fba271ad75a9327eccc59c80d6df072e1d",
+        "dy": "7b77a42048f49fc34b15da4c5f55612a7d5d02ea913f0aaf69e539c7b7b1a19c",
+        "periods": "cafad50701d08f3ee843dee4719dba8b908b0d84b1c053aeec6a6805043572d6",
+        "signal": "3faa6b1fb2d0db23eeed83e7e58b2d6638592fb1b0023b35361cb51efb818853",
+        "exposure_days": "c23961b02c2d88f92b835cf1d4c641d16d4f8ea13a293b5c999398401f9eafc8",
+        "band": "40eee60754817c79b59154751be64a18ba90a781cf05598f02407b91d1dbe34a"
+      }
+    },
+    {
+      "file": "sparse_dense_m.npz",
+      "sha256": "c80b165102eb8a3f3eec1715eeab8c172c065a66d13c4b57cb465e2765d91e2a",
+      "metadata": {
+        "name": "sparse_dense_m",
+        "regime": "ztf_mdwarf",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "sparse_dense_m",
+          "period": 5.944934575989181,
+          "radius": 0.1,
+          "mass": 0.1,
+          "rp": 0.09159999999999999,
+          "impact": 0.5692570636969869,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 5.944934575989181,
+        "truth_epoch": 2457002.05641386,
+        "duration_days": 0.02749825599648604,
+        "full_duration_days": 0.02089935669218071,
+        "semimajor_stellar_radii": 64.10153928800747,
+        "periastron_stellar_radii": 64.10153928800747,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": false,
+        "in_transit_observations": 4,
+        "observed_events": 4,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 0.0004269166514815322,
+          "ou_tau_days": 1.0,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.19868379585065432,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "ztf",
+        "cadence_sha256": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+        "ndata": 1317,
+        "baseline_days": 2743.768345858436,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 0.1,
+          "M_star": 0.1,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 10.0
+        },
+        "stress_settings": {
+          "name": "sparse_dense_m",
+          "regime": "ztf_mdwarf"
+        }
+      },
+      "arrays": {
+        "t": "03881c5d4b3395c7fd3e5e3d04eae56e8e407c2fe8d3e43a64e6f9334a52e1f7",
+        "y": "4fac1814dd5ea6fd6dc7f7efadcddb1fd236e4c065c5b42215d567345660c7b2",
+        "dy": "dbaa3390e8cde838de540896964240d9d56386fcebc879cb1c3944c1742c0142",
+        "periods": "3e73ec1baa100e8a2ecbaf2dc0a5813155b4c552919748b858db077433e7ec1b",
+        "signal": "f297b9bf0b1f0a20f909f6a7ff7c6fef97a162304fb11db56fa2de07ba684279",
+        "exposure_days": "c23961b02c2d88f92b835cf1d4c641d16d4f8ea13a293b5c999398401f9eafc8",
+        "band": "40eee60754817c79b59154751be64a18ba90a781cf05598f02407b91d1dbe34a"
+      }
+    },
+    {
+      "file": "gapped_ordinary.npz",
+      "sha256": "9ca57c83f5ea26be8c63369899456a3046012e978d539c6b4384d0ebdda170b5",
+      "metadata": {
+        "name": "gapped_ordinary",
+        "regime": "tess_gap",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "gapped_ordinary",
+          "period": 3.4835519277633638,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.665894815671085,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 3.4835519277633638,
+        "truth_epoch": 2457003.2988043292,
+        "duration_days": 0.08724289588812431,
+        "full_duration_days": 0.08441188819229926,
+        "semimajor_stellar_radii": 9.670566846220499,
+        "periastron_stellar_radii": 9.670566846220499,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 121,
+        "observed_events": 13,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 2.4255916678292197e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.7525895269586598,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_gap",
+        "cadence_sha256": "2b9746cf9a0f961967208843ecf6b5de949941bfd1f4e9861cf6dce0d0012634",
+        "ndata": 4295,
+        "baseline_days": 734.853796173106,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 27.457888046800917
+        },
+        "stress_settings": {
+          "name": "gapped_ordinary",
+          "regime": "tess_gap"
+        }
+      },
+      "arrays": {
+        "t": "d69b04b5a6420f71b82f335bbdec270e9651c590103b9704aacaf158d345f6e1",
+        "y": "2491fe717be79a89d380f455c8097e81f1a06b5600ad8c6f73f11ecef05929c9",
+        "dy": "5b392ba43fba955021fc9337a3baa0deceb4207a981c51894f8277d575e02f64",
+        "periods": "f52e93c7452daae019284dbda36e0e3365a973d5bbbaabf9098913c052c700aa",
+        "signal": "407a1e968312b3b8c710aa89b1fdeab46bdef168fa9fa029e29f0af7bb0460cf",
+        "exposure_days": "aed829cbe6842924c1b8c1f05cc4a3a230e82443c448710f88e9ef06da49f8ff",
+        "band": "d9f57d67f3302630d7fde7a716ab25a719f527fc0be0e59edf47ef7461cd3875"
+      }
+    },
+    {
+      "file": "phase_wrap.npz",
+      "sha256": "576bce39531233cfbf67441d9579ef7ef8b7826ff762200ae23e6070bd7dec28",
+      "metadata": {
+        "name": "phase_wrap",
+        "regime": "tess_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "phase_wrap",
+          "period": 2.69166142289872,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.6887280063897263,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 2.69166142289872,
+        "truth_epoch": 2457002.691661102,
+        "duration_days": 0.07799521521778079,
+        "full_duration_days": 0.07531608945806528,
+        "semimajor_stellar_radii": 8.142992327144723,
+        "periastron_stellar_radii": 8.142992327144723,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 294,
+        "observed_events": 9,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 3.262617264489152e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.7326615378796296,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "phase_wrap",
+          "regime": "tess_solar",
+          "phase": 0.9999998807907104
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "b6f33c64a6a06f30659c94b01a77bd756ec6f843eb2730d41897b578f0e773ec",
+        "dy": "d3e22c5ef1c89b8dc5bef0528bdda38f5c7782b6eb775b4c755b7015d3fc359f",
+        "periods": "1177be43f4b5de4e4e5cba4518d8082aeff624756560c6f8fd1dbbe9f7d7f653",
+        "signal": "5fc2f72c61ac6e41cd5b6346c683ed78d7dc947db6a7a02b51d298741ed32db6",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "phase_ties.npz",
+      "sha256": "eefbb1b5d3b23456a59ed35d07fba5d71c8afc3d986accb71dd0b67fddf78a3c",
+      "metadata": {
+        "name": "phase_ties",
+        "regime": "tess_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "phase_ties",
+          "period": 3.5566132786370357,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.4452333664388659,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 3.5566132786370357,
+        "truth_epoch": 2457000.322471039,
+        "duration_days": 0.1048205395675596,
+        "full_duration_days": 0.10244587307976771,
+        "semimajor_stellar_radii": 9.805313924580233,
+        "periastron_stellar_radii": 9.805313924580233,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 368,
+        "observed_events": 8,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 4.048023989609912e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.8980311243376251,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9775,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "phase_ties",
+          "regime": "tess_solar",
+          "duplicate": true
+        }
+      },
+      "arrays": {
+        "t": "dd6e30882fb385fa4983539a04148fc23a4e53e94da840fad838cc7508c24396",
+        "y": "eb3ac46daa68b20852dfc5591f3cb98ea811f4011eceabdf4263d04b2503c419",
+        "dy": "0a13dd462f27e71a4e4b5050686405be6703c17fe2f55491ab7842f0e00a032c",
+        "periods": "353653ada230dc95f8a7049c5eb40336842a4e9ee5202794fdf8771b4d7ba2ed",
+        "signal": "7ca0666d760f82bc59815a387919ea935990d17d6f385dd951ee208dd8a80066",
+        "exposure_days": "bf2cf2899dbc67d4e2b297e08fe3dd1911b9df1262e6076af0c022bfd5806386",
+        "band": "bc2dcfc28f595b2c33913535ac1530cf78b4aab041b41cfe22b681a04b616f44"
+      }
+    },
+    {
+      "file": "heteroskedastic.npz",
+      "sha256": "f99337a83c9d01cd99744a6cba7e68b700818a659c161105559d62343ac237e7",
+      "metadata": {
+        "name": "heteroskedastic",
+        "regime": "tess_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "heteroskedastic",
+          "period": 5.203383867104595,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.426890417672689,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 5.203383867104595,
+        "truth_epoch": 2457003.3994936016,
+        "duration_days": 0.12002822703615879,
+        "full_duration_days": 0.11736450559654149,
+        "semimajor_stellar_radii": 12.636524668150791,
+        "periastron_stellar_radii": 12.636524668150791,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 230,
+        "observed_events": 5,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 8.132956743891474e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.9064676335099625,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "heteroskedastic",
+          "regime": "tess_solar",
+          "heteroskedastic": true
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "2c9fafae9061a119a357edc2806df6cd81d31b3a26f29e84c00c27741a542f48",
+        "dy": "47b6e64eb9890493b1955f1e9184ba69541d6350da5e3132cf873ef48c0bb8d5",
+        "periods": "fb2d3573653258722aeef8138a3d49c9b80ac13a3a3377b96ec088da5a1f4925",
+        "signal": "1343ef35579707d895c2a5c327131df17e2329fbab8adc1f39c9ef47c20e1c3b",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "flat.npz",
+      "sha256": "685ae84486049662d5035c4a1faee5405ffe13682264e1c4494b6ea4a564569f",
+      "metadata": {
+        "name": "flat",
+        "regime": "tess_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": true,
+        "physical": {
+          "name": "flat",
+          "period": 5.9284213855861605,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.6226516693278965,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 5.9284213855861605,
+        "truth_epoch": 2457005.3024427094,
+        "duration_days": 0.10889093587117665,
+        "full_duration_days": 0.10567728289350078,
+        "semimajor_stellar_radii": 13.784672387132748,
+        "periastron_stellar_radii": 13.784672387132748,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 192,
+        "observed_events": 4,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 2.7593905648639234e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.7874994478353844,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "flat",
+          "regime": "tess_solar",
+          "flat": true
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "8223ba669b79a612df1fbb9818f0a2e11992c4dfed401c1cd8ac91d4e8aace28",
+        "dy": "b057e108dbc2dcc459e59224b9ef4a78eb592928f4f9ae45d1b461dc622b58b1",
+        "periods": "c1f3fd736353794d8cf65d9e5dbc328f0d0cbe91d4403345ac5f4578e2bedccb",
+        "signal": "0f0e74e81474de1375970caa82c26666b6d80f67bae9f0a2acdfd8779d3f7c71",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "noise_only.npz",
+      "sha256": "d876817cac51e05ea5963c3fb63a428688128ce5161643ba667c9469e5db5666",
+      "metadata": {
+        "name": "noise_only",
+        "regime": "tess_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": true,
+        "physical": {
+          "name": "noise_only",
+          "period": 5.7293089178024275,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.513673310178584,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 5.7293089178024275,
+        "truth_epoch": 2457005.705163365,
+        "duration_days": 0.11773534201840552,
+        "full_duration_days": 0.11483732654784412,
+        "semimajor_stellar_radii": 13.474269572282273,
+        "periastron_stellar_radii": 13.474269572282273,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 222,
+        "observed_events": 5,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 3.077034357856985e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.8611778151497563,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "noise_only",
+          "regime": "tess_solar",
+          "null": true
+        }
+      },
+      "arrays": {
+        "t": "bd9f4645f92cfeca383a1e1206f591befae6064708a0823d908a1d48f6c83b87",
+        "y": "2db426041608cbd9f769ac73400dcf983d777c88275ff4927f7c4d63614818a8",
+        "dy": "0a0240f26c33f447bee187467409dfe0ac275ca4fd4aaecac216536248698225",
+        "periods": "13c838f7aefa2c94717b5dde6e74c51e2e950d3900e4fd6f1ff662e0515eb6d0",
+        "signal": "9dacb0f8f61b485e3eb59268e5b0122d71450fb4d9c2acf51dbda43523852f16",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "large_absolute_epoch.npz",
+      "sha256": "4864ddb3a11eb0b56a49b542b0321cb70ccc5fbfe1f5bb708b546e4dce7e08d5",
+      "metadata": {
+        "name": "large_absolute_epoch",
+        "regime": "tess_highimpact",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "large_absolute_epoch",
+          "period": 5.534498812278373,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.9589071723830888,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 5.534498812278373,
+        "truth_epoch": 2457003.800449112,
+        "duration_days": 0.04219253527630669,
+        "full_duration_days": 0.033475561134736806,
+        "semimajor_stellar_radii": 13.16707384267643,
+        "periastron_stellar_radii": 13.16707384267643,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 73,
+        "observed_events": 4,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 1.0300795514043036e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.3121837828944494,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9736,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "large_absolute_epoch",
+          "regime": "tess_highimpact",
+          "absolute_epoch": 2457000.123456789
+        }
+      },
+      "arrays": {
+        "t": "bd3fecf5b5b4ce60ab780c3eec146eddd6575b263141ca1ae931139d71eb50b0",
+        "y": "40d0a67e37cab62cbdd8623b367a4189823401f35602360c905209bfcbba6d78",
+        "dy": "1bc834f3d1585fdfc5351fcc043f04f645f8f23b740b449f5504126f79e7c681",
+        "periods": "bfc6c08eba63dff7bd8a0d9a4602ece51587e97df8b6a4022f045d9c619a240d",
+        "signal": "a99617355438ea1bc489cac944a31542c1f1b9139c00c355789de7923a9bcf19",
+        "exposure_days": "08977008f53bbe4851d5300236b3554a64bc0903b3f5240d7ef129f9479324bc",
+        "band": "bd3cefda8421d569818957bc2d1d1d67f5b75f7185ac6fdb962371c8c4f1e88f"
+      }
+    },
+    {
+      "file": "cleaning_edges.npz",
+      "sha256": "e47f5ec78dab2c559d7964e9a082eb19ddc55e916b67265d16adadf296cb2828",
+      "metadata": {
+        "name": "cleaning_edges",
+        "regime": "tess_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "cleaning_edges",
+          "period": 4.587627337012885,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.4439402572959297,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 4.587627337012885,
+        "truth_epoch": 2457003.2429479696,
+        "duration_days": 0.11410153014779857,
+        "full_duration_days": 0.11152232427922495,
+        "semimajor_stellar_radii": 11.618832568493488,
+        "periastron_stellar_radii": 11.618832568493488,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": true,
+        "in_transit_observations": 201,
+        "observed_events": 4,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 3.0204657094601798e-05,
+          "ou_tau_days": 0.15,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.8984793772681882,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "tess_200s",
+        "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+        "ndata": 9741,
+        "baseline_days": 25.756750990570254,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          12.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 12.878375495285127
+        },
+        "stress_settings": {
+          "name": "cleaning_edges",
+          "regime": "tess_solar",
+          "cleaning_edges": true
+        }
+      },
+      "arrays": {
+        "t": "7d3dec2752d018a237b6bd38e8c121c38b71e4ed284d414666df12793f693dbf",
+        "y": "1549164f21503424de046f7e68dd83480db40edd767cbb5f8fc6b7ccf201f0d6",
+        "dy": "433a1ba584d80bb60ba9b2279eab80ae3989f3391ae6161231f2f4f0f042d730",
+        "periods": "5f31d2a7f789dd27818ce7e18f8ed2290a7dc9e0b4938f659c694e6a0a8a4a9e",
+        "signal": "63e77f967446820175800628ec6cdf083f43d4e538538ef1f49f697a37119cfe",
+        "exposure_days": "cca12bae5f12b2858272cc805c630b14d19de17615517f263cf5cef16525d7eb",
+        "band": "7b998ee5dd94a2f5eaff4e4bf41a80b4cda3afe2490dcd2eb9dd6b0a163a81b7"
+      }
+    },
+    {
+      "file": "long_solar.npz",
+      "sha256": "4473b82c93ae6a59f09df6bb0aeb923ed5631a20155cdd1697fce4a6c6b07ceb",
+      "metadata": {
+        "name": "long_solar",
+        "regime": "ztf_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "long_solar",
+          "period": 365.25,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.8,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 365.25,
+        "truth_epoch": 2457273.5771409087,
+        "duration_days": 0.3326017525235787,
+        "full_duration_days": 0.3160892804271692,
+        "semimajor_stellar_radii": 215.0290923970047,
+        "periastron_stellar_radii": 215.0290923970047,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 0.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": false,
+        "in_transit_observations": 0,
+        "observed_events": 0,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 2.5e-05,
+          "ou_tau_days": 1.0,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.6095646604474183,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": false,
+        "cadence": "ztf",
+        "cadence_sha256": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+        "ndata": 1317,
+        "baseline_days": 2743.768345858436,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          730.5
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 10.0
+        },
+        "stress_settings": {
+          "name": "long_solar",
+          "regime": "ztf_solar",
+          "period": 365.25,
+          "impact": 0.8
+        }
+      },
+      "arrays": {
+        "t": "03881c5d4b3395c7fd3e5e3d04eae56e8e407c2fe8d3e43a64e6f9334a52e1f7",
+        "y": "dc2ea3e6bd2528c1178ce7aefc13001cac82cfaca1f2710b5a06c5f921b42d3a",
+        "dy": "6386f4f7c90f06640a2e4c75d00feb29096491f56b85fa793aceb519405ea350",
+        "periods": "c789bfeb87355344ccba89c352dc4c39383702d363282feb6d5c70b7adc7b4b3",
+        "signal": "7382e8660e32ba8c639a8d2a961c34599c5e8055282343760c1b0e64ae33c198",
+        "exposure_days": "c23961b02c2d88f92b835cf1d4c641d16d4f8ea13a293b5c999398401f9eafc8",
+        "band": "40eee60754817c79b59154751be64a18ba90a781cf05598f02407b91d1dbe34a"
+      }
+    },
+    {
+      "file": "long_dense_m.npz",
+      "sha256": "b3185d9e0a28944527c97f0c18fd194aab88e3fe42c9e9bc9635ca489b2a4aca",
+      "metadata": {
+        "name": "long_dense_m",
+        "regime": "ztf_mdwarf",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "long_dense_m",
+          "period": 365.25,
+          "radius": 0.1,
+          "mass": 0.1,
+          "rp": 0.09159999999999999,
+          "impact": 0.9,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 365.25,
+        "truth_epoch": 2457189.7864282033,
+        "duration_days": 0.07195740266128813,
+        "full_duration_days": 0.014356994476449407,
+        "semimajor_stellar_radii": 998.0766341718273,
+        "periastron_stellar_radii": 998.0766341718273,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 10.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": false,
+        "in_transit_observations": 1,
+        "observed_events": 1,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 0.00014082914623955454,
+          "ou_tau_days": 1.0,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.13187750631830103,
+        "below_approx_native_duration_envelope": true,
+        "expected_native_cache_failure": false,
+        "cadence": "ztf",
+        "cadence_sha256": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+        "ndata": 1317,
+        "baseline_days": 2743.768345858436,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          730.5
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 0.1,
+          "M_star": 0.1,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 10.0
+        },
+        "stress_settings": {
+          "name": "long_dense_m",
+          "regime": "ztf_mdwarf",
+          "period": 365.25,
+          "impact": 0.9
+        }
+      },
+      "arrays": {
+        "t": "03881c5d4b3395c7fd3e5e3d04eae56e8e407c2fe8d3e43a64e6f9334a52e1f7",
+        "y": "d545df32fa597e68afdac262145e5f39a289643eb7cbf04c79cfaa167e5e5213",
+        "dy": "0fe09f516f5459b3d2251054b55a71db55b98884c22b26831be79d3afe02dba9",
+        "periods": "aecb0548ee70c204e8cc1377efafb56225b7f888f8eab2986d91308885894027",
+        "signal": "9fc98b246fe4b52c285f803fbe25d14aaa6061b2f77a7a1bb1fd5c7bb943f3cb",
+        "exposure_days": "c23961b02c2d88f92b835cf1d4c641d16d4f8ea13a293b5c999398401f9eafc8",
+        "band": "40eee60754817c79b59154751be64a18ba90a781cf05598f02407b91d1dbe34a"
+      }
+    },
+    {
+      "file": "compact_star_native_extension.npz",
+      "sha256": "bcf1c4e63a3c45bcbb10f8c0b898a3da4f3e39516a69c70654253ecdaf769b0c",
+      "metadata": {
+        "name": "compact_star_native_extension",
+        "regime": "ztf_mdwarf",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "compact_star_native_extension",
+          "period": 10.0,
+          "radius": 0.012,
+          "mass": 0.6,
+          "rp": 0.7633333333333333,
+          "impact": 0.6749281394847174,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 10.0,
+        "truth_epoch": 2457003.508816754,
+        "duration_days": 0.003776992709127974,
+        "full_duration_days": 0.0,
+        "semimajor_stellar_radii": 1372.9021216704982,
+        "periastron_stellar_radii": 1372.9021216704982,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 0.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": false,
+        "in_transit_observations": 0,
+        "observed_events": 0,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 2.5e-05,
+          "ou_tau_days": 1.0,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.02295688744102736,
+        "below_approx_native_duration_envelope": true,
+        "expected_native_cache_failure": true,
+        "cadence": "ztf",
+        "cadence_sha256": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+        "ndata": 1317,
+        "baseline_days": 2743.768345858436,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          20.0
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 0.012,
+          "M_star": 0.6,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 10.0
+        },
+        "stress_settings": {
+          "name": "compact_star_native_extension",
+          "regime": "ztf_mdwarf",
+          "period": 10.0,
+          "radius": 0.012,
+          "mass": 0.6,
+          "expected_native_cache_failure": true
+        }
+      },
+      "arrays": {
+        "t": "03881c5d4b3395c7fd3e5e3d04eae56e8e407c2fe8d3e43a64e6f9334a52e1f7",
+        "y": "370043c14de24300d729e3ec7b740ebbb4d6e266fed2824198b0becba9dd09b8",
+        "dy": "6386f4f7c90f06640a2e4c75d00feb29096491f56b85fa793aceb519405ea350",
+        "periods": "a361024f37f9ad7d100eb0bc611a7ab313561778ef93f52c8b69f6eaa56802cf",
+        "signal": "7382e8660e32ba8c639a8d2a961c34599c5e8055282343760c1b0e64ae33c198",
+        "exposure_days": "c23961b02c2d88f92b835cf1d4c641d16d4f8ea13a293b5c999398401f9eafc8",
+        "band": "40eee60754817c79b59154751be64a18ba90a781cf05598f02407b91d1dbe34a"
+      }
+    },
+    {
+      "file": "sparse_long_native_extension.npz",
+      "sha256": "1d66ba3b2ef465d64845383b1e0f8423a346f647badf4197cd545498181d5ed7",
+      "metadata": {
+        "name": "sparse_long_native_extension",
+        "regime": "ztf_solar",
+        "cohort": "development",
+        "purpose": "mathematical_differential",
+        "stream": "development:20260910-v1",
+        "null": false,
+        "physical": {
+          "name": "sparse_long_native_extension",
+          "period": 365.25,
+          "radius": 1.0,
+          "mass": 1.0,
+          "rp": 0.00916,
+          "impact": 0.6162747785293983,
+          "eccentricity": 0.0,
+          "omega": 90.0,
+          "exposure_seconds": 200.0
+        },
+        "truth_period": 365.25,
+        "truth_epoch": 2457325.664508419,
+        "duration_days": 0.4320793728145239,
+        "full_duration_days": 0.41950102732233663,
+        "semimajor_stellar_radii": 215.0290923970047,
+        "periastron_stellar_radii": 215.0290923970047,
+        "latent_white_oracle_snr": 10.0,
+        "realized_latent_white_oracle_snr": 0.0,
+        "conditional_population": false,
+        "accepted_proposal": 1,
+        "observable": false,
+        "in_transit_observations": 0,
+        "observed_events": 0,
+        "noise": {
+          "white": "independent Gaussian with supplied dy",
+          "ou_amplitude": 2.5000000000000005e-05,
+          "ou_tau_days": 1.0,
+          "oracle_snr_excludes_ou": true
+        },
+        "duration_over_solar_central": 0.7918789187899642,
+        "below_approx_native_duration_envelope": false,
+        "expected_native_cache_failure": true,
+        "cadence": "ztf",
+        "cadence_sha256": "fc4c52956954c642f30948a7124418b948da6dcef7c190ff7c210af7c3eb6afa",
+        "ndata": 200,
+        "baseline_days": 2743.768345858436,
+        "period_count": 97,
+        "period_bounds": [
+          0.6,
+          730.5
+        ],
+        "truth_inserted_in_grid": true,
+        "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+        "auto_grid_api_exercised": false,
+        "exposure_quadrature_nodes": 64,
+        "search_kwargs": {
+          "R_star": 1.0,
+          "M_star": 1.0,
+          "oversampling_factor": 3,
+          "period_min": 0.6,
+          "period_max": 10.0
+        },
+        "stress_settings": {
+          "name": "sparse_long_native_extension",
+          "regime": "ztf_solar",
+          "period": 365.25,
+          "thin_points": 200,
+          "expected_native_cache_failure": true
+        }
+      },
+      "arrays": {
+        "t": "75968f4f4fd811383d52dc8879d5f13a71872a07ab6051b6b3f81ba5d0118a61",
+        "y": "06089e6f9c13ad9a40b61de890cf58fdd4c267890031b6ea6d0bb3a0cd65d62e",
+        "dy": "01eb68438fa8d5c7496133e88d8b352b597f153e5c77fb795186a993d59b88e3",
+        "periods": "101ca1a86d8cbb8183bc76521860f6a607c1d2d85ae798bd7aeb4b130072be30",
+        "signal": "763f2a0af001e636cf1cc926c6fbbac59bdfa7f37b187b64591ab4196f0ceaa8",
+        "exposure_days": "2ee36822d0456bb556130351e90ba50cc105864153a7e5324c23832b4b7b86dc",
+        "band": "33f7939b6ddbba1845cb9ad887fac462caa7bfd5a42b255594084a8ed83e9fc8"
+      }
+    }
+  ],
+  "status": "complete"
+}

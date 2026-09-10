@@ -1,0 +1,23 @@
+{
+  "unmapped_host_pid": {
+    "files": {
+      "terminal.json": "3e72ebd41804fd6314c77b626978dee67459dd2bbca068d8b67f754f75c497f2",
+      "acceptance.json": "f62b29e1311480eb8d19ab88d5a1d3ead6f58086cdfff4a7f74d4496ce46d1fc",
+      "public/tess_solar/candidate_graph_1worker/record.json": "8a697de85d437a6f9710866eaeb8f4c81073adf13ef9d7ede1120349d78a9fbb",
+      "logs/public.log": "6e9e81fd8abd390215a909e55b8a02c1ed388486d95c21967f6e64a9653186f4"
+    },
+    "headline_measurements": 0,
+    "speed_denominator_eligible": false
+  },
+  "unexpected_gpu_process": {
+    "files": {
+      "terminal.json": "885500e74f29f58fa53ef2319dcc9e4d31ef5310db52228678d5228a9d127bf0",
+      "acceptance.json": "2a868c269144bc93926d40462eea3df6de601f6458a8f80f190663b9891ce625",
+      "preflight.json": "7308d33a6076c7e012597e2fe5e2cd7962fe0822a947e4f979017ce3b70d10bb",
+      "status.json": "f454e957742cb2034475c43caa714ac710e6c683d9a7de7c63277e3a02b10f11",
+      "logs/preflight.log": "86ba7376b7ee487699b6ed33cc24d07cd305cf054d90bb189f9c72c1fdaf2367"
+    },
+    "headline_measurements": 0,
+    "speed_denominator_eligible": false
+  }
+}

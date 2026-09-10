@@ -504,7 +504,8 @@ class TestTLSBasicExecution:
         results = tls.tls_search_gpu(
             t, y, dy,
             periods=periods,
-            block_size=64
+            block_size=64,
+            method='binned',
         )
 
         assert results is not None
@@ -534,7 +535,7 @@ class TestTLSBasicExecution:
         # Search with periods around the true value
         periods = np.linspace(8, 12, 30)
 
-        results = tls.tls_search_gpu(t, y, dy, periods=periods)
+        results = tls.tls_search_gpu(t, y, dy, periods=periods, method='binned')
 
         # Should return results
         assert results['chi2'] is not None
@@ -564,7 +565,7 @@ class TestTLSBasicExecution:
         dy = np.ones(500) * 0.0001
 
         periods = np.linspace(8, 12, 50)
-        results = tls.tls_search_gpu(t, y, dy, periods=periods)
+        results = tls.tls_search_gpu(t, y, dy, periods=periods, method='binned')
 
         assert results['SDE'] > 0, (
             "SDE should be > 0 for a clear transit signal"
@@ -576,9 +577,9 @@ if __name__ == '__main__':
 
 
 class TestSharedMemoryGuard:
-    """The LEGACY kernel (use_fast=False) must fail loudly (before
+    """The legacy kernel (method='legacy') must fail loudly (before
     touching the GPU) when its shared-memory layout exceeds the 48 KB
-    per-block budget. The default fast path has no such cap."""
+    per-block budget. The binned engine has no such cap."""
 
     def test_large_ndata_raises_value_error(self):
         from cuvarbase.tls import tls_search_gpu
@@ -589,7 +590,7 @@ class TestSharedMemoryGuard:
         dy = 0.001 * np.ones(ndata)
         with pytest.raises(ValueError, match="shared memory"):
             tls_search_gpu(t, y, dy, periods=np.array([1.0, 2.0]),
-                           use_fast=False)
+                           method='legacy')
 
     def test_guard_accounts_for_template_size(self):
         from cuvarbase.tls import tls_search_gpu
@@ -602,10 +603,10 @@ class TestSharedMemoryGuard:
         dy = 0.001 * np.ones(ndata)
         with pytest.raises(ValueError, match="shared memory"):
             tls_search_gpu(t, y, dy, periods=np.array([1.0, 2.0]),
-                           n_template=4000, use_fast=False)
+                           n_template=4000, method='legacy')
 
     def test_fast_path_has_no_ndata_cap(self):
-        # regression for the removed cap: the default (fast) path must
+        # regression for the removed cap: the binned path must
         # accept TESS-length lightcurves outright
         from cuvarbase.tls import tls_search_gpu
         rand = np.random.RandomState(3)
@@ -614,7 +615,7 @@ class TestSharedMemoryGuard:
         y = 1 + 0.001 * rand.randn(ndata)
         dy = 0.001 * np.ones(ndata)
         results = tls_search_gpu(t, y, dy,
-                                 periods=np.linspace(2.0, 5.0, 50))
+                                 periods=np.linspace(2.0, 5.0, 50), method='binned')
         assert np.isfinite(results['chi2_min'])
 
 
@@ -786,16 +787,16 @@ class TestTLSStreamParity:
         dy = np.ones(400) * 0.001
         periods = np.linspace(5, 15, 10)
 
-        # use_fast=False on both sides: this is a regression test for
+        # method='legacy' on both sides: this is a regression test for
         # the LEGACY kernel's async D2H sequencing (the fast path does
         # not take a user stream and would silently fall back to the
         # legacy kernel anyway when one is passed)
         r_default = tls.tls_search_gpu(t, y, dy, periods=periods,
-                                       block_size=64, use_fast=False)
+                                       block_size=64, method='legacy')
         ensure_context()
         r_stream = tls.tls_search_gpu(t, y, dy, periods=periods,
                                       block_size=64,
-                                      stream=cuda.Stream())
+                                      stream=cuda.Stream(), method='legacy')
         np.testing.assert_allclose(r_stream['chi2'], r_default['chi2'],
                                    rtol=1e-3)
 
@@ -809,7 +810,7 @@ import inspect as _inspect
 
 
 class TestDefaultDurationWindow:
-    """Defect 2 (tls-duration-window, audit id 9): tls_search_gpu /
+    """Preserved binned engine duration window (audit id 9): tls_search_gpu /
     tls_search without qmin/qmax used a constant q window [0.005, 0.15]
     at every period while the default Ofir grid runs to span/2; beyond
     P ~ 60 d (Sun-like) no trial duration was physical and a P = 365 d
@@ -875,7 +876,7 @@ class TestDefaultDurationWindow:
             return [tls._null_result(n, 1.0, 'intercepted',
                                      periods=kw['periods'], arrays=True)]
 
-        monkeypatch.setattr(tls, 'tls_search_batch', fake_batch)
+        monkeypatch.setattr(tls, '_tls_search_batch_binned', fake_batch)
         return captured
 
     def test_search_gpu_default_passes_keplerian_window(self, monkeypatch):
@@ -886,7 +887,7 @@ class TestDefaultDurationWindow:
         dy = np.full(2000, 3e-4)
         periods = np.array([10.0, 100.0, 365.0])
         r = tls.tls_search_gpu(t, y, dy, periods=periods,
-                               R_star=0.8, M_star=0.9)
+                               R_star=0.8, M_star=0.9, method='binned')
         q = tls_grids.q_transit(periods, 0.8, 0.9, 1.0)
         np.testing.assert_allclose(captured['qmin'], 0.5 * q, rtol=1e-6)
         np.testing.assert_allclose(captured['qmax'], 2.0 * q, rtol=1e-6)
@@ -901,7 +902,7 @@ class TestDefaultDurationWindow:
         dy = np.full(500, 1e-3)
         periods = np.array([3.0, 30.0])
         tls.tls_search_gpu(t, y, dy, periods=periods, R_planet=3.0,
-                           qmin_fac=0.3, qmax_fac=3.0, n_durations=7)
+                           qmin_fac=0.3, qmax_fac=3.0, n_durations=7, method='binned')
         q = tls_grids.q_transit(periods, 1.0, 1.0, 3.0)
         np.testing.assert_allclose(captured['qmin'], 0.3 * q, rtol=1e-6)
         np.testing.assert_allclose(captured['qmax'], 3.0 * q, rtol=1e-6)
@@ -915,7 +916,7 @@ class TestDefaultDurationWindow:
         dy = np.full(2000, 3e-4)
         with pytest.warns(UserWarning, match="excludes the Keplerian"):
             tls.tls_search_gpu(t, y, dy, periods=np.array([10.0, 365.0]),
-                               duration_window='fixed')
+                               duration_window='fixed', method='binned')
         assert np.all(captured['qmin'] == 0.005)
         assert np.all(captured['qmax'] == 0.15)
 
@@ -932,7 +933,7 @@ class TestDefaultDurationWindow:
         with pytest.raises(ValueError, match="both qmin and qmax"):
             tls.tls_search_gpu(t, y, dy, periods=periods,
                                qmin=np.full(2, 0.01))
-        with pytest.raises(ValueError, match="same length"):
+        with pytest.raises(ValueError, match="aligned with periods"):
             tls.tls_search_gpu(t, y, dy, periods=periods,
                                qmin=np.full(3, 0.01), qmax=np.full(3, 0.05))
         with pytest.raises(ValueError, match="0 < qmin <= qmax < 1"):
@@ -946,7 +947,7 @@ class TestDefaultDurationWindow:
         src = open(find_kernel('tls')).read()
         assert 'RETAINED FOR API COMPATIBILITY ONLY' in src
         from cuvarbase import tls
-        body = _inspect.getsource(tls.tls_search_gpu)
+        body = _inspect.getsource(tls._tls_search_gpu_binned)
         assert "kernels['standard']" not in body
         assert "kernels['keplerian']" in body
 
@@ -972,7 +973,7 @@ class TestTransitDurationWindowBounds:
             return tls._null_result(n, 1.0, 'intercepted',
                                     periods=kw['periods'], arrays=True)
 
-        monkeypatch.setattr(tls, 'tls_search_gpu', fake_search)
+        monkeypatch.setattr(tls, '_tls_search_gpu_binned', fake_search)
         return captured
 
     PARAMS = [dict(), dict(R_star=0.7, M_star=0.65, R_planet=2.3,
@@ -988,7 +989,7 @@ class TestTransitDurationWindowBounds:
         dy = np.full(1200, 1e-3)
         for kw in self.PARAMS:
             captured = self._capture_search(monkeypatch)
-            tls.tls_transit(t, y, dy, period_min=0.5, period_max=30.0, **kw)
+            tls._tls_transit_binned(t, y, dy, period_min=0.5, period_max=30.0, **kw)
             periods = captured['periods']
             # the pre-1.0 expression, verbatim
             _, _, q_values = tls_grids.duration_grid_keplerian(
@@ -1019,7 +1020,7 @@ class TestTransitDurationWindowBounds:
 
         monkeypatch.setattr(tls_grids, 'duration_grid_keplerian', counting)
         t = np.linspace(0, 90.0, 1200)
-        tls.tls_transit(t, np.ones(1200), np.full(1200, 1e-3),
+        tls._tls_transit_binned(t, np.ones(1200), np.full(1200, 1e-3),
                         period_min=0.5, period_max=30.0)
         assert calls == []
 
@@ -1028,7 +1029,7 @@ class TestTransitDurationWindowBounds:
         from cuvarbase import tls
         captured = self._capture_search(monkeypatch)
         t = np.linspace(0, 90.0, 1200)
-        tls.tls_transit(t, np.ones(1200), np.full(1200, 1e-3),
+        tls._tls_transit_binned(t, np.ones(1200), np.full(1200, 1e-3),
                         R_star=0.8, M_star=0.9, period_min=0.5,
                         period_max=30.0)
         qmin, qmax = tls_grids.duration_window(
@@ -1163,7 +1164,7 @@ class TestBatchHasNoThreadPool:
     def test_module_does_not_import_a_thread_pool(self):
         from cuvarbase import tls
         assert not hasattr(tls, 'ThreadPoolExecutor')
-        body = _inspect.getsource(tls.tls_search_batch)
+        body = _inspect.getsource(tls._tls_search_batch_binned)
         assert 'ThreadPoolExecutor(' not in body
         assert 'cpu_count' not in body
 
@@ -1400,10 +1401,10 @@ class TestFAPRemoved:
             r['FAP'] = 0.5   # even if a batch result carried one...
             return [r]
 
-        monkeypatch.setattr(tls, 'tls_search_batch', fake_batch)
+        monkeypatch.setattr(tls, '_tls_search_batch_binned', fake_batch)
         t = np.linspace(0, 100, 500)
         r = tls.tls_search_gpu(t, np.ones(500), np.full(500, 1e-3),
-                               periods=np.array([3.0, 4.0]))
+                               periods=np.array([3.0, 4.0]), method='binned')
         assert 'FAP' not in r        # ...tls_search_gpu never forwards it
         assert 't0_phase' in r and 'T0' in r
 
@@ -1462,7 +1463,7 @@ class TestSortedPeriodGrid:
         with pytest.raises(ValueError, match="ascending"):
             tls.tls_search_gpu(t, np.ones(500), np.full(500, 1e-3),
                                periods=np.array([5.0, 3.0, 4.0]),
-                               use_fast=False, memory=object(),
+                               method='legacy', memory=object(),
                                transfer_to_device=False)
 
     def test_period_uncertainty_positive_on_sorted_input(self):

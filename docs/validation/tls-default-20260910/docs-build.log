@@ -1,0 +1,140 @@
+Running Sphinx v7.4.7
+loading translations [en]... done
+/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+Converting `source_suffix = '.rst'` to `source_suffix = {'.rst': 'restructuredtext'}`.
+loading pickled environment... done
+building [mo]: targets for 0 po files that are out of date
+writing output... 
+building [html]: targets for 10 source files that are out of date
+updating environment: 1 added, 9 changed, 0 removed
+reading sources... [ 10%] bls
+reading sources... [ 20%] ce
+reading sources... [ 30%] cuvarbase
+reading sources... [ 40%] index
+reading sources... [ 50%] install
+reading sources... [ 60%] lomb
+reading sources... [ 70%] nufft_lrt
+reading sources... [ 80%] pdm
+reading sources... [ 90%] tls
+reading sources... [100%] whatsnew
+
+/Users/johnhoffman/Documents/cuvarbase/docs/source/bls.rst:20: WARNING: Exception occurred in plotting bls_example
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/plots/bls_example.py:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 1, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/bls.py", line 19, in <module>
+    import pycuda.driver as cuda
+ModuleNotFoundError: No module named 'pycuda'
+/Users/johnhoffman/Documents/cuvarbase/docs/source/bls.rst:75: WARNING: Exception occurred in plotting bls_example_transit
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/plots/bls_example_transit.py:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 1, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/bls.py", line 19, in <module>
+    import pycuda.driver as cuda
+ModuleNotFoundError: No module named 'pycuda'
+/Users/johnhoffman/Documents/cuvarbase/docs/source/ce.rst:47: WARNING: Exception occurred in plotting ce_example
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/plots/ce_example.py:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 1, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/ce.py", line 16, in <module>
+    import pycuda.driver as cuda
+ModuleNotFoundError: No module named 'pycuda'
+/Users/johnhoffman/Documents/cuvarbase/docs/source/lomb.rst:241: WARNING: Exception occurred in plotting lomb-1
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/lomb.rst:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 12, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/lombscargle.py", line 943, in __init__
+    super(LombScargleAsyncProcess, self).__init__(*args, **kwargs)
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/base/async_process.py", line 21, in __init__
+    ensure_context()
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/base/context.py", line 38, in ensure_context
+    import pycuda.autoprimaryctx as autoctx
+ModuleNotFoundError: No module named 'pycuda'
+/Users/johnhoffman/Documents/cuvarbase/docs/source/lomb.rst:282: WARNING: Exception occurred in plotting lomb-2
+ from /Users/johnhoffman/Documents/cuvarbase/docs/source/lomb.rst:
+Traceback (most recent call last):
+  File "/Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/matplotlib/sphinxext/plot_directive.py", line 552, in _run_code
+    exec(code, ns)
+  File "<string>", line 18, in <module>
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/lombscargle.py", line 943, in __init__
+    super(LombScargleAsyncProcess, self).__init__(*args, **kwargs)
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/base/async_process.py", line 21, in __init__
+    ensure_context()
+  File "/Users/johnhoffman/Documents/cuvarbase/cuvarbase/base/context.py", line 38, in ensure_context
+    import pycuda.autoprimaryctx as autoctx
+ModuleNotFoundError: No module named 'pycuda'
+looking for now-outdated files... none found
+pickling environment... done
+checking consistency... done
+preparing documents... done
+copying assets... 
+copying downloadable files... [  8%] ../../build/html/plot_directive/plots/bls_transit_diagram.py
+Copying the source path /Users/johnhoffman/Documents/cuvarbase/docs/source/../build/html/plot_directive/plots/bls_transit_diagram.py to /Users/johnhoffman/Documents/cuvarbase/docs/build/html/_downloads/02a8659deba2464d81614680237fe436/bls_transit_diagram.py will overwrite data, as a file already exists at the destination path and the content does not match.
+copying downloadable files... [ 15%] ../../build/html/plot_directive/plots/bls_transit_diagram.png
+copying downloadable files... [ 23%] ../../build/html/plot_directive/plots/bls_transit_diagram.hires.png
+copying downloadable files... [ 31%] ../../build/html/plot_directive/plots/bls_transit_diagram.pdf
+copying downloadable files... [ 38%] ../../build/html/plot_directive/plots/bls_example.py
+copying downloadable files... [ 46%] ../../build/html/plot_directive/plots/planet_transit_diagram.py
+copying downloadable files... [ 54%] ../../build/html/plot_directive/plots/planet_transit_diagram.png
+copying downloadable files... [ 62%] ../../build/html/plot_directive/plots/planet_transit_diagram.hires.png
+copying downloadable files... [ 69%] ../../build/html/plot_directive/plots/planet_transit_diagram.pdf
+copying downloadable files... [ 77%] ../../build/html/plot_directive/plots/bls_example_transit.py
+copying downloadable files... [ 85%] ../../build/html/plot_directive/plots/ce_example.py
+copying downloadable files... [ 92%] ../../build/html/plot_directive/lomb-1.py
+copying downloadable files... [100%] ../../build/html/plot_directive/lomb-2.py
+
+copying static files... done
+copying extra files... done
+copying assets: done
+writing output... [  9%] bls
+writing output... [ 18%] ce
+writing output... [ 27%] cuvarbase
+writing output... [ 36%] index
+writing output... [ 45%] install
+writing output... [ 55%] lomb
+writing output... [ 64%] modules
+writing output... [ 73%] nufft_lrt
+writing output... [ 82%] pdm
+writing output... [ 91%] tls
+writing output... [100%] whatsnew
+
+generating indices... genindex py-modindex done
+highlighting module code... [  5%] cuvarbase.base.async_process
+highlighting module code... [ 11%] cuvarbase.base.context
+highlighting module code... [ 16%] cuvarbase.bls
+highlighting module code... [ 21%] cuvarbase.bls_frequencies
+highlighting module code... [ 26%] cuvarbase.ce
+highlighting module code... [ 32%] cuvarbase.cufinufft_backend
+highlighting module code... [ 37%] cuvarbase.cunfft
+highlighting module code... [ 42%] cuvarbase.lombscargle
+highlighting module code... [ 47%] cuvarbase.memory.bls_memory
+highlighting module code... [ 53%] cuvarbase.memory.ce_memory
+highlighting module code... [ 58%] cuvarbase.memory.lombscargle_memory
+highlighting module code... [ 63%] cuvarbase.memory.nfft_memory
+highlighting module code... [ 68%] cuvarbase.nufft_lrt
+highlighting module code... [ 74%] cuvarbase.pdm
+highlighting module code... [ 79%] cuvarbase.tls
+highlighting module code... [ 84%] cuvarbase.tls_grids
+highlighting module code... [ 89%] cuvarbase.tls_models
+highlighting module code... [ 95%] cuvarbase.tls_stats
+highlighting module code... [100%] cuvarbase.utils
+
+writing additional pages... search done
+copying images... [ 33%] ../build/html/plot_directive/plots/bls_transit_diagram.png
+copying images... [ 67%] ../build/html/plot_directive/plots/planet_transit_diagram.png
+copying images... [100%] logo.png
+
+dumping search index in English (code: en)... done
+dumping object inventory... done
+build succeeded, 5 warnings.
+
+The HTML pages are in docs/build/html.

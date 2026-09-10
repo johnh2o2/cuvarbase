@@ -1,9 +1,15 @@
 # Recovery of short, high-impact transits
 
-**GTLS recovered signals that cuvarbase's default TLS search missed in this
+This 9 September 2026 pilot evaluates the earlier phase-binned TLS engine,
+retained as `method='binned'`. Labels such as “v1 defaults” refer to its frozen
+configuration. See the [current transit report](../../../../docs/TRANSIT_BENCHMARKS.md)
+for the observation-level default; the measurements below remain historical
+evidence.
+
+**GTLS recovered signals that cuvarbase's then-default TLS search missed in this
 targeted experiment.** GTLS recovered 112/256 injected transits; the baseline
 v1 defaults recovered 61/256. Widening v1's duration search raised recovery to
-116/256. These results identify a meaningful limitation of the defaults;
+116/256. These results identify a meaningful limitation of those defaults;
 they do not establish equivalent sensitivity between the widened search and
 GTLS, or measure a new headline speedup.
 

@@ -1,0 +1,4055 @@
+{
+  "status": "running",
+  "regime": "tess_solar",
+  "names": [
+    "tess_solar_null_0000.npz",
+    "tess_solar_null_0001.npz",
+    "tess_solar_null_0002.npz",
+    "tess_solar_null_0003.npz"
+  ],
+  "scope": "Untimed eligibility preflight; no headline denominator",
+  "configurations": {
+    "candidate_1worker": {
+      "workers": [
+        {
+          "kind": "ready",
+          "pid": 1163,
+          "namespace_pids": [
+            1163
+          ],
+          "sources": {
+            "root": "/workspace/tls-default/candidate/cuvarbase",
+            "files": {
+              "tls.py": "eb1c0bfd5ce8ee6df86da43bc0cf09c112b1e47e67ca394554dc5cc6db7b0b75",
+              "tls_reference.py": "a38d5a9b83b02825374ba6603d3c7b4106a10c939f98c9fb8004c09ce41100e2",
+              "tls_reference_math.py": "27e5a575e6279e64ce02fd17c40d64e9885f9c285d3145e13e2bee5ac94afe13",
+              "tls_reference_frontend.py": "e2d95902235a6e8728394c76203b7f4c8f9a094a3c57ff582733ea608dd617c6",
+              "tls_reference_prefix.py": "3fcdaf0acd1fb5ff5f00637872ff2785b943b0996369ffeb2f3f3b7e431035fb",
+              "tls_grids.py": "56398357bc4258d52c560170eb01cb204f547d2331a3202648225081ed86f1b7",
+              "tls_stats.py": "53fba5f00950175c742713fc021b5174cd5f86d8fc82e13bf14056aeb8b83ef5",
+              "tls_models.py": "553c90b7abc9511d24589d75abbdb93383541d67b47afa02aef4d12a7fad1623",
+              "kernels/tls_reference.cu": "b060dbd2063b03d3295f8469ecb4293a1118131d41a1c55fa0399d0a24fc7d97",
+              "kernels/tls_reference_prepare.cu": "ab4df4b72aba4d39b93071755978a3706df98b99092546364357873f0c930b9c"
+            }
+          },
+          "cuda_context_allocation_bytes": 1,
+          "cuda_context_synchronized": true
+        }
+      ],
+      "warmup": {
+        "status": "ok",
+        "elapsed_seconds": 1.689583383500576,
+        "denominator_seconds": 1.689583383500576,
+        "validation_seconds": 0.0015102587640285492,
+        "worker_public_calls": [
+          {
+            "kind": "complete",
+            "pid": 1163,
+            "started": 14409180.829572676,
+            "ended": 14409182.518613396,
+            "api_seconds": 1.689040720462799,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          }
+        ],
+        "errors": [],
+        "outputs": [
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "M_star": 1.0,
+              "R_star": 1.0,
+              "SDE": 6.386748790740967,
+              "SDE_raw": 5.803847789764404,
+              "SNR": 7.527322797141988,
+              "SR": {
+                "data": "aa674d10944372d22a3963784dc1fa023206949e50cbba1b1405e5477f23b1a1",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "T0": 11.730273746216653,
+              "best_depth_per_period": {
+                "data": "bc9733883de75f8e050d96aa70ec8eb83dcdf7b8236a07a5b5e822e74c377512",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_duration_per_period": {
+                "data": "396cf547ec0393395599e8f4d2f8ca890c1a72367c3b0450bd475ad18972da75",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_start_index_per_period": {
+                "data": "9edede701c8b72bb35ee1a586ece5b685aa8d3369204f21f68d0263b05b2c046",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_t0_per_period": {
+                "data": "7a7e93ce65e9cf044c24566ed05bf892ee4a5d10ac2d71b3ce963162732569ee",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_width_samples_per_period": {
+                "data": "9127088abe96f0c58aa3bc41ecb635164be9a570a14b32cdd25d3c0b5891f162",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2_cpu_model": 10483.908119401965,
+              "chi2_error_scale": 0.0001520779785999121,
+              "chi2_min": 10483.939404218798,
+              "chi2_null": 10540.599992711172,
+              "delta_chi2": 56.660588492373485,
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "epoch_index": 8792,
+              "exposure": {
+                "integrated_in_search": false,
+                "supplied": false
+              },
+              "fractional_duration": 0.04176355540485472,
+              "n_failed_periods": 0,
+              "n_masked_periods": 0,
+              "n_transits": 2,
+              "native_gtls_snr": 6.792196963629662,
+              "observed_transits": 2,
+              "parameter_valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "per_transit_count": {
+                "data": "142a1ce121b72051fa9c5fb0452d1875e33bbb7bf360359fb99fcf4f61151536",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              },
+              "period": 12.644915705851629,
+              "period_uncertainty": 0.05783276599763276,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "search_configuration": {
+                "method": "reference",
+                "full": true,
+                "phase_binning": false,
+                "candidate_policy": "finite_unmasked_before_ranking",
+                "time_origin": 0.0,
+                "input_count": 9736,
+                "samples_used": 9736,
+                "duration_policy": "reference",
+                "logical_group_size": 77,
+                "work_chunk": 256,
+                "omitted_unrepresentable_durations": [],
+                "per_period_parameters": "nominal sample-window diagnostics; winner parameters use native final postprocessing"
+              },
+              "t0_phase": 0.8485840472033399,
+              "transit_times": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              },
+              "valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "width_in_samples": 406,
+              "width_index": 25
+            },
+            "full_digest": "4ca9e9333870dbb67bf6d291c4d12bccbebea3077af0b6e97829694dbf95cca0",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          }
+        ],
+        "assignments": [
+          [
+            0
+          ]
+        ],
+        "source_count": 1,
+        "warmup": true,
+        "exclusive_before": {
+          "allowed_pids": [
+            1574147
+          ],
+          "observed_pids": [
+            1574147
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409180.829496335,
+          "utc": 1789064996.5871701
+        },
+        "exclusive_after": {
+          "allowed_pids": [
+            1574147
+          ],
+          "observed_pids": [
+            1574147
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409182.552831028,
+          "utc": 1789064998.3105052
+        }
+      },
+      "run": {
+        "status": "ok",
+        "elapsed_seconds": 0.6507403664290905,
+        "denominator_seconds": 0.6507403664290905,
+        "validation_seconds": 0.0036854129284620285,
+        "worker_public_calls": [
+          {
+            "kind": "complete",
+            "pid": 1163,
+            "started": 14409182.563584404,
+            "ended": 14409183.213994509,
+            "api_seconds": 0.6504101045429707,
+            "completed_cases": 4,
+            "error": null,
+            "case_failures": []
+          }
+        ],
+        "errors": [],
+        "outputs": [
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "M_star": 1.0,
+              "R_star": 1.0,
+              "SDE": 6.386748790740967,
+              "SDE_raw": 5.803847789764404,
+              "SNR": 7.527322797141988,
+              "SR": {
+                "data": "aa674d10944372d22a3963784dc1fa023206949e50cbba1b1405e5477f23b1a1",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "T0": 11.730273746216653,
+              "best_depth_per_period": {
+                "data": "bc9733883de75f8e050d96aa70ec8eb83dcdf7b8236a07a5b5e822e74c377512",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_duration_per_period": {
+                "data": "396cf547ec0393395599e8f4d2f8ca890c1a72367c3b0450bd475ad18972da75",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_start_index_per_period": {
+                "data": "9edede701c8b72bb35ee1a586ece5b685aa8d3369204f21f68d0263b05b2c046",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_t0_per_period": {
+                "data": "7a7e93ce65e9cf044c24566ed05bf892ee4a5d10ac2d71b3ce963162732569ee",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_width_samples_per_period": {
+                "data": "9127088abe96f0c58aa3bc41ecb635164be9a570a14b32cdd25d3c0b5891f162",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2_cpu_model": 10483.908119401965,
+              "chi2_error_scale": 0.0001520779785999121,
+              "chi2_min": 10483.939404218798,
+              "chi2_null": 10540.599992711172,
+              "delta_chi2": 56.660588492373485,
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "epoch_index": 8792,
+              "exposure": {
+                "integrated_in_search": false,
+                "supplied": false
+              },
+              "fractional_duration": 0.04176355540485472,
+              "n_failed_periods": 0,
+              "n_masked_periods": 0,
+              "n_transits": 2,
+              "native_gtls_snr": 6.792196963629662,
+              "observed_transits": 2,
+              "parameter_valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "per_transit_count": {
+                "data": "142a1ce121b72051fa9c5fb0452d1875e33bbb7bf360359fb99fcf4f61151536",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              },
+              "period": 12.644915705851629,
+              "period_uncertainty": 0.05783276599763276,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "search_configuration": {
+                "method": "reference",
+                "full": true,
+                "phase_binning": false,
+                "candidate_policy": "finite_unmasked_before_ranking",
+                "time_origin": 0.0,
+                "input_count": 9736,
+                "samples_used": 9736,
+                "duration_policy": "reference",
+                "logical_group_size": 77,
+                "work_chunk": 256,
+                "omitted_unrepresentable_durations": [],
+                "per_period_parameters": "nominal sample-window diagnostics; winner parameters use native final postprocessing"
+              },
+              "t0_phase": 0.8485840472033399,
+              "transit_times": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              },
+              "valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "width_in_samples": 406,
+              "width_index": 25
+            },
+            "full_digest": "4ca9e9333870dbb67bf6d291c4d12bccbebea3077af0b6e97829694dbf95cca0",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0001.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "f3a1d6925fdd21cd02bad8b1a0aaecaf404134124fab36325a984ae59471e93b",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+              "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "09fba8c7ed2ab795d9e3f1d453d3a1f299a71579c55d344ff22205ff9a8f460c",
+              "chi2": "f3a1d6925fdd21cd02bad8b1a0aaecaf404134124fab36325a984ae59471e93b",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+              "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+            },
+            "fields": {
+              "M_star": 1.0,
+              "R_star": 1.0,
+              "SDE": 4.365203857421875,
+              "SDE_raw": 3.919102430343628,
+              "SNR": 7.42778730333859,
+              "SR": {
+                "data": "149048cb00c0ba5bbb9572938cb0a2b0264a8e39a240e25a3393cbedd126628a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "T0": 3.227464532555208,
+              "best_depth_per_period": {
+                "data": "4db83161c53612481d31a771f6e846f9fecca13353af80e7cb0c71a02df987e6",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_duration_per_period": {
+                "data": "1a3f8eea2b9b4d9660302949780593a5d74917a473ef47b2b0e0355d31e26b6d",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_start_index_per_period": {
+                "data": "3691bce3e67d89aba4963276d20d614ecc2ae9e2ac8cd32f7b7fcabc1c680943",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_t0_per_period": {
+                "data": "b0b0648a51c4479ea0db7afd34b321eaf20c72678501743cfa2b09ebd5f1040c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_width_samples_per_period": {
+                "data": "ac2c798d79a6edc3202ba7c9369fd5ccf62540f0556421e7870b36ec72982dab",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "f3a1d6925fdd21cd02bad8b1a0aaecaf404134124fab36325a984ae59471e93b",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2_cpu_model": 10349.436793565728,
+              "chi2_error_scale": 0.0001633100818343664,
+              "chi2_min": 10349.47923520791,
+              "chi2_null": 10404.651259431546,
+              "delta_chi2": 55.17202422363796,
+              "depth": 8.393859623222037e-05,
+              "duration": 0.1602772770021755,
+              "epoch_index": 6100,
+              "exposure": {
+                "integrated_in_search": false,
+                "supplied": false
+              },
+              "fractional_duration": 0.028525070285400387,
+              "n_failed_periods": 0,
+              "n_masked_periods": 0,
+              "n_transits": 5,
+              "native_gtls_snr": 7.022119015901462,
+              "observed_transits": 4,
+              "parameter_valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "per_transit_count": {
+                "data": "0c74a3952e6c8b76d26c133295ddfa09fcf5deba10d313ed0eae6675eaf5701b",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              },
+              "period": 5.118298175229332,
+              "period_uncertainty": 0.01296224174572247,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "search_configuration": {
+                "method": "reference",
+                "full": true,
+                "phase_binning": false,
+                "candidate_policy": "finite_unmasked_before_ranking",
+                "time_origin": 0.0,
+                "input_count": 9736,
+                "samples_used": 9736,
+                "duration_policy": "reference",
+                "logical_group_size": 77,
+                "work_chunk": 256,
+                "omitted_unrepresentable_durations": [],
+                "per_period_parameters": "nominal sample-window diagnostics; winner parameters use native final postprocessing"
+              },
+              "t0_phase": 0.4351963203971413,
+              "transit_times": {
+                "data": "dccdd8aa43813e1454c2b1608eee82c30c48f85de984f3127e25ffeb66686a55",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              },
+              "valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "width_in_samples": 277,
+              "width_index": 21
+            },
+            "full_digest": "98af8f2e55d691d8d37c7476cf883609fd94313409d2626d579be80131aa5b59",
+            "primary_period": 5.118298175229332,
+            "SDE": 4.365203857421875,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0002.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "521c85347de39baa76dc5456a800a7ae51ec1b4ee7c172897760e275829b814a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "1d6ba3e5c29c957db810685844d455ed38a6ecf80024ed18cf377ca8b3456c73",
+              "chi2": "521c85347de39baa76dc5456a800a7ae51ec1b4ee7c172897760e275829b814a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+            },
+            "fields": {
+              "M_star": 1.0,
+              "R_star": 1.0,
+              "SDE": 4.348062038421631,
+              "SDE_raw": 3.815012216567993,
+              "SNR": 8.596930228080586,
+              "SR": {
+                "data": "abc869b98d21788afa68247094bc528508d1dff6d09609d813b989ff9a4aed0c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "T0": 1.8494061363148409,
+              "best_depth_per_period": {
+                "data": "e2a7d796714830b755c3d188931d29bb535e2981eb5b72e7b48ed9cc95fba655",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_duration_per_period": {
+                "data": "a7d4131149d2b0223f4bd564f012067756698d0506c2f780f64a6c4cbe305603",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_start_index_per_period": {
+                "data": "0db96ed10dac68ac1aad8188b58910ea144d36707128915836ea60b87a10227d",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_t0_per_period": {
+                "data": "78ae0a40bdb4b6bd0a80b6e1bd83ee5d5ece8047bf66de01a3f5f0e29cd77287",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_width_samples_per_period": {
+                "data": "a72c8650d32c4698a251a558229b74133eac6ae73d460b0682faece285eda1f8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "521c85347de39baa76dc5456a800a7ae51ec1b4ee7c172897760e275829b814a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2_cpu_model": 10391.225426212155,
+              "chi2_error_scale": 0.00022103808475012479,
+              "chi2_min": 10391.287992115473,
+              "chi2_null": 10465.195201461958,
+              "delta_chi2": 73.9072093464857,
+              "depth": 7.657544619473576e-05,
+              "duration": 0.5136900984448821,
+              "epoch_index": 2681,
+              "exposure": {
+                "integrated_in_search": false,
+                "supplied": false
+              },
+              "fractional_duration": 0.08138535457423787,
+              "n_failed_periods": 0,
+              "n_masked_periods": 0,
+              "n_transits": 5,
+              "native_gtls_snr": 8.050222850159399,
+              "observed_transits": 4,
+              "parameter_valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "per_transit_count": {
+                "data": "c106186ee350ab97f511a4ece6b7a922cde334d490933ed0346bcd111a4226ec",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              },
+              "period": 5.844920932176428,
+              "period_uncertainty": 0.02060640446416162,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "search_configuration": {
+                "method": "reference",
+                "full": true,
+                "phase_binning": false,
+                "candidate_policy": "finite_unmasked_before_ranking",
+                "time_origin": 0.0,
+                "input_count": 9736,
+                "samples_used": 9736,
+                "duration_policy": "reference",
+                "logical_group_size": 77,
+                "work_chunk": 256,
+                "omitted_unrepresentable_durations": [],
+                "per_period_parameters": "nominal sample-window diagnostics; winner parameters use native final postprocessing"
+              },
+              "t0_phase": 0.1453238026948902,
+              "transit_times": {
+                "data": "f2a49d9ac50933c4b17d27ae1379448f4058db3c80105c1fc6f5ac7ae9f8a955",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              },
+              "valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "width_in_samples": 792,
+              "width_index": 32
+            },
+            "full_digest": "26bbe90b9cd02d992bbe6008caa78ef8a0ebc288ab86f2716392d5029f94d611",
+            "primary_period": 5.844920932176428,
+            "SDE": 4.348062038421631,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0003.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "10cfd14182de65435d23a18d55402891c3b18e5eb66579544d0fb47ad93a9159",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "f5df42f6e1fd571f1ebfd363230acd37ab3f242a1e54326bc0b0abaafa383b22",
+              "chi2": "10cfd14182de65435d23a18d55402891c3b18e5eb66579544d0fb47ad93a9159",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+            },
+            "fields": {
+              "M_star": 1.0,
+              "R_star": 1.0,
+              "SDE": 4.781316757202148,
+              "SDE_raw": 3.5360522270202637,
+              "SNR": 6.9589180520252905,
+              "SR": {
+                "data": "7cfb468e50d7a1e8816ffe889e85d919b30f5344439c29035e5e4c48878c4600",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "T0": 3.902729920811617,
+              "best_depth_per_period": {
+                "data": "68260e0c41e0564b6ff68b9eda5cfbbfb336797887ba05f1ac150128395a55ae",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_duration_per_period": {
+                "data": "c4ef22b369a1da0907d4015680853fcbf54c7f5a78457f3a1085d9e9745c7e42",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_start_index_per_period": {
+                "data": "b451e2cf5c9f2e75314c7b66e37e2e37b233f2d536d4d95f56d4b96d1f01cb23",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_t0_per_period": {
+                "data": "1fbefd58d39df55bab7d1adb8eda0a4674d9fdae2afadc87c43f927fff0a2479",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "best_width_samples_per_period": {
+                "data": "74c5cd4d2c54e35d2b9ebfe6818671d77bfc5848599a66f61f735a6c10d10e7e",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "10cfd14182de65435d23a18d55402891c3b18e5eb66579544d0fb47ad93a9159",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2_cpu_model": 10413.250285640072,
+              "chi2_error_scale": 0.00012989417307329243,
+              "chi2_min": 10413.319247606805,
+              "chi2_null": 10461.745788061608,
+              "delta_chi2": 48.42654045480346,
+              "depth": 8.161965815781439e-05,
+              "duration": 0.10185106540393432,
+              "epoch_index": 6493,
+              "exposure": {
+                "integrated_in_search": false,
+                "supplied": false
+              },
+              "fractional_duration": 0.016101658529060172,
+              "n_failed_periods": 0,
+              "n_masked_periods": 0,
+              "n_transits": 4,
+              "native_gtls_snr": 6.501842416628172,
+              "observed_transits": 4,
+              "parameter_valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "per_transit_count": {
+                "data": "e1f91663f36b5d9cf09415c5327cb4a7ff6499ddb6cf901b383587ab2e3263db",
+                "mask": "03aeea0b1edfd9024b480457fcf330ef51e727feac8635578667174ba6dfadb3"
+              },
+              "period": 5.844920932176428,
+              "period_uncertainty": 0.01547294756247064,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "search_configuration": {
+                "method": "reference",
+                "full": true,
+                "phase_binning": false,
+                "candidate_policy": "finite_unmasked_before_ranking",
+                "time_origin": 0.0,
+                "input_count": 9736,
+                "samples_used": 9736,
+                "duration_policy": "reference",
+                "logical_group_size": 77,
+                "work_chunk": 256,
+                "omitted_unrepresentable_durations": [],
+                "per_period_parameters": "nominal sample-window diagnostics; winner parameters use native final postprocessing"
+              },
+              "t0_phase": 0.4966243264014095,
+              "transit_times": {
+                "data": "e123622141b01ce46a666fa3b792ca867ef2d6f3881e248795fed5d1818713dc",
+                "mask": "03aeea0b1edfd9024b480457fcf330ef51e727feac8635578667174ba6dfadb3"
+              },
+              "valid_periods": {
+                "data": "d8cb552c10b4614460e5549e0d458cf456f4a067978d375db997d937f3b1c6aa",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "width_in_samples": 156,
+              "width_index": 15
+            },
+            "full_digest": "64755eff7f0c270682030e7e0b1a5c80e359db2a942c827f843df7ee8c12ebe7",
+            "primary_period": 5.844920932176428,
+            "SDE": 4.781316757202148,
+            "nperiods": 2325
+          }
+        ],
+        "assignments": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "source_count": 4,
+        "warmup": false,
+        "exclusive_before": {
+          "allowed_pids": [
+            1574147
+          ],
+          "observed_pids": [
+            1574147
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409182.563498065,
+          "utc": 1789064998.321172
+        },
+        "exclusive_after": {
+          "allowed_pids": [
+            1574147
+          ],
+          "observed_pids": [
+            1574147
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409183.244821368,
+          "utc": 1789064999.0024955
+        }
+      },
+      "output_gate": {
+        "eligible": true,
+        "problems": [],
+        "reference": {
+          "tess_solar_null_0000.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+            "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+          },
+          "tess_solar_null_0001.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "f3a1d6925fdd21cd02bad8b1a0aaecaf404134124fab36325a984ae59471e93b",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+            "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+          },
+          "tess_solar_null_0002.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "521c85347de39baa76dc5456a800a7ae51ec1b4ee7c172897760e275829b814a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+            "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+          },
+          "tess_solar_null_0003.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "10cfd14182de65435d23a18d55402891c3b18e5eb66579544d0fb47ad93a9159",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+            "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+          }
+        }
+      },
+      "status": "ok",
+      "gpu_ownership": {
+        "version": 1,
+        "status": "complete",
+        "passed": true,
+        "before_start": {
+          "allowed_pids": [],
+          "observed_pids": [],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409179.870186675,
+          "utc": 1789064995.6278615
+        },
+        "workers": [
+          {
+            "kind": "ready",
+            "pid": 1163,
+            "namespace_pids": [
+              1163
+            ],
+            "sources": {
+              "root": "/workspace/tls-default/candidate/cuvarbase",
+              "files": {
+                "tls.py": "eb1c0bfd5ce8ee6df86da43bc0cf09c112b1e47e67ca394554dc5cc6db7b0b75",
+                "tls_reference.py": "a38d5a9b83b02825374ba6603d3c7b4106a10c939f98c9fb8004c09ce41100e2",
+                "tls_reference_math.py": "27e5a575e6279e64ce02fd17c40d64e9885f9c285d3145e13e2bee5ac94afe13",
+                "tls_reference_frontend.py": "e2d95902235a6e8728394c76203b7f4c8f9a094a3c57ff582733ea608dd617c6",
+                "tls_reference_prefix.py": "3fcdaf0acd1fb5ff5f00637872ff2785b943b0996369ffeb2f3f3b7e431035fb",
+                "tls_grids.py": "56398357bc4258d52c560170eb01cb204f547d2331a3202648225081ed86f1b7",
+                "tls_stats.py": "53fba5f00950175c742713fc021b5174cd5f86d8fc82e13bf14056aeb8b83ef5",
+                "tls_models.py": "553c90b7abc9511d24589d75abbdb93383541d67b47afa02aef4d12a7fad1623",
+                "kernels/tls_reference.cu": "b060dbd2063b03d3295f8469ecb4293a1118131d41a1c55fa0399d0a24fc7d97",
+                "kernels/tls_reference_prepare.cu": "ab4df4b72aba4d39b93071755978a3706df98b99092546364357873f0c930b9c"
+              }
+            },
+            "cuda_context_allocation_bytes": 1,
+            "cuda_context_synchronized": true
+          }
+        ],
+        "owned_worker_pids": [
+          1163
+        ],
+        "bindings": [
+          {
+            "worker_pid": 1163,
+            "namespace_pids": [
+              1163
+            ],
+            "host_pid": 1574147,
+            "method": "single_worker_lifecycle"
+          }
+        ],
+        "host_pids": [
+          1574147
+        ],
+        "identity_scope": "individual",
+        "live_workers_at_binding": [
+          1163
+        ],
+        "startup_observations": [
+          {
+            "allowed_pids": [],
+            "observed_pids": [
+              1574147
+            ],
+            "foreign_pids": [
+              1574147
+            ],
+            "missing_pids": [],
+            "exclusive": false,
+            "monotonic": 14409180.791407492,
+            "utc": 1789064996.5490813
+          }
+        ],
+        "after_start": {
+          "allowed_pids": [
+            1574147
+          ],
+          "observed_pids": [
+            1574147
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409180.800734488,
+          "utc": 1789064996.5584083
+        },
+        "worker_exits": [
+          {
+            "worker_pid": 1163,
+            "exit_code": 0,
+            "alive": false,
+            "forced": false
+          }
+        ],
+        "exit_observations": [
+          {
+            "allowed_pids": [],
+            "observed_pids": [],
+            "foreign_pids": [],
+            "missing_pids": [],
+            "exclusive": true,
+            "monotonic": 14409183.479187274,
+            "utc": 1789064999.2368615
+          }
+        ],
+        "after_exit": {
+          "allowed_pids": [],
+          "observed_pids": [],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409183.479187274,
+          "utc": 1789064999.2368615
+        }
+      }
+    },
+    "gtls_1worker": {
+      "workers": [
+        {
+          "kind": "ready",
+          "pid": 1181,
+          "namespace_pids": [
+            1181
+          ],
+          "sources": {
+            "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+            "files": {
+              "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+              "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+              "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+              "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+              "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+              "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+              "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+              "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+              "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+              "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+              "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+              "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+              "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+              "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+              "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+              "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+              "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+              "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+              "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+            }
+          },
+          "cuda_context_allocation_bytes": 1,
+          "cuda_context_synchronized": true
+        }
+      ],
+      "warmup": {
+        "status": "ok",
+        "elapsed_seconds": 3.254035586491227,
+        "denominator_seconds": 3.254035586491227,
+        "validation_seconds": 0.001238098368048668,
+        "worker_public_calls": [
+          {
+            "kind": "complete",
+            "pid": 1181,
+            "started": 14409184.780865153,
+            "ended": 14409188.034472128,
+            "api_seconds": 3.2536069750785828,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          }
+        ],
+        "errors": [],
+        "outputs": [
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          }
+        ],
+        "assignments": [
+          [
+            0
+          ]
+        ],
+        "source_count": 1,
+        "warmup": true,
+        "exclusive_before": {
+          "allowed_pids": [
+            1574224
+          ],
+          "observed_pids": [
+            1574224
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409184.780755345,
+          "utc": 1789065000.5384293
+        },
+        "exclusive_after": {
+          "allowed_pids": [
+            1574224
+          ],
+          "observed_pids": [
+            1574224
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409188.0655644,
+          "utc": 1789065003.8232386
+        }
+      },
+      "run": {
+        "status": "ok",
+        "elapsed_seconds": 2.2623503282666206,
+        "denominator_seconds": 2.2623503282666206,
+        "validation_seconds": 0.003445921465754509,
+        "worker_public_calls": [
+          {
+            "kind": "complete",
+            "pid": 1181,
+            "started": 14409188.096067159,
+            "ended": 14409190.358136624,
+            "api_seconds": 2.2620694655925035,
+            "completed_cases": 4,
+            "error": null,
+            "case_failures": []
+          }
+        ],
+        "errors": [],
+        "outputs": [
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0001.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+              "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "09fba8c7ed2ab795d9e3f1d453d3a1f299a71579c55d344ff22205ff9a8f460c",
+              "chi2": "f3a1d6925fdd21cd02bad8b1a0aaecaf404134124fab36325a984ae59471e93b",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+              "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+            },
+            "fields": {
+              "SDE": 4.365203857421875,
+              "T0": 3.227464532555208,
+              "chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 8.393859623222037e-05,
+              "duration": 0.1602772770021755,
+              "durationPoints": 277,
+              "period": 5.118298175229332,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "f93f97026e7e5b3e15f2a6d44b09da56abd2726dbac56a5eb71697fb9627b453",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "422c3e151ba9bc9cac6f7252a5cd9fd16db3e8f218e28c68002137610f66f49e",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.028525070285400387,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "f30bc47fe8f78bbcd7cbc08275ae44ff609f9cd08b9c7ee62b2bf1a21ce44da3",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 7.022119015901462,
+              "snrFit": 98797.76423182724,
+              "snrFitPink": 79946.16857901457,
+              "snrPink": 5.8039497078251046,
+              "transitTimes": {
+                "data": "dccdd8aa43813e1454c2b1608eee82c30c48f85de984f3127e25ffeb66686a55",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              }
+            },
+            "full_digest": "0fa4d5f92106de99784f193c542fc0f6ebc8d97d3924eff296ea8b1f663c6275",
+            "primary_period": 5.118298175229332,
+            "SDE": 4.365203857421875,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0002.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "1d6ba3e5c29c957db810685844d455ed38a6ecf80024ed18cf377ca8b3456c73",
+              "chi2": "521c85347de39baa76dc5456a800a7ae51ec1b4ee7c172897760e275829b814a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+            },
+            "fields": {
+              "SDE": 4.348062038421631,
+              "T0": 1.8494061363148409,
+              "chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 7.657544619473576e-05,
+              "duration": 0.5136900984448821,
+              "durationPoints": 792,
+              "period": 5.844920932176428,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "903d98fa4659b5fa82c7febee5bab2d73030cbf414c586258a1f5adee6477d8d",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "ae78aa355481e0992845b17c0550b7bea3c85e07530768534509b3f498ce4ba2",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.08138535457423787,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "65f9d8e049c64df4ddcc04c17f81756910a23357c11988d5453f5a2d5d37373a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 8.050222850159399,
+              "snrFit": 123387.08385097572,
+              "snrFitPink": 78094.2962210836,
+              "snrPink": 6.301582127137303,
+              "transitTimes": {
+                "data": "f2a49d9ac50933c4b17d27ae1379448f4058db3c80105c1fc6f5ac7ae9f8a955",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              }
+            },
+            "full_digest": "1ffecd0d0bfee67393a3c8a67c47360a3e2eaa4082b17290eeea24d3f6287dd3",
+            "primary_period": 5.844920932176428,
+            "SDE": 4.348062038421631,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0003.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "f5df42f6e1fd571f1ebfd363230acd37ab3f242a1e54326bc0b0abaafa383b22",
+              "chi2": "10cfd14182de65435d23a18d55402891c3b18e5eb66579544d0fb47ad93a9159",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+            },
+            "fields": {
+              "SDE": 4.781316757202148,
+              "T0": 3.902729920811617,
+              "chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 8.161965815781439e-05,
+              "duration": 0.10185106540393432,
+              "durationPoints": 156,
+              "period": 5.844920932176428,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "fb4ad5b0b74bcb32a82a7fcb55df3beab84ff2483d40d34e4920ec53fa332e67",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "f036b684764a0682cea03c6e64fddb58aeca04504955f4ef089f57eadb76b2ef",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.016101658529060172,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "b268a2f24d20140716aa7d49394709ad1883faab26370a11fdabcf17be456e46",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.501842416628172,
+              "snrFit": 93042.40451626621,
+              "snrFitPink": 77445.57540876926,
+              "snrPink": 6.806832526779678,
+              "transitTimes": {
+                "data": "e123622141b01ce46a666fa3b792ca867ef2d6f3881e248795fed5d1818713dc",
+                "mask": "03aeea0b1edfd9024b480457fcf330ef51e727feac8635578667174ba6dfadb3"
+              }
+            },
+            "full_digest": "871bb39b03e6a9208d868f4911689564ef6baa808b7216e2ca214feb65d1084b",
+            "primary_period": 5.844920932176428,
+            "SDE": 4.781316757202148,
+            "nperiods": 2325
+          }
+        ],
+        "assignments": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "source_count": 4,
+        "warmup": false,
+        "exclusive_before": {
+          "allowed_pids": [
+            1574224
+          ],
+          "observed_pids": [
+            1574224
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409188.095978187,
+          "utc": 1789065003.8536518
+        },
+        "exclusive_after": {
+          "allowed_pids": [
+            1574224
+          ],
+          "observed_pids": [
+            1574224
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409190.388494913,
+          "utc": 1789065006.1461692
+        }
+      },
+      "output_gate": {
+        "eligible": true,
+        "problems": [],
+        "reference": {
+          "tess_solar_null_0000.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+            "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+          },
+          "tess_solar_null_0001.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+            "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+          },
+          "tess_solar_null_0002.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+            "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+          },
+          "tess_solar_null_0003.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+            "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+          }
+        }
+      },
+      "status": "ok",
+      "gpu_ownership": {
+        "version": 1,
+        "status": "complete",
+        "passed": true,
+        "before_start": {
+          "allowed_pids": [],
+          "observed_pids": [],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409183.489711488,
+          "utc": 1789064999.2473853
+        },
+        "workers": [
+          {
+            "kind": "ready",
+            "pid": 1181,
+            "namespace_pids": [
+              1181
+            ],
+            "sources": {
+              "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+              "files": {
+                "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+                "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+                "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+                "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+                "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+                "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+                "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+                "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+                "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+                "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+                "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+                "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+                "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+                "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+                "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+                "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+                "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+                "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+                "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+              }
+            },
+            "cuda_context_allocation_bytes": 1,
+            "cuda_context_synchronized": true
+          }
+        ],
+        "owned_worker_pids": [
+          1181
+        ],
+        "bindings": [
+          {
+            "worker_pid": 1181,
+            "namespace_pids": [
+              1181
+            ],
+            "host_pid": 1574224,
+            "method": "single_worker_lifecycle"
+          }
+        ],
+        "host_pids": [
+          1574224
+        ],
+        "identity_scope": "individual",
+        "live_workers_at_binding": [
+          1181
+        ],
+        "startup_observations": [
+          {
+            "allowed_pids": [],
+            "observed_pids": [
+              1574224
+            ],
+            "foreign_pids": [
+              1574224
+            ],
+            "missing_pids": [],
+            "exclusive": false,
+            "monotonic": 14409184.740757916,
+            "utc": 1789065000.4984317
+          }
+        ],
+        "after_start": {
+          "allowed_pids": [
+            1574224
+          ],
+          "observed_pids": [
+            1574224
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409184.77060028,
+          "utc": 1789065000.5282738
+        },
+        "worker_exits": [
+          {
+            "worker_pid": 1181,
+            "exit_code": 0,
+            "alive": false,
+            "forced": false
+          }
+        ],
+        "exit_observations": [
+          {
+            "allowed_pids": [],
+            "observed_pids": [],
+            "foreign_pids": [],
+            "missing_pids": [],
+            "exclusive": true,
+            "monotonic": 14409190.720827252,
+            "utc": 1789065006.478501
+          }
+        ],
+        "after_exit": {
+          "allowed_pids": [],
+          "observed_pids": [],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409190.720827252,
+          "utc": 1789065006.478501
+        }
+      }
+    },
+    "gtls_2worker": {
+      "workers": [
+        {
+          "kind": "ready",
+          "pid": 1233,
+          "namespace_pids": [
+            1233
+          ],
+          "sources": {
+            "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+            "files": {
+              "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+              "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+              "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+              "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+              "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+              "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+              "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+              "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+              "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+              "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+              "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+              "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+              "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+              "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+              "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+              "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+              "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+              "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+              "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+            }
+          },
+          "cuda_context_allocation_bytes": 1,
+          "cuda_context_synchronized": true
+        },
+        {
+          "kind": "ready",
+          "pid": 1234,
+          "namespace_pids": [
+            1234
+          ],
+          "sources": {
+            "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+            "files": {
+              "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+              "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+              "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+              "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+              "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+              "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+              "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+              "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+              "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+              "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+              "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+              "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+              "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+              "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+              "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+              "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+              "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+              "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+              "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+            }
+          },
+          "cuda_context_allocation_bytes": 1,
+          "cuda_context_synchronized": true
+        }
+      ],
+      "warmup": {
+        "status": "ok",
+        "elapsed_seconds": 1.0231515429913998,
+        "denominator_seconds": 1.0231515429913998,
+        "validation_seconds": 0.0014058612287044525,
+        "worker_public_calls": [
+          {
+            "kind": "complete",
+            "pid": 1233,
+            "started": 14409192.299429342,
+            "ended": 14409193.32212936,
+            "api_seconds": 1.0227000173181295,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          },
+          {
+            "kind": "complete",
+            "pid": 1234,
+            "started": 14409192.299439711,
+            "ended": 14409193.321176596,
+            "api_seconds": 1.0217368844896555,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          }
+        ],
+        "errors": [],
+        "outputs": [
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          }
+        ],
+        "assignments": [
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ],
+        "source_count": 2,
+        "warmup": true,
+        "exclusive_before": {
+          "allowed_pids": [
+            1575905,
+            1575906
+          ],
+          "observed_pids": [
+            1575905,
+            1575906
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409192.2992915,
+          "utc": 1789065008.0569656
+        },
+        "exclusive_after": {
+          "allowed_pids": [
+            1575905,
+            1575906
+          ],
+          "observed_pids": [
+            1575905,
+            1575906
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409193.352190629,
+          "utc": 1789065009.1098654
+        }
+      },
+      "run": {
+        "status": "ok",
+        "elapsed_seconds": 1.6955118626356125,
+        "denominator_seconds": 1.6955118626356125,
+        "validation_seconds": 0.0025709252804517746,
+        "worker_public_calls": [
+          {
+            "kind": "complete",
+            "pid": 1233,
+            "started": 14409193.384079915,
+            "ended": 14409195.062479109,
+            "api_seconds": 1.6783991940319538,
+            "completed_cases": 2,
+            "error": null,
+            "case_failures": []
+          },
+          {
+            "kind": "complete",
+            "pid": 1234,
+            "started": 14409193.384144563,
+            "ended": 14409195.07893746,
+            "api_seconds": 1.6947928965091705,
+            "completed_cases": 2,
+            "error": null,
+            "case_failures": []
+          }
+        ],
+        "errors": [],
+        "outputs": [
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0002.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "1d6ba3e5c29c957db810685844d455ed38a6ecf80024ed18cf377ca8b3456c73",
+              "chi2": "521c85347de39baa76dc5456a800a7ae51ec1b4ee7c172897760e275829b814a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+            },
+            "fields": {
+              "SDE": 4.348062038421631,
+              "T0": 1.8494061363148409,
+              "chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 7.657544619473576e-05,
+              "duration": 0.5136900984448821,
+              "durationPoints": 792,
+              "period": 5.844920932176428,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "903d98fa4659b5fa82c7febee5bab2d73030cbf414c586258a1f5adee6477d8d",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "ae78aa355481e0992845b17c0550b7bea3c85e07530768534509b3f498ce4ba2",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.08138535457423787,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "65f9d8e049c64df4ddcc04c17f81756910a23357c11988d5453f5a2d5d37373a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 8.050222850159399,
+              "snrFit": 123387.08385097572,
+              "snrFitPink": 78094.2962210836,
+              "snrPink": 6.301582127137303,
+              "transitTimes": {
+                "data": "f2a49d9ac50933c4b17d27ae1379448f4058db3c80105c1fc6f5ac7ae9f8a955",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              }
+            },
+            "full_digest": "1ffecd0d0bfee67393a3c8a67c47360a3e2eaa4082b17290eeea24d3f6287dd3",
+            "primary_period": 5.844920932176428,
+            "SDE": 4.348062038421631,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0001.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+              "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "09fba8c7ed2ab795d9e3f1d453d3a1f299a71579c55d344ff22205ff9a8f460c",
+              "chi2": "f3a1d6925fdd21cd02bad8b1a0aaecaf404134124fab36325a984ae59471e93b",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+              "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+            },
+            "fields": {
+              "SDE": 4.365203857421875,
+              "T0": 3.227464532555208,
+              "chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 8.393859623222037e-05,
+              "duration": 0.1602772770021755,
+              "durationPoints": 277,
+              "period": 5.118298175229332,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "f93f97026e7e5b3e15f2a6d44b09da56abd2726dbac56a5eb71697fb9627b453",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "422c3e151ba9bc9cac6f7252a5cd9fd16db3e8f218e28c68002137610f66f49e",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.028525070285400387,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "f30bc47fe8f78bbcd7cbc08275ae44ff609f9cd08b9c7ee62b2bf1a21ce44da3",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 7.022119015901462,
+              "snrFit": 98797.76423182724,
+              "snrFitPink": 79946.16857901457,
+              "snrPink": 5.8039497078251046,
+              "transitTimes": {
+                "data": "dccdd8aa43813e1454c2b1608eee82c30c48f85de984f3127e25ffeb66686a55",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              }
+            },
+            "full_digest": "0fa4d5f92106de99784f193c542fc0f6ebc8d97d3924eff296ea8b1f663c6275",
+            "primary_period": 5.118298175229332,
+            "SDE": 4.365203857421875,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0003.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "f5df42f6e1fd571f1ebfd363230acd37ab3f242a1e54326bc0b0abaafa383b22",
+              "chi2": "10cfd14182de65435d23a18d55402891c3b18e5eb66579544d0fb47ad93a9159",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+            },
+            "fields": {
+              "SDE": 4.781316757202148,
+              "T0": 3.902729920811617,
+              "chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 8.161965815781439e-05,
+              "duration": 0.10185106540393432,
+              "durationPoints": 156,
+              "period": 5.844920932176428,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "fb4ad5b0b74bcb32a82a7fcb55df3beab84ff2483d40d34e4920ec53fa332e67",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "f036b684764a0682cea03c6e64fddb58aeca04504955f4ef089f57eadb76b2ef",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.016101658529060172,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "b268a2f24d20140716aa7d49394709ad1883faab26370a11fdabcf17be456e46",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.501842416628172,
+              "snrFit": 93042.40451626621,
+              "snrFitPink": 77445.57540876926,
+              "snrPink": 6.806832526779678,
+              "transitTimes": {
+                "data": "e123622141b01ce46a666fa3b792ca867ef2d6f3881e248795fed5d1818713dc",
+                "mask": "03aeea0b1edfd9024b480457fcf330ef51e727feac8635578667174ba6dfadb3"
+              }
+            },
+            "full_digest": "871bb39b03e6a9208d868f4911689564ef6baa808b7216e2ca214feb65d1084b",
+            "primary_period": 5.844920932176428,
+            "SDE": 4.781316757202148,
+            "nperiods": 2325
+          }
+        ],
+        "assignments": [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            3
+          ]
+        ],
+        "source_count": 4,
+        "warmup": false,
+        "exclusive_before": {
+          "allowed_pids": [
+            1575905,
+            1575906
+          ],
+          "observed_pids": [
+            1575905,
+            1575906
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409193.384014525,
+          "utc": 1789065009.1416883
+        },
+        "exclusive_after": {
+          "allowed_pids": [
+            1575905,
+            1575906
+          ],
+          "observed_pids": [
+            1575905,
+            1575906
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409195.110669306,
+          "utc": 1789065010.8683436
+        }
+      },
+      "output_gate": {
+        "eligible": true,
+        "problems": [],
+        "reference": {
+          "tess_solar_null_0000.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+            "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+          },
+          "tess_solar_null_0001.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+            "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+          },
+          "tess_solar_null_0002.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+            "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+          },
+          "tess_solar_null_0003.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+            "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+          }
+        }
+      },
+      "status": "ok",
+      "gpu_ownership": {
+        "version": 1,
+        "status": "complete",
+        "passed": true,
+        "before_start": {
+          "allowed_pids": [],
+          "observed_pids": [],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409190.75136614,
+          "utc": 1789065006.5090399
+        },
+        "workers": [
+          {
+            "kind": "ready",
+            "pid": 1233,
+            "namespace_pids": [
+              1233
+            ],
+            "sources": {
+              "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+              "files": {
+                "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+                "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+                "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+                "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+                "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+                "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+                "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+                "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+                "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+                "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+                "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+                "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+                "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+                "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+                "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+                "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+                "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+                "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+                "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+              }
+            },
+            "cuda_context_allocation_bytes": 1,
+            "cuda_context_synchronized": true
+          },
+          {
+            "kind": "ready",
+            "pid": 1234,
+            "namespace_pids": [
+              1234
+            ],
+            "sources": {
+              "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+              "files": {
+                "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+                "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+                "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+                "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+                "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+                "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+                "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+                "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+                "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+                "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+                "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+                "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+                "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+                "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+                "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+                "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+                "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+                "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+                "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+              }
+            },
+            "cuda_context_allocation_bytes": 1,
+            "cuda_context_synchronized": true
+          }
+        ],
+        "owned_worker_pids": [
+          1233,
+          1234
+        ],
+        "bindings": [
+          {
+            "worker_pid": 1233,
+            "namespace_pids": [
+              1233
+            ],
+            "host_pid": null,
+            "method": "pool_lifecycle_member"
+          },
+          {
+            "worker_pid": 1234,
+            "namespace_pids": [
+              1234
+            ],
+            "host_pid": null,
+            "method": "pool_lifecycle_member"
+          }
+        ],
+        "host_pids": [
+          1575905,
+          1575906
+        ],
+        "identity_scope": "owned_pool_set",
+        "live_workers_at_binding": [
+          1233,
+          1234
+        ],
+        "startup_observations": [
+          {
+            "allowed_pids": [],
+            "observed_pids": [
+              1575905,
+              1575906
+            ],
+            "foreign_pids": [
+              1575905,
+              1575906
+            ],
+            "missing_pids": [],
+            "exclusive": false,
+            "monotonic": 14409192.255119428,
+            "utc": 1789065008.0127938
+          }
+        ],
+        "after_start": {
+          "allowed_pids": [
+            1575905,
+            1575906
+          ],
+          "observed_pids": [
+            1575905,
+            1575906
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409192.264656598,
+          "utc": 1789065008.02233
+        },
+        "worker_exits": [
+          {
+            "worker_pid": 1233,
+            "exit_code": 0,
+            "alive": false,
+            "forced": false
+          },
+          {
+            "worker_pid": 1234,
+            "exit_code": 0,
+            "alive": false,
+            "forced": false
+          }
+        ],
+        "exit_observations": [
+          {
+            "allowed_pids": [],
+            "observed_pids": [],
+            "foreign_pids": [],
+            "missing_pids": [],
+            "exclusive": true,
+            "monotonic": 14409195.537877632,
+            "utc": 1789065011.295552
+          }
+        ],
+        "after_exit": {
+          "allowed_pids": [],
+          "observed_pids": [],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409195.537877632,
+          "utc": 1789065011.295552
+        }
+      }
+    },
+    "gtls_4worker": {
+      "workers": [
+        {
+          "kind": "ready",
+          "pid": 1265,
+          "namespace_pids": [
+            1265
+          ],
+          "sources": {
+            "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+            "files": {
+              "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+              "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+              "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+              "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+              "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+              "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+              "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+              "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+              "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+              "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+              "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+              "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+              "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+              "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+              "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+              "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+              "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+              "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+              "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+            }
+          },
+          "cuda_context_allocation_bytes": 1,
+          "cuda_context_synchronized": true
+        },
+        {
+          "kind": "ready",
+          "pid": 1266,
+          "namespace_pids": [
+            1266
+          ],
+          "sources": {
+            "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+            "files": {
+              "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+              "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+              "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+              "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+              "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+              "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+              "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+              "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+              "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+              "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+              "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+              "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+              "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+              "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+              "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+              "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+              "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+              "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+              "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+            }
+          },
+          "cuda_context_allocation_bytes": 1,
+          "cuda_context_synchronized": true
+        },
+        {
+          "kind": "ready",
+          "pid": 1267,
+          "namespace_pids": [
+            1267
+          ],
+          "sources": {
+            "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+            "files": {
+              "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+              "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+              "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+              "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+              "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+              "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+              "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+              "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+              "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+              "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+              "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+              "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+              "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+              "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+              "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+              "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+              "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+              "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+              "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+            }
+          },
+          "cuda_context_allocation_bytes": 1,
+          "cuda_context_synchronized": true
+        },
+        {
+          "kind": "ready",
+          "pid": 1268,
+          "namespace_pids": [
+            1268
+          ],
+          "sources": {
+            "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+            "files": {
+              "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+              "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+              "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+              "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+              "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+              "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+              "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+              "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+              "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+              "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+              "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+              "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+              "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+              "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+              "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+              "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+              "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+              "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+              "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+            }
+          },
+          "cuda_context_allocation_bytes": 1,
+          "cuda_context_synchronized": true
+        }
+      ],
+      "warmup": {
+        "status": "ok",
+        "elapsed_seconds": 2.2802426870912313,
+        "denominator_seconds": 2.2802426870912313,
+        "validation_seconds": 0.0018635112792253494,
+        "worker_public_calls": [
+          {
+            "kind": "complete",
+            "pid": 1265,
+            "started": 14409197.236669311,
+            "ended": 14409199.402791267,
+            "api_seconds": 2.166121955960989,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          },
+          {
+            "kind": "complete",
+            "pid": 1266,
+            "started": 14409197.236785984,
+            "ended": 14409199.510347871,
+            "api_seconds": 2.2735618874430656,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          },
+          {
+            "kind": "complete",
+            "pid": 1267,
+            "started": 14409197.236690493,
+            "ended": 14409199.471822854,
+            "api_seconds": 2.235132360830903,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          },
+          {
+            "kind": "complete",
+            "pid": 1268,
+            "started": 14409197.236781444,
+            "ended": 14409199.51650748,
+            "api_seconds": 2.2797260358929634,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          }
+        ],
+        "errors": [],
+        "outputs": [
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          }
+        ],
+        "assignments": [
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            0
+          ],
+          [
+            0
+          ]
+        ],
+        "source_count": 4,
+        "warmup": true,
+        "exclusive_before": {
+          "allowed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "observed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409197.236563312,
+          "utc": 1789065012.994237
+        },
+        "exclusive_after": {
+          "allowed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "observed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409199.546509445,
+          "utc": 1789065015.3041835
+        }
+      },
+      "run": {
+        "status": "error",
+        "elapsed_seconds": 1.4477740116417408,
+        "denominator_seconds": null,
+        "validation_seconds": 0.002541312947869301,
+        "worker_public_calls": [
+          {
+            "kind": "complete",
+            "pid": 1265,
+            "started": 14409199.558009405,
+            "ended": 14409200.953620287,
+            "api_seconds": 1.3956108819693327,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          },
+          {
+            "kind": "complete",
+            "pid": 1266,
+            "started": 14409199.558026737,
+            "ended": 14409201.003914965,
+            "api_seconds": 1.445888228714466,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          },
+          {
+            "kind": "complete",
+            "pid": 1267,
+            "started": 14409199.558033375,
+            "ended": 14409200.955810709,
+            "api_seconds": 1.397777333855629,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          },
+          {
+            "kind": "complete",
+            "pid": 1268,
+            "started": 14409199.558018876,
+            "ended": 14409201.005287064,
+            "api_seconds": 1.4472681879997253,
+            "completed_cases": 1,
+            "error": null,
+            "case_failures": []
+          }
+        ],
+        "errors": [
+          {
+            "reason": "GPU ownership changed across the measurement",
+            "snapshot": {
+              "allowed_pids": [
+                1576405,
+                1576406,
+                1576407,
+                1576408
+              ],
+              "observed_pids": [
+                1576405,
+                1576406,
+                1576407,
+                1576408,
+                1576794
+              ],
+              "foreign_pids": [
+                1576794
+              ],
+              "missing_pids": [],
+              "exclusive": false,
+              "monotonic": 14409201.078556009,
+              "utc": 1789065016.8362315
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "case": "tess_solar_null_0000.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "9e43216f31f403f224e8f38f7a1e84c811bff1416ad69eae592d866a17681ac2",
+              "chi2": "8e04bbe3220840bd7b24337da7513e2d134b2bbef50da5e546dbbe2a375b287a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+              "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+            },
+            "fields": {
+              "SDE": 6.386748790740967,
+              "T0": 11.730273746216653,
+              "chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 6.230722705142192e-05,
+              "duration": 0.4699035256076056,
+              "durationPoints": 406,
+              "period": 12.644915705851629,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "2c2644c528ac5f39bee235d98efb1f0e42e7c687e0541b681749a3dcffff35f4",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "127741da6eb0bb3132b60a59847ececeeda467b7f0c6653a5a93003bff6333f8",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.04176355540485472,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "3ea9de0bd5455a125682c712d94d95de97117dbe0e76a7151992cd79a97b5cd8",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.792196963629662,
+              "snrFit": 128173.70226774747,
+              "snrFitPink": 69997.4533750418,
+              "snrPink": 6.87636204877885,
+              "transitTimes": {
+                "data": "5c8b67b860a2635ed6d855ec31d962c377528cef42674afe41d174cbbec112e3",
+                "mask": "df87e8fe7254ba84688cbda04231a6926b9e8448b301769e76816e8c4213e859"
+              }
+            },
+            "full_digest": "626aadb9041cc613b58d53faaab5230534a88091ab2c8a0470eb7a2f234cfb78",
+            "primary_period": 12.644915705851629,
+            "SDE": 6.386748790740967,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0001.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+              "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "09fba8c7ed2ab795d9e3f1d453d3a1f299a71579c55d344ff22205ff9a8f460c",
+              "chi2": "f3a1d6925fdd21cd02bad8b1a0aaecaf404134124fab36325a984ae59471e93b",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+              "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+            },
+            "fields": {
+              "SDE": 4.365203857421875,
+              "T0": 3.227464532555208,
+              "chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 8.393859623222037e-05,
+              "duration": 0.1602772770021755,
+              "durationPoints": 277,
+              "period": 5.118298175229332,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "f93f97026e7e5b3e15f2a6d44b09da56abd2726dbac56a5eb71697fb9627b453",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "422c3e151ba9bc9cac6f7252a5cd9fd16db3e8f218e28c68002137610f66f49e",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.028525070285400387,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "f30bc47fe8f78bbcd7cbc08275ae44ff609f9cd08b9c7ee62b2bf1a21ce44da3",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 7.022119015901462,
+              "snrFit": 98797.76423182724,
+              "snrFitPink": 79946.16857901457,
+              "snrPink": 5.8039497078251046,
+              "transitTimes": {
+                "data": "dccdd8aa43813e1454c2b1608eee82c30c48f85de984f3127e25ffeb66686a55",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              }
+            },
+            "full_digest": "0fa4d5f92106de99784f193c542fc0f6ebc8d97d3924eff296ea8b1f663c6275",
+            "primary_period": 5.118298175229332,
+            "SDE": 4.365203857421875,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0002.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "1d6ba3e5c29c957db810685844d455ed38a6ecf80024ed18cf377ca8b3456c73",
+              "chi2": "521c85347de39baa76dc5456a800a7ae51ec1b4ee7c172897760e275829b814a",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+            },
+            "fields": {
+              "SDE": 4.348062038421631,
+              "T0": 1.8494061363148409,
+              "chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 7.657544619473576e-05,
+              "duration": 0.5136900984448821,
+              "durationPoints": 792,
+              "period": 5.844920932176428,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "903d98fa4659b5fa82c7febee5bab2d73030cbf414c586258a1f5adee6477d8d",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "ae78aa355481e0992845b17c0550b7bea3c85e07530768534509b3f498ce4ba2",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.08138535457423787,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "65f9d8e049c64df4ddcc04c17f81756910a23357c11988d5453f5a2d5d37373a",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 8.050222850159399,
+              "snrFit": 123387.08385097572,
+              "snrFitPink": 78094.2962210836,
+              "snrPink": 6.301582127137303,
+              "transitTimes": {
+                "data": "f2a49d9ac50933c4b17d27ae1379448f4058db3c80105c1fc6f5ac7ae9f8a955",
+                "mask": "781f35f46f3bbc202a2134044bf7dadde94ab6c778015e4419fc18aab980be9c"
+              }
+            },
+            "full_digest": "1ffecd0d0bfee67393a3c8a67c47360a3e2eaa4082b17290eeea24d3f6287dd3",
+            "primary_period": 5.844920932176428,
+            "SDE": 4.348062038421631,
+            "nperiods": 2325
+          },
+          {
+            "case": "tess_solar_null_0003.npz",
+            "strict": {
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "power": {
+                "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+            },
+            "common": {
+              "periods": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "power": "f5df42f6e1fd571f1ebfd363230acd37ab3f242a1e54326bc0b0abaafa383b22",
+              "chi2": "10cfd14182de65435d23a18d55402891c3b18e5eb66579544d0fb47ad93a9159",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb",
+              "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+              "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+            },
+            "fields": {
+              "SDE": 4.781316757202148,
+              "T0": 3.902729920811617,
+              "chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "depth": 8.161965815781439e-05,
+              "duration": 0.10185106540393432,
+              "durationPoints": 156,
+              "period": 5.844920932176428,
+              "periods": {
+                "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "possiblePeriods": {
+                "data": "fb4ad5b0b74bcb32a82a7fcb55df3beab84ff2483d40d34e4920ec53fa332e67",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "possiblePeriodsIndices": {
+                "data": "f036b684764a0682cea03c6e64fddb58aeca04504955f4ef089f57eadb76b2ef",
+                "mask": "955e640af8a653a02c5af4e883167617fa9cab5108d326a1c33d77c41b2dc47a"
+              },
+              "power": {
+                "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "rawDuration": 0.016101658529060172,
+              "rawDurations": {
+                "data": "2b0e9b53156d7b49faae8159ada19c79388e5436b3329df9c4ba492b4933b98a",
+                "mask": "b44c7d0e2af89e6d347d5aca804a9598a2d3cd4f3f3e2762f07e7b0b625813cb"
+              },
+              "raw_chi2": {
+                "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "raw_power": {
+                "data": "b268a2f24d20140716aa7d49394709ad1883faab26370a11fdabcf17be456e46",
+                "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+              },
+              "snr": 6.501842416628172,
+              "snrFit": 93042.40451626621,
+              "snrFitPink": 77445.57540876926,
+              "snrPink": 6.806832526779678,
+              "transitTimes": {
+                "data": "e123622141b01ce46a666fa3b792ca867ef2d6f3881e248795fed5d1818713dc",
+                "mask": "03aeea0b1edfd9024b480457fcf330ef51e727feac8635578667174ba6dfadb3"
+              }
+            },
+            "full_digest": "871bb39b03e6a9208d868f4911689564ef6baa808b7216e2ca214feb65d1084b",
+            "primary_period": 5.844920932176428,
+            "SDE": 4.781316757202148,
+            "nperiods": 2325
+          }
+        ],
+        "assignments": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "source_count": 4,
+        "warmup": false,
+        "exclusive_before": {
+          "allowed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "observed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409199.557907924,
+          "utc": 1789065015.3155818
+        },
+        "exclusive_after": {
+          "allowed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "observed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408,
+            1576794
+          ],
+          "foreign_pids": [
+            1576794
+          ],
+          "missing_pids": [],
+          "exclusive": false,
+          "monotonic": 14409201.078556009,
+          "utc": 1789065016.8362315
+        }
+      },
+      "output_gate": {
+        "eligible": false,
+        "problems": [
+          {
+            "repetition": 0,
+            "reason": "incomplete public result"
+          }
+        ],
+        "reference": {
+          "tess_solar_null_0000.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "c00bca1042b9b48fc7f1d0477acc762639070bf7fe7a05879a285b1bb3d8fe11",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "0fed8e8b6a24cba2f9d3f38a72cd1c7ffb80ab569a8e008aa49172660d74b12c",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "698a962152f083dd314e9060b5a53b40da7451cc6e8d01bcd65ca58b56f28f6c",
+            "SDE": "4056092b95b4bb249eed772fe285e1a57993e8548a4060437283d1ddfc8fe227"
+          },
+          "tess_solar_null_0001.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "77e66ee5469a1d7532b14627685abe7cea4984ae304bb22fd59fdacf89f7eae7",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "40ec8ca4da75cad9f4eeddb20a3332a4568928b263482874b43588d1f04672a0",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "cc5ba9321f34c7f144a2d026d69c61e7b300d07ff2d7e84bc20432ad9b9db9e4",
+            "SDE": "a319365954c154e58632d2f8e89f569010d518405865d6766ef65c51135bb943"
+          },
+          "tess_solar_null_0002.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "99a8a1a5094eb432f5f82d7c7c3f996c1b2f066ace1aab10be57d8b233c068b9",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "ee801df1c1abf4b98f847f26786042f8cdb77c9b2f520930ac492f1bf2c40012",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+            "SDE": "cde099c70d28d1969e28560b2ef4f93fa1e6410b8732b9b1da5b46df7bca1ece"
+          },
+          "tess_solar_null_0003.npz": {
+            "periods": {
+              "data": "2d8a0ce118b16ec578e50c5852973615a9fd042c1f3754ab50e1e894635d9432",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "power": {
+              "data": "5a4e7bfc9823abfc93cf99e177d9772d278be9fbe29269c054971a6bf51e91b4",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "chi2": {
+              "data": "149c2743e688b9a656919bdae2b37a29fa707b68d30e8654654c0992ab11a51f",
+              "mask": "eefdb1c933f039c13d69841c4de5a03b76aa717292af08c581149876904c42bb"
+            },
+            "period": "d0c9d74eaa38c8f1821bfbdad05350313b2958e883534571dc196c9da2a9dc89",
+            "SDE": "6ab12979508e40b003d0e46229d0a793f7949e1c60bfa11b91efec84bd17271a"
+          }
+        }
+      },
+      "status": "ownership_failure",
+      "error": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/run_timing.py\", line 132, in preflight\n    raise RuntimeError(\"Preflight public API or exclusive-process gate failed: \" + label)\nRuntimeError: Preflight public API or exclusive-process gate failed: gtls_4worker\n",
+      "gpu_ownership": {
+        "version": 1,
+        "status": "failed",
+        "passed": false,
+        "before_start": {
+          "allowed_pids": [],
+          "observed_pids": [],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409195.572341656,
+          "utc": 1789065011.3300154
+        },
+        "workers": [
+          {
+            "kind": "ready",
+            "pid": 1265,
+            "namespace_pids": [
+              1265
+            ],
+            "sources": {
+              "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+              "files": {
+                "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+                "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+                "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+                "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+                "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+                "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+                "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+                "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+                "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+                "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+                "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+                "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+                "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+                "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+                "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+                "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+                "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+                "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+                "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+              }
+            },
+            "cuda_context_allocation_bytes": 1,
+            "cuda_context_synchronized": true
+          },
+          {
+            "kind": "ready",
+            "pid": 1266,
+            "namespace_pids": [
+              1266
+            ],
+            "sources": {
+              "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+              "files": {
+                "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+                "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+                "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+                "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+                "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+                "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+                "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+                "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+                "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+                "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+                "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+                "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+                "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+                "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+                "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+                "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+                "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+                "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+                "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+              }
+            },
+            "cuda_context_allocation_bytes": 1,
+            "cuda_context_synchronized": true
+          },
+          {
+            "kind": "ready",
+            "pid": 1267,
+            "namespace_pids": [
+              1267
+            ],
+            "sources": {
+              "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+              "files": {
+                "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+                "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+                "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+                "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+                "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+                "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+                "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+                "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+                "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+                "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+                "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+                "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+                "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+                "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+                "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+                "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+                "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+                "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+                "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+              }
+            },
+            "cuda_context_allocation_bytes": 1,
+            "cuda_context_synchronized": true
+          },
+          {
+            "kind": "ready",
+            "pid": 1268,
+            "namespace_pids": [
+              1268
+            ],
+            "sources": {
+              "root": "/workspace/tls-default/modern/lib/python3.11/site-packages/gputls",
+              "files": {
+                "GPUFun.cu": "6d4da1b66b3aaa830061def28237ffba74a959f77b3e5a56d895d4aeace0655e",
+                "GPUFun.py": "e1013a4ac3fb0877fb51b5a67d1dcaee8eaf7ed54b41179f1ff7fdcd591dcc85",
+                "GPUFun_bak.cu": "eb6061e31a19a1e06b6cd677e0af253bb05b41dd2390ac90b62573d2400ec766",
+                "__init__.py": "14d455c3f31d539f5472adf9b36330a042dd547362f7d4612d146d7b457c813d",
+                "_worker.py": "9cc405dfa957b171c5659000faafaca1617edf332406f720268b3b293d9015fb",
+                "compare.py": "52b0aec50e12d0ed4f26d600425cb9d32cf46139124171847950f1eda02c1384",
+                "constants.py": "1c3a84b46c9d7e7b0e09f757a6466d38c852c533311b971a71cc1e59b37eb40a",
+                "core.py": "dc5ad7b322ef9cd475250c95c224e5fced0c4f42893c02b8383ed83c2522e92d",
+                "core_bak_new.py": "6220a818f8ef835b2b277d9b2bb07ef82da5ea78f0c110f77c4a6190eab15250",
+                "core_update_bak.py": "f00566cda099997bccb9fdcd302f7f4057795fcc5f0efe1fc45cd67b0b0417b6",
+                "grid.py": "b3f2f6b601f4bdd2b103d53f8ac8b6d38f3ac2ef8f4d4793984e155db750d7a5",
+                "helpers.py": "4bdb67f63e17d9cae60378a130543bb9411215c719ab58f180f5ce83bb8fcfbe",
+                "interpolation.py": "b9b437f70d85b39c27db3a0f0d4f5f950a6374809eadabaaf70adf382cb33152",
+                "main.py": "07b56a401c42a661e8f5dc9e098e558ef07ce4131b2b112297d3a7265639710d",
+                "results.py": "e7f1a10e62915d016db244a27f62141022f37f9b9a082f21acc96f7aed083ad1",
+                "stats.py": "7b6eac3090282c294980e931ef48cfa1a84db9ffbdf27cafdebd8e18f923112a",
+                "transit.py": "2f7c4d2c61c132e41089c8f5667f7e0640c15443d523d4a3b935f56d5c182a08",
+                "validate.py": "f442df670eebf613e50a671f2a20022e17798ee5c60b06f23fe385a2db9ce38c",
+                "version.py": "cdbbfebc80445e145382ec2c3307c9936a0cb876413f6793341780e7eeb78cac"
+              }
+            },
+            "cuda_context_allocation_bytes": 1,
+            "cuda_context_synchronized": true
+          }
+        ],
+        "owned_worker_pids": [
+          1265,
+          1266,
+          1267,
+          1268
+        ],
+        "bindings": [
+          {
+            "worker_pid": 1265,
+            "namespace_pids": [
+              1265
+            ],
+            "host_pid": null,
+            "method": "pool_lifecycle_member"
+          },
+          {
+            "worker_pid": 1266,
+            "namespace_pids": [
+              1266
+            ],
+            "host_pid": null,
+            "method": "pool_lifecycle_member"
+          },
+          {
+            "worker_pid": 1267,
+            "namespace_pids": [
+              1267
+            ],
+            "host_pid": null,
+            "method": "pool_lifecycle_member"
+          },
+          {
+            "worker_pid": 1268,
+            "namespace_pids": [
+              1268
+            ],
+            "host_pid": null,
+            "method": "pool_lifecycle_member"
+          }
+        ],
+        "host_pids": [
+          1576405,
+          1576406,
+          1576407,
+          1576408
+        ],
+        "identity_scope": "owned_pool_set",
+        "live_workers_at_binding": [
+          1265,
+          1266,
+          1267,
+          1268
+        ],
+        "startup_observations": [
+          {
+            "allowed_pids": [],
+            "observed_pids": [
+              1576405,
+              1576406,
+              1576407,
+              1576408
+            ],
+            "foreign_pids": [
+              1576405,
+              1576406,
+              1576407,
+              1576408
+            ],
+            "missing_pids": [],
+            "exclusive": false,
+            "monotonic": 14409197.199361872,
+            "utc": 1789065012.9570363
+          }
+        ],
+        "after_start": {
+          "allowed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "observed_pids": [
+            1576405,
+            1576406,
+            1576407,
+            1576408
+          ],
+          "foreign_pids": [],
+          "missing_pids": [],
+          "exclusive": true,
+          "monotonic": 14409197.208038516,
+          "utc": 1789065012.965712
+        },
+        "worker_exits": [
+          {
+            "worker_pid": 1265,
+            "exit_code": 0,
+            "alive": false,
+            "forced": false
+          },
+          {
+            "worker_pid": 1266,
+            "exit_code": 0,
+            "alive": false,
+            "forced": false
+          },
+          {
+            "worker_pid": 1267,
+            "exit_code": 0,
+            "alive": false,
+            "forced": false
+          },
+          {
+            "worker_pid": 1268,
+            "exit_code": 0,
+            "alive": false,
+            "forced": false
+          }
+        ],
+        "exit_observations": [
+          {
+            "allowed_pids": [],
+            "observed_pids": [
+              1576794
+            ],
+            "foreign_pids": [
+              1576794
+            ],
+            "missing_pids": [],
+            "exclusive": false,
+            "monotonic": 14409201.628121415,
+            "utc": 1789065017.3857958
+          }
+        ],
+        "after_exit": {
+          "allowed_pids": [],
+          "observed_pids": [
+            1576794
+          ],
+          "foreign_pids": [
+            1576794
+          ],
+          "missing_pids": [],
+          "exclusive": false,
+          "monotonic": 14409201.628121415,
+          "utc": 1789065017.3857958
+        }
+      },
+      "ownership_error": "Context birth/presence/exit proof failed"
+    }
+  }
+}

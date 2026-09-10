@@ -1,0 +1,34 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q",
+    "cuvarbase/tests",
+    "benchmarks/tls_reference"
+  ],
+  "scope": "Combined current repository CPU suite and TLS benchmark harness tests; GPU tests are skipped in this host environment.",
+  "counts": {
+    "passed": 1215,
+    "skipped": 851,
+    "xfailed": 1,
+    "warnings": 13
+  },
+  "elapsed_seconds": 61.63,
+  "log_sha256": "70088c1e62d7fd92e7eeac96079e954bf187e0c9d6abb02591f3efd22d77d92b",
+  "environment_file": "host-environment.json",
+  "production_sources_match_gpu_receipt": true,
+  "verified_utc": "2026-09-10T19:22:21.548608+00:00",
+  "frozen_source_comparison": {
+    "matching_files": 78,
+    "changed_files": [
+      {
+        "path": "cuvarbase/tests/test_readme_consistency.py",
+        "gpu_receipt_sha256": "f179d02f2e81bd6d405c0579c63785cdf836f33ec98f7f9911ee8169e94c21a1",
+        "current_sha256": "78d3b90af0a2d9818b9a1bd7946885ee07e24cc3d9be33038b6b1b8e54abd7a6"
+      }
+    ],
+    "change_scope": "Only the README consistency test now checks the measured candidate installation instead of assuming v1 has already been published to PyPI. Runtime code and GPU TLS tests are byte-identical to the GPU receipt."
+  },
+  "reporting_assessor_sha256": "e43a99acbc6305611e3d4356526f697aecbb65bf87cd37ecb0346ce2bed70aa4"
+}

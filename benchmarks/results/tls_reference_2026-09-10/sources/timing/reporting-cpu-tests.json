@@ -1,0 +1,12 @@
+{
+  "created_utc": "2026-09-10T19:17:56.559361+00:00",
+  "status": "passed",
+  "exit_code": 0,
+  "tests": 42,
+  "scope": "CPU-only post hoc reporting safeguards; no measurement or scientific gate source changed",
+  "source_sha256": {
+    "report_completed.py": "e43a99acbc6305611e3d4356526f697aecbb65bf87cd37ecb0346ce2bed70aa4",
+    "test_report_completed.py": "4568202e5a2ca9318d5200a63d875b8a82889015d649ad056c52bf36b4ccd4fc"
+  },
+  "output_sha256": "8ebc47f261b07efebf60c56a9cb3b54c1110eea6e9207f1c477d917557f44714"
+}

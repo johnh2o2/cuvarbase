@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "status": "complete",
+  "passed": true,
+  "before_start": {
+    "allowed_pids": [],
+    "observed_pids": [],
+    "foreign_pids": [],
+    "missing_pids": [],
+    "exclusive": true,
+    "monotonic": 2004024.072917376,
+    "utc": 1789065525.654145
+  },
+  "workers": [
+    {
+      "kind": "ready",
+      "pid": 1071,
+      "namespace_pids": [
+        1071
+      ],
+      "sources": {
+        "root": "/workspace/tls-default/candidate/cuvarbase",
+        "files": {
+          "tls.py": "eb1c0bfd5ce8ee6df86da43bc0cf09c112b1e47e67ca394554dc5cc6db7b0b75",
+          "tls_reference.py": "a38d5a9b83b02825374ba6603d3c7b4106a10c939f98c9fb8004c09ce41100e2",
+          "tls_reference_math.py": "27e5a575e6279e64ce02fd17c40d64e9885f9c285d3145e13e2bee5ac94afe13",
+          "tls_reference_frontend.py": "e2d95902235a6e8728394c76203b7f4c8f9a094a3c57ff582733ea608dd617c6",
+          "tls_reference_prefix.py": "3fcdaf0acd1fb5ff5f00637872ff2785b943b0996369ffeb2f3f3b7e431035fb",
+          "tls_grids.py": "56398357bc4258d52c560170eb01cb204f547d2331a3202648225081ed86f1b7",
+          "tls_stats.py": "53fba5f00950175c742713fc021b5174cd5f86d8fc82e13bf14056aeb8b83ef5",
+          "tls_models.py": "553c90b7abc9511d24589d75abbdb93383541d67b47afa02aef4d12a7fad1623",
+          "kernels/tls_reference.cu": "b060dbd2063b03d3295f8469ecb4293a1118131d41a1c55fa0399d0a24fc7d97",
+          "kernels/tls_reference_prepare.cu": "ab4df4b72aba4d39b93071755978a3706df98b99092546364357873f0c930b9c"
+        }
+      },
+      "cuda_context_allocation_bytes": 1,
+      "cuda_context_synchronized": true
+    }
+  ],
+  "owned_worker_pids": [
+    1071
+  ],
+  "bindings": [
+    {
+      "worker_pid": 1071,
+      "namespace_pids": [
+        1071
+      ],
+      "host_pid": 2903075,
+      "method": "single_worker_lifecycle"
+    }
+  ],
+  "host_pids": [
+    2903075
+  ],
+  "identity_scope": "individual",
+  "live_workers_at_binding": [
+    1071
+  ],
+  "startup_observations": [
+    {
+      "allowed_pids": [],
+      "observed_pids": [
+        2903075
+      ],
+      "foreign_pids": [
+        2903075
+      ],
+      "missing_pids": [],
+      "exclusive": false,
+      "monotonic": 2004025.093435015,
+      "utc": 1789065526.6746626
+    }
+  ],
+  "after_start": {
+    "allowed_pids": [
+      2903075
+    ],
+    "observed_pids": [
+      2903075
+    ],
+    "foreign_pids": [],
+    "missing_pids": [],
+    "exclusive": true,
+    "monotonic": 2004025.113403146,
+    "utc": 1789065526.6946309
+  },
+  "worker_exits": [
+    {
+      "worker_pid": 1071,
+      "exit_code": 0,
+      "alive": false,
+      "forced": false
+    }
+  ],
+  "exit_observations": [
+    {
+      "allowed_pids": [],
+      "observed_pids": [],
+      "foreign_pids": [],
+      "missing_pids": [],
+      "exclusive": true,
+      "monotonic": 2004055.638951285,
+      "utc": 1789065557.2201796
+    }
+  ],
+  "after_exit": {
+    "allowed_pids": [],
+    "observed_pids": [],
+    "foreign_pids": [],
+    "missing_pids": [],
+    "exclusive": true,
+    "monotonic": 2004055.638951285,
+    "utc": 1789065557.2201796
+  }
+}

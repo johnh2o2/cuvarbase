@@ -1,0 +1,90 @@
+{
+  "declared_utc": "2026-09-10T18:23:36.682814+00:00",
+  "status": "frozen_before_any_valid_warmup_or_headline_measurement",
+  "measurement_scope": "full",
+  "normalized_measurement_scope": "single_and_batch",
+  "reason": "User approved another $20 compute, restoring the original unexecuted16-source design. Scope changes use authorization and cost forecasts, not observed benchmark outcomes.",
+  "authorization": {
+    "root_relayed_user_additional_compute_usd": 20,
+    "total_user_ceiling_usd": 70,
+    "next_root_compute_cap_usd": 1.5,
+    "provisioning_and_guard_owner": "root; these tools do not provision or spend"
+  },
+  "original_full_protocol_receipt_sha256": "95e713885a84bb57206045e71facfa9018aeefdd3893ca227fcc09fcb1bee067",
+  "original_full_source_archive_sha256": "e45a39ef55a9b1f311dd7854f67f6055e5e2702070c41d95aaa9f204e3c6443b",
+  "superseded_single_source_archive_sha256": "b4b67c41e925e8ad3e032a4ce641d6e99b34df10a224c241de474f90cbd38dd3",
+  "superseded_single_protocol_sha256": "25d986decbeb1feda0c62ee06a857110dd5e0f6e8a4498cc2115e86164f11da1",
+  "scientific_study_unchanged": {
+    "main_cases": 160,
+    "supplementary_null_cases": 24,
+    "original_main_manifest_sha256": "aebf04ba2e518471a4273a9724a99bc9302e32c49033da068cecf8946efc44cd",
+    "numerical_sources_unchanged": true,
+    "all_existing_failures_and_diagnostic_review_retained": true
+  },
+  "regimes": [
+    "tess_solar",
+    "tess_gap",
+    "ztf_solar"
+  ],
+  "selection": {
+    "requested_batch": "16 distinct frozen noise-only inputs per regime, same16 for both methods",
+    "requested_single": "Original null0000 from the same supporting cohort",
+    "fallback": "Existing deterministic manifest-order paired-API-success rule; preserve all original failures and actual smallerN. No runtime, SNR or recovery selection."
+  },
+  "measurements": {
+    "full_search": true,
+    "api_single_repetitions": 5,
+    "batch_repetitions": 3,
+    "component_repetitions": 5,
+    "candidate_workers": 1,
+    "native_pool_widths": [
+      1,
+      2,
+      4
+    ],
+    "optional_row_prefix_AB": false,
+    "public_boundary": "Constructor, input validation, cache, full search, final fit, public result and CUDA synchronization. Input file loading and explicit period-grid generation precede clocks. Hashing follows the all-worker completion barrier.",
+    "common_boundary": "Separate instrumented calls through final window selection: native after final GPU argmin.get(); candidate after search_full returns including compact winner transfers. Native subsequent physical/SNR/pink-noise diagnostics are separately reported.",
+    "startup_and_warmup": "Imports/context setup/identity binding and clean-exit checks are outside clocks; one full untimed public warmup precedes each configuration. The retained original short multiworker API preflight has no headline denominators.",
+    "native_pool_eligibility": "Each pool must preserve every complete strict search-output fingerprint from literal native1 across all three batches. Changed logical domains/outputs are excluded. Each method must match its own frozen independent result. Every requested configuration must finish and retain all repetitions; failed times never become denominators.",
+    "corrected_native": "Retain conditional extra native1 public and component comparisons if any supporting case cannot prove the correction is a no-op; selection and literal results remain unchanged.",
+    "worker_math_threads": 1
+  },
+  "ownership_amendment": {
+    "cause": "Prior single attempt rejected an unmapped host NVML PID before warmup. Consistent with hidden namespace PID, but original ownership was not established.",
+    "rules": [
+      "GPU must be empty before pool creation.",
+      "N distinct owned live children each retain one-byte CUDA allocation and synchronize before readiness. ExactlyN new NVML host PIDs are required.",
+      "Direct namespace mappings are recorded when unambiguous; hidden multiworker identities are recorded only as an owned pool set, never an invented one-to-one assignment.",
+      "Every public/component warmup and measured call requires the same complete host PID set and no foreign or missing context before/after.",
+      "All owned children must exit cleanly and all contexts must disappear before acceptance. Only owned Process objects may be terminated on failure.",
+      "Raw lifecycle and call receipts are independently rechecked by summaries and terminal audit."
+    ]
+  },
+  "failed_attempt_receipts": {
+    "acceptance.json": "f62b29e1311480eb8d19ab88d5a1d3ead6f58086cdfff4a7f74d4496ce46d1fc",
+    "logs/public.log": "6e9e81fd8abd390215a909e55b8a02c1ed388486d95c21967f6e64a9653186f4",
+    "pipeline-plan.json": "c67a862ffd5e05279392e628b94466eaf50d7c2525f78818df38ee94d9993a84",
+    "prepared.json": "dddc8272be4618744808d0e6201f9cdcdc785c95a78a9998f7efe14c72d0751d",
+    "public/plan.json": "fe8212fabea2db0c876f176ac8dbb211324beddb1b085e09e70ec38c041a9271",
+    "public/summary.json": "9af029b2912a26309161470a1453cdf9f915449c269f7b5dd51d2e8a54e731a8",
+    "public/tess_solar/candidate_graph_1worker/record.json": "8a697de85d437a6f9710866eaeb8f4c81073adf13ef9d7ede1120349d78a9fbb",
+    "status.json": "3037725bcb94d0bfce761efc800ff4ec57deb9816dba66faecc3dafd5b20489f",
+    "terminal.json": "3e72ebd41804fd6314c77b626978dee67459dd2bbca068d8b67f754f75c497f2"
+  },
+  "limits": [
+    "Finite16-source throughput on fixed null inputs and recorded hardware; no universal survey or population-runtime claim.",
+    "Strongest means fastest eligible of the tested1/2/4-worker native configurations on this allocation.",
+    "Boundary snapshots and1Hz telemetry cannot rule out foreign work entirely between samples.",
+    "Original long-control coarse failure and scan variability remain disclosed; timing does not replace numerical evidence."
+  ],
+  "forecast": {
+    "original_full_driver_minutes": [
+      60,
+      90
+    ],
+    "optional_corrected_extra_minutes_at_most": 30,
+    "hardware_rate_recorded_separately": true,
+    "external_total_budget_guard_authoritative": true
+  }
+}

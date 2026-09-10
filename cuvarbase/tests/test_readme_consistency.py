@@ -3,7 +3,8 @@
 These are the claims that silently rot or contradict the code:
 - the removed ``periodograms`` subpackage must not be advertised,
 - ``import cuvarbase`` no longer requires a GPU / creates a context (B1),
-- the install instructions advertise the PyPI release (no stale ``0.2.5`` banner, no ``git+`` branch install) and every link is absolute,
+- the candidate install points to the measured branch and distinguishes the
+  published PyPI version; every link is absolute,
 - ADS links should be https, and the test suite is CPU-runnable.
 """
 import os
@@ -34,21 +35,19 @@ def test_readme_import_does_not_claim_gpu_required():
     assert "importing cuvarbase still requires a working cuda" not in readme
 
 
-def test_readme_advertises_the_pypi_install():
-    # 1.0.0 is published to PyPI as the first release since 0.2.5: the
-    # advertised install is a bare ``pip install cuvarbase`` and the
-    # pre-release banner / ``git+`` branch install are gone (the README
-    # is the PyPI long description, which cannot be edited after upload).
+def test_readme_installs_the_benchmarked_candidate():
+    # The measured v1 candidate is not the currently published 0.2.5.
+    # Keep an ordinary PyPI install from silently selecting a different
+    # implementation from the one advertised by the benchmark figure.
     readme = _readme()
-    assert "pip install cuvarbase\n" in readme
-    assert "git+https" not in readme
-    # Historical versions belong in benchmark comparisons, but must not
-    # reappear as the advertised installation target or a stale banner.
     installation = re.search(
         r"^## Installation\n(.*?)(?=^## |\Z)", readme, re.M | re.S)
     assert installation is not None
-    assert "0.2.5" not in installation.group(1)
-    assert "Until v1.0.0" not in readme
+    text = installation.group(1)
+    assert "0.2.5" in text and "PyPI" in text
+    assert ("pip install 'cuvarbase @ git+https://github.com/"
+            "johnh2o2/cuvarbase@v1.0-fixes'") in text
+    assert "pip install cuvarbase\n" not in text
 
 
 def test_readme_links_are_absolute():

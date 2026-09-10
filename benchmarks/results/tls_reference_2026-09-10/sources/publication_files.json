@@ -1,0 +1,42 @@
+{
+  "README.md": {
+    "sha256": "d7778588b98970f443f4648044c8e7acf3f02580417e867a68d5e1357bbd1af3",
+    "bytes": 4531
+  },
+  "generation_environment.json": {
+    "sha256": "0bf76648825cb23dfc3b2b5f93b3c37f009eb24c26854c8d9686bc6ccf97cfe0",
+    "bytes": 526
+  },
+  "gpu_tests.json": {
+    "sha256": "0c87955dbc913ba3e2c30d6f210ef97e9a963846f4c89a83c1812fc5108773a2",
+    "bytes": 18900
+  },
+  "input_restoration_proof.json": {
+    "sha256": "2c572a4db0c8e4dd4a1c9c5d49525e7701eb551d2b5386541c610698942073eb",
+    "bytes": 411628
+  },
+  "input_restoration_sources.tar.gz": {
+    "sha256": "cd0a13daa2236dcbc236d354cad85474d316e8ef05428225fd7ec3e6f59ff4a2",
+    "bytes": 7038
+  },
+  "manifest.json": {
+    "sha256": "0c57ba652c17bae8397170012baa88c06294a5e38a8045c593bdfeb7c1d5f349",
+    "bytes": 6038
+  },
+  "production_sources.tar.gz": {
+    "sha256": "f8c6930e1804adbedf355e3d11cf0826a5d28e6d73475307bd2c4a82fd40bb94",
+    "bytes": 448840
+  },
+  "result_postprocessing_sources.tar.gz": {
+    "sha256": "6c170c136388cec4e805834f3c4f944c72f778d1f40b629c38b4b1956db8c006",
+    "bytes": 12055
+  },
+  "scientific_sources.tar.gz": {
+    "sha256": "f2d5cf669e0859544ae7af220613dca0e362043cebc93b7b6df5f45d8be88143",
+    "bytes": 54768
+  },
+  "stress_compaction_proof.json": {
+    "sha256": "a2576f384193716656e9ad0c275225930a34528cc368482141330a4eb6dee01c",
+    "bytes": 1276
+  }
+}

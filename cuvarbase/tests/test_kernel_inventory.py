@@ -39,7 +39,7 @@ _FIND_KERNEL_LITERAL = re.compile(r"""find_kernel\(\s*['"]([A-Za-z0-9_]+)['"]\s*
 EXPECTED_STEMS = {
     'bls', 'bls_optimized', 'bls_batch', 'sparse_bls',
     'ce', 'cunfft', 'lomb', 'nufft_lrt', 'pdm',
-    'tls', 'tls_fast',
+    'tls', 'tls_fast', 'tls_reference', 'tls_reference_prepare',
 }
 
 

@@ -1,0 +1,27 @@
+{
+  "frozen_utc": "2026-09-10T18:23:36.682814+00:00",
+  "archive": "execution-sources.tar.gz",
+  "archive_sha256": "3826aff0f65042079159291d751b45965faaf717a50677af316ed4bd9f58ffd7",
+  "receipt_sha256": "f1b80bc774a3a71060b077793bf6506398b6f671579f42126e830e71958ad0fd",
+  "protocol_sha256": "0f28803ebda37a555053968cc9708abca53a0b9647f23d675766af8295924eb0",
+  "file_count": 17,
+  "files": {
+    "latency/cpu-test-receipt.json": "f1b80bc774a3a71060b077793bf6506398b6f671579f42126e830e71958ad0fd",
+    "latency/protocol.json": "0f28803ebda37a555053968cc9708abca53a0b9647f23d675766af8295924eb0",
+    "latency/run_timing.py": "77037a90d85fd6eec235db96ebdf182f1dbd97fa66c66d6f637919dcf1a5d3f1",
+    "latency/test_driver.py": "6f024586023e591096ee7ec72db9c006fdbbc40ecc4857a18e38418c7412306c",
+    "latency/tools/analyze_timing.py": "d36d390b8275d427157365d73f6e9f7cd6281e26bea00edd267c13a5073f3548",
+    "latency/tools/timing/README.md": "84c5f205916c21342794eb6483840623b57b1e82c98099de5ef60db0ab634197",
+    "latency/tools/timing/__init__.py": "4bb3e39d7a6e3e8ba3f186b86da7bf5b927e0129ffe792f6f4d483486eacccd4",
+    "latency/tools/timing/benchmark.py": "9d16b1407387abca643cab6df4599c90d2235ab94ceebb0b4bd35c3a3a0f91e1",
+    "latency/tools/timing/cohort.py": "610cb5d3dc074b970a16e6bb85690500bdabbcbd65f35dddce955e887de20884",
+    "latency/tools/timing/common.py": "e92ebfcd232099c6661f14c8d9de1f8580a85b3df76ac2821f77fc4813014bc7",
+    "latency/tools/timing/components.py": "93a98075c88ca65c8775730e32040102db06ca34423f92b7bf6dcd7cbb3d4d85",
+    "latency/tools/timing/merge.py": "ffa0aa8e6c17a4c6891ab85e70d265e86c93975aa196f5daf6b27e5335db1553",
+    "latency/tools/timing/summarize.py": "cb6eeacc27f266e2cc1aa63173a29ef080225aa5725e34b123844dc1e4ed702c",
+    "latency/tools/timing/test_process_ownership.py": "e0308023d8d5ae3c88d6803a81c3ecc5457a1ccf97c7495a2f5183bc6e464de3",
+    "latency/tools/timing/test_reproduction.py": "de9abcc1bd697a31019a478548bcca86665c5227d8da7ec31391a3f9ce16c428",
+    "latency/tools/timing/test_timing.py": "889f6d861b100ab742da4694ca157a127d64b7cfc397877cf64f8fa87ef4a41f",
+    "latency/tools/timing/verify_study_hashes.py": "2b1087d0c52be38d634323803af3699c1c72cd181889ea45fcdb09e2b2e0f8b6"
+  }
+}

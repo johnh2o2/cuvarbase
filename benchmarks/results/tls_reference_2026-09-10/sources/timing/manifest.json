@@ -1,0 +1,159 @@
+{
+  "created_utc": "2026-09-10T19:30:37.535707+00:00",
+  "scope": "Timing-specific executed sources, exact origin/collection support, reporting analysis and public replay proof. Scientific/production archives are indexed by the parent sources/manifest.json.",
+  "files": {
+    "README.md": {
+      "sha256": "f73abf4915e2ef4245033ff09db0b3ad2bac2008334bbd1d423de4232270e83b",
+      "size": 4606
+    },
+    "allocation.py": {
+      "sha256": "e9d7d13905c32fd523c2fb6c60121c17ba55707145dcc10ca7a6b48a11aa7361",
+      "size": 4695
+    },
+    "collection-support.json": {
+      "sha256": "a65805f3e54e0df3fa0d5f3c9728260f8c7ff4e7cd28b4c375c7c0c857965750",
+      "size": 18863
+    },
+    "collection-support.tar.gz": {
+      "sha256": "f39fc0d0e68c4a3f2bb082c8058d98cd91250f3de98c23b73c2de7b1cf786c9c",
+      "size": 560405
+    },
+    "environment/cpu-quota.json": {
+      "sha256": "fb3cdcc58afa659317750ddb9e7edc988be0b3b1fb0adb6e7df61f2cc617cce0",
+      "size": 48
+    },
+    "environment/cpu.txt": {
+      "sha256": "2f405643050023153099db2eed1e59744be066f3276d5d7d96439e3cfa18f8d2",
+      "size": 3550
+    },
+    "environment/freeze.txt": {
+      "sha256": "b609f3f7278e826841967433f66e3e853e2649396d03f5aba46f70a37b09cab8",
+      "size": 1105
+    },
+    "environment/gpu.xml": {
+      "sha256": "dda3b0300e9fb90b4b9125efcb325e3acfc59a2a3f5c05b690f144d4fa743a78",
+      "size": 47009
+    },
+    "environment/install.json": {
+      "sha256": "cf86ac9591e72666d6bd2d0c6a7522dfc438eb63156ecdccc0d0f82f610e8609",
+      "size": 544955
+    },
+    "environment/runtime.json": {
+      "sha256": "ef54bf266f00be605ba0e91c6c3f9f6a21c3655a4635dcd91baf102c60e0730e",
+      "size": 366
+    },
+    "execution-sources.json": {
+      "sha256": "b89e4be7f0de7966849eac137cd2b56f9816acd45b2c44b91552f87e5f8ea225",
+      "size": 2230
+    },
+    "execution-sources.tar.gz": {
+      "sha256": "3826aff0f65042079159291d751b45965faaf717a50677af316ed4bd9f58ffd7",
+      "size": 59991
+    },
+    "failed-attempts/README.md": {
+      "sha256": "da60caefd1c4a3f8e6ee0c164b39ea7d714a1c4fceffa1a7d28a8210f6c08bef",
+      "size": 914
+    },
+    "failed-attempts/manifest.json": {
+      "sha256": "1c520bac68487368b598afa47edfd4953bffc5fc53f52c58f359244060f63050",
+      "size": 1123
+    },
+    "failed-attempts/unexpected_gpu_process/acceptance.json": {
+      "sha256": "2a868c269144bc93926d40462eea3df6de601f6458a8f80f190663b9891ce625",
+      "size": 659
+    },
+    "failed-attempts/unexpected_gpu_process/logs/preflight.log": {
+      "sha256": "86ba7376b7ee487699b6ed33cc24d07cd305cf054d90bb189f9c72c1fdaf2367",
+      "size": 2929
+    },
+    "failed-attempts/unexpected_gpu_process/preflight.json": {
+      "sha256": "7308d33a6076c7e012597e2fe5e2cd7962fe0822a947e4f979017ce3b70d10bb",
+      "size": 192976
+    },
+    "failed-attempts/unexpected_gpu_process/source-audit.json": {
+      "sha256": "089a045b3c9f7df566462a676a603b8c2b6e48cf34685ca0986837a6ef1114c1",
+      "size": 12192
+    },
+    "failed-attempts/unexpected_gpu_process/status.json": {
+      "sha256": "f454e957742cb2034475c43caa714ac710e6c683d9a7de7c63277e3a02b10f11",
+      "size": 1326
+    },
+    "failed-attempts/unexpected_gpu_process/terminal.json": {
+      "sha256": "885500e74f29f58fa53ef2319dcc9e4d31ef5310db52228678d5228a9d127bf0",
+      "size": 735
+    },
+    "failed-attempts/unmapped_host_pid/acceptance.json": {
+      "sha256": "f62b29e1311480eb8d19ab88d5a1d3ead6f58086cdfff4a7f74d4496ce46d1fc",
+      "size": 644
+    },
+    "failed-attempts/unmapped_host_pid/execution-sources.tar.gz": {
+      "sha256": "b4b67c41e925e8ad3e032a4ce641d6e99b34df10a224c241de474f90cbd38dd3",
+      "size": 49802
+    },
+    "failed-attempts/unmapped_host_pid/logs/public.log": {
+      "sha256": "6e9e81fd8abd390215a909e55b8a02c1ed388486d95c21967f6e64a9653186f4",
+      "size": 835
+    },
+    "failed-attempts/unmapped_host_pid/public/tess_solar/candidate_graph_1worker/record.json": {
+      "sha256": "8a697de85d437a6f9710866eaeb8f4c81073adf13ef9d7ede1120349d78a9fbb",
+      "size": 2587
+    },
+    "failed-attempts/unmapped_host_pid/terminal.json": {
+      "sha256": "3e72ebd41804fd6314c77b626978dee67459dd2bbca068d8b67f754f75c497f2",
+      "size": 640
+    },
+    "hardware-timing02-allocation.json": {
+      "sha256": "b9779462762980b84c4b9b685ced697adb0107d62d1badba6b1fee49b78ae2ad",
+      "size": 714
+    },
+    "hardware.json": {
+      "sha256": "233880933d2bae72cd08fc647c43050249b04c14e9f0bd34bc83becf34c75831",
+      "size": 1795
+    },
+    "protocol.json": {
+      "sha256": "0f28803ebda37a555053968cc9708abca53a0b9647f23d675766af8295924eb0",
+      "size": 6075
+    },
+    "public-replay-proof.json": {
+      "sha256": "1869f1083972b2d6250c68fb2ac9eeb32df9f06950fde9bc9ace54e6e39ece78",
+      "size": 910
+    },
+    "public-verification.json": {
+      "sha256": "edf1fac30cbbb85fd8bcf084f4a91f905f64b6bcc20fdd42edf8c27750fa5374",
+      "size": 1025
+    },
+    "report_completed.py": {
+      "sha256": "e43a99acbc6305611e3d4356526f697aecbb65bf87cd37ecb0346ce2bed70aa4",
+      "size": 29979
+    },
+    "reporting-cpu-tests.json": {
+      "sha256": "74baf97fe0f594ccc63cd805b19a3631ec22680b3c42f91befe2a5cffb0f5ea2",
+      "size": 521
+    },
+    "reporting-protocol.json": {
+      "sha256": "5de0221ba0ee28d89030741cb5739d928949a6611cb7a69039de39f6ebdd7fd2",
+      "size": 2145
+    },
+    "reporting-tests.log": {
+      "sha256": "8ebc47f261b07efebf60c56a9cb3b54c1110eea6e9207f1c477d917557f44714",
+      "size": 99
+    },
+    "test_report_completed.py": {
+      "sha256": "4568202e5a2ca9318d5200a63d875b8a82889015d649ad056c52bf36b4ccd4fc",
+      "size": 9863
+    },
+    "timing-origin-records.json": {
+      "sha256": "68385d3d37ed525531c0350ee33de785f5a1a053c93f47fa19e9b4b44a843786",
+      "size": 55220
+    },
+    "timing-origin-records.tar.gz": {
+      "sha256": "b96741a90911d577e4fcc927f8434b1533101fdb061d50eac27b07566bb26afd",
+      "size": 2053066
+    }
+  },
+  "executed_timing_archive_sha256": "3826aff0f65042079159291d751b45965faaf717a50677af316ed4bd9f58ffd7",
+  "assessment_source_sha256": "e43a99acbc6305611e3d4356526f697aecbb65bf87cd37ecb0346ce2bed70aa4",
+  "original_campaign_pass": false,
+  "reporting_gate_scope": "post_hoc_complete_configurations_after_optional_native_warmup_oom",
+  "original_data_files_manifest": "../../timing/raw-files.json"
+}

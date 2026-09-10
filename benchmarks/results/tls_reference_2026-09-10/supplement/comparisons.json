@@ -1,0 +1,2258 @@
+{
+  "tess_solar_null_0008": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 1708,
+        "candidate_index": 1708,
+        "same_primary": true,
+        "reference_period": 4.0460547891087995,
+        "candidate_period": 4.0460547891087995,
+        "same_period": true,
+        "reference_margin": 0.011458873748779297,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 3.112287998199463
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "88b587755a6954bcc40fad0c82f3845601b15c8f179d66c347c0d36fb5d95f98"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 1708,
+        "candidate_index": 1708,
+        "same_primary": true,
+        "reference_period": 4.0460547891087995,
+        "candidate_period": 4.0460547891087995,
+        "same_period": true,
+        "reference_margin": 0.011458873748779297,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 3.112287998199463
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "5c17de2f8cf3b4f9352d7e11dd0a4bb7a596319d42535ec16a6acfd58c64866e"
+    }
+  },
+  "tess_solar_null_0009": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 1750,
+        "candidate_index": 1750,
+        "same_primary": true,
+        "reference_period": 4.3230461844818535,
+        "candidate_period": 4.3230461844818535,
+        "same_period": true,
+        "reference_margin": 0.6278090476989746,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 1.750391960144043
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "64f1a33bea2a4c592da1cfe105abd93e680acb1d265fd07b7545aa6110eb7bcb"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 1750,
+        "candidate_index": 1750,
+        "same_primary": true,
+        "reference_period": 4.3230461844818535,
+        "candidate_period": 4.3230461844818535,
+        "same_period": true,
+        "reference_margin": 0.6278090476989746,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 1.750391960144043
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "d3404566aefe7fc37cf21ceede73708856bdcd7028e2aa007aeaa35d1f83bc71"
+    }
+  },
+  "tess_solar_null_0010": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 2126,
+        "candidate_index": 2126,
+        "same_primary": true,
+        "reference_period": 8.437116795597724,
+        "candidate_period": 8.437116795597724,
+        "same_period": true,
+        "reference_margin": 0.07002019882202148,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.07404279708862305
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "729c7d52257784251574d64ffdda693502d36b5dce44dc174ce0ef3b97eb8f48"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 2126,
+        "candidate_index": 2126,
+        "same_primary": true,
+        "reference_period": 8.437116795597724,
+        "candidate_period": 8.437116795597724,
+        "same_period": true,
+        "reference_margin": 0.07002019882202148,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.07404279708862305
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "36acfc8af1753c64e7c641eb6fc854b65e993129e6767145207cc74cbfb59ca8"
+    }
+  },
+  "tess_solar_null_0011": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 1979,
+        "candidate_index": 1979,
+        "same_primary": true,
+        "reference_period": 6.380304484900656,
+        "candidate_period": 6.380304484900656,
+        "same_period": true,
+        "reference_margin": 0.08858251571655273,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 3.5832533836364746
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "12ffa2f53830c31f69b98d238ee7fbbefa97fb97137084d4b81cfa3c266fa4d0"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 1979,
+        "candidate_index": 1979,
+        "same_primary": true,
+        "reference_period": 6.380304484900656,
+        "candidate_period": 6.380304484900656,
+        "same_period": true,
+        "reference_margin": 0.08858251571655273,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 3.5832533836364746
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "e90425c2f8fec751842a81eb432e901c4fd3e02a58ba5853ae51d0a5dc811dc1"
+    }
+  },
+  "tess_solar_null_0012": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 2265,
+        "candidate_index": 2265,
+        "same_primary": true,
+        "reference_period": 11.281678947483467,
+        "candidate_period": 11.281678947483467,
+        "same_period": true,
+        "reference_margin": 0.08066940307617188,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 2.3137760162353516
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "e6808449a81abeb0b28c2b3d211547c9f89436f5d39aa401287463387e24b5cc"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 2265,
+        "candidate_index": 2265,
+        "same_primary": true,
+        "reference_period": 11.281678947483467,
+        "candidate_period": 11.281678947483467,
+        "same_period": true,
+        "reference_margin": 0.08066940307617188,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 2.3137760162353516
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "0259f8c7eceefd57fcf1284332031ad9dfd01fadd713bfd816a1ba092471aab6"
+    }
+  },
+  "tess_solar_null_0013": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 2277,
+        "candidate_index": 2277,
+        "same_primary": true,
+        "reference_period": 11.58410227403049,
+        "candidate_period": 11.58410227403049,
+        "same_period": true,
+        "reference_margin": 0.20215320587158203,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.5225391387939453
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "0fef3f6ccdd699f9a3e14914bd83a093c5c0897b28c8c53f9ab5a8010466d54d"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 2277,
+        "candidate_index": 2277,
+        "same_primary": true,
+        "reference_period": 11.58410227403049,
+        "candidate_period": 11.58410227403049,
+        "same_period": true,
+        "reference_margin": 0.20215320587158203,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.5225391387939453
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "4d466edc59b29f42caf1ec56c92dba84da5e68e88efc4965c96eb0a55aa9f6b4"
+    }
+  },
+  "tess_solar_null_0014": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 2197,
+        "candidate_index": 2197,
+        "same_primary": true,
+        "reference_period": 9.752552278395903,
+        "candidate_period": 9.752552278395903,
+        "same_period": true,
+        "reference_margin": 0.06867361068725586,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 2.5537476539611816
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "c000fa9ea072c7f3c17f5c2c001b3712951f9a037eee1f92e37d4ee43e740cbe"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 2197,
+        "candidate_index": 2197,
+        "same_primary": true,
+        "reference_period": 9.752552278395903,
+        "candidate_period": 9.752552278395903,
+        "same_period": true,
+        "reference_margin": 0.06867361068725586,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 2.5537476539611816
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "44b0fc86d6c1606a6f6642ba5963949343bf62cd3c5b30946a55431f84286d2b"
+    }
+  },
+  "tess_solar_null_0015": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 1859,
+        "candidate_index": 1859,
+        "same_primary": true,
+        "reference_period": 5.170440093285481,
+        "candidate_period": 5.170440093285481,
+        "same_period": true,
+        "reference_margin": 0.10004711151123047,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 2.478773593902588
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "113e490cbade61aff5c619d60d065325ff9b2390ac4ed8d5f23c3b3f3726321f"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 1859,
+        "candidate_index": 1859,
+        "same_primary": true,
+        "reference_period": 5.170440093285481,
+        "candidate_period": 5.170440093285481,
+        "same_period": true,
+        "reference_margin": 0.10004711151123047,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 2.478773593902588
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "b59d00a5158f64d0cc0dc975462c1ebbd0d218ac482b18b5eff9d620fe70f04a"
+    }
+  },
+  "ztf_solar_null_0008": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 159588,
+        "candidate_index": 159588,
+        "same_primary": true,
+        "reference_period": 2.967403066559364,
+        "candidate_period": 2.967403066559364,
+        "same_period": true,
+        "reference_margin": 1.6751184463500977,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 2.040642738342285
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "f7259cb817d7a391b98f7e9452ecb34dd87b6e93fd22dacf14e79f41b24c2ad8"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 159588,
+        "candidate_index": 159588,
+        "same_primary": true,
+        "reference_period": 2.967403066559364,
+        "candidate_period": 2.967403066559364,
+        "same_period": true,
+        "reference_margin": 1.6751184463500977,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 2.040642738342285
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "9663020167378de77e7c9a1206c625735104175cb5f61723140608f20fdf7b64"
+    }
+  },
+  "ztf_solar_null_0009": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 193305,
+        "candidate_index": 193305,
+        "same_primary": true,
+        "reference_period": 4.80412918799966,
+        "candidate_period": 4.80412918799966,
+        "same_period": true,
+        "reference_margin": 0.6312503814697266,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.2079381942749023
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "2f367e3288eba610bb0ce79e85ba1713a79e58c23a854712b769291d196462a4"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 193305,
+        "candidate_index": 193305,
+        "same_primary": true,
+        "reference_period": 4.80412918799966,
+        "candidate_period": 4.80412918799966,
+        "same_period": true,
+        "reference_margin": 0.6312503814697266,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.2079381942749023
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "b371a1201a039d0491ae9d59c9712aa7247231ba77dbbfc610395375e254fd47"
+    }
+  },
+  "ztf_solar_null_0010": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 151560,
+        "candidate_index": 151560,
+        "same_primary": true,
+        "reference_period": 2.6739046292735886,
+        "candidate_period": 2.6739046292735886,
+        "same_period": true,
+        "reference_margin": 0.28019142150878906,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.221944808959961
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "552b01033b3ae9bb0af5820370a2159f65ac582168595d024bf92d78dcfbfc2a"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 151560,
+        "candidate_index": 151560,
+        "same_primary": true,
+        "reference_period": 2.6739046292735886,
+        "candidate_period": 2.6739046292735886,
+        "same_period": true,
+        "reference_margin": 0.28019142150878906,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.221944808959961
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "58df4f5edd201e12b98c4319f37423f57221c3762d22c01968a6d546bbb00012"
+    }
+  },
+  "ztf_solar_null_0011": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 195490,
+        "candidate_index": 195490,
+        "same_primary": true,
+        "reference_period": 4.970583014750503,
+        "candidate_period": 4.970583014750503,
+        "same_period": true,
+        "reference_margin": 2.1235103607177734,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 2.2121639251708984
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "cae9651c5592e4f605bc7ac1f8558d85c7c2b21096af0f4805bc6bfdb79ed81f"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 195490,
+        "candidate_index": 195490,
+        "same_primary": true,
+        "reference_period": 4.970583014750503,
+        "candidate_period": 4.970583014750503,
+        "same_period": true,
+        "reference_margin": 2.1235103607177734,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 2.2121639251708984
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "c78054e84f476644c4ef2f3e4c1bf971d1357c036d0f3b5991f1634451550b8c"
+    }
+  },
+  "ztf_solar_null_0012": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 6869,
+        "candidate_index": 6869,
+        "same_primary": true,
+        "reference_period": 0.6348384471754172,
+        "candidate_period": 0.6348384471754172,
+        "same_period": true,
+        "reference_margin": 0.019191265106201172,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.37015628814697266
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "e4c12abe766ce20d49d6f985f7069bbd238b32e5dc42cbda42bc9bf85fdd19c6"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 6869,
+        "candidate_index": 6869,
+        "same_primary": true,
+        "reference_period": 0.6348384471754172,
+        "candidate_period": 0.6348384471754172,
+        "same_period": true,
+        "reference_margin": 0.019191265106201172,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.37015628814697266
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "d81f19e667761b36a3e28f8793fe0b59755d16c5bd5d0aa514abdcf1e035bebb"
+    }
+  },
+  "ztf_solar_null_0013": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 99967,
+        "candidate_index": 99967,
+        "same_primary": true,
+        "reference_period": 1.4751573888009453,
+        "candidate_period": 1.4751573888009453,
+        "same_period": true,
+        "reference_margin": 1.176997184753418,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.5961799621582031
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "5b6520e4e1104e69e7b216ace3821629479866c6d6061608532a33fc363895cb"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 99967,
+        "candidate_index": 99967,
+        "same_primary": true,
+        "reference_period": 1.4751573888009453,
+        "candidate_period": 1.4751573888009453,
+        "same_period": true,
+        "reference_margin": 1.176997184753418,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.5961799621582031
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "f54f2a3b126fc3c004c46addc90681875b8567a3669825776468e209493350b5"
+    }
+  },
+  "ztf_solar_null_0014": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 8927,
+        "candidate_index": 8927,
+        "same_primary": true,
+        "reference_period": 0.6452662650240979,
+        "candidate_period": 0.6452662650240979,
+        "same_period": true,
+        "reference_margin": 0.18303203582763672,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 2.639820098876953
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "582b79fe711e7ab1e4f7d523b90410da736783ea931e934bb41d96cd381d71ec"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 8927,
+        "candidate_index": 8927,
+        "same_primary": true,
+        "reference_period": 0.6452662650240979,
+        "candidate_period": 0.6452662650240979,
+        "same_period": true,
+        "reference_margin": 0.18303203582763672,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 2.639820098876953
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "54453476d6176526c1c0103707738867a026a5f6073e1863301ef8c13643d48c"
+    }
+  },
+  "ztf_solar_null_0015": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 102370,
+        "candidate_index": 102370,
+        "same_primary": true,
+        "reference_period": 1.5128564388680676,
+        "candidate_period": 1.5128564388680676,
+        "same_period": true,
+        "reference_margin": 1.0112743377685547,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.5732622146606445
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "20c3ad045e5e12e9b508ecc4e6e885fb3eb8edcc1f3e9f8ab17ced85e901fd26"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 102370,
+        "candidate_index": 102370,
+        "same_primary": true,
+        "reference_period": 1.5128564388680676,
+        "candidate_period": 1.5128564388680676,
+        "same_period": true,
+        "reference_margin": 1.0112743377685547,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 1.5732622146606445
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "a3a2685a12f759ca40e3deb0bbd541f1aea1923b99b54948c6a224441c5a5a47"
+    }
+  },
+  "tess_gap_null_0008": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 58863,
+        "candidate_index": 58863,
+        "same_primary": true,
+        "reference_period": 7.469181400794109,
+        "candidate_period": 7.469181400794109,
+        "same_period": true,
+        "reference_margin": 0.028804779052734375,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 0.5041131973266602
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "2538636b8970744965d0422d99a53e72257d2e693db043479d46c4ff093d7422"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 58863,
+        "candidate_index": 58863,
+        "same_primary": true,
+        "reference_period": 7.469181400794109,
+        "candidate_period": 7.469181400794109,
+        "same_period": true,
+        "reference_margin": 0.028804779052734375,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 0.5041131973266602
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "587b2066b4f9869df2b58d79eb37455e74f5c0279140c17c0df6a8cc18871d56"
+    }
+  },
+  "tess_gap_null_0009": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 58232,
+        "candidate_index": 58232,
+        "same_primary": true,
+        "reference_period": 7.161892326546765,
+        "candidate_period": 7.161892326546765,
+        "same_period": true,
+        "reference_margin": 0.013888835906982422,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.47953033447265625
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "eb3d14a8807452843f4dbe3e47887df19a2342e2678a45f9c0f9038dc1503569"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 58232,
+        "candidate_index": 58232,
+        "same_primary": true,
+        "reference_period": 7.161892326546765,
+        "candidate_period": 7.161892326546765,
+        "same_period": true,
+        "reference_margin": 0.013888835906982422,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.47953033447265625
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "2d859e23b83d8031c47b38ddd1056b7452f5845027083f908aaac0b192a401ed"
+    }
+  },
+  "tess_gap_null_0010": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 14623,
+        "candidate_index": 14623,
+        "same_primary": true,
+        "reference_period": 0.9496236104580567,
+        "candidate_period": 0.9496236104580567,
+        "same_period": true,
+        "reference_margin": 0.7105493545532227,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 0.41735076904296875
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "499ba74ee3ca54fd3e39325f089aebd4de5593f02fc7a72657aa5de3a908313d"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 14623,
+        "candidate_index": 14623,
+        "same_primary": true,
+        "reference_period": 0.9496236104580567,
+        "candidate_period": 0.9496236104580567,
+        "same_period": true,
+        "reference_margin": 0.7105493545532227,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 0.41735076904296875
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "9d62a37b0c0235328eb414b54d8a995cdcd2c5551752125e5a1cf6cd7302fd07"
+    }
+  },
+  "tess_gap_null_0011": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 68265,
+        "candidate_index": 68265,
+        "same_primary": true,
+        "reference_period": 15.156495243279037,
+        "candidate_period": 15.156495243279037,
+        "same_period": true,
+        "reference_margin": 0.28638362884521484,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 0.697178840637207
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "b256e452f2dd393f5956500f17497a743cfcf708679bd319ff68f76891a4f97b"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 68265,
+        "candidate_index": 68265,
+        "same_primary": true,
+        "reference_period": 15.156495243279037,
+        "candidate_period": 15.156495243279037,
+        "same_period": true,
+        "reference_margin": 0.28638362884521484,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 0.697178840637207
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "3ff9dc7ebca215dff682b95bb5995d86980a0ad80657209ca9aaa4f354db60de"
+    }
+  },
+  "tess_gap_null_0012": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 58777,
+        "candidate_index": 58777,
+        "same_primary": true,
+        "reference_period": 7.426278762857232,
+        "candidate_period": 7.426278762857232,
+        "same_period": true,
+        "reference_margin": 0.11655330657958984,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 1.156419277191162
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "b6c4c23a051e8e6fdf5f47235b114036b9cd0a2df15293f186ef0a4e1ade77a3"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 58777,
+        "candidate_index": 58777,
+        "same_primary": true,
+        "reference_period": 7.426278762857232,
+        "candidate_period": 7.426278762857232,
+        "same_period": true,
+        "reference_margin": 0.11655330657958984,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 1.156419277191162
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "0ae56caa607fee31b893c73b1265c1aaa42882a42e1162a22ca0de013a94d295"
+    }
+  },
+  "tess_gap_null_0013": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 67718,
+        "candidate_index": 67718,
+        "same_primary": true,
+        "reference_period": 14.473996561909921,
+        "candidate_period": 14.473996561909921,
+        "same_period": true,
+        "reference_margin": 0.1984114646911621,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.29560279846191406
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "be2d291d16aac886e388ca3e69d9b93ce68ece53f4424f73dcac2145ddc3f333"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 67718,
+        "candidate_index": 67718,
+        "same_primary": true,
+        "reference_period": 14.473996561909921,
+        "candidate_period": 14.473996561909921,
+        "same_period": true,
+        "reference_margin": 0.1984114646911621,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.29560279846191406
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "0d810f392bf26e4fbc3697a9b7a14606eb4a07f0c3756eb2972b19edfef79217"
+    }
+  },
+  "tess_gap_null_0014": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 56193,
+        "candidate_index": 56193,
+        "same_primary": true,
+        "reference_period": 6.277095783371012,
+        "candidate_period": 6.277095783371012,
+        "same_period": true,
+        "reference_margin": 0.16579914093017578,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 0.710820198059082
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "cf7a6f66a247c222e35835c7bba12581b915c904aa0a5094cb5a9ea603420575"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 56193,
+        "candidate_index": 56193,
+        "same_primary": true,
+        "reference_period": 6.277095783371012,
+        "candidate_period": 6.277095783371012,
+        "same_period": true,
+        "reference_margin": 0.16579914093017578,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": true,
+          "candidate_above": true,
+          "same_decision": true,
+          "reference_margin": 0.710820198059082
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "757a300e6d290301502abb9d3c133f311e127987f0563a72838eeff36cd956cd"
+    }
+  },
+  "tess_gap_null_0015": {
+    "gtls_corrected": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 26764,
+        "candidate_index": 26764,
+        "same_primary": true,
+        "reference_period": 1.4745950357507274,
+        "candidate_period": 1.4745950357507274,
+        "same_period": true,
+        "reference_margin": 0.34180498123168945,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.0076694488525390625
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "54c28dd154a8c548c7451e4c6d8e0e35d771eac507b703dd783f7924f0b45ef2"
+    },
+    "gtls": {
+      "status": "compared",
+      "passed": true,
+      "numeric_passed": true,
+      "decisions_passed": true,
+      "ranking": {
+        "reference_index": 26764,
+        "candidate_index": 26764,
+        "same_primary": true,
+        "reference_period": 1.4745950357507274,
+        "candidate_period": 1.4745950357507274,
+        "same_period": true,
+        "reference_margin": 0.34180498123168945,
+        "max_power_error": 0.0,
+        "changed_within_error_band": false
+      },
+      "thresholds": [
+        {
+          "threshold": 8.0,
+          "reference_above": false,
+          "candidate_above": false,
+          "same_decision": true,
+          "reference_margin": 0.0076694488525390625
+        }
+      ],
+      "stage_counts": [
+        3,
+        3
+      ],
+      "counts": {
+        "checks": 49,
+        "final_checks": 7,
+        "public_checks": 13
+      },
+      "failed": {
+        "checks": {},
+        "final_checks": {},
+        "public_checks": {}
+      },
+      "nonbitwise": {
+        "checks": [],
+        "final_checks": [],
+        "public_checks": []
+      },
+      "original_comparison_sha256": "cac9b0435f0a60affe70d5b847d2b2a163978250ba72a98c43624f151e182e23"
+    }
+  }
+}

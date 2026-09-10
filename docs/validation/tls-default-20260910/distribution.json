@@ -1,0 +1,37 @@
+{
+  "status": "pass",
+  "source_files": {
+    "cuvarbase/tls.py": "eb1c0bfd5ce8ee6df86da43bc0cf09c112b1e47e67ca394554dc5cc6db7b0b75",
+    "cuvarbase/tls_reference.py": "a38d5a9b83b02825374ba6603d3c7b4106a10c939f98c9fb8004c09ce41100e2",
+    "cuvarbase/tls_reference_math.py": "27e5a575e6279e64ce02fd17c40d64e9885f9c285d3145e13e2bee5ac94afe13",
+    "cuvarbase/tls_reference_frontend.py": "e2d95902235a6e8728394c76203b7f4c8f9a094a3c57ff582733ea608dd617c6",
+    "cuvarbase/tls_reference_prefix.py": "3fcdaf0acd1fb5ff5f00637872ff2785b943b0996369ffeb2f3f3b7e431035fb",
+    "cuvarbase/kernels/tls_reference.cu": "b060dbd2063b03d3295f8469ecb4293a1118131d41a1c55fa0399d0a24fc7d97",
+    "cuvarbase/kernels/tls_reference_prepare.cu": "ab4df4b72aba4d39b93071755978a3706df98b99092546364357873f0c930b9c"
+  },
+  "extras": [
+    "Requires-Dist: cupy-cuda12x<14,>=13.6; extra == \"tls\"",
+    "Requires-Dist: batman-package>=2.5; extra == \"tls\""
+  ],
+  "wheel_sha256": "165ac3343eee6764104af7e1a4c7bef34e2658f3a68fb8c6745d3414cd42e954",
+  "sdist_sha256": "34e1a35af9c0bee1e79d80211e5904ce1eb9e0f38942188ae1f81b0563553875",
+  "created_utc": "2026-09-10T19:38:37.599807+00:00",
+  "wheel_file": "cuvarbase-1.0.0-py3-none-any.whl",
+  "sdist_file": "cuvarbase-1.0.0.tar.gz",
+  "readme_sha256": "3ff3ca09100b78e10a8c26d5a705779f1a084a9967c982fe79fab375800f61d0",
+  "metadata_readme_matches_checkout": true,
+  "benchmark_evidence_excluded_from_distributions": true,
+  "wheel_host_tests": {
+    "passed": 87,
+    "failed": 0,
+    "cwd": "outside source checkout",
+    "modules": [
+      "test_tls_reference_math.py",
+      "test_tls_reference_frontend.py",
+      "test_kernel_inventory.py"
+    ],
+    "log_file": "wheel-tests.log",
+    "log_sha256": "af8fa3a4a6e1eef19766efae6324b5a5c181d74e647d58122b45d222f9e4220c",
+    "scope": "Host-side tests imported from this exact wheel, installed with --no-deps into an isolated target directory."
+  }
+}

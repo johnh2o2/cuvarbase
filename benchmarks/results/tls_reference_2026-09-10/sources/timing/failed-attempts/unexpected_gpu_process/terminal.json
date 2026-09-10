@@ -1,0 +1,9 @@
+{
+  "status": "error",
+  "measurement_scope": "full",
+  "started_utc": "2026-09-10T18:29:54.788983+00:00",
+  "exit_code": 2,
+  "scope": "Timing runner only; independent study acceptance is a prerequisite",
+  "error": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/run_timing.py\", line 409, in run\n    runner.run(stage[\"name\"], stage[\"command\"], stage[\"timeout_seconds\"])\n  File \"/workspace/tls-default/latency/run_timing.py\", line 342, in run\n    raise RuntimeError(f\"Stage {name} exited {exit_code}; see {log}\")\nRuntimeError: Stage preflight exited 1; see /workspace/tls-default/timing-continuation/results/timing/logs/preflight.log\n",
+  "ended_utc": "2026-09-10T18:30:17.450076+00:00"
+}

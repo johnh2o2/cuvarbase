@@ -1,19 +1,19 @@
 # Transit benchmark tools
 
-These tools analyze and reproduce parts of the [September 2026 transit experiment](../results/transit_2026-09-08/README.md). Run commands from the repository root. Plotting and analysis require Python, NumPy, SciPy and Matplotlib; backend searches additionally require the pinned scientific packages and a CUDA device for GPU methods.
+These tools analyze and reproduce parts of the [2026-09-08 transit experiment](../results/transit_2026-09-08/README.md). Its TLS arm uses the earlier **binned** engine, now retained as `method='binned'`. The [current report](../../docs/TRANSIT_BENCHMARKS.md) distinguishes those historical TLS results from the standard observation-level search and identifies the BLS measurements used for release claims. Run commands from the repository root. Plotting and analysis require Python, NumPy, SciPy and Matplotlib; backend searches additionally require the pinned scientific packages and a CUDA device for GPU methods.
 
-Regenerate the timing figure without a GPU:
+Regenerate the current timing figure without a GPU:
 
 ```bash
 python benchmarks/transit/plot_main.py \
   --root benchmarks/results/transit_2026-09-08 \
-  --tls-study benchmarks/results/tls_sensitivity_2026-09-09 \
+  --tls-reference benchmarks/results/tls_reference_2026-09-10 \
   --output-dir /tmp/cuvarbase-figure
 ```
 
 | Tool | Purpose |
 |---|---|
-| `plot_main.py` | Six timing panels: BLS and TLS across the three cadences |
+| `plot_main.py` | Six-panel timing figure: BLS and TLS across three cadences; accepts current or historical TLS evidence |
 | `analyze.py`, `recovery_statistics.py` | Independent null calibration, injection recovery, false positives and paired confidence bounds |
 | `analyze_timings.py`, `analyze_runtime_cohorts.py` | Timing medians, repetition ranges, cost projections and cohort checks |
 | `analyze_components.py` | Component tables and ablations |
@@ -23,7 +23,7 @@ python benchmarks/transit/plot_main.py \
 
 The committed [inputs](../results/transit_2026-09-08/inputs) and [selection record](../results/transit_2026-09-08/selection.json) define the measured experiment. Use each worker's `--help` for arguments; `worker.py --config` takes a JSON configuration from the selected method records. Install the selected backend in its own environment, including fBLS on the import path when selecting that backend. The original cloud controller and environment setup are retained in the pinned Git archive described below; no cloud resources are started by the analysis or plotting tools.
 
-The current figure combines this experiment's BLS measurements with the [independent TLS follow-up](../results/tls_sensitivity_2026-09-09/README.md). Omit `--tls-study` to recreate the earlier TLS timing comparison.
+The command above combines this experiment's BLS measurements with the current observation-level TLS study. For the historical binned comparison, replace `--tls-reference` with `--tls-study benchmarks/results/tls_sensitivity_2026-09-09`; omit both options to recreate the initial September 8 figure. Those older TLS figures do not describe the new default engine.
 
 Analysis scripts write into `--root`. Use a scratch copy to recompute tables. Without `--verify-arrays`, recovery and timing analysis checks committed per-job summaries and inputs; it does not re-verify the omitted periodograms, and records that distinction in its output. `analyze_components.py` and full-array recovery/timing validation require restoring the periodogram archive. Do not overwrite the published verification receipts with a summary-only rerun.
 

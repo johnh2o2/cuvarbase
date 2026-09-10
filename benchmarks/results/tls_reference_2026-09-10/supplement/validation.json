@@ -1,0 +1,10 @@
+{
+  "input_cases": 24,
+  "backend_records": 72,
+  "retained_npz_archives_verified": 9,
+  "pruned_archives_with_valid_retention_receipts": 63,
+  "source_chain_verified": true,
+  "all_retained_array_digests_verified": true,
+  "packaging_script_sha256": "c5a6cbaad0028f7ba37353985b266eda834b32ba90bd589e6a4c04c5290e9c8d",
+  "interpretation": "Complete independent input/record/source/comparison chain verified; raw NPZ files remain outside the repository."
+}

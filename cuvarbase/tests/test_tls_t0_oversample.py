@@ -1,14 +1,14 @@
-"""TLS t0-fidelity parameter plumbing (D1).
+"""Preserved binned/legacy TLS t0-fidelity parameter plumbing (D1).
 
 ``T0_OVERSAMPLE`` (transit-epoch trial positions per duration) is now a
 Python-level parameter (``t0_oversample``) plumbed into the kernel's
-``#define`` via cpp_defs, the kernel cache key, and ``tls_search_gpu``.
+``#define`` via cpp_defs, the kernel cache key, and the older engine.
 These checks run on CPU (no kernel compilation needed).
 """
 import inspect
 
 import cuvarbase.tls as tls_mod
-from cuvarbase.tls import compile_tls, _get_cached_kernels, tls_search_gpu
+from cuvarbase.tls import compile_tls, _get_cached_kernels, _tls_search_gpu_binned
 from cuvarbase.tls_grids import t0_grid_size
 from cuvarbase.utils import _module_reader, find_kernel
 
@@ -23,8 +23,8 @@ def test_t0_oversample_overrides_kernel_define():
             < txt.index('#ifndef T0_OVERSAMPLE'))
 
 
-def test_t0_oversample_in_public_signatures():
-    for fn in (compile_tls, _get_cached_kernels, tls_search_gpu):
+def test_t0_oversample_in_binned_signatures():
+    for fn in (compile_tls, _get_cached_kernels, _tls_search_gpu_binned):
         params = inspect.signature(fn).parameters
         assert 't0_oversample' in params, fn.__name__
     # default matches the kernel/grid default

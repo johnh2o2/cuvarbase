@@ -1,0 +1,552 @@
+{
+  "generated_utc": "2026-09-10T15:24:53.377230+00:00",
+  "status": "pass",
+  "benchmark_commit": "1032caf029570dc4841db1c594a2cbb1654e8fd8",
+  "current_checkout_head": "b65a09b792efe791fa885c1a42ee2cd557615110",
+  "source_scope": "Current working-tree BLS implementation, its transitive local imports/package initializers, all BLS CUDA roots and inline headers; no GPU execution",
+  "counts": {
+    "python_files": 10,
+    "cuda_or_header_files": 5,
+    "byte_identical_files": 14,
+    "documentation_only_files": 1,
+    "timing_jobs": 9,
+    "assembled_kernel_variants": 8
+  },
+  "primary_receipt": {
+    "file": "benchmarks/results/transit_2026-09-08/results/timing_tess_200s_bls_v1_batch16/summary.json",
+    "sha256": "16a38061d2a74e7a448b91032123b8536b5a8edaf798595b86764e6eb4ea3a9d"
+  },
+  "files": [
+    {
+      "file": "cuvarbase/__init__.py",
+      "current_sha256": "ecededdb22bf71485ea8f52e42dec9ec9243f0802b6fdb435ff7545ffb8e764b",
+      "benchmark_commit_sha256": "ecededdb22bf71485ea8f52e42dec9ec9243f0802b6fdb435ff7545ffb8e764b",
+      "recorded_installed_sha256": "ecededdb22bf71485ea8f52e42dec9ec9243f0802b6fdb435ff7545ffb8e764b",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "92aa60ea502c8f8c12d122a63c72c9c28f17676dc67688461c31ce69883228f9",
+      "benchmark_executable_ast_sha256": "92aa60ea502c8f8c12d122a63c72c9c28f17676dc67688461c31ce69883228f9",
+      "same_ast_after_removing_docstrings": true
+    },
+    {
+      "file": "cuvarbase/base/__init__.py",
+      "current_sha256": "26df6507e65a9e023768da85d2dcadcce00255d697b9655b6cde6519b436a562",
+      "benchmark_commit_sha256": "26df6507e65a9e023768da85d2dcadcce00255d697b9655b6cde6519b436a562",
+      "recorded_installed_sha256": "26df6507e65a9e023768da85d2dcadcce00255d697b9655b6cde6519b436a562",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "be986beaefb9028b9dc7aaf273deda8b5ee6798697d39617442faa2a1c973553",
+      "benchmark_executable_ast_sha256": "be986beaefb9028b9dc7aaf273deda8b5ee6798697d39617442faa2a1c973553",
+      "same_ast_after_removing_docstrings": true
+    },
+    {
+      "file": "cuvarbase/base/async_process.py",
+      "current_sha256": "974b1170ef180e946e4d6d6ae2761f88e56676d177c23f813a49fbd9eebbefb0",
+      "benchmark_commit_sha256": "974b1170ef180e946e4d6d6ae2761f88e56676d177c23f813a49fbd9eebbefb0",
+      "recorded_installed_sha256": "974b1170ef180e946e4d6d6ae2761f88e56676d177c23f813a49fbd9eebbefb0",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "a85177be3594282d059424a0bb736a51bbe61c2655140eb6cee76e69d1d37e0d",
+      "benchmark_executable_ast_sha256": "a85177be3594282d059424a0bb736a51bbe61c2655140eb6cee76e69d1d37e0d",
+      "same_ast_after_removing_docstrings": true
+    },
+    {
+      "file": "cuvarbase/base/context.py",
+      "current_sha256": "2d8430e079b3032c4f9c1197fc4ff7cb4ebd04eaa05892eaf2684ba14883b0ab",
+      "benchmark_commit_sha256": "2d8430e079b3032c4f9c1197fc4ff7cb4ebd04eaa05892eaf2684ba14883b0ab",
+      "recorded_installed_sha256": "2d8430e079b3032c4f9c1197fc4ff7cb4ebd04eaa05892eaf2684ba14883b0ab",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "0ca503a91e28c533c72ea6579f3fbdf7ac9f64b3d4497a7431a7ebd5f487eab0",
+      "benchmark_executable_ast_sha256": "0ca503a91e28c533c72ea6579f3fbdf7ac9f64b3d4497a7431a7ebd5f487eab0",
+      "same_ast_after_removing_docstrings": true
+    },
+    {
+      "file": "cuvarbase/bls.py",
+      "current_sha256": "e09104d989f17ceee0d46ee66976cdeeb1167901ed84fb5578bcd7dd1d459978",
+      "benchmark_commit_sha256": "c748724649a8dc4b45d6710c20fa5352a67daba51c1a11744d8b1921e96d9673",
+      "recorded_installed_sha256": "c748724649a8dc4b45d6710c20fa5352a67daba51c1a11744d8b1921e96d9673",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": false,
+      "executable_ast_sha256": "b52db38e459557fb8f300a68636b1805eeebb7f02ef141cc2fa8dacb9754cc5b",
+      "benchmark_executable_ast_sha256": "b52db38e459557fb8f300a68636b1805eeebb7f02ef141cc2fa8dacb9754cc5b",
+      "same_ast_after_removing_docstrings": true,
+      "changed_docstrings": [
+        "module.eebls_gpu_batch"
+      ],
+      "diff": "diff --git a/cuvarbase/bls.py b/cuvarbase/bls.py\nindex 0a100e3..dd63232 100644\n--- a/cuvarbase/bls.py\n+++ b/cuvarbase/bls.py\n@@ -3504,7 +3504,7 @@ def eebls_gpu_batch(lightcurves, freqs, *, qmin=1e-2, qmax=0.5,\n     re-allocating per chunk. The earlier \"~12x slower at TESS scale\"\n     regression was per-call kernel compilation (now LRU-cached like\n     the single-LC paths); see\n-    ``analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md``.\n+    `archived numerical diagnosis <https://github.com/johnh2o2/cuvarbase/blob/f0dc98136ae34b34465b152be1af84faf063eb44/analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md>`_.\n     \"\"\"\n     _validate_convention(convention)\n     # Validate every light curve, the shared grid and the q bounds\n",
+      "classification": "documentation_only"
+    },
+    {
+      "file": "cuvarbase/bls_frequencies.py",
+      "current_sha256": "523e57aa62fb450f02704463263f891590f45b98444983b0ad352659e5fcbace",
+      "benchmark_commit_sha256": "523e57aa62fb450f02704463263f891590f45b98444983b0ad352659e5fcbace",
+      "recorded_installed_sha256": "523e57aa62fb450f02704463263f891590f45b98444983b0ad352659e5fcbace",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "85fac0246f230065ecd508a1e9052fcc7b9d44b7b7c65d520c8dd90c71f6dedf",
+      "benchmark_executable_ast_sha256": "85fac0246f230065ecd508a1e9052fcc7b9d44b7b7c65d520c8dd90c71f6dedf",
+      "same_ast_after_removing_docstrings": true
+    },
+    {
+      "file": "cuvarbase/kernels/bls.cu",
+      "current_sha256": "400326db8eb64361d89bd696c02d0bb02e35e307715cee936dfc2bcc592d1004",
+      "benchmark_commit_sha256": "400326db8eb64361d89bd696c02d0bb02e35e307715cee936dfc2bcc592d1004",
+      "recorded_installed_sha256": "400326db8eb64361d89bd696c02d0bb02e35e307715cee936dfc2bcc592d1004",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true
+    },
+    {
+      "file": "cuvarbase/kernels/bls_batch.cu",
+      "current_sha256": "76d786fc6cc93feaa8a56e83d4cb7d7149b315c17f738fd89ca3badb95b68622",
+      "benchmark_commit_sha256": "76d786fc6cc93feaa8a56e83d4cb7d7149b315c17f738fd89ca3badb95b68622",
+      "recorded_installed_sha256": "76d786fc6cc93feaa8a56e83d4cb7d7149b315c17f738fd89ca3badb95b68622",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true
+    },
+    {
+      "file": "cuvarbase/kernels/bls_common.cuh",
+      "current_sha256": "f3e6ed36d840cc9d57265efc32cec82dcade0f7a9f33c6b27160e38fbdf340b9",
+      "benchmark_commit_sha256": "f3e6ed36d840cc9d57265efc32cec82dcade0f7a9f33c6b27160e38fbdf340b9",
+      "recorded_installed_sha256": "f3e6ed36d840cc9d57265efc32cec82dcade0f7a9f33c6b27160e38fbdf340b9",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true
+    },
+    {
+      "file": "cuvarbase/kernels/bls_optimized.cu",
+      "current_sha256": "3b583bac9a4a6222207ae13760145a15f5faa8cfa4b9068e4835102450d11f19",
+      "benchmark_commit_sha256": "3b583bac9a4a6222207ae13760145a15f5faa8cfa4b9068e4835102450d11f19",
+      "recorded_installed_sha256": "3b583bac9a4a6222207ae13760145a15f5faa8cfa4b9068e4835102450d11f19",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true
+    },
+    {
+      "file": "cuvarbase/kernels/sparse_bls.cu",
+      "current_sha256": "e0b9c01655b7bcde0a93acb1fbe2c5514ce12263f0a9bbf35cdee430dfb4185f",
+      "benchmark_commit_sha256": "e0b9c01655b7bcde0a93acb1fbe2c5514ce12263f0a9bbf35cdee430dfb4185f",
+      "recorded_installed_sha256": "e0b9c01655b7bcde0a93acb1fbe2c5514ce12263f0a9bbf35cdee430dfb4185f",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true
+    },
+    {
+      "file": "cuvarbase/memory/__init__.py",
+      "current_sha256": "1427d5bb6daad54a1359a7cac3638c6ac2973e5d5a70c9667a379d94c5e1a07f",
+      "benchmark_commit_sha256": "1427d5bb6daad54a1359a7cac3638c6ac2973e5d5a70c9667a379d94c5e1a07f",
+      "recorded_installed_sha256": "1427d5bb6daad54a1359a7cac3638c6ac2973e5d5a70c9667a379d94c5e1a07f",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "fedb836c7de31ba7946a90ad16d1c565ea2c1180b509aa03083e63f50990fe15",
+      "benchmark_executable_ast_sha256": "fedb836c7de31ba7946a90ad16d1c565ea2c1180b509aa03083e63f50990fe15",
+      "same_ast_after_removing_docstrings": true
+    },
+    {
+      "file": "cuvarbase/memory/_host.py",
+      "current_sha256": "1be037b705b12bee28cff8e955cad735b5be2875740417e4b6405af91d9b92dd",
+      "benchmark_commit_sha256": "1be037b705b12bee28cff8e955cad735b5be2875740417e4b6405af91d9b92dd",
+      "recorded_installed_sha256": "1be037b705b12bee28cff8e955cad735b5be2875740417e4b6405af91d9b92dd",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "3aee72a842af57ab2e4a1771394558644ea460d8054f3420394fe1cbc7ace3fa",
+      "benchmark_executable_ast_sha256": "3aee72a842af57ab2e4a1771394558644ea460d8054f3420394fe1cbc7ace3fa",
+      "same_ast_after_removing_docstrings": true
+    },
+    {
+      "file": "cuvarbase/memory/bls_memory.py",
+      "current_sha256": "3c92b95169c5fca7eb4ffca94c70b6d31cd07a7116115369a45fa937b6865942",
+      "benchmark_commit_sha256": "3c92b95169c5fca7eb4ffca94c70b6d31cd07a7116115369a45fa937b6865942",
+      "recorded_installed_sha256": "3c92b95169c5fca7eb4ffca94c70b6d31cd07a7116115369a45fa937b6865942",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "63825af3a46bd5d839640e9bde579ac91648b374c8572297f8977fd9b456f1ca",
+      "benchmark_executable_ast_sha256": "63825af3a46bd5d839640e9bde579ac91648b374c8572297f8977fd9b456f1ca",
+      "same_ast_after_removing_docstrings": true
+    },
+    {
+      "file": "cuvarbase/utils.py",
+      "current_sha256": "404a0b29f2da4c7cf7f9fba5f738e7069b61c0fa93c7e2f23de86bd226cb379f",
+      "benchmark_commit_sha256": "404a0b29f2da4c7cf7f9fba5f738e7069b61c0fa93c7e2f23de86bd226cb379f",
+      "recorded_installed_sha256": "404a0b29f2da4c7cf7f9fba5f738e7069b61c0fa93c7e2f23de86bd226cb379f",
+      "benchmark_commit_matches_recorded_installation": true,
+      "same_bytes": true,
+      "executable_ast_sha256": "b96759a7192d107929f4cbec161eccfa291270b6f0de27dfd3300b8fc404f81d",
+      "benchmark_executable_ast_sha256": "b96759a7192d107929f4cbec161eccfa291270b6f0de27dfd3300b8fc404f81d",
+      "same_ast_after_removing_docstrings": true
+    }
+  ],
+  "dependency_audit": {
+    "relative_import_edges": [
+      {
+        "source": "cuvarbase/bls.py",
+        "imported": "cuvarbase/base/__init__.py",
+        "names": [
+          "ensure_context"
+        ]
+      },
+      {
+        "source": "cuvarbase/bls.py",
+        "imported": "cuvarbase/utils.py",
+        "names": [
+          "find_kernel",
+          "_module_reader",
+          "subtract_epoch",
+          "conflict_scatter_perm",
+          "check_lightcurve",
+          "check_freqs"
+        ]
+      },
+      {
+        "source": "cuvarbase/bls.py",
+        "imported": "cuvarbase/bls_frequencies.py",
+        "names": [
+          "_euler_transit_grid",
+          "_recursion_transit_grid",
+          "_validate_grid_method"
+        ]
+      },
+      {
+        "source": "cuvarbase/bls.py",
+        "imported": "cuvarbase/memory/bls_memory.py",
+        "names": [
+          "BLSBatchMemory"
+        ]
+      },
+      {
+        "source": "cuvarbase/bls.py",
+        "imported": "cuvarbase/memory/_host.py",
+        "names": [
+          "host_array"
+        ]
+      },
+      {
+        "source": "cuvarbase/memory/bls_memory.py",
+        "imported": "cuvarbase/base/__init__.py",
+        "names": [
+          "ensure_context"
+        ]
+      },
+      {
+        "source": "cuvarbase/memory/bls_memory.py",
+        "imported": "cuvarbase/memory/_host.py",
+        "names": [
+          "host_array"
+        ]
+      },
+      {
+        "source": "cuvarbase/memory/bls_memory.py",
+        "imported": "cuvarbase/utils.py",
+        "names": [
+          "subtract_epoch",
+          "conflict_scatter_perm",
+          "check_lightcurve",
+          "check_freqs"
+        ]
+      },
+      {
+        "source": "cuvarbase/memory/bls_memory.py",
+        "imported": "cuvarbase/bls.py",
+        "names": [
+          "_validate_fast_q_bounds"
+        ]
+      },
+      {
+        "source": "cuvarbase/base/__init__.py",
+        "imported": "cuvarbase/base/async_process.py",
+        "names": [
+          "GPUAsyncProcess"
+        ]
+      },
+      {
+        "source": "cuvarbase/base/__init__.py",
+        "imported": "cuvarbase/base/context.py",
+        "names": [
+          "ensure_context"
+        ]
+      },
+      {
+        "source": "cuvarbase/base/async_process.py",
+        "imported": "cuvarbase/base/context.py",
+        "names": [
+          "ensure_context"
+        ]
+      }
+    ],
+    "inline_kernel_edges": [
+      {
+        "source": "cuvarbase/kernels/bls_optimized.cu",
+        "included": "cuvarbase/kernels/bls_common.cuh"
+      },
+      {
+        "source": "cuvarbase/kernels/bls.cu",
+        "included": "cuvarbase/kernels/bls_common.cuh"
+      }
+    ],
+    "external_imports": [
+      "collections",
+      "copy",
+      "functools",
+      "importlib",
+      "numpy",
+      "os",
+      "pycuda.autoprimaryctx",
+      "pycuda.compiler",
+      "pycuda.driver",
+      "pycuda.gpuarray",
+      "re",
+      "threading",
+      "warnings"
+    ],
+    "lazy_import_scope": "cuvarbase and memory initializers are byte-identical and dispatch BLS names to the audited BLS modules. Other algorithm modules, libcufft and TLS are not imported by the recorded BLS worker path.",
+    "kernel_scope": "128 and256 are the measured explicit/default block sizes; same host validation, auto-selection, compiler options and C signatures were verified by executable AST identity. Assembled text was compared on CPU, not compiled.",
+    "external_dependency_limit": "External NumPy/PyCUDA/CUDA/compiler binaries and hardware were not rehashed or executed. Recorded package versions remain the environment of the historical timing, not a new current-runtime certification."
+  },
+  "timing_jobs": [
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_tess_200s_bls_v1_batch16/summary.json",
+      "summary_sha256": "16a38061d2a74e7a448b91032123b8536b5a8edaf798595b86764e6eb4ea3a9d",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 8,
+        "optimized": true,
+        "reuse_batch": true,
+        "batch_capacity": 16
+      },
+      "source_count": 16,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    },
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_tess_200s_bls_v1_fresh_grid/summary.json",
+      "summary_sha256": "e7a54788b93db849e471fe693ef02be367aa602cad2e53e0bc6d7d6da25792d1",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      },
+      "source_count": 1,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    },
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_tess_200s_bls_v1_single/summary.json",
+      "summary_sha256": "3922104cf3104b6ff67170ba8f9243b7c16509f50366879d3854014001b01e32",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      },
+      "source_count": 1,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    },
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_tess_gap_bls_v1_batch16/summary.json",
+      "summary_sha256": "81ae2ca76536fc5144b94ad8a1f724b3b0b2079f7e7c585ad7ac444baa8c6491",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 4,
+        "optimized": true,
+        "qmin_fac": 0.25,
+        "block_size": 128,
+        "reuse_batch": true,
+        "batch_capacity": 16
+      },
+      "source_count": 16,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    },
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_tess_gap_bls_v1_fresh_grid/summary.json",
+      "summary_sha256": "597f64b10a6572472df7d8bf1887a14066cbbb2044b4e196e791ad930013a691",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 4,
+        "optimized": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      },
+      "source_count": 1,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    },
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_tess_gap_bls_v1_single/summary.json",
+      "summary_sha256": "caf13a0e872c950784858eba28bcd271ea2939b0d65fcea98dfd147f4b74f7e7",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 4,
+        "optimized": true,
+        "qmin_fac": 0.25,
+        "block_size": 128
+      },
+      "source_count": 1,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    },
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_ztf_bls_v1_batch16/summary.json",
+      "summary_sha256": "97bc4a2be694eacfbff0b2352df1034b61609043823529eb8d8bb27ce19ad2a6",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_batch",
+        "noverlap": 8,
+        "optimized": true,
+        "reuse_batch": true,
+        "batch_capacity": 16
+      },
+      "source_count": 16,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    },
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_ztf_bls_v1_fresh_grid/summary.json",
+      "summary_sha256": "dabee76867ce25edb6a508c4a9c7fa21f26e6ccf2486e5bd6286dbee496e8203",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      },
+      "source_count": 1,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    },
+    {
+      "summary": "benchmarks/results/transit_2026-09-08/results/timing_ztf_bls_v1_single/summary.json",
+      "summary_sha256": "4e38e1792992d57fc0a621bb6b378d8d19f631ec56a0e46998caf9ab93708085",
+      "status": "ok",
+      "config": {
+        "backend": "v1_bls_fast",
+        "noverlap": 8,
+        "optimized": true
+      },
+      "source_count": 1,
+      "worker_sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+      "relevant_installed_sources_match_primary": true,
+      "mismatches": []
+    }
+  ],
+  "assembled_kernel_sources": [
+    {
+      "kernel": "cuvarbase/kernels/bls.cu",
+      "block_size": 128,
+      "assembled_source_sha256": "8962af137b4c6ff9d0f019dccb2c5a90af78f0a9ab3755b6a9953024a3af778f",
+      "same_assembled_source": true
+    },
+    {
+      "kernel": "cuvarbase/kernels/bls.cu",
+      "block_size": 256,
+      "assembled_source_sha256": "15b47aef90a24e36d61271db6ac72eaf632f7100721a30e51e9d12673d7a1894",
+      "same_assembled_source": true
+    },
+    {
+      "kernel": "cuvarbase/kernels/bls_optimized.cu",
+      "block_size": 128,
+      "assembled_source_sha256": "b6026b244b064eacadfe18e1b33e24c18f7a5f26ecacdf23d0a42058dd54a423",
+      "same_assembled_source": true
+    },
+    {
+      "kernel": "cuvarbase/kernels/bls_optimized.cu",
+      "block_size": 256,
+      "assembled_source_sha256": "0acba67990b239fe45926d8462f91c7de093d99a669b313a6560713d68028083",
+      "same_assembled_source": true
+    },
+    {
+      "kernel": "cuvarbase/kernels/bls_batch.cu",
+      "block_size": 128,
+      "assembled_source_sha256": "f6427e0d35f7cb800e2b756e0b9837f8f3b025b4f7e1e966fe8e0ec36a2e6d4f",
+      "same_assembled_source": true
+    },
+    {
+      "kernel": "cuvarbase/kernels/bls_batch.cu",
+      "block_size": 256,
+      "assembled_source_sha256": "0aeab3e68378de142a6af3365be563cbd741211fed3bbf564f545306afc761d1",
+      "same_assembled_source": true
+    },
+    {
+      "kernel": "cuvarbase/kernels/sparse_bls.cu",
+      "block_size": 128,
+      "assembled_source_sha256": "29bf88d03e016995bef406fd7bb9e41a2c96593be18e0f16ed9b0ad39ba6f993",
+      "same_assembled_source": true
+    },
+    {
+      "kernel": "cuvarbase/kernels/sparse_bls.cu",
+      "block_size": 256,
+      "assembled_source_sha256": "d05833cb15c08f62394b6a603ad9699558d14f3bc88372c466bb94346396cc2d",
+      "same_assembled_source": true
+    }
+  ],
+  "recorded_environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "pycuda": "2025.1.2",
+      "astropy": "8.0.1",
+      "cupy-cuda12x": "13.6.0",
+      "gputls": "0.4.4",
+      "cuvarbase": "1.0.0",
+      "periodfind": "0.1.3"
+    },
+    "cpu_quota": null,
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "7"
+    }
+  },
+  "build_metadata": {
+    "file": "pyproject.toml",
+    "current_sha256": "dc8faee8a0fda3c55096aafe739803fa9ba14951e9c610b0ec37a60204086dae",
+    "benchmark_sha256": "ed27727106a15623304295c73c22137ff4c7cf659a076ac1f3e41c84bf59ba26",
+    "runtime_dependencies": [
+      "numpy>=1.22",
+      "scipy>=1.8",
+      "pycuda>=2017.1.1,!=2024.1.2"
+    ],
+    "runtime_dependencies_unchanged": true,
+    "diff": "diff --git a/pyproject.toml b/pyproject.toml\nindex 808dc29..8ca31ce 100644\n--- a/pyproject.toml\n+++ b/pyproject.toml\n@@ -39,6 +39,10 @@ dependencies = [\n ]\n \n [project.optional-dependencies]\n+tls = [\n+    \"cupy-cuda12x>=13.6,<14\",\n+    \"batman-package>=2.5\",\n+]\n # Test extra: what `pytest --pyargs cuvarbase` needs beyond the runtime\n # deps. matplotlib is not needed (every plotting import sits behind\n # plot=False); batman-package and transitleastsquares exercise the\n"
+  },
+  "recorded_harness": {
+    "sha256": "a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f",
+    "matches_timing_receipt": true,
+    "bls_entrypoints": [
+      "cuvarbase.base.ensure_context",
+      "cuvarbase.memory.bls_memory.BLSBatchMemory",
+      "cuvarbase.bls.eebls_gpu_batch",
+      "cuvarbase.bls.eebls_gpu_fast_optimized"
+    ],
+    "url": "https://github.com/johnh2o2/cuvarbase/blob/f0dc981/analysis/transit-recovery-20260908/sources/harness/worker-a02c3f8d87283cc78655c7ca54b42e9fbcf6d7d96206fbd9e8e615ab105b3c8f.py"
+  },
+  "executable_identity_method": "Parse each Python file using this interpreter; remove only leading string docstrings in module/class/function bodies; compare ast.dump(include_attributes=False). Comments and source positions are ignored; all executable statements, constants, imports and signatures remain. The sole textual difference is retained verbatim in the bls.py record.",
+  "audit_tool": {
+    "sha256": "04b1d62c73c167e50eb7b3ea98b5db53dd6810cd4f7cbbe6d5cec2834ee4f0cd",
+    "python": "3.9.6 (default, Dec  2 2025, 07:27:58) \n[Clang 17.0.0 (clang-1700.6.3.2)]",
+    "name": "audit_bls_source_continuity.py"
+  },
+  "limits": [
+    "This is source continuity, not a new benchmark or a proof of identical speed on another hardware/software environment.",
+    "Retain the September8 date, original inputs/configurations, timing boundaries, batch size16, and recovery/false-positive qualifications.",
+    "The receipt's per-job cpu_quota field is null; the historical campaign's separate hardware record documents allocation. This audit does not infer CPU allocation from host logical CPU count.",
+    "Documentation introspection differs at the corrected link. No audited BLS source reads that docstring to generate kernels or execute searches.",
+    "No production or frozen archived file was modified; this receipt checks current working-tree bytes, including uncommitted changes elsewhere."
+  ],
+  "publication": {
+    "original_receipt_sha256": "2dcf6d3f035910483bf32764b857f8dfcb9e535acf2703e90da070687fc4f979",
+    "change": "Replace absolute local tool/harness paths with a tool filename and verified Git archive URL; omit suggested prose. Source identities, comparisons and outcomes are unchanged."
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "created_utc": "2026-09-10T19:31:14.745991+00:00",
+  "status": "passed",
+  "cpu_tests": {
+    "command": "python3 -m pytest -q benchmarks/tls_reference/timing",
+    "passed": 125,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "exact_raw_timing_files": 43,
+  "raw_files_manifest_sha256": "eeffa9d45bd981cedf49b7717afdf4c4d62c842edd97551a771b8b6f2e91c8a7",
+  "all_original_timing_bytes_verified": true,
+  "original_campaign_pass": false,
+  "reporting_gate_pass": true,
+  "reporting_acceptance_sha256": "1d6454cad6a6de7c830f24bea27ca35d608017f89874f6ee55ab5eeedb7cd2d4",
+  "timing_analysis_sha256": "d428e8aadc337678db1112c6a0adf5de1cdcc2c4a7b4fc8283ce1900f607bb1b",
+  "public_only_replay_normalized_bytes_identical": true,
+  "public_replay_proof_sha256": "1869f1083972b2d6250c68fb2ac9eeb32df9f06950fde9bc9ace54e6e39ece78",
+  "executed_timing_archive_sha256": "3826aff0f65042079159291d751b45965faaf717a50677af316ed4bd9f58ffd7",
+  "assessment_source_sha256": "e43a99acbc6305611e3d4356526f697aecbb65bf87cd37ecb0346ce2bed70aa4"
+}

@@ -622,7 +622,7 @@ class TLSMemory:
         return mem
 
 
-def tls_search_gpu(t, y, dy, periods=None, *,
+def _tls_search_gpu_binned(t, y, dy, periods=None, *,
                    qmin=None, qmax=None, n_durations=15,
                    R_star=1.0, M_star=1.0,
                    period_min=None, period_max=None, n_transits_min=2,
@@ -896,7 +896,7 @@ def tls_search_gpu(t, y, dy, periods=None, *,
             "falling back to the legacy per-point kernel (which caps "
             "ndata at ~3,500 points)")
     if use_fast and fast_gate:
-        r = tls_search_batch(
+        r = _tls_search_batch_binned(
             [(t, y, dy)],
             periods=periods, qmin=qmin_arr, qmax=qmax_arr,
             n_durations=n_durations, t0_oversample=t0_oversample,
@@ -1177,7 +1177,7 @@ def tls_search(t, y, dy, **kwargs):
     return tls_search_gpu(t, y, dy, **kwargs)
 
 
-def tls_transit(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
+def _tls_transit_binned(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
                 qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
                 period_min=None, period_max=None, n_transits_min=2,
                 oversampling_factor=3, **kwargs):
@@ -1306,7 +1306,7 @@ def tls_transit(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
     )
 
     # Run TLS search with Keplerian constraints
-    results = tls_search_gpu(
+    results = _tls_search_gpu_binned(
         t, y, dy,
         periods=periods,
         qmin=qmin,
@@ -1507,7 +1507,7 @@ def _preprocess_batch(lightcurves):
     return t_hi, t_lo, a_c, b_c, offs, lens, chi2_0, epochs, spans
 
 
-def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
+def _tls_search_batch_binned(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
                      periods=None, qmin=None, qmax=None,
                      period_min=None, period_max=None,
                      n_transits_min=2, oversampling_factor=3,
@@ -2041,7 +2041,7 @@ def tls_search_batch(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
                  n_durations=n_durations, t0_oversample=t0_oversample,
                  refine_top_k=0, block_size=block_size, nbins=nbins,
                  limb_dark=limb_dark, u=u, R_star=R_star, M_star=M_star,
-                 sde_kernel_size=sde_kernel_size))
+                 sde_kernel_size=sde_kernel_size, method='binned'))
 
     return results
 
@@ -2087,3 +2087,114 @@ def _attach_null_fap(results, lightcurves, n_draws, seed, search_kwargs):
             res['FAP'] = (n_exceed + 1.0) / (n_draws + 1.0)
             res['SDE_null'] = sde_null
         i0 = i1
+
+
+def tls_search_gpu(t, y, dy, periods=None, *, qmin=None, qmax=None,
+                   R_star=1., M_star=1., method=None, **kwargs):
+    """Search for transits with the complete observation-level TLS algorithm.
+
+    The default ``method='reference'`` follows the pinned GTLS numerical
+    objective: native transit templates, duration grid, sample-window trials,
+    depth estimates, spectrum ranking and full candidate/harmonic refinement.
+    It does not phase-bin observations. GPU workspace size does not narrow the
+    duration search. Install ``cuvarbase[tls]`` for its CUDA 12 dependencies.
+
+    ``t`` is in days; ``y`` must have a positive out-of-transit baseline of one,
+    and ``dy`` contains positive uncertainties in the same units. All three
+    arrays must be finite and aligned, with at least three observations. The
+    time origin is shifted internally without dropping zero/negative times.
+    ``T0`` is the absolute mid-transit time of the first transit at or after
+    ``min(t)``; ``t0_phase`` is its fold phase relative to ``floor(min(t))``.
+
+    Omit ``periods`` for the stellar-density/Ofir grid, controlled by
+    ``R_star``, ``M_star``, ``period_min``, ``period_max``,
+    ``n_transits_min`` and ``oversampling_factor`` (default 3). Explicit periods
+    retain float64 precision and their caller order in returned arrays.
+
+    Omitted duration controls use the broad GTLS domain, including thin
+    transits. ``duration_grid_step`` (default 1.1) controls its density.
+    Optional scalar or aligned ``qmin``/``qmax`` replace the automatic domain.
+    ``duration_window='keplerian'`` with optional ``qmin_fac``/``qmax_fac``
+    explicitly selects the older, narrower stellar-duration prior.
+    ``n_durations`` with an explicit window sets a minimum geometric density.
+
+    ``full=True`` includes native candidate/harmonic refinement. ``full=False``
+    is the explicit GTLS fast-mode policy. ``T0_fit_margin`` (default .125)
+    sets coarse epoch spacing; full refinement tests every sample start.
+    ``work_chunk`` (default 256) is a memory/performance control only.
+    ``u``/``limb_dark`` and ``transit_template`` select the transit template.
+
+    Returns the existing cuvarbase dictionary: period, T0, duration, depth,
+    SDE, SDE_raw, SNR, period_uncertainty and per-period arrays. SNR retains
+    cuvarbase's sqrt(delta chi-squared) definition in input-error units;
+    detection ranking uses native GTLS SDE. Per-period duration/epoch arrays
+    describe nominal sample windows; final winner parameters use native
+    postprocessing. ``search_configuration`` records the engine and policy.
+    A degenerate spectrum returns SDE=0 and NaN parameters with an error.
+
+    ``method='binned'`` explicitly selects the previous approximate phase-bin
+    engine and accepts its bin/refinement controls. ``method='legacy'`` selects
+    the old shared-memory per-observation kernel. Neither is the new default.
+    ``use_fast`` is a deprecated alias selecting those older engines.
+    """
+    old_fast = kwargs.pop('use_fast', None)
+    if {'fap_null_draws', 'fap_seed'} & kwargs.keys():
+        raise TypeError('fap_null_draws/fap_seed are available only from tls_search_batch')
+    if old_fast is not None:
+        if method is not None:
+            raise ValueError('use method or use_fast, not both')
+        method = 'binned' if old_fast else 'legacy'
+        warnings.warn("use_fast selects an older TLS engine; use method='%s' "
+                      "explicitly. The default observation-level engine is "
+                      "method='reference'." % method, FutureWarning, stacklevel=2)
+    method = 'reference' if method is None else method
+    if method == 'reference':
+        from .tls_reference_frontend import search
+        return search(t, y, dy, periods=periods, qmin=qmin, qmax=qmax,
+                      R_star=R_star, M_star=M_star, **kwargs)
+    if method in ('binned', 'legacy'):
+        return _tls_search_gpu_binned(t, y, dy, periods=periods,
+                                      qmin=qmin, qmax=qmax,
+                                      R_star=R_star, M_star=M_star,
+                                      use_fast=method == 'binned', **kwargs)
+    raise ValueError("method must be 'reference', 'binned' or 'legacy'")
+
+
+def tls_transit(t, y, dy, *, R_star=1., M_star=1., **kwargs):
+    """Stellar-aware TLS convenience wrapper; see :func:`tls_search_gpu`.
+
+    Uses the same broad observation-level search by default. A narrow
+    Keplerian duration prior is applied only when explicitly requested.
+    ``T0`` is the first mid-transit at or after ``min(t)``; ``t0_phase``
+    is its fold phase relative to ``floor(min(t))``.
+    """
+    _check_tls_lightcurve(t, y, dy, name='tls_transit')
+    return tls_search_gpu(t, y, dy, R_star=R_star, M_star=M_star, **kwargs)
+
+
+def tls_search_batch(lightcurves, *, R_star=1., M_star=1.,
+                     method='reference', **kwargs):
+    """Search a survey with the same sensitivity policy as tls_search_gpu.
+
+    The standard engine processes light curves sequentially, parallelizing
+    each complete period search on the GPU and reusing bounded scan workspaces.
+    A batch shares the longest-baseline automatic grid unless ``periods`` is
+    supplied. ``return_arrays=False`` avoids keeping every period spectrum.
+    ``T0`` is the absolute mid-transit time of the first transit at or after
+    ``min(t)``; ``t0_phase`` is its fold phase relative to ``floor(min(t))``.
+
+    ``fap_null_draws`` enables a flux/error permutation null: all nulls use the
+    same full search, including refinement. This destroys correlated noise;
+    it is a white-noise null, not a model of arbitrary survey systematics.
+    ``fap_seed`` makes the permutations reproducible.
+
+    ``method='binned'`` opts into the older approximate multi-lightcurve
+    kernel and its original controls; see :func:`tls_search_gpu`.
+    """
+    if method == 'reference':
+        from .tls_reference_frontend import search_batch
+        return search_batch(lightcurves, R_star=R_star, M_star=M_star, **kwargs)
+    if method == 'binned':
+        return _tls_search_batch_binned(lightcurves, R_star=R_star, M_star=M_star,
+                                        **kwargs)
+    raise ValueError("batch method must be 'reference' or 'binned'")

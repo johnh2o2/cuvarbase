@@ -1,0 +1,184 @@
+{
+  "generated_utc": "2026-09-10T19:32:26.953543+00:00",
+  "accounting_scope": "Benchmark study from the September 6 audit onward, originally authorized for $50 and expanded by an additional $20 for compute on September 10; earlier release implementation compute is outside this authorization.",
+  "authorized_total_usd": 70.0,
+  "authorization_history": {
+    "original_ceiling_usd": 50,
+    "additional_compute_authorized_usd": 20,
+    "amended_ceiling_usd": 70.0,
+    "estimated_spend_before_amendment_usd": 49.80728788719975,
+    "amendment_recorded_utc": "2026-09-10T18:16:37.826010+00:00",
+    "source": {
+      "label": "Additional compute authorization receipt",
+      "sha256": "00a2a3350bfe95061d76d2f35c86adbb69a75e9cd92aa0b8945ec9050f5e0c27"
+    },
+    "earlier_receipts": "Original $50 receipts and failed or deferred timing attempts remain unchanged."
+  },
+  "estimate_not_provider_invoice": true,
+  "prior_campaigns": {
+    "ledger": "../tls_sensitivity_2026-09-09/rental-ledger.json",
+    "source": {
+      "label": "September 9 cumulative ledger",
+      "sha256": "c9afeed5579b6dd12d71c2f163050871ef6b69f584286787df57e0f7f7932851"
+    },
+    "compute_plus_september9_storage_usd": 44.61280569550456,
+    "earlier_storage_planning_reserve_usd": 0.22,
+    "earlier_storage_basis": "Five pre-September-9 rentals: conservatively reserve 90 GB each, add five provisioning minutes each, charge $0.10/GB-month over 720 hours, and round $0.2100896943 upward to $0.22. Saved launch configurations imply $0.0850140404; actual disk-size fields for the first two pods were not retained.",
+    "no_double_counting": "The prior ledger already includes its 37 September 9 pods and their storage; those are not added again."
+  },
+  "additional_rentals": [
+    {
+      "study": "binned-accuracy",
+      "node": "validation01",
+      "id": "ljmtrfxz3ruqdo",
+      "created_utc": "2026-09-09T19:24:25.158405+00:00",
+      "terminated_utc": "2026-09-09T20:40:40.439224+00:00",
+      "recorded_rental_seconds": 4576.097277879715,
+      "compute_rate_usd_per_hour": 0.49,
+      "compute_estimate_usd": 0.6228576850447389,
+      "storage_gb": 80,
+      "storage_estimate_usd": 0.014123757030492949,
+      "termination_verified": true,
+      "outcome": "Earlier phase-binned accuracy audit; separate historical engine.",
+      "source": {
+        "label": "validation01 original rental record",
+        "sha256": "f5ef64fb904d904931a779f703e3674d50b868150029aa799ce97e47c0b9af15"
+      }
+    },
+    {
+      "study": "observation-level-tls",
+      "node": "completion01",
+      "id": "a0610rlkvs1avd",
+      "created_utc": "2026-09-10T16:46:07.714248+00:00",
+      "terminated_utc": "2026-09-10T16:56:03.269727+00:00",
+      "recorded_rental_seconds": 596.3838458061218,
+      "compute_rate_usd_per_hour": 0.53,
+      "compute_estimate_usd": 0.08780095507701238,
+      "storage_gb": 80,
+      "storage_estimate_usd": 0.0018406908821176598,
+      "termination_verified": true,
+      "outcome": "Supplement24 completed; stronger solar control failed strict intermediate parity and stopped the pipeline before timing.",
+      "source": {
+        "label": "completion01 original rental record",
+        "sha256": "33601b299eded83c808a99b383246891196b9dcd41230b0a73882a73b951e5ba"
+      }
+    },
+    {
+      "study": "observation-level-tls",
+      "node": "diagnostic01",
+      "id": "x79pwuwdoqu77a",
+      "created_utc": "2026-09-10T17:46:22.226233+00:00",
+      "terminated_utc": "2026-09-10T17:49:39.260283+00:00",
+      "recorded_rental_seconds": 197.68106484413147,
+      "compute_rate_usd_per_hour": 0.69,
+      "compute_estimate_usd": 0.037888870761791864,
+      "storage_gb": 80,
+      "storage_estimate_usd": 0.0006101267433460848,
+      "termination_verified": true,
+      "outcome": "CommunityL40 had no publicSSH endpoint; terminated before upload or scientific execution.",
+      "source": {
+        "label": "diagnostic01 original rental record",
+        "sha256": "f6d63ddab1179ce5859623a6ccecf27f4223efd0337147cba22f1f0cbf0fa305"
+      }
+    },
+    {
+      "study": "observation-level-tls",
+      "node": "diagnostic02",
+      "id": "i9pcl6v04m5qac",
+      "created_utc": "2026-09-10T17:51:40.253631+00:00",
+      "terminated_utc": "2026-09-10T17:59:42.104061+00:00",
+      "recorded_rental_seconds": 482.65878415107727,
+      "compute_rate_usd_per_hour": 0.53,
+      "compute_estimate_usd": 0.0710580987777975,
+      "storage_gb": 80,
+      "storage_estimate_usd": 0.0014896876054045596,
+      "termination_verified": true,
+      "outcome": "Focused diagnostic completed and all artifacts collected; subsequent timing ownership preflight rejected an unmapped NVML PID before warmup or timed calls.",
+      "source": {
+        "label": "diagnostic02 original rental record",
+        "sha256": "21830382f2d895f9ab75013ed2164864b5073b748b23bb8f521538fd4e78e026"
+      }
+    },
+    {
+      "study": "observation-level-tls",
+      "node": "recovery01",
+      "id": "370ln12lzc83qh",
+      "created_utc": "2026-09-10T15:03:23.436017+00:00",
+      "terminated_utc": "2026-09-10T16:22:09.606298+00:00",
+      "recorded_rental_seconds": 4726.994220972061,
+      "compute_rate_usd_per_hour": 0.49,
+      "compute_estimate_usd": 0.6433964356323083,
+      "storage_gb": 80,
+      "storage_estimate_usd": 0.014589488336333525,
+      "termination_verified": true,
+      "outcome": "Main160 completed and original acceptance recovered; failed final download salvaged with nine retained output containers uncollected.",
+      "source": {
+        "label": "recovery01 original rental record",
+        "sha256": "f57d5fef654b72626e7adae9e404a6058fc60d157215848dd51b912715499370"
+      }
+    },
+    {
+      "study": "observation-level-tls",
+      "node": "reference01",
+      "id": "y3io0y0xx0lf3q",
+      "created_utc": "2026-09-10T01:36:10.525796+00:00",
+      "terminated_utc": "2026-09-10T08:32:41.532601+00:00",
+      "recorded_rental_seconds": 24992.012253046036,
+      "compute_rate_usd_per_hour": 0.49,
+      "compute_estimate_usd": 3.401690556664599,
+      "storage_gb": 80,
+      "storage_estimate_usd": 0.07713584028717914,
+      "termination_verified": true,
+      "outcome": "Original observation-level confirmation interrupted; incomplete collection, unchanged inputs later replayed.",
+      "source": {
+        "label": "reference01 original rental record",
+        "sha256": "6fc134d82d520aca9fb11e36067f7471ffdc79c7ea8143d208fffa82b6b7ba25"
+      }
+    },
+    {
+      "study": "observation-level-tls",
+      "node": "timing01",
+      "id": "2pouid2wy7bqmp",
+      "created_utc": "2026-09-10T18:26:51.070407+00:00",
+      "terminated_utc": "2026-09-10T18:30:24.212689+00:00",
+      "recorded_rental_seconds": 213.86511301994324,
+      "compute_rate_usd_per_hour": 0.53,
+      "compute_estimate_usd": 0.03148569719460276,
+      "storage_gb": 80,
+      "storage_estimate_usd": 0.0006600775093208125,
+      "termination_verified": true,
+      "outcome": "Restored full-campaign preflight rejected an unexpected NVML compute PID during the native4-worker eligibility call. All worker contexts exited; no headline repetitions or component measurements ran. Complete compact/full receipts were collected.",
+      "source": {
+        "label": "timing01 original rental record",
+        "sha256": "446651a8cf800ce51ab634c1dcdd1c6417d6acade62fb5cf04ab3eb8648de3a5"
+      }
+    },
+    {
+      "study": "observation-level-tls",
+      "node": "timing02",
+      "id": "qzk82xykk3epg7",
+      "created_utc": "2026-09-10T18:34:47.781523+00:00",
+      "terminated_utc": "2026-09-10T19:21:16.639283+00:00",
+      "recorded_rental_seconds": 2789.4910662174225,
+      "compute_rate_usd_per_hour": 0.53,
+      "compute_estimate_usd": 0.410675073637565,
+      "storage_gb": 80,
+      "storage_estimate_usd": 0.00860954032783155,
+      "termination_verified": true,
+      "outcome": "Unchanged full-campaign retry after rejected process-ownership preflight. Eleven configurations completed; the original all-configurations gate failed after four-worker GTLS ran out of memory during the separated-TESS warmup. A separate post hoc report audits the completed configurations; original failed acceptance and all attempts are retained.",
+      "source": {
+        "label": "timing02 original rental record",
+        "sha256": "43e8fd2a2d44acf71aa79bceeb881d2742e5d8563439321ba31a8f7da684fcb3"
+      }
+    }
+  ],
+  "cumulative_estimate_usd": 50.258718277017,
+  "remaining_to_amended_authorization_usd": 19.741281722982997,
+  "storage_basis": "$0.10/GB-month for running container storage, using a 720-hour month; no network volumes requested. Node launch configurations specify 80 GB container and no volume unless a recorded size overrides it.",
+  "storage_price_source": "https://docs.runpod.io/pods/pricing",
+  "all_owned_pods_absent": true,
+  "provider_absence_checked_utc": "2026-09-10T19:23:53.935685+00:00",
+  "resource_failures": "Failed supply-constraint allocation requests created no pods. Setup, interrupted searches, repeated execution, diagnostics and evidence collection are included in recorded rental time.",
+  "collection": "Original reference01 collection was incomplete and the unchanged main inputs were reexecuted on recovery01. The complete main acceptance was salvaged from complete members of a partial download. completion01 stopped on the strict solar-control discrepancy before timing. Original failed comparisons and collection losses are preserved separately from later diagnostics.",
+  "limitations": "This is an elapsed-time estimate with a conservative early-storage allowance, not an independently verified provider invoice. Unrecorded account changes or provider billing adjustments cannot be ruled out by these receipts."
+}

@@ -1,0 +1,11 @@
+{
+  "status": "incomplete",
+  "measurement_scope": "single",
+  "publication_gate": {
+    "pass": false,
+    "problems": [
+      "A required stage failed or is incomplete"
+    ]
+  },
+  "error": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/run_timing.py\", line 166, in run\n    runner.run(stage['name'], stage['command'], stage['timeout_seconds'])\n  File \"/workspace/tls-default/latency/_driver_support.py\", line 314, in run\n    raise RuntimeError(f\"Stage {name} exited {exit_code}; see {log}\")\nRuntimeError: Stage public exited 1; see /workspace/tls-default/diagnostic/results/timing/logs/public.log\n"
+}

@@ -1,0 +1,9 @@
+{
+  "status": "error",
+  "measurement_scope": "full",
+  "started_utc": "2026-09-10T18:38:20.753207+00:00",
+  "exit_code": 2,
+  "scope": "Timing runner only; independent study acceptance is a prerequisite",
+  "error": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/run_timing.py\", line 415, in run\n    audit(args)\n  File \"/workspace/tls-default/latency/run_timing.py\", line 302, in audit\n    raise ValueError(\"Final timing acceptance failed: \" + json.dumps(problems))\nValueError: Final timing acceptance failed: [\"tess_gap: gtls_graph_4worker: Configuration did not complete successfully\", \"tess_gap: gtls_graph_4worker: Warmup did not complete\", \"tess_gap: gtls_graph_4worker: Batch repetition count is not three\"]\n",
+  "ended_utc": "2026-09-10T19:20:59.257572+00:00"
+}

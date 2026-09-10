@@ -1,0 +1,17 @@
+{
+  "scope": "Host environment used for the recorded installed-wheel tests; this inventory was captured after the test run.",
+  "python": "3.9.6",
+  "platform": "macOS-26.0-arm64-arm-64bit",
+  "versions": {
+    "numpy": "1.26.4",
+    "scipy": "1.12.0",
+    "batman-package": "2.5.3",
+    "pytest": "8.4.2"
+  },
+  "tests_log_sha256": "350d99d8c88c2e886b2780846b3ccad3d78d9106aee71ecfe8372ea6ae21672d",
+  "tested_modules": [
+    "test_tls_reference_math.py",
+    "test_tls_reference_frontend.py",
+    "test_kernel_inventory.py"
+  ]
+}

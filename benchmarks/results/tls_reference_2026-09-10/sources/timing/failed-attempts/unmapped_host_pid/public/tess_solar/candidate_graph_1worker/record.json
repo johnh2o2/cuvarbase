@@ -1,0 +1,51 @@
+{
+  "config": {
+    "manifest": "/workspace/tls-default/diagnostic/results/timing_manifest.json",
+    "regime": "tess_solar",
+    "backend": "candidate",
+    "prefix": "graph",
+    "correction_adapter": "/workspace/tls-default/validation/corrected_reference.py",
+    "names": [
+      "tess_solar_null_0000.npz"
+    ],
+    "measurement_scope": "single"
+  },
+  "pool_width": 1,
+  "single": [],
+  "batch": [],
+  "pool_startup_seconds": 0.8169582409318537,
+  "workers": [
+    {
+      "kind": "ready",
+      "pid": 2400,
+      "namespace_pids": [
+        2400
+      ],
+      "sources": {
+        "root": "/workspace/tls-default/candidate/cuvarbase",
+        "files": {
+          "tls.py": "eb1c0bfd5ce8ee6df86da43bc0cf09c112b1e47e67ca394554dc5cc6db7b0b75",
+          "tls_reference.py": "a38d5a9b83b02825374ba6603d3c7b4106a10c939f98c9fb8004c09ce41100e2",
+          "tls_reference_math.py": "27e5a575e6279e64ce02fd17c40d64e9885f9c285d3145e13e2bee5ac94afe13",
+          "tls_reference_frontend.py": "e2d95902235a6e8728394c76203b7f4c8f9a094a3c57ff582733ea608dd617c6",
+          "tls_reference_prefix.py": "3fcdaf0acd1fb5ff5f00637872ff2785b943b0996369ffeb2f3f3b7e431035fb",
+          "tls_grids.py": "56398357bc4258d52c560170eb01cb204f547d2331a3202648225081ed86f1b7",
+          "tls_stats.py": "53fba5f00950175c742713fc021b5174cd5f86d8fc82e13bf14056aeb8b83ef5",
+          "tls_models.py": "553c90b7abc9511d24589d75abbdb93383541d67b47afa02aef4d12a7fad1623",
+          "kernels/tls_reference.cu": "b060dbd2063b03d3295f8469ecb4293a1118131d41a1c55fa0399d0a24fc7d97",
+          "kernels/tls_reference_prepare.cu": "ab4df4b72aba4d39b93071755978a3706df98b99092546364357873f0c930b9c"
+        }
+      }
+    }
+  ],
+  "status": "error",
+  "error": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/tools/timing/benchmark.py\", line 387, in run\n    record['warmup'] = pool.measure([0], warmup=True,\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/latency/tools/timing/benchmark.py\", line 178, in measure\n    exclusive_before = exclusive_gpu_processes(allowed_pids)\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/latency/tools/timing/benchmark.py\", line 135, in exclusive_gpu_processes\n    raise RuntimeError('Foreign GPU compute processes prevent exclusive timings: ' + str(foreign))\nRuntimeError: Foreign GPU compute processes prevent exclusive timings: [3212228]\n",
+  "parity": {
+    "eligible": false,
+    "problems": [
+      {
+        "reason": "runner failure"
+      }
+    ]
+  }
+}

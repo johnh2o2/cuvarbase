@@ -1,5 +1,10 @@
 # Expected SNR retained by fast TLS
 
+This 9 September 2026 diagnostic evaluates the earlier phase-binned TLS
+engine, retained as `method='binned'`. “API defaults” below means its frozen
+settings. See the [current transit report](../../../../docs/TRANSIT_BENCHMARKS.md)
+for the observation-level default.
+
 Phase binning has a small cost in many of these examples, but **1–2% is not a
 universal upper bound**. This CPU diagnostic separates the fixed transit
 template, its phase-bin approximation, and its epoch/duration grids. It

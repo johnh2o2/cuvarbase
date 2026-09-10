@@ -387,10 +387,10 @@ def duration_window(periods, R_star=1.0, M_star=1.0, R_planet=1.0,
     """
     Per-period fractional transit-duration bounds for a TLS search.
 
-    This is the default duration window of every TLS entry point
-    (``tls_search_gpu``, ``tls_search``, ``tls_transit``,
-    ``tls_search_batch``) when no explicit ``qmin``/``qmax`` arrays are
-    given.
+    This is the default duration window of the explicit ``method='binned'``
+    engine. The standard observation-level TLS engine uses the broader GTLS
+    domain; it calls this helper only for an explicit ``duration_window`` or
+    Keplerian q-factor override.
 
     Parameters
     ----------

@@ -1,0 +1,34 @@
+{
+  "array_digests.json.gz": {
+    "sha256": "ff4985d50892d0c0a0011da05b98a1dac83a014c46f3954a76a9961f75744341",
+    "bytes": 292000
+  },
+  "cases.csv": {
+    "sha256": "1a8c6f764535177823a82f9ea98b334eb14b3d78b1ce79415b961c35b8c19777",
+    "bytes": 19546
+  },
+  "comparisons.json.gz": {
+    "sha256": "5386c5f7a77924e811e6a5011da545891e5a542f75b64d22c7087cb8e3016536",
+    "bytes": 19468
+  },
+  "long_period_inputs.json": {
+    "sha256": "622f5e7aa611bc58ccd370d1c8e61b549190f088285d22eb1cc9860528b0c465",
+    "bytes": 13520
+  },
+  "selected_grid_inputs.json": {
+    "sha256": "24f4c21691b5b604416eeb8d48cf02f52c8548ab1992c49f4819a4ea98fa88d9",
+    "bytes": 65908
+  },
+  "source_identities.json": {
+    "sha256": "4036bb5ad83f65c37146e01ab663c2640241c85f021b94fca452a442a4b9f335",
+    "bytes": 9610
+  },
+  "stronger_controls_inputs.json": {
+    "sha256": "4f4d9023691a46b69f89ceeb6599d487009c0762ea6ce0504a756d41eb82985e",
+    "bytes": 7200
+  },
+  "validation.json": {
+    "sha256": "e2a86c6ff70c6f11300acd405d147e983074350fb171b3ad545b4e7cf8f18eb2",
+    "bytes": 4240
+  }
+}

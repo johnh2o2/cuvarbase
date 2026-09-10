@@ -1,7 +1,7 @@
 """GPU tests for the fast (batched, phase-binned) TLS path.
 
-The fast path is the default for tls_search_gpu/tls_transit; these
-tests cover what the legacy-oriented suites do not: batch consistency,
+These tests explicitly select method='binned', the preserved approximate
+engine. They cover batch consistency,
 the coarse/refined statistics separation, adaptive binning, chunking,
 and the removal of the legacy ndata cap.
 """
@@ -44,8 +44,8 @@ class TestBatchConsistency:
         periods = shared_grid()
         lcs = [make_transit_lc(3.3, 0.03, 0.012, seed=1),
                make_transit_lc(7.7, 0.02, 0.012, ndata=2500, seed=2)]
-        batch = tls.tls_search_batch(lcs, periods=periods)
-        singles = [tls.tls_search_batch([lc], periods=periods)[0]
+        batch = tls.tls_search_batch(lcs, periods=periods, method='binned')
+        singles = [tls.tls_search_batch([lc], periods=periods, method='binned')[0]
                    for lc in lcs]
         for b, s in zip(batch, singles):
             # atomics make near-tied neighbors non-deterministic;
@@ -59,7 +59,7 @@ class TestBatchConsistency:
         p_injs = [3.3, 7.7]
         lcs = [make_transit_lc(p, 0.03, 0.012, seed=10 + i)
                for i, p in enumerate(p_injs)]
-        results = tls.tls_search_batch(lcs, periods=periods)
+        results = tls.tls_search_batch(lcs, periods=periods, method='binned')
         for r, p in zip(results, p_injs):
             assert abs(r['period'] - p) / p < 0.01
             assert r['SDE'] > 5
@@ -73,7 +73,7 @@ class TestBatchConsistency:
                     np.full(1500, 2e-3))
         sig_lc = make_transit_lc(3.3, 0.03, 0.012, seed=4)
         r_noise, r_sig = tls.tls_search_batch([noise_lc, sig_lc],
-                                              periods=periods)
+                                              periods=periods, method='binned')
         assert r_noise['SDE'] < r_sig['SDE']
 
 
@@ -97,10 +97,10 @@ class TestStatisticsSeparation:
         lc = make_transit_lc(3.3, 0.03, 0.012, seed=5)
         r_ref = tls.tls_search_batch([lc], periods=periods,
                                      refine_top_k=200,
-                                     return_arrays=True)[0]
+                                     return_arrays=True, method='binned')[0]
         r_none = tls.tls_search_batch([lc], periods=periods,
                                       refine_top_k=0,
-                                      return_arrays=True)[0]
+                                      return_arrays=True, method='binned')[0]
         ok = (np.isfinite(r_ref['chi2']) & np.isfinite(r_none['chi2']))
         np.testing.assert_allclose(r_ref['chi2'][ok],
                                    r_none['chi2'][ok], rtol=1e-2)
@@ -114,7 +114,7 @@ class TestStatisticsSeparation:
         periods = shared_grid()
         lc = make_transit_lc(3.3, 0.03, 0.012, seed=6)
         r = tls.tls_search_batch([lc], periods=periods,
-                                 return_arrays=True)[0]
+                                 return_arrays=True, method='binned')[0]
         coarse_min = np.nanmin(r['chi2'])
         assert r['chi2_min'] <= coarse_min * (1 + 1e-3)
 
@@ -124,7 +124,7 @@ class TestScalability:
         from cuvarbase import tls
         periods = shared_grid()
         lc = make_transit_lc(4.56, 0.025, 0.008, ndata=20000, seed=7)
-        r = tls.tls_search_batch([lc], periods=periods)[0]
+        r = tls.tls_search_batch([lc], periods=periods, method='binned')[0]
         assert abs(r['period'] - 4.56) / 4.56 < 0.01
 
     def test_bjd_scale_times(self):
@@ -133,7 +133,7 @@ class TestScalability:
         t, y, dy = make_transit_lc(4.56, 0.025, 0.008, ndata=5000,
                                    seed=8)
         r = tls.tls_search_batch([(t + 2457000.0, y, dy)],
-                                 periods=periods)[0]
+                                 periods=periods, method='binned')[0]
         assert abs(r['period'] - 4.56) / 4.56 < 0.01
         # T0 is the first mid-transit at or after the first observation
         tmin = t.min() + 2457000.0
@@ -150,7 +150,7 @@ class TestScalability:
         try:
             lcs = [make_transit_lc(3.3, 0.03, 0.012, ndata=400,
                                    seed=20 + i) for i in range(8)]
-            results = tls.tls_search_batch(lcs, periods=periods)
+            results = tls.tls_search_batch(lcs, periods=periods, method='binned')
         finally:
             tls._TLS_FAST_MAX_OUT_FLOATS = old
         assert len(results) == 8
@@ -163,7 +163,7 @@ class TestScalability:
         periods = shared_grid()
         lcs = [make_transit_lc(3.3, 0.03, 0.015, ndata=n, seed=30 + i)
                for i, n in enumerate((300, 4000, 1100))]
-        results = tls.tls_search_batch(lcs, periods=periods)
+        results = tls.tls_search_batch(lcs, periods=periods, method='binned')
         for r in results:
             assert abs(r['period'] - 3.3) / 3.3 < 0.02
 
@@ -192,7 +192,7 @@ class TestValidation:
         from cuvarbase import tls
         lc = make_transit_lc(3.3, 0.03, 0.012, ndata=300)
         with pytest.raises(ValueError, match="n_durations"):
-            tls.tls_search_batch([lc], n_durations=100)
+            tls.tls_search_batch([lc], n_durations=100, method='binned')
 
 
 class TestBanding:
@@ -216,11 +216,11 @@ class TestBanding:
 
         r_banded = tls.tls_search_batch([lc], periods=periods,
                                         qmin=qmin, qmax=qmax,
-                                        return_arrays=True)[0]
+                                        return_arrays=True, method='binned')[0]
         r_fixed = tls.tls_search_batch([lc], periods=periods,
                                        qmin=qmin, qmax=qmax,
                                        nbins=512,
-                                       return_arrays=True)[0]
+                                       return_arrays=True, method='binned')[0]
 
         assert abs(r_banded['period'] - 3.3) / 3.3 < 0.01
         assert abs(r_banded['period'] - r_fixed['period']) / 3.3 < 5e-3
@@ -267,7 +267,7 @@ class TestEmptyBinTraversal:
         monkeypatch.setattr(tls, '_get_cached_fast_kernels', get_kernels)
         outputs = []
         for mode in (0, 1):
-            outputs.append(tls.tls_search_batch(lightcurves, **kwargs))
+            outputs.append(tls.tls_search_batch(lightcurves, **kwargs, method='binned'))
         return outputs
 
     @pytest.mark.parametrize('nbins,ndata,q,center,clustered,block_size', [
@@ -381,7 +381,7 @@ class TestRefinementFallback:
         periods = shared_grid()
         lcs = [make_transit_lc(3.3, 0.03, 0.012, seed=1),
                make_transit_lc(7.7, 0.02, 0.012, seed=2)]
-        res = tls.tls_search_batch(lcs, periods=periods)   # defaults
+        res = tls.tls_search_batch(lcs, periods=periods, method='binned')   # defaults
         assert len(res) == 2
         for r in res:
             assert 'error' not in r
@@ -411,11 +411,11 @@ def _call_expect_warning(fn, match):
 def _three_paths(t, y, dy, periods, **kw):
     """(fast, legacy, batch) results for one light curve."""
     from cuvarbase import tls
-    fast = tls.tls_search_gpu(t, y, dy, periods=periods, **kw)
-    legacy = tls.tls_search_gpu(t, y, dy, periods=periods, use_fast=False,
+    fast = tls.tls_search_gpu(t, y, dy, periods=periods, **kw, method='binned')
+    legacy = tls.tls_search_gpu(t, y, dy, periods=periods, method='legacy',
                                 **kw)
     batch = tls.tls_search_batch([(t, y, dy)], periods=periods,
-                                 return_arrays=True)[0]
+                                 return_arrays=True, method='binned')[0]
     return {'fast': fast, 'legacy': legacy, 'batch': batch}
 
 
@@ -485,14 +485,14 @@ class TestUnsortedPeriodGrid:
         from cuvarbase import tls
         periods = np.asarray(shared_grid(), dtype=np.float64)
         lc = make_transit_lc(3.3, 0.03, 0.012, seed=1)
-        ref = tls.tls_search_gpu(*lc, periods=periods)
+        ref = tls.tls_search_gpu(*lc, periods=periods, method='binned')
         assert ref['period_uncertainty'] > 0
         rng = np.random.RandomState(0)
         for label, grid in (('descending', periods[::-1].copy()),
                             ('shuffled', periods[rng.permutation(len(periods))])):
             for path in ('fast', 'legacy'):
                 r = tls.tls_search_gpu(*lc, periods=grid,
-                                       use_fast=(path == 'fast'))
+                                       method='binned' if (path == 'fast') else 'legacy')
                 assert r['period'] == pytest.approx(ref['period'], rel=5e-3), (label, path)
                 assert r['period_uncertainty'] > 0, (label, path)
                 # per-period arrays come back in the caller's order
@@ -507,7 +507,7 @@ class TestUnsortedPeriodGrid:
                     np.testing.assert_array_equal(r['valid_periods'][back],
                                                   ref['valid_periods'])
             rb = tls.tls_search_batch([lc], periods=grid,
-                                      return_arrays=True)[0]
+                                      return_arrays=True, method='binned')[0]
             assert rb['period_uncertainty'] > 0
             np.testing.assert_array_equal(rb['periods'], grid.astype(np.float32))
             assert abs(rb['SDE'] - ref['SDE']) < 0.05
@@ -524,11 +524,11 @@ class TestFlatLightCurve:
         dy = np.full(1000, 1e-3)
         periods = np.linspace(2, 5, 200)
         calls = {
-            'fast': lambda: tls.tls_search_gpu(t, y, dy, periods=periods),
+            'fast': lambda: tls.tls_search_gpu(t, y, dy, periods=periods, method='binned'),
             'legacy': lambda: tls.tls_search_gpu(t, y, dy, periods=periods,
-                                                 use_fast=False),
+                                                 method='legacy'),
             'batch': lambda: tls.tls_search_batch([(t, y, dy)],
-                                                  periods=periods)[0],
+                                                  periods=periods, method='binned')[0],
         }
         for name, fn in calls.items():
             r = _call_expect_warning(fn, "no valid solution")
@@ -540,7 +540,7 @@ class TestFlatLightCurve:
         good = make_transit_lc(3.3, 0.03, 0.012, seed=1)
         rs = _call_expect_warning(
             lambda: tls.tls_search_batch([(t, y, dy), good],
-                                         periods=shared_grid()),
+                                         periods=shared_grid(), method='binned'),
             "no valid solution")
         assert rs[0]['SDE'] == 0.0
         assert abs(rs[1]['period'] - 3.3) / 3.3 < 0.01 and rs[1]['SDE'] > 5
@@ -564,7 +564,7 @@ class TestFAPKey:
         sig_lc = make_transit_lc(3.3, 0.03, 0.012, seed=4)
         r_noise, r_sig = tls.tls_search_batch(
             [noise_lc, sig_lc], periods=periods, fap_null_draws=40,
-            fap_seed=7)
+            fap_seed=7, method='binned')
         for r in (r_noise, r_sig):
             assert 0 < r['FAP'] <= 1.0
             assert r['SDE_null'].shape == (40,)
@@ -577,11 +577,11 @@ class TestFAPKey:
         # the noise light curve is not significant
         assert r_noise['FAP'] > 0.05
         # the observed SDE is unchanged by the bootstrap
-        plain = tls.tls_search_batch([noise_lc, sig_lc], periods=periods)
+        plain = tls.tls_search_batch([noise_lc, sig_lc], periods=periods, method='binned')
         assert plain[1]['SDE'] == pytest.approx(r_sig['SDE'], abs=1e-3)
         # seeded -> reproducible null
         again = tls.tls_search_batch([noise_lc], periods=periods,
-                                     fap_null_draws=40, fap_seed=7)[0]
+                                     fap_null_draws=40, fap_seed=7, method='binned')[0]
         np.testing.assert_allclose(again['SDE_null'], r_noise['SDE_null'],
                                    atol=1e-2)
 
@@ -590,7 +590,7 @@ class TestFAPKey:
         lc = make_transit_lc(3.3, 0.03, 0.012, ndata=300)
         with pytest.raises(ValueError, match="fap_null_draws"):
             tls.tls_search_batch([lc], periods=shared_grid(),
-                                 fap_null_draws=-1)
+                                 fap_null_draws=-1, method='binned')
 
 
 class TestSNRDefinition:
@@ -618,16 +618,16 @@ class TestDurationWindowDefault:
         lc = make_transit_lc(3.3, 0.03, 0.012, seed=1)
         periods = np.asarray(shared_grid(), dtype=np.float64)
         q = tls_grids.q_transit(periods)
-        r_def = tls.tls_search_gpu(*lc, periods=periods)
+        r_def = tls.tls_search_gpu(*lc, periods=periods, method='binned')
         r_exp = tls.tls_search_gpu(*lc, periods=periods, qmin=0.5 * q,
-                                   qmax=2.0 * q)
+                                   qmax=2.0 * q, method='binned')
         ok = np.isfinite(r_def['chi2']) & np.isfinite(r_exp['chi2'])
         np.testing.assert_allclose(r_def['chi2'][ok], r_exp['chi2'][ok],
                                    rtol=1e-5)
         assert r_def['period'] == pytest.approx(r_exp['period'], rel=1e-3)
         # tls_transit builds its own Ofir grid from the data's span and
         # the same Keplerian window; it must find the same transit
-        r_tr = tls.tls_transit(*lc, period_min=1.0, period_max=12.0)
+        r_tr = tls.tls_transit(*lc, period_min=1.0, period_max=12.0, method='binned')
         assert r_tr['period'] == pytest.approx(3.3, rel=0.01)
         assert r_tr['depth'] == pytest.approx(r_def['depth'], rel=0.1)
 
@@ -640,13 +640,13 @@ class TestDurationWindowDefault:
         periods = np.linspace(100.0, 300.0, 50)
         with _w.catch_warnings():
             _w.simplefilter("error")
-            tls.tls_search_gpu(t, y, dy, periods=periods)
-            tls.tls_search_gpu(t, y, dy, periods=periods, use_fast=False)
+            tls.tls_search_gpu(t, y, dy, periods=periods, method='binned')
+            tls.tls_search_gpu(t, y, dy, periods=periods, method='legacy')
         for path in ('fast', 'legacy'):
             r = _call_expect_warning(
                 lambda: tls.tls_search_gpu(t, y, dy, periods=periods,
                                            duration_window='fixed',
-                                           use_fast=(path == 'fast')),
+                                           method='binned' if (path == 'fast') else 'legacy'),
                 "excludes the Keplerian")
             assert np.isfinite(r['SDE'])
 
@@ -673,7 +673,7 @@ class TestDurationWindowDefault:
 
         monkeypatch.setattr(tls, '_get_cached_kernels', spy)
         lc = make_transit_lc(3.3, 0.03, 0.012, ndata=800, seed=2)
-        r = tls.tls_search_gpu(*lc, periods=shared_grid(), use_fast=False)
+        r = tls.tls_search_gpu(*lc, periods=shared_grid(), method='legacy')
         assert seen == ['keplerian']
         assert abs(r['period'] - 3.3) / 3.3 < 0.02
 
@@ -702,7 +702,7 @@ class TestBatchStatisticsAreSequential:
         periods = shared_grid()
         lcs = [make_transit_lc(2.5 + 0.7 * i, 0.03, 0.012, ndata=600,
                                seed=30 + i) for i in range(6)]
-        results = tls.tls_search_batch(lcs, periods=periods)
+        results = tls.tls_search_batch(lcs, periods=periods, method='binned')
         assert len(seen) == len(lcs)
         assert set(seen) == {threading.current_thread().name}
         assert all(r is not None for r in results)
@@ -713,7 +713,7 @@ class TestBatchStatisticsAreSequential:
         p_injs = [2.6, 4.1, 6.3, 9.5]
         lcs = [make_transit_lc(p, 0.03, 0.015, ndata=900, seed=40 + i)
                for i, p in enumerate(p_injs)]
-        results = tls.tls_search_batch(lcs, periods=periods)
+        results = tls.tls_search_batch(lcs, periods=periods, method='binned')
         for r, p in zip(results, p_injs):
             assert abs(r['period'] - p) / p < 0.01
 
@@ -751,8 +751,8 @@ class TestFastLegacyParity:
         from cuvarbase import tls
         lc, periods, qmin, qmax = self._grid_and_data()
         kw = dict(periods=periods, qmin=qmin, qmax=qmax, n_durations=15)
-        r_old = tls.tls_search_gpu(*lc, use_fast=False, **kw)
-        r_new = tls.tls_search_gpu(*lc, use_fast=True, **kw)
+        r_old = tls.tls_search_gpu(*lc, method='legacy', **kw)
+        r_new = tls.tls_search_gpu(*lc, method='binned', **kw)
 
         c_old, c_new = r_old['chi2'], r_new['chi2']
         both = np.isfinite(c_old) & np.isfinite(c_new)
@@ -777,6 +777,7 @@ class TestTlsTransitSmoke:
     fold phase in [0, 1)."""
 
     def test_recovers_injected_transit(self):
+        pytest.importorskip('cupy', reason='standard TLS needs the optional CUDA TLS extra')
         from cuvarbase import tls
         P, q, depth = 4.56, 0.025, 0.008
         t, y, dy = make_transit_lc(P, q, depth, ndata=3000, seed=11,

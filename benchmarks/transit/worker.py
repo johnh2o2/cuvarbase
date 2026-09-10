@@ -96,7 +96,9 @@ class Backend:
                 self.memory=BLSBatchMemory(capacity,cfg.get('batch_capacity',16),len(self.f),stream=drv.Stream())
         elif k=='v1_tls':
             from cuvarbase.base import ensure_context
-            from cuvarbase.tls import tls_search_batch
+            from cuvarbase import tls as tls_module
+            # This dated benchmark targets the original binned engine.
+            tls_search_batch = getattr(tls_module, '_tls_search_batch_binned', tls_module.tls_search_batch)
             import pycuda.driver as drv
             ensure_context();self.tls=tls_search_batch;self.sync=drv.Context.synchronize
         elif k=='gtls':

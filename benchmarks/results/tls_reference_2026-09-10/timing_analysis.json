@@ -1,0 +1,1531 @@
+{
+  "measurement_scope": "single_and_batch",
+  "verification": {
+    "complete": true,
+    "numerical_validation_complete": true,
+    "numerical_evidence_kind": "independent",
+    "exclusive_processes": true,
+    "scope": "Separate post hoc complete-configuration reporting gate; original full campaign failed. Original numerical/source/cohort/exclusivity/repetition gates are unchanged.",
+    "campaign_pass": false,
+    "reporting_scope": "post_hoc_complete_configurations_after_optional_native_warmup_oom",
+    "full_returned_object_repeatability": true
+  },
+  "profiles": [
+    {
+      "profile": "tess_200s",
+      "regime": "tess_solar",
+      "n_samples": 9736,
+      "baseline_days": 25.756750990570254,
+      "n_periods": 2325,
+      "batch_size": 16,
+      "supporting_cohort_size": 16,
+      "gtls_workers": 4,
+      "single_case": "tess_solar_null_0000.npz",
+      "input_sha256": "17d916f23500090ff85fc857888376b09a7855fb1a0660a59645dab889438ef5"
+    },
+    {
+      "profile": "tess_gap",
+      "regime": "tess_gap",
+      "n_samples": 4295,
+      "baseline_days": 734.853796173106,
+      "n_periods": 74616,
+      "batch_size": 16,
+      "supporting_cohort_size": 16,
+      "gtls_workers": 2,
+      "single_case": "tess_gap_null_0000.npz",
+      "input_sha256": "00cd78672530881be709a706289d21a919dc759d9f2c787258efa8fb55b3572d"
+    },
+    {
+      "profile": "ztf",
+      "regime": "ztf_solar",
+      "n_samples": 1317,
+      "baseline_days": 2743.768345858436,
+      "n_periods": 235266,
+      "batch_size": 16,
+      "supporting_cohort_size": 16,
+      "gtls_workers": 4,
+      "single_case": "ztf_solar_null_0000.npz",
+      "input_sha256": "fa77c511d09785dff43ac2b87055a52f32182de300e691fd41cbda9fb428afcf"
+    }
+  ],
+  "timings": [
+    {
+      "profile": "tess_200s",
+      "method": "tls_v1",
+      "mode": "single",
+      "boundary": "warm_public_api",
+      "n": 1,
+      "workers": 1,
+      "repetitions": 5,
+      "total_seconds": [
+        0.1492174060549587,
+        0.1511366928461939,
+        0.14856891916133463,
+        0.1488149631768465,
+        0.15077269915491343
+      ],
+      "seconds_per_source": 0.1492174060549587,
+      "min_seconds_per_source": 0.14856891916133463,
+      "max_seconds_per_source": 0.1511366928461939
+    },
+    {
+      "profile": "tess_200s",
+      "method": "gtls",
+      "mode": "single",
+      "boundary": "warm_public_api",
+      "n": 1,
+      "workers": 1,
+      "repetitions": 5,
+      "total_seconds": [
+        0.5334544151555747,
+        0.5330096858087927,
+        0.530828403076157,
+        0.6829790840856731,
+        0.5485368729569018
+      ],
+      "seconds_per_source": 0.5334544151555747,
+      "min_seconds_per_source": 0.530828403076157,
+      "max_seconds_per_source": 0.6829790840856731
+    },
+    {
+      "profile": "tess_200s",
+      "method": "tls_v1",
+      "mode": "batch",
+      "boundary": "warm_public_api",
+      "n": 16,
+      "workers": 1,
+      "repetitions": 3,
+      "total_seconds": [
+        2.5751232779584825,
+        2.573938259156421,
+        2.6682341429404914
+      ],
+      "seconds_per_source": 0.16094520487240516,
+      "min_seconds_per_source": 0.1608711411972763,
+      "max_seconds_per_source": 0.16676463393378071
+    },
+    {
+      "profile": "tess_200s",
+      "method": "gtls",
+      "mode": "batch",
+      "boundary": "warm_public_api",
+      "n": 16,
+      "workers": 4,
+      "repetitions": 3,
+      "total_seconds": [
+        5.132365423021838,
+        5.1079645089339465,
+        5.056025411002338
+      ],
+      "seconds_per_source": 0.31924778180837166,
+      "min_seconds_per_source": 0.3160015881876461,
+      "max_seconds_per_source": 0.3207728389388649
+    },
+    {
+      "profile": "tess_gap",
+      "method": "tls_v1",
+      "mode": "single",
+      "boundary": "warm_public_api",
+      "n": 1,
+      "workers": 1,
+      "repetitions": 5,
+      "total_seconds": [
+        1.5544587089680135,
+        1.589773964136839,
+        1.5480819819495082,
+        1.5425327140837908,
+        1.556061381008476
+      ],
+      "seconds_per_source": 1.5544587089680135,
+      "min_seconds_per_source": 1.5425327140837908,
+      "max_seconds_per_source": 1.589773964136839
+    },
+    {
+      "profile": "tess_gap",
+      "method": "gtls",
+      "mode": "single",
+      "boundary": "warm_public_api",
+      "n": 1,
+      "workers": 1,
+      "repetitions": 5,
+      "total_seconds": [
+        5.937770273070782,
+        5.994522526161745,
+        6.047998022986576,
+        6.0370472660288215,
+        6.955144861945882
+      ],
+      "seconds_per_source": 6.0370472660288215,
+      "min_seconds_per_source": 5.937770273070782,
+      "max_seconds_per_source": 6.955144861945882
+    },
+    {
+      "profile": "tess_gap",
+      "method": "tls_v1",
+      "mode": "batch",
+      "boundary": "warm_public_api",
+      "n": 16,
+      "workers": 1,
+      "repetitions": 3,
+      "total_seconds": [
+        24.792830897960812,
+        24.54490523505956,
+        24.445841963868588
+      ],
+      "seconds_per_source": 1.5340565771912225,
+      "min_seconds_per_source": 1.5278651227417868,
+      "max_seconds_per_source": 1.5495519311225507
+    },
+    {
+      "profile": "tess_gap",
+      "method": "gtls",
+      "mode": "batch",
+      "boundary": "warm_public_api",
+      "n": 16,
+      "workers": 2,
+      "repetitions": 3,
+      "total_seconds": [
+        58.44593784492463,
+        58.95175574487075,
+        59.519077527103946
+      ],
+      "seconds_per_source": 3.684484734054422,
+      "min_seconds_per_source": 3.6528711153077893,
+      "max_seconds_per_source": 3.7199423454439966
+    },
+    {
+      "profile": "ztf",
+      "method": "tls_v1",
+      "mode": "single",
+      "boundary": "warm_public_api",
+      "n": 1,
+      "workers": 1,
+      "repetitions": 5,
+      "total_seconds": [
+        3.4531880680005997,
+        3.1488155780825764,
+        3.2247611810453236,
+        3.3181371779646724,
+        3.231454955181107
+      ],
+      "seconds_per_source": 3.231454955181107,
+      "min_seconds_per_source": 3.1488155780825764,
+      "max_seconds_per_source": 3.4531880680005997
+    },
+    {
+      "profile": "ztf",
+      "method": "gtls",
+      "mode": "single",
+      "boundary": "warm_public_api",
+      "n": 1,
+      "workers": 1,
+      "repetitions": 5,
+      "total_seconds": [
+        14.960921935038641,
+        14.899326854851097,
+        14.838357164990157,
+        15.513726464938372,
+        14.887710958020762
+      ],
+      "seconds_per_source": 14.899326854851097,
+      "min_seconds_per_source": 14.838357164990157,
+      "max_seconds_per_source": 15.513726464938372
+    },
+    {
+      "profile": "ztf",
+      "method": "tls_v1",
+      "mode": "batch",
+      "boundary": "warm_public_api",
+      "n": 16,
+      "workers": 1,
+      "repetitions": 3,
+      "total_seconds": [
+        50.286529175937176,
+        49.83430309710093,
+        49.86187008698471
+      ],
+      "seconds_per_source": 3.1163668804365443,
+      "min_seconds_per_source": 3.114643943568808,
+      "max_seconds_per_source": 3.1429080734960735
+    },
+    {
+      "profile": "ztf",
+      "method": "gtls",
+      "mode": "batch",
+      "boundary": "warm_public_api",
+      "n": 16,
+      "workers": 4,
+      "repetitions": 3,
+      "total_seconds": [
+        72.72501625097357,
+        71.69815611699596,
+        73.9254456909839
+      ],
+      "seconds_per_source": 4.545313515685848,
+      "min_seconds_per_source": 4.4811347573122475,
+      "max_seconds_per_source": 4.620340355686494
+    }
+  ],
+  "speedups": [
+    {
+      "profile": "tess_200s",
+      "single": 3.575014666580496,
+      "batch": 1.9835805736583847,
+      "gtls_batch_workers": 4
+    },
+    {
+      "profile": "tess_gap",
+      "single": 3.8836974126104287,
+      "batch": 2.401791947465537,
+      "gtls_batch_workers": 2
+    },
+    {
+      "profile": "ztf",
+      "single": 4.61071779167538,
+      "batch": 1.4585296565111534,
+      "gtls_batch_workers": 4
+    }
+  ],
+  "components": [
+    {
+      "profile": "tess_200s",
+      "eligible": true,
+      "measurements": {
+        "gtls": {
+          "common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.511048702057451,
+              0.4652283249888569,
+              0.4550569010898471,
+              0.4630405008792877,
+              0.46065000793896616
+            ],
+            "median_seconds": 0.4630405008792877,
+            "minimum_seconds": 0.4550569010898471,
+            "maximum_seconds": 0.511048702057451
+          },
+          "public_instrumented": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.6443293259944767,
+              0.5774345020763576,
+              0.5629472031723708,
+              0.5723002550657839,
+              0.5703768599778414
+            ],
+            "median_seconds": 0.5723002550657839,
+            "minimum_seconds": 0.5629472031723708,
+            "maximum_seconds": 0.6443293259944767
+          },
+          "after_common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.13328062393702567,
+              0.11220617708750069,
+              0.1078903020825237,
+              0.10925975418649614,
+              0.10972685203887522
+            ],
+            "median_seconds": 0.10972685203887522,
+            "minimum_seconds": 0.1078903020825237,
+            "maximum_seconds": 0.13328062393702567
+          },
+          "inclusive_stages": {
+            "native_candidate_or_harmonic_refinement": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.08324637799523771,
+                0.08507239795289934,
+                0.0878023779951036,
+                0.09055049507878721,
+                0.08484940300695598
+              ],
+              "median_seconds": 0.08507239795289934,
+              "minimum_seconds": 0.08324637799523771,
+              "maximum_seconds": 0.09055049507878721
+            },
+            "native_final_window_and_diagnostics": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.13936617993749678,
+                0.11971613811329007,
+                0.11246608896180987,
+                0.11355510610155761,
+                0.11390646989457309
+              ],
+              "median_seconds": 0.11390646989457309,
+              "minimum_seconds": 0.11246608896180987,
+              "maximum_seconds": 0.13936617993749678
+            },
+            "native_pink_noise_nested": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.12504575680941343,
+                0.10476119606755674,
+                0.10122963483445346,
+                0.10251259407959878,
+                0.10143261100165546
+              ],
+              "median_seconds": 0.10251259407959878,
+              "minimum_seconds": 0.10122963483445346,
+              "maximum_seconds": 0.12504575680941343
+            },
+            "native_snr_stats_inclusive": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.12531051598489285,
+                0.10508486302569509,
+                0.10142976604402065,
+                0.10271547897718847,
+                0.10174157493747771
+              ],
+              "median_seconds": 0.10271547897718847,
+              "minimum_seconds": 0.10142976604402065,
+              "maximum_seconds": 0.12531051598489285
+            },
+            "native_spectra": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.008444001199677587,
+                0.008424254832789302,
+                0.007231204304844141,
+                0.00767404492944479,
+                0.007314244983717799
+              ],
+              "median_seconds": 0.00767404492944479,
+              "minimum_seconds": 0.007231204304844141,
+              "maximum_seconds": 0.008444001199677587
+            }
+          }
+        },
+        "candidate": {
+          "common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.1669922131113708,
+              0.16372996801510453,
+              0.16015767003409564,
+              0.16723129781894386,
+              0.1899191909469664
+            ],
+            "median_seconds": 0.1669922131113708,
+            "minimum_seconds": 0.16015767003409564,
+            "maximum_seconds": 0.1899191909469664
+          },
+          "public_instrumented": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.169645878020674,
+              0.16624664003029466,
+              0.16267023794353008,
+              0.17060259683057666,
+              0.1924421819858253
+            ],
+            "median_seconds": 0.169645878020674,
+            "minimum_seconds": 0.16267023794353008,
+            "maximum_seconds": 0.1924421819858253
+          },
+          "after_common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.0026536649093031883,
+              0.0025166720151901245,
+              0.0025125679094344378,
+              0.0033712990116328,
+              0.0025229910388588905
+            ],
+            "median_seconds": 0.0025229910388588905,
+            "minimum_seconds": 0.0025125679094344378,
+            "maximum_seconds": 0.0033712990116328
+          },
+          "inclusive_stages": {
+            "candidate_coarse_stage": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.08047934481874108,
+                0.0816977380309254,
+                0.07988771703094244,
+                0.08043759595602751,
+                0.0920980900991708
+              ],
+              "median_seconds": 0.08047934481874108,
+              "minimum_seconds": 0.07988771703094244,
+              "maximum_seconds": 0.0920980900991708
+            },
+            "candidate_final_physical_parameters": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.002329988870769739,
+                0.0021976488642394543,
+                0.0021966940257698298,
+                0.0027280619833618402,
+                0.0021962400060147047
+              ],
+              "median_seconds": 0.0021976488642394543,
+              "minimum_seconds": 0.0021962400060147047,
+              "maximum_seconds": 0.0027280619833618402
+            },
+            "candidate_full_window_stage": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.031220696168020368,
+                0.030862327897921205,
+                0.030643589096143842,
+                0.03625123901292682,
+                0.03544001770205796
+              ],
+              "median_seconds": 0.031220696168020368,
+              "minimum_seconds": 0.030643589096143842,
+              "maximum_seconds": 0.03625123901292682
+            },
+            "candidate_search_full": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.16676574083976448,
+                0.16348665207624435,
+                0.1599232628941536,
+                0.16700108512304723,
+                0.1896323540713638
+              ],
+              "median_seconds": 0.16676574083976448,
+              "minimum_seconds": 0.1599232628941536,
+              "maximum_seconds": 0.1896323540713638
+            },
+            "candidate_spectra": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.013361247023567557,
+                0.009882981888949871,
+                0.008175602182745934,
+                0.00929543492384255,
+                0.014011902967467904
+              ],
+              "median_seconds": 0.009882981888949871,
+              "minimum_seconds": 0.008175602182745934,
+              "maximum_seconds": 0.014011902967467904
+            },
+            "candidate_template_cache": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.005625959951430559,
+                0.005530278896912932,
+                0.005531016970053315,
+                0.005459784995764494,
+                0.005643891170620918
+              ],
+              "median_seconds": 0.005531016970053315,
+              "minimum_seconds": 0.005459784995764494,
+              "maximum_seconds": 0.005643891170620918
+            }
+          }
+        }
+      },
+      "common_outputs_identical": true,
+      "speedup": 2.772826901638077,
+      "scope": "Separate instrumented single-source search through final window selection; candidate includes compact winner transfers, while native stops after final GPU argmin and excludes subsequent physical/SNR diagnostics",
+      "overlap_note": "Inclusive stage durations overlap and must not be added together."
+    },
+    {
+      "profile": "tess_gap",
+      "eligible": true,
+      "measurements": {
+        "gtls": {
+          "common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              6.320684631122276,
+              6.248879885999486,
+              6.858157824026421,
+              6.123418836155906,
+              6.111762095009908
+            ],
+            "median_seconds": 6.248879885999486,
+            "minimum_seconds": 6.111762095009908,
+            "maximum_seconds": 6.858157824026421
+          },
+          "public_instrumented": {
+            "repetitions": 5,
+            "raw_seconds": [
+              6.3968632239848375,
+              6.32537899306044,
+              6.945239057997242,
+              6.205065282061696,
+              6.186873702798039
+            ],
+            "median_seconds": 6.32537899306044,
+            "minimum_seconds": 6.186873702798039,
+            "maximum_seconds": 6.945239057997242
+          },
+          "after_common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.07617859286256135,
+              0.07649910706095397,
+              0.0870812339708209,
+              0.08164644590578973,
+              0.07511160778813064
+            ],
+            "median_seconds": 0.07649910706095397,
+            "minimum_seconds": 0.07511160778813064,
+            "maximum_seconds": 0.0870812339708209
+          },
+          "inclusive_stages": {
+            "native_candidate_or_harmonic_refinement": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.42218712670728564,
+                0.4338617369066924,
+                0.46814307710155845,
+                0.4233664199709892,
+                0.43261495186015964
+              ],
+              "median_seconds": 0.43261495186015964,
+              "minimum_seconds": 0.42218712670728564,
+              "maximum_seconds": 0.46814307710155845
+            },
+            "native_final_window_and_diagnostics": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.069927231175825,
+                0.07093820790760219,
+                0.08044042903929949,
+                0.07075413595885038,
+                0.06938360002823174
+              ],
+              "median_seconds": 0.07075413595885038,
+              "minimum_seconds": 0.06938360002823174,
+              "maximum_seconds": 0.08044042903929949
+            },
+            "native_pink_noise_nested": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.04455390805378556,
+                0.04459281708113849,
+                0.04588907188735902,
+                0.044297299114987254,
+                0.044526871060952544
+              ],
+              "median_seconds": 0.04455390805378556,
+              "minimum_seconds": 0.044297299114987254,
+              "maximum_seconds": 0.04588907188735902
+            },
+            "native_snr_stats_inclusive": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.0449458179064095,
+                0.044950111070647836,
+                0.046268878038972616,
+                0.04465841013006866,
+                0.044908019015565515
+              ],
+              "median_seconds": 0.0449458179064095,
+              "minimum_seconds": 0.04465841013006866,
+              "maximum_seconds": 0.046268878038972616
+            },
+            "native_spectra": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.20840854197740555,
+                0.2230925322510302,
+                0.230580777162686,
+                0.21413220721296966,
+                0.22091521602123976
+              ],
+              "median_seconds": 0.22091521602123976,
+              "minimum_seconds": 0.20840854197740555,
+              "maximum_seconds": 0.230580777162686
+            }
+          }
+        },
+        "candidate": {
+          "common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              1.6622144819702953,
+              1.563318784814328,
+              1.537974731065333,
+              1.5448824749328196,
+              1.5708740320988
+            ],
+            "median_seconds": 1.563318784814328,
+            "minimum_seconds": 1.537974731065333,
+            "maximum_seconds": 1.6622144819702953
+          },
+          "public_instrumented": {
+            "repetitions": 5,
+            "raw_seconds": [
+              1.6700919109862298,
+              1.5704914338421077,
+              1.5445490130223334,
+              1.552334456006065,
+              1.5775708470027894
+            ],
+            "median_seconds": 1.5704914338421077,
+            "minimum_seconds": 1.5445490130223334,
+            "maximum_seconds": 1.6700919109862298
+          },
+          "after_common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.007877429015934467,
+              0.007172649027779698,
+              0.006574281957000494,
+              0.007451981073245406,
+              0.006696814903989434
+            ],
+            "median_seconds": 0.007172649027779698,
+            "minimum_seconds": 0.006574281957000494,
+            "maximum_seconds": 0.007877429015934467
+          },
+          "inclusive_stages": {
+            "candidate_coarse_stage": {
+              "repetitions": 5,
+              "raw_seconds": [
+                1.168505288893357,
+                1.1631320789456367,
+                1.1517254901118577,
+                1.1545442920178175,
+                1.150626647984609
+              ],
+              "median_seconds": 1.1545442920178175,
+              "minimum_seconds": 1.150626647984609,
+              "maximum_seconds": 1.168505288893357
+            },
+            "candidate_final_physical_parameters": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.0019070871639996767,
+                0.001620386028662324,
+                0.0015766380820423365,
+                0.0016208069864660501,
+                0.0016135359182953835
+              ],
+              "median_seconds": 0.001620386028662324,
+              "minimum_seconds": 0.0015766380820423365,
+              "maximum_seconds": 0.0019070871639996767
+            },
+            "candidate_full_window_stage": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.030647512758150697,
+                0.03140113013796508,
+                0.028439129702746868,
+                0.03088389290496707,
+                0.027992902789264917
+              ],
+              "median_seconds": 0.030647512758150697,
+              "minimum_seconds": 0.027992902789264917,
+              "maximum_seconds": 0.03140113013796508
+            },
+            "candidate_search_full": {
+              "repetitions": 5,
+              "raw_seconds": [
+                1.661812999052927,
+                1.5629278430715203,
+                1.537517486140132,
+                1.5445305060129613,
+                1.5704270510468632
+              ],
+              "median_seconds": 1.5629278430715203,
+              "minimum_seconds": 1.537517486140132,
+              "maximum_seconds": 1.661812999052927
+            },
+            "candidate_spectra": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.15364957903511822,
+                0.1417321607004851,
+                0.13802214991301298,
+                0.13828028505668044,
+                0.13459427398629487
+              ],
+              "median_seconds": 0.13828028505668044,
+              "minimum_seconds": 0.13459427398629487,
+              "maximum_seconds": 0.15364957903511822
+            },
+            "candidate_template_cache": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.0120342040900141,
+                0.011861911043524742,
+                0.009945128113031387,
+                0.009690412087365985,
+                0.01011423789896071
+              ],
+              "median_seconds": 0.01011423789896071,
+              "minimum_seconds": 0.009690412087365985,
+              "maximum_seconds": 0.0120342040900141
+            }
+          }
+        }
+      },
+      "common_outputs_identical": true,
+      "speedup": 3.997188511197767,
+      "scope": "Separate instrumented single-source search through final window selection; candidate includes compact winner transfers, while native stops after final GPU argmin and excludes subsequent physical/SNR diagnostics",
+      "overlap_note": "Inclusive stage durations overlap and must not be added together."
+    },
+    {
+      "profile": "ztf",
+      "eligible": true,
+      "measurements": {
+        "gtls": {
+          "common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              15.8293956911657,
+              15.620833852794021,
+              16.18051267787814,
+              16.58913102094084,
+              16.236695953877643
+            ],
+            "median_seconds": 16.18051267787814,
+            "minimum_seconds": 15.620833852794021,
+            "maximum_seconds": 16.58913102094084
+          },
+          "public_instrumented": {
+            "repetitions": 5,
+            "raw_seconds": [
+              16.123012240044773,
+              15.934133203933015,
+              16.53638294292614,
+              16.927933532977477,
+              16.54817314981483
+            ],
+            "median_seconds": 16.53638294292614,
+            "minimum_seconds": 15.934133203933015,
+            "maximum_seconds": 16.927933532977477
+          },
+          "after_common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.29361654887907207,
+              0.3132993511389941,
+              0.35587026504799724,
+              0.33880251203663647,
+              0.3114771959371865
+            ],
+            "median_seconds": 0.3132993511389941,
+            "minimum_seconds": 0.29361654887907207,
+            "maximum_seconds": 0.35587026504799724
+          },
+          "inclusive_stages": {
+            "native_candidate_or_harmonic_refinement": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.748416546266526,
+                0.7482574351597577,
+                0.8661665692925453,
+                0.8313947590067983,
+                0.7471645548939705
+              ],
+              "median_seconds": 0.748416546266526,
+              "minimum_seconds": 0.7471645548939705,
+              "maximum_seconds": 0.8661665692925453
+            },
+            "native_final_window_and_diagnostics": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.252267227973789,
+                0.26263043098151684,
+                0.3094836769159883,
+                0.2907831307966262,
+                0.2593334298580885
+              ],
+              "median_seconds": 0.26263043098151684,
+              "minimum_seconds": 0.252267227973789,
+              "maximum_seconds": 0.3094836769159883
+            },
+            "native_pink_noise_nested": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.015099911019206047,
+                0.015050541143864393,
+                0.018663605907931924,
+                0.015395460883155465,
+                0.015693524153903127
+              ],
+              "median_seconds": 0.015395460883155465,
+              "minimum_seconds": 0.015050541143864393,
+              "maximum_seconds": 0.018663605907931924
+            },
+            "native_snr_stats_inclusive": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.03494551591575146,
+                0.03497482091188431,
+                0.04278207290917635,
+                0.035808934131637216,
+                0.03704195283353329
+              ],
+              "median_seconds": 0.035808934131637216,
+              "minimum_seconds": 0.03494551591575146,
+              "maximum_seconds": 0.04278207290917635
+            },
+            "native_spectra": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.5986728230491281,
+                0.612992902752012,
+                0.6910481010563672,
+                0.633098904043436,
+                0.6064477839972824
+              ],
+              "median_seconds": 0.612992902752012,
+              "minimum_seconds": 0.5986728230491281,
+              "maximum_seconds": 0.6910481010563672
+            }
+          }
+        },
+        "candidate": {
+          "common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              3.064060176955536,
+              3.1061459658667445,
+              3.086494253948331,
+              3.0964321030769497,
+              3.0515955998562276
+            ],
+            "median_seconds": 3.086494253948331,
+            "minimum_seconds": 3.0515955998562276,
+            "maximum_seconds": 3.1061459658667445
+          },
+          "public_instrumented": {
+            "repetitions": 5,
+            "raw_seconds": [
+              3.1342703700065613,
+              3.176953340880573,
+              3.157175586093217,
+              3.167390195885673,
+              3.1223328129854053
+            ],
+            "median_seconds": 3.157175586093217,
+            "minimum_seconds": 3.1223328129854053,
+            "maximum_seconds": 3.176953340880573
+          },
+          "after_common_search": {
+            "repetitions": 5,
+            "raw_seconds": [
+              0.07021019305102527,
+              0.07080737501382828,
+              0.07068133214488626,
+              0.07095809280872345,
+              0.07073721312917769
+            ],
+            "median_seconds": 0.07073721312917769,
+            "minimum_seconds": 0.07021019305102527,
+            "maximum_seconds": 0.07095809280872345
+          },
+          "inclusive_stages": {
+            "candidate_coarse_stage": {
+              "repetitions": 5,
+              "raw_seconds": [
+                1.925726257963106,
+                1.9404464969411492,
+                1.934728373074904,
+                1.9355675738770515,
+                1.9350448090117425
+              ],
+              "median_seconds": 1.9350448090117425,
+              "minimum_seconds": 1.925726257963106,
+              "maximum_seconds": 1.9404464969411492
+            },
+            "candidate_final_physical_parameters": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.053433032939210534,
+                0.05401377100497484,
+                0.05368131888099015,
+                0.053453260101377964,
+                0.05351916584186256
+              ],
+              "median_seconds": 0.05351916584186256,
+              "minimum_seconds": 0.053433032939210534,
+              "maximum_seconds": 0.05401377100497484
+            },
+            "candidate_full_window_stage": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.01957413787022233,
+                0.022408956196159124,
+                0.020420727087184787,
+                0.02281554415822029,
+                0.019734050845727324
+              ],
+              "median_seconds": 0.020420727087184787,
+              "minimum_seconds": 0.01957413787022233,
+              "maximum_seconds": 0.02281554415822029
+            },
+            "candidate_search_full": {
+              "repetitions": 5,
+              "raw_seconds": [
+                3.062706876080483,
+                3.1054513410199434,
+                3.0856568010058254,
+                3.0955869159661233,
+                3.0507348529063165
+              ],
+              "median_seconds": 3.0856568010058254,
+              "minimum_seconds": 3.0507348529063165,
+              "maximum_seconds": 3.1054513410199434
+            },
+            "candidate_spectra": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.39904878893867135,
+                0.3940868228673935,
+                0.3819931170437485,
+                0.39378632698208094,
+                0.3928499280009419
+              ],
+              "median_seconds": 0.39378632698208094,
+              "minimum_seconds": 0.3819931170437485,
+              "maximum_seconds": 0.39904878893867135
+            },
+            "candidate_template_cache": {
+              "repetitions": 5,
+              "raw_seconds": [
+                0.022491677897050977,
+                0.020017168950289488,
+                0.019981858087703586,
+                0.020205581095069647,
+                0.020489420974627137
+              ],
+              "median_seconds": 0.020205581095069647,
+              "minimum_seconds": 0.019981858087703586,
+              "maximum_seconds": 0.022491677897050977
+            }
+          }
+        }
+      },
+      "common_outputs_identical": true,
+      "speedup": 5.242359566093334,
+      "scope": "Separate instrumented single-source search through final window selection; candidate includes compact winner transfers, while native stops after final GPU argmin and excludes subsequent physical/SNR diagnostics",
+      "overlap_note": "Inclusive stage durations overlap and must not be added together."
+    }
+  ],
+  "environment": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.35",
+    "packages": {
+      "numpy": "2.2.6",
+      "scipy": "1.15.3",
+      "cupy-cuda12x": "13.6.0",
+      "pycuda": "2025.1.2",
+      "batman-package": "2.5.3",
+      "numba": "0.67.0",
+      "pynvml": "13.0.1"
+    },
+    "cgroup": {
+      "/sys/fs/cgroup/cpu.max": "765000 100000",
+      "/sys/fs/cgroup/cpu.stat": "usage_usec 353333503\nuser_usec 316967336\nsystem_usec 36366166\ncore_sched.force_idle_usec 0\nnr_periods 3506\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0",
+      "/sys/fs/cgroup/memory.max": "49999998976",
+      "/sys/fs/cgroup/memory.current": "1560043520"
+    },
+    "cpu_quota_cores": 7.65,
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95
+    ],
+    "cpu_math_thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "NUMBA_NUM_THREADS": "1"
+    },
+    "nvidia_smi": "NVIDIA RTX A6000, GPU-d53d83c7-3beb-1538-02f7-f6d5c859a1fb, 580.159.03, 49140, 300.00",
+    "nvidia_smi_error": ""
+  },
+  "native_extras": "Literal GTLS full calls include CPU per-transit SNR and pink-noise diagnostics absent from cuvarbase",
+  "source_scope": "Timings require each method to reproduce its own frozen validation output. Numerical-search equivalence and any declared native bug correction must be assessed from the independent validation study; timing does not establish that scientific claim.",
+  "corrected_native_crosschecks": {},
+  "campaign_pass": false,
+  "reporting_scope": "post_hoc_complete_configurations_after_optional_native_warmup_oom",
+  "reporting_scope_note": "Post hoc assessment after an optional native pool warmup OOM; the original all-configuration campaign acceptance remains failed. Only complete configurations enter timing denominators, with all attempts disclosed.",
+  "excluded_configurations": [
+    "tess_gap/gtls_graph_4worker"
+  ],
+  "configuration_outcomes": {
+    "tess_solar": {
+      "candidate_graph_1worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_batch_full_identity": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 5,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/tess_solar/candidate_graph_1worker/record.json",
+        "record_sha256": "ea0386f39d16e0f1703252c683453d48c1b0f70fa573e869668f0a2aa606049e",
+        "backend": "candidate",
+        "workers": 1
+      },
+      "gtls_graph_1worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_batch_full_identity": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 5,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/tess_solar/gtls_graph_1worker/record.json",
+        "record_sha256": "4799dbd96fa7d5a0ce2978a84a0aebf8c2ccf3bba1d0c7936cefdc94dc82ea9c",
+        "backend": "gtls",
+        "workers": 1
+      },
+      "gtls_graph_2worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 0,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/tess_solar/gtls_graph_2worker/record.json",
+        "record_sha256": "1874132c52f408c1d494aee6f3889116470f980d9e753057d12a4eedf79b013c",
+        "backend": "gtls",
+        "workers": 2
+      },
+      "gtls_graph_4worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 0,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/tess_solar/gtls_graph_4worker/record.json",
+        "record_sha256": "beb58f60a6e21ac9254394183d3396bca145e832238ff21f204d124adfa19e58",
+        "backend": "gtls",
+        "workers": 4
+      }
+    },
+    "tess_gap": {
+      "candidate_graph_1worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_batch_full_identity": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 5,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/tess_gap/candidate_graph_1worker/record.json",
+        "record_sha256": "86725134b15a3c2fe5298998447a23eac9210cb60c46097a122431ef9927bc26",
+        "backend": "candidate",
+        "workers": 1
+      },
+      "gtls_graph_1worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_batch_full_identity": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 5,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/tess_gap/gtls_graph_1worker/record.json",
+        "record_sha256": "1ace825ae54a921c0a13924db1775826255e9ab6a49e41dc856f3657763dda34",
+        "backend": "gtls",
+        "workers": 1
+      },
+      "gtls_graph_2worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 0,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/tess_gap/gtls_graph_2worker/record.json",
+        "record_sha256": "66294d4d69cab8c3e3466e97ab4fcda644ef4a9614fc841125f9a9e76b0b5e07",
+        "backend": "gtls",
+        "workers": 2
+      },
+      "gtls_graph_4worker": {
+        "status": "error",
+        "complete": false,
+        "eligible": false,
+        "exclusion": "warmup_gpu_out_of_memory",
+        "problems": [
+          "Configuration did not complete successfully",
+          "Warmup did not complete",
+          "Batch repetition count is not three"
+        ],
+        "completed_single_repetitions": 0,
+        "completed_batch_repetitions": 0,
+        "warmup_failure": [
+          {
+            "case": "tess_gap_null_0000.npz",
+            "failure_seconds": 8.725318802054971,
+            "traceback": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/tools/timing/benchmark.py\", line 100, in worker\n    result = public_single(config['backend'], cases[index])\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/latency/tools/timing/common.py\", line 172, in public_single\n    return model.power(periods=data['periods'], fast=False,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/gputls/main.py\", line 108, in power\n    = core.search_multi_periods(\n      ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/gputls/core.py\", line 768, in search_multi_periods\n    ootrGPU = cp.empty((singleCalcPeriods,len(singleDurations),(tSize)),dtype=cp.float32)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/tls-default/modern/lib/python3.11/site-packages/cupy/_creation/basic.py\", line 32, in empty\n    return cupy.ndarray(shape, dtype, order=order)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"cupy/_core/core.pyx\", line 167, in cupy._core.core.ndarray.__new__\n  File \"cupy/_core/core.pyx\", line 254, in cupy._core.core._ndarray_base._init\n  File \"cupy/cuda/memory.pyx\", line 875, in cupy.cuda.memory.alloc\n  File \"cupy/cuda/memory.pyx\", line 1579, in cupy.cuda.memory.MemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1600, in cupy.cuda.memory.MemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1271, in cupy.cuda.memory.SingleDeviceMemoryPool.malloc\n  File \"cupy/cuda/memory.pyx\", line 1292, in cupy.cuda.memory.SingleDeviceMemoryPool._malloc\n  File \"cupy/cuda/memory.pyx\", line 1537, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc\n  File \"cupy/cuda/memory.pyx\", line 1540, in cupy.cuda.memory.SingleDeviceMemoryPool._try_malloc\ncupy.cuda.memory.OutOfMemoryError: Out of memory allocating 1,623,613,440 bytes (allocated so far: 3,667,990,016 bytes).\n"
+          },
+          {
+            "reason": "Post-barrier result membership differs from the assigned inputs",
+            "expected": [
+              "tess_gap_null_0000.npz",
+              "tess_gap_null_0000.npz",
+              "tess_gap_null_0000.npz",
+              "tess_gap_null_0000.npz"
+            ],
+            "observed": [
+              "tess_gap_null_0000.npz",
+              "tess_gap_null_0000.npz",
+              "tess_gap_null_0000.npz"
+            ]
+          }
+        ],
+        "failed_times_are_speed_denominators": false,
+        "record": "public/tess_gap/gtls_graph_4worker/record.json",
+        "record_sha256": "b3bff3dbc77aec586d67585630418aef4de0b8dd840f7785a0ea0c264bbd8f05",
+        "backend": "gtls",
+        "workers": 4
+      }
+    },
+    "ztf_solar": {
+      "candidate_graph_1worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_batch_full_identity": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 5,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/ztf_solar/candidate_graph_1worker/record.json",
+        "record_sha256": "072213e2bcc55e19db86a78943bb2fe40e05108991d8b2d4353a60a358c17e53",
+        "backend": "candidate",
+        "workers": 1
+      },
+      "gtls_graph_1worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          },
+          "single_batch_full_identity": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 5,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/ztf_solar/gtls_graph_1worker/record.json",
+        "record_sha256": "7ed33b3de103da6875920f27b1af383e7d02741c744870bf8a5e29f434092fe3",
+        "backend": "gtls",
+        "workers": 1
+      },
+      "gtls_graph_2worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 0,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/ztf_solar/gtls_graph_2worker/record.json",
+        "record_sha256": "0c0af0fbf3af91209a3a43b912295356528d2365b60e66d13581819cf96e8ebc",
+        "backend": "gtls",
+        "workers": 2
+      },
+      "gtls_graph_4worker": {
+        "status": "ok",
+        "complete": true,
+        "eligible": true,
+        "exclusion": null,
+        "gates": {
+          "batch_frozen": {
+            "eligible": true,
+            "problems": []
+          },
+          "batch_full_repeatability": {
+            "eligible": true,
+            "problems": []
+          }
+        },
+        "completed_single_repetitions": 0,
+        "completed_batch_repetitions": 3,
+        "failed_times_are_speed_denominators": false,
+        "record": "public/ztf_solar/gtls_graph_4worker/record.json",
+        "record_sha256": "b92c719d6a83f3302ed957cb9be8b253297f66c4f693c523adafa56b3a922023",
+        "backend": "gtls",
+        "workers": 4
+      }
+    }
+  },
+  "sources": {
+    "timing_checks": {
+      "file": "summary.json",
+      "sha256": "ea0765ce93bbe52b7c1834250fe390c428f5e50c636917f16581d671aa2cd10a"
+    },
+    "inputs": {
+      "file": "timing_manifest.json",
+      "sha256": "31982fa202e0c52272b11de63b520dd4818a3c60cb0331f5467dcc4b9d02ff8a"
+    },
+    "numerical_acceptance": {
+      "file": "acceptance.json",
+      "sha256": "213472ad4bb0c2feb9ec0705617928d6ba3366dd9b217e6c1cea6df21965d69c"
+    }
+  }
+}

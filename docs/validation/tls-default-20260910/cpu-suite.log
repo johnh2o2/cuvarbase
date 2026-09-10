@@ -1,0 +1,348 @@
+.........................................................sssssssssssssss [  3%]
+ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss [  6%]
+ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss [ 10%]
+ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss [ 13%]
+sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss......... [ 17%]
+.................................................................sssssss [ 20%]
+sssssssssssssssssss..s.sssssssssssssss.sssss..s.....s......sss...ss..... [ 24%]
+..ssss..ssssss....ssss.......sss.s..sssssssssssssssssss.....s....ss.s... [ 27%]
+..........ssss..........................................s............... [ 31%]
+........ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss [ 34%]
+ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss [ 38%]
+sssssssssssssssssssssssssssssssssssssssssss.ssssssssssssssssssssssssssss [ 41%]
+ssss......ss......s...............ssss.ssssssss.s....sssssssssss.sssssss [ 45%]
+s.sss.........s.s.....x................................................. [ 48%]
+........................................................................ [ 52%]
+........................................................................ [ 55%]
+........................................................................ [ 59%]
+........................................................s....s.......... [ 62%]
+.....................sssssssssssssssssssssssssss....sssssssssss......... [ 66%]
+...ssssssss.........ssssssssss.sss......ssssssssssssssss.s........s..... [ 69%]
+...........sssssssssssssssssssss.....ss...s...ss........................ [ 73%]
+....s.sssssssssssssssssssss...............................sssssssss...ss [ 76%]
+..s....ssssssss.ss.............sss.............................ss.ssssss [ 80%]
+s..s............s....................................................... [ 83%]
+.........sssssssss....sssssssssssssssssssssssssssssssss................. [ 87%]
+........................................................................ [ 90%]
+........................................................................ [ 94%]
+........................................................................ [ 97%]
+..................................................                       [100%]
+=============================== warnings summary ===============================
+cuvarbase/tests/test_api_freeze.py::test_submodules_reachable_as_attributes
+  /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: DeprecationWarning: cuvarbase.core is deprecated; import from cuvarbase.base. It will be removed in 2.0
+    return _bootstrap._gcd_import(name[level:], package, level)
+
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_snr_matches_astropy
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_loglik_matches_astropy_up_to_reference
+  /Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/astropy/timeseries/periodograms/bls/methods.py:113: RuntimeWarning: invalid value encountered in scalar divide
+    y_in = np.sum(y[m_in] * ivar[m_in]) / ivar_in
+
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_snr_matches_astropy
+cuvarbase/tests/test_bls.py::TestPowerConventions::test_loglik_matches_astropy_up_to_reference
+  /Users/johnhoffman/Library/Python/3.9/lib/python/site-packages/astropy/timeseries/periodograms/bls/methods.py:118: RuntimeWarning: divide by zero encountered in scalar divide
+    depth_err = np.sqrt(1.0 / ivar_in + 1.0 / ivar_out)
+
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_dy_none_rejected_on_every_entry_point
+  /Users/johnhoffman/Documents/cuvarbase/cuvarbase/tests/test_tls_basic.py:1646: FutureWarning: use_fast selects an older TLS engine; use method='legacy' explicitly. The default observation-level engine is method='reference'.
+    tls.tls_search_gpu(t, y, None, periods=periods, use_fast=False)
+
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[1-True]
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[0-True]
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[-3-True]
+  /Users/johnhoffman/Documents/cuvarbase/cuvarbase/tests/test_tls_basic.py:1665: FutureWarning: use_fast selects an older TLS engine; use method='binned' explicitly. The default observation-level engine is method='reference'.
+    tls.tls_search_gpu(t, y, dy, periods=np.array([2.0, 3.0]),
+
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[1-False]
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[0-False]
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_below_two_rejected_on_both_paths[-3-False]
+  /Users/johnhoffman/Documents/cuvarbase/cuvarbase/tests/test_tls_basic.py:1665: FutureWarning: use_fast selects an older TLS engine; use method='legacy' explicitly. The default observation-level engine is method='reference'.
+    tls.tls_search_gpu(t, y, dy, periods=np.array([2.0, 3.0]),
+
+cuvarbase/tests/test_tls_basic.py::TestTlsInputGuards::test_n_durations_must_be_an_integer
+  /Users/johnhoffman/Documents/cuvarbase/cuvarbase/tests/test_tls_basic.py:1672: FutureWarning: use_fast selects an older TLS engine; use method='legacy' explicitly. The default observation-level engine is method='reference'.
+    tls.tls_search_gpu(t, y, dy, periods=np.array([2.0, 3.0]),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] cuvarbase/tests/test_tls_reference_prefix.py:11: could not import 'cupy': No module named 'cupy'
+SKIPPED [48] cuvarbase/tests/test_bls.py:211: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [48] cuvarbase/tests/test_bls.py:279: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [108] cuvarbase/tests/test_bls.py:317: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:388: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:414: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [72] cuvarbase/tests/test_bls.py:428: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [16] cuvarbase/tests/test_bls.py:508: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:846: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [16] cuvarbase/tests/test_bls.py:864: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:887: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [4] cuvarbase/tests/test_bls.py:907: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_bls.py:947: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:980: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1028: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1072: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_bls.py:1109: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1124: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [4] cuvarbase/tests/test_bls.py:1156: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1173: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1186: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1210: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1245: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1260: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1271: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1281: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1294: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1341: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1357: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_bls.py:1384: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1408: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1476: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1588: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1699: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1715: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1728: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_bls.py:1798: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:1953: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2010: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2037: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2082: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2224: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2250: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2279: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2312: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2329: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2350: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2523: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2536: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2549: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2557: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2728: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2743: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2751: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2792: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2824: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2834: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2861: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2873: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2926: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2944: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2955: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:2980: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3044: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3054: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_bls.py:3064: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3079: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3125: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3135: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3147: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3172: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3192: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3223: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3293: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3354: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3367: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls.py:3395: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [4] cuvarbase/tests/test_bls.py:3446: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_bls_frequencies.py:55: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [3] cuvarbase/tests/test_ce.py:166: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [32] cuvarbase/tests/test_ce.py:196: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [32] cuvarbase/tests/test_ce.py:251: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [10] cuvarbase/tests/test_ce.py:318: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:373: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [4] cuvarbase/tests/test_ce.py:392: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [80] cuvarbase/tests/test_ce.py:467: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [4] cuvarbase/tests/test_ce.py:546: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:570: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [8] cuvarbase/tests/test_ce.py:609: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_ce.py:627: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_ce.py:638: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:663: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [12] cuvarbase/tests/test_ce.py:682: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:732: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [16] cuvarbase/tests/test_ce.py:758: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:794: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:828: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:895: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:917: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:961: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_ce.py:1091: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1112: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1127: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1179: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1200: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1224: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1247: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1260: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1269: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_ce.py:1282: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1311: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1393: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1413: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [8] cuvarbase/tests/test_ce.py:1425: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1475: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [4] cuvarbase/tests/test_ce.py:1499: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1516: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_ce.py:1524: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_ce.py:1547: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [3] cuvarbase/tests/test_ce.py:1577: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_error_hygiene.py:170: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_error_hygiene.py:186: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_input_validation.py:681: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_input_validation.py:814: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:54: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:70: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:84: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:99: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:114: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:173: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:192: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:212: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:234: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:262: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_lombscargle.py:357: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_lombscargle.py:371: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_lombscargle.py:388: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [6] cuvarbase/tests/test_lombscargle.py:454: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:469: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:482: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:490: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:497: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:508: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [8] cuvarbase/tests/test_lombscargle.py:601: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:619: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_lombscargle.py:627: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_lombscargle.py:937: could not import 'cufinufft': No module named 'cufinufft'
+SKIPPED [4] cuvarbase/tests/test_lombscargle.py:976: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:992: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1000: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1157: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1171: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1178: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1206: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1226: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_lombscargle.py:1256: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1278: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1293: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1303: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [3] cuvarbase/tests/test_lombscargle.py:1339: cufinufft not installed
+SKIPPED [2] cuvarbase/tests/test_lombscargle.py:1401: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1454: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1466: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1498: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1519: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1532: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1550: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1565: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1584: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1596: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1632: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1670: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [3] cuvarbase/tests/test_lombscargle.py:1691: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1731: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_lombscargle.py:1907: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:109: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:125: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:141: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:157: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:182: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:237: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:240: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:243: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:246: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:250: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [3] cuvarbase/tests/test_nfft.py:253: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:301: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:329: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_nfft.py:364: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:430: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_nfft.py:445: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:466: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:612: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:636: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nfft.py:694: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_nfft.py:811: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:151: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:197: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:238: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:259: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:283: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:314: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:328: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:368: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:389: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:407: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [3] cuvarbase/tests/test_nufft_lrt.py:468: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:507: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:536: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_nufft_lrt.py:575: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_nufft_lrt.py:610: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:648: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:670: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_nufft_lrt.py:711: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:77: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:81: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:86: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:91: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:96: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:101: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:106: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:111: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:116: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:237: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:274: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:354: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:477: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:489: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:505: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [4] cuvarbase/tests/test_pdm.py:520: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:539: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:597: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_pdm.py:613: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_readme_examples.py:26: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_readme_examples.py:47: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_readme_examples.py:60: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:388: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:395: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:421: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:431: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:446: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:460: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:485: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:515: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:550: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:607: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_basic.py:778: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:41: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:55: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:66: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:80: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:108: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:122: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:129: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:142: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:160: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:202: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [6] cuvarbase/tests/test_tls_fast.py:272: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:321: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:359: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [3] cuvarbase/tests/test_tls_fast.py:440: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:470: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:483: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:519: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:552: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:557: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:587: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:600: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:615: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:633: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:652: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:690: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:709: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:749: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_fast.py:780: standard TLS needs the optional CUDA TLS extra
+SKIPPED [1] cuvarbase/tests/test_tls_golden.py:47: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_golden.py:61: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [2] cuvarbase/tests/test_tls_golden.py:93: could not import 'transitleastsquares': No module named 'transitleastsquares'
+SKIPPED [1] cuvarbase/tests/test_tls_golden.py:153: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_golden.py:183: requires GPU (pycuda stubbed by cuvarbase/tests/conftest.py)
+SKIPPED [1] cuvarbase/tests/test_tls_golden.py:207: could not import 'transitleastsquares': No module named 'transitleastsquares'
+1215 passed, 851 skipped, 1 xfailed, 13 warnings in 61.63s (0:01:01)

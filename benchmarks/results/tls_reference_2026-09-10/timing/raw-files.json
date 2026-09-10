@@ -1,0 +1,177 @@
+{
+  "scope": "Exact original timing files; original full campaign acceptance remains failed. README and this inventory are publication additions.",
+  "files": {
+    "acceptance.json": {
+      "sha256": "1e70b9f8226b0f531506d39cfccfe4063980de6eedd4e6d7f344446301a44dfe",
+      "size": 3364
+    },
+    "components/candidate/monitor.jsonl": {
+      "sha256": "4cbd95ce7f7e5789f9a844e07abb54f9614a5f46ac837d0fc3bc9ab00bbc492b",
+      "size": 14002
+    },
+    "components/candidate/ownership.json": {
+      "sha256": "a0483dbffcd0eec4baf85315af1f44511f8e66a0227716863cfd7d5d35729c1d",
+      "size": 3045
+    },
+    "components/candidate/plan.json": {
+      "sha256": "51f71c30d50163bbb25190daa0b4104dd883a5e34b3308010eddefc539b14771",
+      "size": 170885
+    },
+    "components/candidate/summary.json": {
+      "sha256": "c0b73c9a055533c37c446655967d538d422c97ce780371c469d97132791c872d",
+      "size": 3604
+    },
+    "components/candidate/tess_gap.json": {
+      "sha256": "e1bc896b2e5163f41dc28e7626a7420e48f7176b3e3eb1b4896de767243770bb",
+      "size": 60137
+    },
+    "components/candidate/tess_solar.json": {
+      "sha256": "c721dc39e1d3c352ed2cfbb1c03b763751b5e331e9bf2281225e66bed362cb00",
+      "size": 60245
+    },
+    "components/candidate/ztf_solar.json": {
+      "sha256": "b06e0c45af135c2b97ab7a6acab12957268d7c0530cd6909cde8c992ddbc965e",
+      "size": 60141
+    },
+    "components/gtls/monitor.jsonl": {
+      "sha256": "d64c866465f34b89432e56246a9b139ca9e74ce23dec2a9756eb331ed0718ceb",
+      "size": 67738
+    },
+    "components/gtls/ownership.json": {
+      "sha256": "ae26ea4465e84d5dc096266545f1d573b3aa8d7aeff0c37b51421660124315f0",
+      "size": 3824
+    },
+    "components/gtls/plan.json": {
+      "sha256": "d6ed6dd3786f745f941a39a900b31ea612c9958b87a152afcace9b2e5b13b4a4",
+      "size": 172447
+    },
+    "components/gtls/summary.json": {
+      "sha256": "3aa31e65feb8bad55d664fbfc7c21d4db101b3663653f20f6bfc495451820ee0",
+      "size": 4396
+    },
+    "components/gtls/tess_gap.json": {
+      "sha256": "48353696628aa787bae750b0bbd5c5c88e7cc04eaea7aa595ef03a976eda8cc7",
+      "size": 51281
+    },
+    "components/gtls/tess_solar.json": {
+      "sha256": "f53782ea00fffd02a61bc123d07b21e0b9954265359b2d5ec8d0652927bd632b",
+      "size": 51375
+    },
+    "components/gtls/ztf_solar.json": {
+      "sha256": "b6febb4760cfbc36c747d489720a596e171d461f86f890abc202d0199498ea9e",
+      "size": 51245
+    },
+    "logs/components_candidate.log": {
+      "sha256": "1aad98366dae24cac72c8d1c97d601daa5c04a31f90955de26c331fdf5a68d76",
+      "size": 592
+    },
+    "logs/components_gtls.log": {
+      "sha256": "f18047401e215813b1f42a3e74eaa124e1e0fdd9fb1bbf05196577409763e3d0",
+      "size": 1175
+    },
+    "logs/normalize.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "logs/preflight.log": {
+      "sha256": "f5da71c4a347f7945777c86444db03b67d0532bba52c104a88c502d8f4b68231",
+      "size": 2417
+    },
+    "logs/public.log": {
+      "sha256": "c84bbe2e5421aa1be39284894bac19506d288b1e84ac9b73dc1e9233e0cbf615",
+      "size": 12811
+    },
+    "logs/summarize.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "pipeline-plan.json": {
+      "sha256": "b3b99f213ec7777a507d3778fc8ec27dd31187d2c0098f4206d46a01bbc86ace",
+      "size": 4461
+    },
+    "preflight.json": {
+      "sha256": "712dbfc48e3a92b9d99c02a85493788e53c518a93756d47b7f1c10280ac28f4a",
+      "size": 191512
+    },
+    "prepared.json": {
+      "sha256": "49ca66e864083f5646c288108786bdda09398c1402e4ab1ae0d389bc48fa5a88",
+      "size": 286036
+    },
+    "public/monitor.jsonl": {
+      "sha256": "8b321b8e71038d3c8c3149e679735255b53bf472a85413d8d102346ef33b12af",
+      "size": 1214688
+    },
+    "public/plan.json": {
+      "sha256": "b073315641b55e3502ad6ea233c5b2a2d73760810fcf6b9bf460505af45d1352",
+      "size": 322998
+    },
+    "public/summary.json": {
+      "sha256": "8734a3f0131779e01158321b78d2be9604a791d72d422d6bf027f9af19e43df4",
+      "size": 329867
+    },
+    "public/tess_gap/candidate_graph_1worker/record.json": {
+      "sha256": "86725134b15a3c2fe5298998447a23eac9210cb60c46097a122431ef9927bc26",
+      "size": 393540
+    },
+    "public/tess_gap/gtls_graph_1worker/record.json": {
+      "sha256": "1ace825ae54a921c0a13924db1775826255e9ab6a49e41dc856f3657763dda34",
+      "size": 272336
+    },
+    "public/tess_gap/gtls_graph_2worker/record.json": {
+      "sha256": "66294d4d69cab8c3e3466e97ab4fcda644ef4a9614fc841125f9a9e76b0b5e07",
+      "size": 254105
+    },
+    "public/tess_gap/gtls_graph_4worker/record.json": {
+      "sha256": "b3bff3dbc77aec586d67585630418aef4de0b8dd840f7785a0ea0c264bbd8f05",
+      "size": 40588
+    },
+    "public/tess_solar/candidate_graph_1worker/record.json": {
+      "sha256": "ea0386f39d16e0f1703252c683453d48c1b0f70fa573e869668f0a2aa606049e",
+      "size": 393600
+    },
+    "public/tess_solar/gtls_graph_1worker/record.json": {
+      "sha256": "4799dbd96fa7d5a0ce2978a84a0aebf8c2ccf3bba1d0c7936cefdc94dc82ea9c",
+      "size": 272701
+    },
+    "public/tess_solar/gtls_graph_2worker/record.json": {
+      "sha256": "1874132c52f408c1d494aee6f3889116470f980d9e753057d12a4eedf79b013c",
+      "size": 254475
+    },
+    "public/tess_solar/gtls_graph_4worker/record.json": {
+      "sha256": "beb58f60a6e21ac9254394183d3396bca145e832238ff21f204d124adfa19e58",
+      "size": 274801
+    },
+    "public/ztf_solar/candidate_graph_1worker/record.json": {
+      "sha256": "072213e2bcc55e19db86a78943bb2fe40e05108991d8b2d4353a60a358c17e53",
+      "size": 393935
+    },
+    "public/ztf_solar/gtls_graph_1worker/record.json": {
+      "sha256": "7ed33b3de103da6875920f27b1af383e7d02741c744870bf8a5e29f434092fe3",
+      "size": 272058
+    },
+    "public/ztf_solar/gtls_graph_2worker/record.json": {
+      "sha256": "0c0af0fbf3af91209a3a43b912295356528d2365b60e66d13581819cf96e8ebc",
+      "size": 253884
+    },
+    "public/ztf_solar/gtls_graph_4worker/record.json": {
+      "sha256": "b92c719d6a83f3302ed957cb9be8b253297f66c4f693c523adafa56b3a922023",
+      "size": 274179
+    },
+    "status.json": {
+      "sha256": "de67187b0f415567d49f1eb506c624897166d4cefb1b38ec3d76f099fc734b93",
+      "size": 5769
+    },
+    "summary.json": {
+      "sha256": "ea0765ce93bbe52b7c1834250fe390c428f5e50c636917f16581d671aa2cd10a",
+      "size": 576015
+    },
+    "terminal.json": {
+      "sha256": "2903a567c8afb0eda907d5882359db1e606dc9a063247ef3f7d2be85afd90911",
+      "size": 816
+    },
+    "timing_analysis.json": {
+      "sha256": "2faa9cff04b1a472a6893095e28008c514768a106ea8947b7654cdb396573c0f",
+      "size": 36590
+    }
+  }
+}

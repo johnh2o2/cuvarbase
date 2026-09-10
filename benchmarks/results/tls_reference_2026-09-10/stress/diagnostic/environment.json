@@ -1,0 +1,22 @@
+{
+  "runtime": {
+    "python": "3.11.10 (main, Sep  7 2024, 18:35:41) [GCC 11.4.0]",
+    "platform": "Linux-5.15.0-139-generic-x86_64-with-glibc2.35",
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMBA_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "BLIS_NUM_THREADS": "1"
+    }
+  },
+  "gpu_name": "NVIDIA RTX A6000",
+  "driver_version": "550.127.08",
+  "driver_cuda_support": "12.4",
+  "original_gpu_xml_sha256": "cb2eaab56c9e5df17eccc4b4b94d13962677cee8be11a9b9eae1a2e92f0e2f5b",
+  "original_runtime_sha256": "1b1dc0dd38a9a290f1854598d97f91fc457448cb2c40b8931706b9dd94dbd404",
+  "original_dependency_freeze_sha256": "b609f3f7278e826841967433f66e3e853e2649396d03f5aba46f70a37b09cab8",
+  "hardware_scope": "Another RTX A6000 host; not the original physical host"
+}

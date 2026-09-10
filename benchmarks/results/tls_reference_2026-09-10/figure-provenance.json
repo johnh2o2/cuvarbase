@@ -1,0 +1,41 @@
+{
+  "scope": "BLS September 8 dated measurements and observation-level TLS September 10 completed-configuration report",
+  "command_from_repository_root": "python benchmarks/transit/plot_main.py --root benchmarks/results/transit_2026-09-08 --tls-reference benchmarks/results/tls_reference_2026-09-10 --output-dir FIGURE_OUTPUT",
+  "output_mapping": "FIGURE_OUTPUT/benchmark_story.{png,pdf,svg} copied to docs/figures/transit_benchmarks_20260910.{png,pdf,svg}",
+  "sources_sha256": {
+    "benchmarks/transit/plot_main.py": "79e6567fec2cb1bbc1eb3d028567ebcd337efa9a5ed23252b5a1190c40d4baf7",
+    "benchmarks/results/transit_2026-09-08/recovery_analysis.json": "6b0ec3b65972a0a1f79108fa1de76f71f66ffe55b4ef82b03cf219be534d0e0e",
+    "benchmarks/results/transit_2026-09-08/timing_analysis.json": "787d0c184abc4dc2eaef89fa2448ac87389753c396260310b235bd70da140f99",
+    "benchmarks/results/tls_reference_2026-09-10/timing_analysis.json": "d428e8aadc337678db1112c6a0adf5de1cdcc2c4a7b4fc8283ce1900f607bb1b",
+    "benchmarks/results/tls_reference_2026-09-10/reporting_acceptance.json": "1d6454cad6a6de7c830f24bea27ca35d608017f89874f6ee55ab5eeedb7cd2d4",
+    "benchmarks/results/tls_reference_2026-09-10/timing/acceptance.json": "1e70b9f8226b0f531506d39cfccfe4063980de6eedd4e6d7f344446301a44dfe"
+  },
+  "outputs_sha256": {
+    "docs/figures/transit_benchmarks_20260910.png": "565cfe8ba9ff94bbb5df277ed988a11ea1f12115c020e4a8fb14da50fc6bdbcf",
+    "docs/figures/transit_benchmarks_20260910.pdf": "3725b8885c031fe953bd3a095905a8f2fb0d130dea9be7b15c6a3e7e117b1916",
+    "docs/figures/transit_benchmarks_20260910.svg": "f2e5769e790f69c3c727f4c76d93cde0a943de1ecc3e03d3483df71e439566a2"
+  },
+  "environment": {
+    "python": "3.9.6",
+    "matplotlib": "3.9.4",
+    "numpy": "1.26.4"
+  },
+  "plot": {
+    "points": "median single-source call and median batch seconds / 16",
+    "whiskers": "minimum to maximum across repetitions; not confidence intervals",
+    "repetitions": {
+      "single": 5,
+      "batch16": 3
+    },
+    "ratios": "batch seconds per source / cuvarbase v1 batch seconds per source, within each algorithm and cadence",
+    "tls_gtls_batch_workers": {
+      "tess_200s": 4,
+      "tess_gap": 2,
+      "ztf": 4
+    },
+    "tls_campaign_pass": false,
+    "tls_reporting_scope": "post_hoc_complete_configurations_after_optional_native_warmup_oom",
+    "excluded_configuration": "tess_gap/gtls_graph_4worker: warmup OOM, zero measured repetitions"
+  },
+  "reproduction_note": "Plot appearance is reproducible from the hashed data and renderer; graphics metadata and SVG element IDs can change output bytes on regeneration."
+}

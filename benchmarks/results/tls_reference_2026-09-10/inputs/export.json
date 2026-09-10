@@ -1,0 +1,24 @@
+{
+  "all_original_numerical_arrays_equal": true,
+  "array_uses_derived_after_original_npz_hash_verification": 14,
+  "array_uses_with_original_digest": 1449,
+  "bank_npz_bytes": 19877103,
+  "exporter_sha256": "f4b1bec01312ba884b6c4787ee675ea582e032cd1efdecf96d694f1b45a82866",
+  "interpretation": "Exact stored numerical inputs; no signal regeneration or new independent cases",
+  "numpy": "1.26.4",
+  "original_npz_bytes": 232483377,
+  "original_npz_metadata_equal": true,
+  "original_studies": {
+    "long_period": "622f5e7aa611bc58ccd370d1c8e61b549190f088285d22eb1cc9860528b0c465",
+    "main": "aebf04ba2e518471a4273a9724a99bc9302e32c49033da068cecf8946efc44cd",
+    "selected_grid": "24f4c21691b5b604416eeb8d48cf02f52c8548ab1992c49f4819a4ea98fa88d9",
+    "stronger_controls": "4f4d9023691a46b69f89ceeb6599d487009c0762ea6ce0504a756d41eb82985e",
+    "supplement": "a436c2e4871bc849723aaa54226af0a70a6668e5cc2668d1662fe0cc28b5a8c1"
+  },
+  "python": "3.9.6",
+  "schema_version": 1,
+  "unique_array_bytes": 49406568,
+  "unique_arrays": 676,
+  "verified_original_array_uses": 1463,
+  "verified_original_cases": 209
+}

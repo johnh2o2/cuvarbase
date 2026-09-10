@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "original_acceptance_unchanged": true,
+  "original_acceptance_sha256": "213472ad4bb0c2feb9ec0705617928d6ba3366dd9b217e6c1cea6df21965d69c",
+  "complete_original_cases": 160,
+  "complete_original_backend_records": 480,
+  "complete_original_comparisons": 320,
+  "complete_original_correction_traces": 160,
+  "original_compact_files_sha256": "726c62e55065282defd1dc32d8a220993ec3c31ace586c662bea35532c488931",
+  "raw_partial_archive_sha256": "320843fea596af33600582b17379657cf5e6193cd3229c70e6967d7b7e6c7df7",
+  "raw_partial_archive_bytes": 826183680,
+  "recovery_receipt_sha256": "b861c9799959f591410bcaf84246f3a2eb9bb469e085258996cbf08a3770cae9",
+  "recovery_auditor_sha256": "37e6ddccb4452e2e64040d216297ff2c7bcc398fa8450e768df8d907d3dcf2ee",
+  "retained_npz_on_host_verified": 75,
+  "retained_npz_locally_verified": 66,
+  "uncollected_retained_npz": [
+    {
+      "file": "ztf_solar_snr6_0000/gtls/arrays.npz",
+      "sha256": "d046a1e1e446c547eb176b91b82f406dfd07f51c2110d2171301a439506f3178"
+    },
+    {
+      "file": "ztf_solar_snr6_0000/gtls_corrected/arrays.npz",
+      "sha256": "d046a1e1e446c547eb176b91b82f406dfd07f51c2110d2171301a439506f3178"
+    },
+    {
+      "file": "ztf_solar_snr6_0000/candidate/arrays.npz",
+      "sha256": "da117663d7ea6868d4edadf04c4965953697b7d42a6e6c4482c920431fd83453"
+    },
+    {
+      "file": "ztf_solar_null_0000/gtls/arrays.npz",
+      "sha256": "ae2d0056f34571324e0811ac1e668b1f823c268500c5485e31d0944d31558dad"
+    },
+    {
+      "file": "ztf_solar_null_0000/gtls_corrected/arrays.npz",
+      "sha256": "ae2d0056f34571324e0811ac1e668b1f823c268500c5485e31d0944d31558dad"
+    },
+    {
+      "file": "ztf_solar_null_0000/candidate/arrays.npz",
+      "sha256": "e9de0849f6409b198c90ec4c7cd07566b4d6ae20b607d2cd6d66432f430b21e4"
+    },
+    {
+      "file": "ztf_mdwarf_snr6_0000/gtls/arrays.npz",
+      "sha256": "f5d5b0e3b9a852bec61fc10e1711b47c2abda50dd397c6ba68cf486093f659c6"
+    },
+    {
+      "file": "ztf_mdwarf_snr6_0000/gtls_corrected/arrays.npz",
+      "sha256": "f5d5b0e3b9a852bec61fc10e1711b47c2abda50dd397c6ba68cf486093f659c6"
+    },
+    {
+      "file": "ztf_mdwarf_snr6_0000/candidate/arrays.npz",
+      "sha256": "c4139c1e9357ef11efd685b11d26d13fd98825dc5c0e346002f834ce17e08531"
+    }
+  ],
+  "original_predeclared_pruning_count": 405,
+  "scope": "The completed original acceptance and all compact science identities were recovered unchanged. The large partial download and recovered output tensors remain private; exact input vectors and complete output digests are public. Nine missing retained containers are collection loss, not pruning or unexecuted comparisons. No main case was rerun during this recovery."
+}

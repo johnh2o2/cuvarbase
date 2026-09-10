@@ -1,5 +1,5 @@
 """
-Golden accuracy tests for the GPU TLS implementation.
+Golden regressions for the preserved method='binned' TLS implementation.
 
 The reference is the original CPU `transitleastsquares` package
 (Hippke & Heller 2019). These tests need a GPU (the conftest stub
@@ -12,7 +12,7 @@ the pre-rework fixed 30-epoch t0 grid failed (8/8 injected epochs
 missed): it requires no reference package and documents that the
 duration-scaled grid actually finds what the old grid could not.
 
-1.0 (Sep 2026 audit): the default duration window is now Keplerian
+For this explicit older engine, the default duration window is Keplerian
 (defect 2), the SDE uses the reference's ``SR = chi2_min / chi2``
 (ids 81/146) and its edge-extended running median (id 83). The
 recovery-level expectations below were re-checked on an A40 after
@@ -51,7 +51,7 @@ class TestNarrowTransitRecovery:
         t, y, dy = make_transit_lc(period, q, depth=depth)
         periods = np.linspace(14.0, 16.0, 400).astype(np.float32)
 
-        results = tls_search_gpu(t, y, dy, periods=periods)
+        results = tls_search_gpu(t, y, dy, periods=periods, method='binned')
 
         assert abs(results['period'] - period) / period < 0.01
         # SDE > 5 is a clear detection; the absolute value depends on
@@ -66,7 +66,7 @@ class TestNarrowTransitRecovery:
         t, y, dy = make_transit_lc(period, q, depth=depth, baseline=30.0)
         periods = np.linspace(2.8, 3.2, 400).astype(np.float32)
 
-        results = tls_search_gpu(t, y, dy, periods=periods)
+        results = tls_search_gpu(t, y, dy, periods=periods, method='binned')
 
         assert abs(results['period'] - period) / period < 0.01
         # 1.0: measured 6.90 on an A40 with the default Keplerian
@@ -98,7 +98,7 @@ class TestGoldenVsTransitLeastSquares:
         # cuvarbase (GPU)
         periods = np.linspace(0.9 * period, 1.1 * period,
                               500).astype(np.float32)
-        res_gpu = tls_search_gpu(t, y, dy, periods=periods)
+        res_gpu = tls_search_gpu(t, y, dy, periods=periods, method='binned')
 
         # reference (CPU); same period range to bound runtime
         model = ref.transitleastsquares(t, y, dy)
@@ -164,7 +164,7 @@ class TestLongPeriodDurationWindow:
         periods = tls_grids.period_grid_ofir(t, period_min=0.5 * P,
                                              period_max=1.5 * P)
 
-        r = tls_search_gpu(t, y, dy, periods=periods)   # default window
+        r = tls_search_gpu(t, y, dy, periods=periods, method='binned')   # default window
         assert abs(r['period'] - P) / P < 0.01, r['period']
         assert r['depth'] == pytest.approx(depth_true, rel=0.10)
         assert r['duration'] == pytest.approx(t14, rel=0.25)
@@ -176,7 +176,7 @@ class TestLongPeriodDurationWindow:
         with warnings.catch_warnings(record=True) as rec:
             warnings.simplefilter("always")
             rf = tls_search_gpu(t, y, dy, periods=periods,
-                                duration_window='fixed')
+                                duration_window='fixed', method='binned')
         assert any("excludes the Keplerian" in str(w.message) for w in rec)
         assert abs(rf['period'] - 0.5 * P) / (0.5 * P) < 0.01, rf['period']
         assert rf['depth'] < 0.6 * depth_true
@@ -189,7 +189,7 @@ class TestLongPeriodDurationWindow:
         t, y, dy, depth_true, t14 = _batman_lc(
             P, 0.04, 0.41 * P, baseline=1400.0, cadence_min=30.0,
             sigma=3e-4, seed=11)
-        r = tls_search_gpu(t, y, dy)
+        r = tls_search_gpu(t, y, dy, method='binned')
         assert len(r['periods']) > 100000
         assert abs(r['period'] - P) / P < 0.01, r['period']
         assert r['depth'] == pytest.approx(depth_true, rel=0.10)
@@ -220,7 +220,7 @@ class TestSDEParityWithReference:
         # oversampling 3 x 30 + 1; cuvarbase's automatic kernel is
         # length-scaled below 910 periods, so pin it)
         res_gpu = tls_search_gpu(t, y, dy, periods=periods,
-                                 sde_kernel_size=91)
+                                 sde_kernel_size=91, method='binned')
 
         assert abs(res_gpu['period'] - period) / period < 0.01
         assert abs(res_cpu.period - period) / period < 0.01

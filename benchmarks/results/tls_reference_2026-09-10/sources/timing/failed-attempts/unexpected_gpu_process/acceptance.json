@@ -1,0 +1,11 @@
+{
+  "status": "incomplete",
+  "measurement_scope": "full",
+  "publication_gate": {
+    "pass": false,
+    "problems": [
+      "A required stage did not finish or pass"
+    ]
+  },
+  "failure": "Traceback (most recent call last):\n  File \"/workspace/tls-default/latency/run_timing.py\", line 409, in run\n    runner.run(stage[\"name\"], stage[\"command\"], stage[\"timeout_seconds\"])\n  File \"/workspace/tls-default/latency/run_timing.py\", line 342, in run\n    raise RuntimeError(f\"Stage {name} exited {exit_code}; see {log}\")\nRuntimeError: Stage preflight exited 1; see /workspace/tls-default/timing-continuation/results/timing/logs/preflight.log\n"
+}

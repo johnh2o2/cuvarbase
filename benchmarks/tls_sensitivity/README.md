@@ -1,6 +1,6 @@
-# Independent TLS sensitivity study
+# Binned TLS sensitivity study (2026-09-09)
 
-These tools compare three frozen cuvarbase TLS configurations with public GTLS on identical synthetic lightcurves and trial periods. Observing times, relative uncertainties and exposures come from the earlier TESS and ZTF cadence examples. The [numerical explanation](../../docs/TLS_NUMERICS.md) describes phase binning and its limitations.
+These tools reproduce the dated comparison of three frozen **binned** cuvarbase TLS configurations with public GTLS `fast=True` on identical synthetic lightcurves and trial periods. Observing times, relative uncertainties and exposures come from the earlier TESS and ZTF cadence examples. The binned engine is now an explicit option, `method='binned'`; this experiment does not measure the standard observation-level TLS engine. See the [current benchmark and validation](../../docs/TRANSIT_BENCHMARKS.md).
 
 The experiment separates null calibration, independent recovery evaluation and exclusive GPU timing. Distributed recovery-run durations are diagnostic and never supply the published speed ratios. No tool here creates cloud resources or needs cloud credentials.
 
@@ -13,7 +13,7 @@ The experiment separates null calibration, independent recovery evaluation and e
 | `bls_control.py` | Analyze the secondary box-search control on the same period-restricted inputs |
 | `archive.py` | Verify input/sample-spectrum bytes and export lossless compact scalar evidence |
 | `binning.py`, `plot_binning.py` | Isolate the SNR cost of phase compression at known ephemerides and illustrate the template |
-| `hatpi_cost.py` | Price a fully synthetic HATPI-like season and five-minute time averages; this is a cost pilot, not HATPI sensitivity evidence |
+| `hatpi_cost.py` | Historical binned-TLS cost pilot on a synthetic HATPI-like season and five-minute time averages; it establishes neither HATPI sensitivity nor the cost of the new default |
 
 Run commands from the repository root. Analysis of compact evidence needs NumPy and SciPy; plotting also needs Matplotlib. Cohort generation and the binning diagnostic need batman-package and Numba. GPU workers additionally need the measured CUDA/software environment and pinned numerical packages. The library's general Python support range is separate from the experiment's Python 3.11 environment.
 

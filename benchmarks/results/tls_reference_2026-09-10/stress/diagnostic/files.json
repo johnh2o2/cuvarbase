@@ -1,0 +1,34 @@
+{
+  "dependencies.txt": {
+    "bytes": 1105,
+    "sha256": "b609f3f7278e826841967433f66e3e853e2649396d03f5aba46f70a37b09cab8"
+  },
+  "environment.json": {
+    "bytes": 888,
+    "sha256": "2415a629a0870c7ecf431fb485a0d4e202436f7ef3132ac2d50817a388b7326e"
+  },
+  "execution-sources-v3.tar.gz": {
+    "bytes": 21184,
+    "sha256": "0e3cb85b90d689afe430069154b38b3113a7354f041ff431805826389f6413db"
+  },
+  "postprocessing_sources.tar.gz": {
+    "bytes": 4771,
+    "sha256": "789fda614866f926ef3932902bc7d1f2557ef88049881e17dc4aa9ef9921d80e"
+  },
+  "records.tar.gz": {
+    "bytes": 281448,
+    "sha256": "e6bbfc2959a309708b7245e9688f28f1a6ee13b22d607d066950ebfd5922ac54"
+  },
+  "runs.csv": {
+    "bytes": 2420,
+    "sha256": "8a06458118ad252da54cc5e42d82a555dcc7e40c709057e8d59417202c329b07"
+  },
+  "source_manifest.json": {
+    "bytes": 1460,
+    "sha256": "86b9cb7425e2a3059db0b79c7dae4db58e862e8e6e01342586681181958fa7df"
+  },
+  "summary.json": {
+    "bytes": 12131,
+    "sha256": "60a9d45a073a0b2046286c512065e7122a756a6a6b12dad2b1cb489f67235322"
+  }
+}

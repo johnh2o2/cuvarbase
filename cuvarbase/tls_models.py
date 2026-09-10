@@ -109,6 +109,7 @@ def create_reference_transit(n_samples=1000, limb_dark='quadratic',
     Notes
     -----
     The reference model assumes:
+
     - Period = 1.0 (arbitrary units, we work in phase)
     - Semi-major axis = 15 stellar radii
     - Planet-to-star radius ratio = 0.1, central circular transit

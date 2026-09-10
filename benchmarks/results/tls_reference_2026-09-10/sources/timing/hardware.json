@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "scope": "Separate factual allocation sidecar; frozen timings and their hashes remain unchanged",
+  "gpu": "NVIDIA RTX A6000",
+  "gpu_uuid": "GPU-d53d83c7-3beb-1538-02f7-f6d5c859a1fb",
+  "cpu_model": "Intel(R) Xeon(R) Gold 6342 CPU @ 2.80GHz",
+  "cpu_quota_cores": 7.65,
+  "cgroup": {
+    "version": 2,
+    "quota_us": 765000,
+    "period_us": 100000,
+    "cpu_quota_cores": 7.65
+  },
+  "original_timing_cpu_quota_cores": 7.65,
+  "allocation_note": "The frozen environment reader only parses cgroup v2; this sidecar also reads v1. Host-visible CPU count is not the quota.",
+  "numerical_threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1"
+  },
+  "compute_usd_per_hour": 0.53,
+  "sources": {
+    "cpu_quota": {
+      "file": "cpu-quota.json",
+      "sha256": "fb3cdcc58afa659317750ddb9e7edc988be0b3b1fb0adb6e7df61f2cc617cce0"
+    },
+    "cpu": {
+      "file": "cpu.txt",
+      "sha256": "2f405643050023153099db2eed1e59744be066f3276d5d7d96439e3cfa18f8d2"
+    },
+    "gpu": {
+      "file": "gpu.xml",
+      "sha256": "dda3b0300e9fb90b4b9125efcb325e3acfc59a2a3f5c05b690f144d4fa743a78"
+    },
+    "runtime": {
+      "file": "runtime.json",
+      "sha256": "ef54bf266f00be605ba0e91c6c3f9f6a21c3655a4635dcd91baf102c60e0730e"
+    },
+    "original_timing_analysis": {
+      "file": "timing_analysis.json",
+      "sha256": "2faa9cff04b1a472a6893095e28008c514768a106ea8947b7654cdb396573c0f"
+    },
+    "actual_allocation": {
+      "file": "hardware-timing02-allocation.json",
+      "sha256": "b9779462762980b84c4b9b685ced697adb0107d62d1badba6b1fee49b78ae2ad"
+    }
+  },
+  "measurements_modified": false
+}

@@ -1,0 +1,36 @@
+{
+  "only_two_oversized_transit_lists_compacted": true,
+  "all_original_record_hashes_arrays_outcomes_and_comparisons_unchanged": true,
+  "prior_gzip_bytes": 9005914,
+  "new_gzip_bytes": 292000,
+  "identities": [
+    {
+      "name": "cleaning_edges",
+      "backend": "gtls",
+      "field": "result.final_fit.transit_times",
+      "identity": {
+        "dtype": "float64",
+        "shape": [
+          534984
+        ],
+        "sha256": "314efe80e5b0d56b26e4800fef5e461f70f6227b15f566d2d79c15cbcf9acb3d",
+        "original_json_value_sha256": "600f3c9417f8859a03d19a1f0db5c90acdb407c75b8abdfcfe6724811e3eca1a",
+        "representation": "Float64 numerical identity; original list values omitted from compact publication"
+      }
+    },
+    {
+      "name": "cleaning_edges",
+      "backend": "gtls_corrected",
+      "field": "result.final_fit.transit_times",
+      "identity": {
+        "dtype": "float64",
+        "shape": [
+          534984
+        ],
+        "sha256": "314efe80e5b0d56b26e4800fef5e461f70f6227b15f566d2d79c15cbcf9acb3d",
+        "original_json_value_sha256": "600f3c9417f8859a03d19a1f0db5c90acdb407c75b8abdfcfe6724811e3eca1a",
+        "representation": "Float64 numerical identity; original list values omitted from compact publication"
+      }
+    }
+  ]
+}

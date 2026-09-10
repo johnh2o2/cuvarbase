@@ -1,0 +1,23 @@
+{
+  "created_utc": "2026-09-10T19:17:56.559760+00:00",
+  "status": "post_hoc_reporting_scope",
+  "reason": "The unchanged full campaign recorded a native four-worker warmup GPU OOM in the gapped TESS regime. The original all-config acceptance remains failed; completed configurations may be assessed separately.",
+  "scope": "Report complete single-source and fixed16-source comparisons only after all originally declared attempts terminate and final evidence is hash-verified.",
+  "reporting_scope": "post_hoc_complete_configurations_after_optional_native_warmup_oom",
+  "prior_scope_modified": true,
+  "measurements_rerun": false,
+  "scientific_rules_modified": false,
+  "required_gates": [
+    "All original stages through normalization completed; exact frozen final-audit rejection reproduces.",
+    "Every original rejection reason is completeness/warmup/repetition failure of a disclosed optional native pool with recorded GPU OOM; no other prerequisite failure is permitted.",
+    "All requested configurations, source identities, fixed inputs, worker counts and final ownership receipts are present, terminal and collected.",
+    "Candidate1 and native1 complete in every regime; all included configurations retain five declared singles where applicable and three complete batches.",
+    "Original strict frozen-output and native1 pool parity hold, plus stable full returned-object hashes across repetitions.",
+    "All five separate component calls preserve their own literal output and frozen search; no instrumentation times replace public API denominators.",
+    "Select the lowest batch median among complete eligible tested1/2/4 native pools, disclose every excluded pool, never use failed elapsed times.",
+    "Derived timing data is hash-bound to separate reporting acceptance; original acceptance and raw normalization stay unchanged."
+  ],
+  "original_execution_archive_sha256": "3826aff0f65042079159291d751b45965faaf717a50677af316ed4bd9f58ffd7",
+  "assessor_sha256": "e43a99acbc6305611e3d4356526f697aecbb65bf87cd37ecb0346ce2bed70aa4",
+  "cpu_tests_sha256": "74baf97fe0f594ccc63cd805b19a3631ec22680b3c42f91befe2a5cffb0f5ea2"
+}

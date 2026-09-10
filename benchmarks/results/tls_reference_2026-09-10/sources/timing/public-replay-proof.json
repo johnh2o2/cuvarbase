@@ -1,0 +1,16 @@
+{
+  "created_utc": "2026-09-10T19:28:52.857933+00:00",
+  "status": "passed",
+  "scope": "CPU-only reconstruction and assessment using public files alone; no scientific or timing rerun.",
+  "reporting_gate_passed": true,
+  "original_campaign_pass": false,
+  "normalized_bytes_identical": true,
+  "timing_analysis_sha256": "d428e8aadc337678db1112c6a0adf5de1cdcc2c4a7b4fc8283ce1900f607bb1b",
+  "receipt_matches_except_created_utc": true,
+  "original_receipt_sha256": "1d6454cad6a6de7c830f24bea27ca35d608017f89874f6ee55ab5eeedb7cd2d4",
+  "replay_receipt_sha256": "d3489cde05a96a9a6771f6f3be27a0d1ed2643c2e94898539a311b91ce2e20ec",
+  "exact_original_timing_input_containers_restored": 48,
+  "restored_population_cases": 184,
+  "input_bank_sha256": "258413b2cf79163af2ce108ad63c46d2df58460a619f529a122b3244f181b3a0",
+  "executed_assessor_sha256": "e43a99acbc6305611e3d4356526f697aecbb65bf87cd37ecb0346ce2bed70aa4"
+}

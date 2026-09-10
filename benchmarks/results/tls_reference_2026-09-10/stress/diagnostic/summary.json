@@ -1,0 +1,407 @@
+{
+  "classification": "Focused diagnostic repeated execution on one original development input",
+  "original_control_gate_pass": false,
+  "scientific_gate_changed": false,
+  "independent_scientific_samples_added": 0,
+  "input_sha256": "0fe57812bd564d8659300b5e54cf1713850e9f0dbe8a370b1d5e03b4221704a5",
+  "original_input_metadata": {
+    "accepted_proposal": 1,
+    "auto_grid_api_exercised": false,
+    "baseline_days": 1285.7567509905703,
+    "below_approx_native_duration_envelope": false,
+    "cadence": "tess_200s",
+    "cadence_construction": "Synthetic repeated observed TESS campaign blocks",
+    "cadence_sha256": "6c9dad45878a9f5d9fbd11a25d0d4a9da9797c6fdb430129c5282b7f4d50bc26",
+    "cohort": "development",
+    "conditional_population": false,
+    "controlled_generator_sha256": "2c8b258b12de9ef7f832c117d5d4b77183042f97cb4acafd71905b2b82d2df09",
+    "controlled_interpretation": "Same physical signal/grid and same Gaussian+OU realization at half amplitude; development control, not independent recovery evidence",
+    "controlled_parent_sha256": "78993541456c1a36e73845ec4d5832c725891c9041e31c5e462e4a85b6ae1dc3",
+    "controlled_transform": "y20=1-signal+0.5*(y10-1+signal);dy20=0.5*dy10",
+    "duration_days": 0.3326017525235787,
+    "duration_over_solar_central": 0.6095646604474183,
+    "duration_times_ndata": 70.92590089132511,
+    "expected_native_cache_failure": false,
+    "exposure_quadrature_nodes": 64,
+    "fractional_duration": 0.0009106139699481963,
+    "full_duration_days": 0.3160892804271692,
+    "grid_execution": "Explicit selected-period mathematical stress grid including truth and aliases.",
+    "in_transit_observations": 513,
+    "input_time_offset_from_cadence_days": 2457000.0,
+    "input_time_origin_policy": "Large absolute epoch for literal native preprocessing development stress",
+    "latent_white_oracle_snr": 20.0,
+    "name": "dense_long_solar_snr20",
+    "ndata": 77888,
+    "noise": {
+      "oracle_snr_excludes_ou": true,
+      "ou_amplitude": 1.9899448931232606e-05,
+      "ou_tau_days": 0.15,
+      "white": "independent Gaussian with supplied dy"
+    },
+    "null": false,
+    "observable": true,
+    "observed_events": 4,
+    "periastron_stellar_radii": 215.0290923970047,
+    "period_bounds": [
+      0.6,
+      730.5
+    ],
+    "period_count": 97,
+    "physical": {
+      "eccentricity": 0.0,
+      "exposure_seconds": 200.0,
+      "impact": 0.8,
+      "mass": 1.0,
+      "name": "dense_long_solar",
+      "omega": 90.0,
+      "period": 365.25,
+      "radius": 1.0,
+      "rp": 0.00916
+    },
+    "purpose": "mathematical_differential",
+    "realized_latent_white_oracle_snr": 20.0,
+    "regime": "tess_solar",
+    "seal_sha256": null,
+    "search_kwargs": {
+      "M_star": 1.0,
+      "R_star": 1.0,
+      "oversampling_factor": 3,
+      "period_max": 12.878375495285127,
+      "period_min": 0.6
+    },
+    "semimajor_stellar_radii": 215.0290923970047,
+    "stream": "development:20260910-long-v1",
+    "stress_settings": {
+      "campaign_spacing_days": 180.0,
+      "impact": 0.8,
+      "name": "dense_long_solar",
+      "period": 365.25,
+      "phase": 0.013689253935660506,
+      "regime": "tess_solar",
+      "repeated_campaigns": 8
+    },
+    "truth_epoch": 2457005.0,
+    "truth_inserted_in_grid": true,
+    "truth_period": 365.25
+  },
+  "full_uncaptured_runs": 9,
+  "full_captured_runs": 2,
+  "captured_periods": 97,
+  "selected_rows": [
+    {
+      "row": 2,
+      "period": 0.704129632465028,
+      "unique_scan_outputs": {
+        "native": 2,
+        "graph": 1,
+        "native_error_axis1": 1
+      },
+      "same_input_kernels_bitwise": true,
+      "candidate_saved_input_kernels_bitwise": true,
+      "prefix_only_outcomes": [
+        {
+          "native_minimum": 0.0005222725449129939,
+          "native_start": 74555,
+          "native_width": 1482,
+          "changed_mean_depth_gates_all_starts": 0,
+          "changed_mean_depth_gates_evaluated_starts": 0
+        },
+        {
+          "native_minimum": 77888.0,
+          "native_start": 0,
+          "native_width": 1012,
+          "changed_mean_depth_gates_all_starts": 4604,
+          "changed_mean_depth_gates_evaluated_starts": 30
+        }
+      ]
+    },
+    {
+      "row": 0,
+      "period": 0.6,
+      "unique_scan_outputs": {
+        "native": 1,
+        "graph": 1,
+        "native_error_axis1": 1
+      },
+      "same_input_kernels_bitwise": true,
+      "candidate_saved_input_kernels_bitwise": true,
+      "prefix_only_outcomes": [
+        {
+          "native_minimum": 0.0005221721949055791,
+          "native_start": 34750,
+          "native_width": 1113,
+          "changed_mean_depth_gates_all_starts": 0,
+          "changed_mean_depth_gates_evaluated_starts": 0
+        },
+        {
+          "native_minimum": 0.0005221721949055791,
+          "native_start": 34750,
+          "native_width": 1113,
+          "changed_mean_depth_gates_all_starts": 0,
+          "changed_mean_depth_gates_evaluated_starts": 0
+        }
+      ]
+    },
+    {
+      "row": 96,
+      "period": 730.5,
+      "unique_scan_outputs": {
+        "native": 2,
+        "graph": 1,
+        "native_error_axis1": 1
+      },
+      "same_input_kernels_bitwise": true,
+      "candidate_saved_input_kernels_bitwise": true,
+      "prefix_only_outcomes": [
+        {
+          "native_minimum": 0.0005210698000155389,
+          "native_start": 3660,
+          "native_width": 242,
+          "changed_mean_depth_gates_all_starts": 0,
+          "changed_mean_depth_gates_evaluated_starts": 0
+        },
+        {
+          "native_minimum": 0.0005210698000155389,
+          "native_start": 3660,
+          "native_width": 242,
+          "changed_mean_depth_gates_all_starts": 0,
+          "changed_mean_depth_gates_evaluated_starts": 0
+        },
+        {
+          "native_minimum": 0.0005210698000155389,
+          "native_start": 3660,
+          "native_width": 242,
+          "changed_mean_depth_gates_all_starts": 0,
+          "changed_mean_depth_gates_evaluated_starts": 0
+        }
+      ]
+    },
+    {
+      "row": 7,
+      "period": 1.0505241706898663,
+      "unique_scan_outputs": {
+        "native": 2,
+        "graph": 2,
+        "native_error_axis1": 1
+      },
+      "same_input_kernels_bitwise": true,
+      "candidate_saved_input_kernels_bitwise": true,
+      "prefix_only_outcomes": [
+        {
+          "native_minimum": 0.0005222898907959461,
+          "native_start": 76728,
+          "native_width": 1113,
+          "changed_mean_depth_gates_all_starts": 0,
+          "changed_mean_depth_gates_evaluated_starts": 0
+        },
+        {
+          "native_minimum": 0.0005223297630436718,
+          "native_start": 72520,
+          "native_width": 1482,
+          "changed_mean_depth_gates_all_starts": 3735,
+          "changed_mean_depth_gates_evaluated_starts": 25
+        }
+      ]
+    }
+  ],
+  "all_selected_periods_days": [
+    121.75
+  ],
+  "shared_final_fit_fields": [
+    "T0",
+    "depth",
+    "duration",
+    "fractional_duration",
+    "native_gtls_snr",
+    "transit_times",
+    "width_in_samples"
+  ],
+  "shared_final_fit_fields_equal": true,
+  "all_truth_and_selected_coarse_final_chi2_tie": true,
+  "all_final_truth_tied_rank_one": true,
+  "SDE_by_method": {
+    "gtls": [
+      3.2465779781341553,
+      3.2300527095794678,
+      3.2300527095794678
+    ],
+    "gtls_corrected": [
+      3.2434375517925504,
+      3.2342769568911143,
+      3.2434375517925504
+    ],
+    "candidate": [
+      3.2434375517925504,
+      3.2434375517925504,
+      3.2434375517925504
+    ]
+  },
+  "captured_differing_rows": {
+    "0": [
+      "prefix"
+    ],
+    "3": [
+      "prefix"
+    ],
+    "7": [
+      "prefix"
+    ],
+    "8": [
+      "prefix"
+    ],
+    "9": [
+      "prefix"
+    ],
+    "10": [
+      "prefix"
+    ],
+    "11": [
+      "prefix"
+    ],
+    "13": [
+      "prefix"
+    ],
+    "15": [
+      "prefix"
+    ],
+    "21": [
+      "prefix"
+    ],
+    "23": [
+      "prefix"
+    ],
+    "30": [
+      "prefix"
+    ],
+    "33": [
+      "prefix"
+    ],
+    "44": [
+      "prefix"
+    ],
+    "47": [
+      "prefix"
+    ],
+    "48": [
+      "prefix"
+    ],
+    "51": [
+      "prefix"
+    ],
+    "52": [
+      "prefix"
+    ],
+    "74": [
+      "prefix"
+    ],
+    "75": [
+      "prefix"
+    ],
+    "76": [
+      "prefix"
+    ],
+    "82": [
+      "prefix"
+    ],
+    "83": [
+      "prefix"
+    ],
+    "87": [
+      "prefix"
+    ],
+    "91": [
+      "prefix"
+    ],
+    "95": [
+      "prefix"
+    ],
+    "96": [
+      "prefix"
+    ]
+  },
+  "full_collected_inventory_files": 79,
+  "compact_published_original_files": 64,
+  "unpublished_collected_npz": {
+    "candidate/run0/vectors.npz": {
+      "bytes": 27556,
+      "sha256": "8364a1af604d633955db66d61061a2002743bda79efdb138e90ae8fdc5a08e1f"
+    },
+    "candidate/run1/vectors.npz": {
+      "bytes": 27556,
+      "sha256": "8364a1af604d633955db66d61061a2002743bda79efdb138e90ae8fdc5a08e1f"
+    },
+    "candidate/run2/vectors.npz": {
+      "bytes": 27556,
+      "sha256": "8364a1af604d633955db66d61061a2002743bda79efdb138e90ae8fdc5a08e1f"
+    },
+    "capture_candidate/run0/vectors.npz": {
+      "bytes": 27556,
+      "sha256": "8364a1af604d633955db66d61061a2002743bda79efdb138e90ae8fdc5a08e1f"
+    },
+    "capture_candidate/selected-buffers.npz": {
+      "bytes": 4921661,
+      "sha256": "b0b5c460cafd9d3ab3d3962752c18c1d0dad60ea7d3a419b644705bc52362d90"
+    },
+    "capture_gtls_corrected/run0/vectors.npz": {
+      "bytes": 32068,
+      "sha256": "6995d2f837135e38dc486c69e51ac6e16fbeed448b75f45901ecc1f80bbeea38"
+    },
+    "capture_gtls_corrected/selected-buffers.npz": {
+      "bytes": 5733571,
+      "sha256": "ede574933d6acbc741e6f41f3f9520d65708741f89b1f7a5babae756cd8545b0"
+    },
+    "gtls/run0/vectors.npz": {
+      "bytes": 30152,
+      "sha256": "e2b5d278b86f19cb985ba75304673568da09f97e9e61ffbeb5fbc37bd0513eea"
+    },
+    "gtls/run1/vectors.npz": {
+      "bytes": 30092,
+      "sha256": "033e5f448663a0df4ec2ebacdb245742d75dd2c7263d20e657aa60aa587290a4"
+    },
+    "gtls/run2/vectors.npz": {
+      "bytes": 30092,
+      "sha256": "033e5f448663a0df4ec2ebacdb245742d75dd2c7263d20e657aa60aa587290a4"
+    },
+    "gtls_corrected/run0/vectors.npz": {
+      "bytes": 32068,
+      "sha256": "6995d2f837135e38dc486c69e51ac6e16fbeed448b75f45901ecc1f80bbeea38"
+    },
+    "gtls_corrected/run1/vectors.npz": {
+      "bytes": 31936,
+      "sha256": "58f399db523770f70d988deebf3ff04167efddb5f7f80780b36aea701ed43d17"
+    },
+    "gtls_corrected/run2/vectors.npz": {
+      "bytes": 32075,
+      "sha256": "d01e4b1b384bacf75525fd363096f25b7efd48eed1c33f3695817d81f7bbd5bb"
+    },
+    "scan-kernels/row0-scan-variants.npz": {
+      "bytes": 232823,
+      "sha256": "ac01e73be6d2032d6016461608266b138f6e4ea23255d77516a8822b6947962d"
+    },
+    "scan-kernels/row2-scan-variants.npz": {
+      "bytes": 233561,
+      "sha256": "78c1339632430cda19cf10f7b05edea636e189d797d574dea4d6446b63aca973"
+    },
+    "scan-kernels/row7-scan-variants.npz": {
+      "bytes": 232385,
+      "sha256": "59f7696360cdb649159cc6c76ca49b4baf10b2aaec17006d0ae9ca93d066d587"
+    },
+    "scan-kernels/row96-scan-variants.npz": {
+      "bytes": 358393,
+      "sha256": "28b025e901d885f3a2501cec02157c7b0f7894006c4322c975379cb944579f41"
+    }
+  },
+  "all_original_files_hash_verified": true,
+  "original_inventory_sha256": "ba974a1c49238445a8f9f90bc0622c96a63b24cf0acda51f02fa32e09e0f1fd7",
+  "original_terminal_sha256": "f3e266761ff3c564976c413530e1293536e734aaf84907c2caf56abd0f64c1d2",
+  "packaging_source_sha256": "75a870f22b0125e81ede1dff661d0506d96155f07377e40e07fd2c40fcc5337c",
+  "reviewer_source_sha256": "830e23a818b2396209936b0361a2879d4f126b980ce2d485d4974a2643848b21",
+  "limits": [
+    "Original failed exact comparison remains failed",
+    "The selected grid contains truth and aliases; this is not blind recovery evidence",
+    "Native and graph float32 prefix variability can change depth gates, masks and final SDE",
+    "Stable candidate full repeats do not imply deterministic graph scans or universal parity",
+    "Same-prefix kernel agreement is limited to the inspected rows and variants",
+    "Diagnostic elapsed time is not a performance measurement"
+  ]
+}

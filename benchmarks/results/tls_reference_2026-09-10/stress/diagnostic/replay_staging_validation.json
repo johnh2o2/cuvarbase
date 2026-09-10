@@ -1,0 +1,8 @@
+{
+  "frozen_production_and_validation_source_files_verified": 36,
+  "restored_inputs": 2,
+  "documented_cpu_staging_succeeded": true,
+  "GPU_execution_attempted": false,
+  "restored_input_container_reencoding_explicit": true,
+  "scope": "Preparation of the documented reproduction workspace only; no new scientific measurement"
+}

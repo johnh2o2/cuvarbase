@@ -1,0 +1,43 @@
+{
+  "frozen_utc": "2026-09-10T17:29:14.569352+00:00",
+  "supersedes_unexecuted_archive_sha256": "242d4d203aad279f560b8944e736466e53359edb4a3965b434596ff4968ac0f2",
+  "files": {
+    "long_control_probe.py": {
+      "sha256": "85012a44c3295ba567590460062e74c1c94bd8c80db774d0b57f53b01170f39f",
+      "bytes": 30019
+    },
+    "expected.json": {
+      "sha256": "5f076cf32eda04c33f97d42da4d8e948e311c24b9b2988e09dfd2199fc634ccf",
+      "bytes": 53693
+    },
+    "protocol.json": {
+      "sha256": "3887eea560a525a65b941823f162a34c6eb4f0974e6fa26702d691425b2651bb",
+      "bytes": 1871
+    },
+    "protocol-v2.json": {
+      "sha256": "2544f7ba94778d297868aabcb584b4d5e315358854fb56c7d956210ff8025943",
+      "bytes": 2411
+    },
+    "protocol-v3.json": {
+      "sha256": "f72057343e97a51f5bcfee5faaa7e387cafc5e31f5af6bd58925e8657541bfa7",
+      "bytes": 2897
+    },
+    "test_long_control_probe.py": {
+      "sha256": "a2b390d35c67e63012c08874d1c9d1278bf1b448dc71d5604abbdcc154ed77c1",
+      "bytes": 7152
+    },
+    "cpu-test-receipt-v3.json": {
+      "sha256": "e2cf0dc32a58b58c3f547411ffbe4f8345b0ddc53dd1d27424173dd94788daab",
+      "bytes": 366
+    },
+    "cpu-tests-v3.log": {
+      "sha256": "fdfbcdc0b20b11b073c609fbd4e2b84dba25a5f5611fdf0ee53bd32d37c0a322",
+      "bytes": 1068
+    }
+  },
+  "archive": {
+    "name": "execution-sources-v3.tar.gz",
+    "sha256": "0e3cb85b90d689afe430069154b38b3113a7354f041ff431805826389f6413db",
+    "bytes": 21184
+  }
+}

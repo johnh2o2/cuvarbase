@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "original_acceptance_unchanged": true,
+  "original_acceptance_sha256": "629cb99b10201ce105b1da2dcde7bc990965dda6a41194836b6ef93e04185150",
+  "complete_original_cases": 24,
+  "complete_original_backend_records": 72,
+  "complete_original_comparisons": 48,
+  "source_partial_archive_sha256": "9f7956238795c440611efb5108485b36f1a7088c6ad03001691186205589ecc4",
+  "source_partial_archive_bytes": 3133440,
+  "raw_record_and_comparison_hashes_verified": true,
+  "checkpoint_file_index_sha256": "eed4bfe3343179ec99cf82e3a922f856bf2c8a90aa86db4903e41383e6b77088",
+  "source_array_digests_sha256": "021c7e7c746dfb8162541724d7e2be31613414209f25fcb6897ee6f3317a136b",
+  "uncollected_retained_npz": [
+    {
+      "file": "tess_solar_null_0008/gtls/arrays.npz",
+      "sha256": "668534694b6827a9f7e1f47ba81a7f748fc7760cbcc7fdc4911e481b2152a8ad"
+    },
+    {
+      "file": "tess_solar_null_0008/gtls_corrected/arrays.npz",
+      "sha256": "668534694b6827a9f7e1f47ba81a7f748fc7760cbcc7fdc4911e481b2152a8ad"
+    },
+    {
+      "file": "tess_solar_null_0008/candidate/arrays.npz",
+      "sha256": "a7889e643cc31218d45a9c716beca87e5ef55b2e22cd940a2a17191ce4ff083c"
+    },
+    {
+      "file": "ztf_solar_null_0008/gtls/arrays.npz",
+      "sha256": "eac6fa493e89ac48a61915b3d497a5bb4ceebe1e82fd2f374cc66480de194449"
+    },
+    {
+      "file": "ztf_solar_null_0008/gtls_corrected/arrays.npz",
+      "sha256": "eac6fa493e89ac48a61915b3d497a5bb4ceebe1e82fd2f374cc66480de194449"
+    },
+    {
+      "file": "ztf_solar_null_0008/candidate/arrays.npz",
+      "sha256": "63e9618e4794144a2cdfaf68e97c7524b6a5c33788198e5a0adff397e8b93274"
+    },
+    {
+      "file": "tess_gap_null_0008/gtls/arrays.npz",
+      "sha256": "3d42f23e64ed8894ab0d8a632e4766fb2f3338aff11cb1c96f3871d2a12b5afe"
+    },
+    {
+      "file": "tess_gap_null_0008/gtls_corrected/arrays.npz",
+      "sha256": "3d42f23e64ed8894ab0d8a632e4766fb2f3338aff11cb1c96f3871d2a12b5afe"
+    },
+    {
+      "file": "tess_gap_null_0008/candidate/arrays.npz",
+      "sha256": "8874a4a74a7a102d3eae28280be9d25ff568fdaa466b1e5f372965e87f25fffc"
+    }
+  ],
+  "original_predeclared_pruning_count": 63,
+  "original_on_host_array_verification": {
+    "input_cases": 24,
+    "backend_records": 72,
+    "retained_npz_archives_verified": 9,
+    "pruned_archives_with_valid_retention_receipts": 63,
+    "source_chain_verified": true,
+    "all_retained_array_digests_verified": true,
+    "packaging_script_sha256": "c5a6cbaad0028f7ba37353985b266eda834b32ba90bd589e6a4c04c5290e9c8d",
+    "interpretation": "Complete independent input/record/source/comparison chain verified; raw NPZ files remain outside the repository."
+  },
+  "auditor_source_sha256": "1121a8d408c0346fd0d9434b1011f40a5ac24c84a16296c8449bfb424bd05c0e",
+  "scope": "The original supplemental24-case acceptance and full compact science package survive unchanged. All72 raw records and48 original comparisons were independently checked. Nine retained NPZ containers were not collected; their on-host verification and complete numerical identities survive. Subsequent selected-grid control failure is separate and never changes this original gate."
+}

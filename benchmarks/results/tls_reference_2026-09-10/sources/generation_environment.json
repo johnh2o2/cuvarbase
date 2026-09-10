@@ -1,0 +1,16 @@
+{
+  "python": "3.9.6",
+  "platform": "macOS-26.0-arm64-arm-64bit",
+  "machine": "arm64",
+  "distributions": {
+    "numpy": "1.26.4",
+    "scipy": "1.12.0",
+    "batman-package": "2.5.3"
+  },
+  "module_versions": {
+    "numpy": "1.26.4",
+    "scipy": "1.12.0",
+    "batman": "2.5.1"
+  },
+  "explanation": "The sealed batman field records batman.__version__, which is2.5.1 inside the installed batman-package2.5.3 distribution. Reproduction installation must use distribution version2.5.3. Original seal bytes are unchanged."
+}

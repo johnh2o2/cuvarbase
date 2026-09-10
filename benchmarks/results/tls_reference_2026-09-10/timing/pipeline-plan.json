@@ -1,0 +1,135 @@
+{
+  "stages": [
+    {
+      "name": "preflight",
+      "timeout_seconds": 600,
+      "command": [
+        "/workspace/tls-default/modern/bin/python",
+        "/workspace/tls-default/latency/run_timing.py",
+        "--root",
+        "/workspace/tls-default",
+        "--manifest",
+        "/workspace/tls-default/diagnostic/results/timing_manifest.json",
+        "--paired-results",
+        "/workspace/tls-default/diagnostic/results/main",
+        "--output",
+        "/workspace/tls-default/timing-continuation/results/timing",
+        "--timing-tools",
+        "/workspace/tls-default/latency/tools/timing",
+        "--phase",
+        "preflight"
+      ]
+    },
+    {
+      "name": "components_candidate",
+      "timeout_seconds": 1800,
+      "command": [
+        "/workspace/tls-default/modern/bin/python",
+        "/workspace/tls-default/latency/tools/timing/components.py",
+        "--manifest",
+        "/workspace/tls-default/diagnostic/results/timing_manifest.json",
+        "--paired-results",
+        "/workspace/tls-default/diagnostic/results/main",
+        "--measurement-scope",
+        "full",
+        "--backend",
+        "candidate",
+        "--output",
+        "/workspace/tls-default/timing-continuation/results/timing/components/candidate",
+        "--regimes",
+        "tess_solar",
+        "tess_gap",
+        "ztf_solar"
+      ]
+    },
+    {
+      "name": "components_gtls",
+      "timeout_seconds": 1800,
+      "command": [
+        "/workspace/tls-default/modern/bin/python",
+        "/workspace/tls-default/latency/tools/timing/components.py",
+        "--manifest",
+        "/workspace/tls-default/diagnostic/results/timing_manifest.json",
+        "--paired-results",
+        "/workspace/tls-default/diagnostic/results/main",
+        "--measurement-scope",
+        "full",
+        "--backend",
+        "gtls",
+        "--output",
+        "/workspace/tls-default/timing-continuation/results/timing/components/gtls",
+        "--regimes",
+        "tess_solar",
+        "tess_gap",
+        "ztf_solar"
+      ]
+    },
+    {
+      "name": "public",
+      "timeout_seconds": 9000,
+      "command": [
+        "/workspace/tls-default/modern/bin/python",
+        "/workspace/tls-default/latency/tools/timing/benchmark.py",
+        "--manifest",
+        "/workspace/tls-default/diagnostic/results/timing_manifest.json",
+        "--paired-results",
+        "/workspace/tls-default/diagnostic/results/main",
+        "--measurement-scope",
+        "full",
+        "--output",
+        "/workspace/tls-default/timing-continuation/results/timing/public",
+        "--regimes",
+        "tess_solar",
+        "tess_gap",
+        "ztf_solar",
+        "--pool-widths",
+        "1",
+        "2",
+        "4",
+        "--timeout",
+        "1200",
+        "--correction-adapter",
+        "/workspace/tls-default/validation/corrected_reference.py"
+      ]
+    },
+    {
+      "name": "summarize",
+      "timeout_seconds": 180,
+      "command": [
+        "/workspace/tls-default/modern/bin/python",
+        "/workspace/tls-default/latency/tools/timing/summarize.py",
+        "/workspace/tls-default/timing-continuation/results/timing/public",
+        "--components-gtls",
+        "/workspace/tls-default/timing-continuation/results/timing/components/gtls",
+        "--components-candidate",
+        "/workspace/tls-default/timing-continuation/results/timing/components/candidate",
+        "--output",
+        "/workspace/tls-default/timing-continuation/results/timing/summary.json"
+      ]
+    },
+    {
+      "name": "normalize",
+      "timeout_seconds": 180,
+      "command": [
+        "/workspace/tls-default/modern/bin/python",
+        "/workspace/tls-default/latency/tools/analyze_timing.py",
+        "--checks",
+        "/workspace/tls-default/timing-continuation/results/timing/summary.json",
+        "--manifest",
+        "/workspace/tls-default/diagnostic/results/timing_manifest.json",
+        "--acceptance",
+        "/workspace/tls-default/diagnostic/results/main/acceptance.json",
+        "--output",
+        "/workspace/tls-default/timing-continuation/results/timing/timing_analysis.json"
+      ]
+    }
+  ],
+  "corrected_regimes": [],
+  "driver_sha256": "77037a90d85fd6eec235db96ebdf182f1dbd97fa66c66d6f637919dcf1a5d3f1",
+  "expected_duration_minutes": [
+    60,
+    90
+  ],
+  "conditional_corrected_extra_minutes_at_most_forecast": 30,
+  "timeout_note": "Timeouts are failure limits, not cost forecasts; external rental guard remains authoritative"
+}
