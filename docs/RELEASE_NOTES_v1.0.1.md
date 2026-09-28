@@ -1,10 +1,8 @@
-# cuvarbase 1.0.0
+# cuvarbase 1.0.1
 
-This is the superseded pre-publication draft. The reviewed candidate is now **1.0.1**, preserving the existing June `v1.0.0` tag. Use the [1.0.1 release notes](RELEASE_NOTES_v1.0.1.md) for the prepared release. The historical draft below describes the planned development release, not the contents of the June tag.
+**First planned PyPI release of the 1.x series.** cuvarbase provides GPU-accelerated period-finding and transit-detection algorithms for astronomical time series: Box Least Squares (BLS), Transit Least Squares (TLS), Lomb–Scargle (including multiharmonic), Phase Dispersion Minimization (PDM), Conditional Entropy (CE), and the non-uniform FFT (NFFT) that powers them.
 
-**First major release.** cuvarbase provides GPU-accelerated period-finding and transit-detection algorithms for astronomical time series: Box Least Squares (BLS), Transit Least Squares (TLS), Lomb–Scargle (including multiharmonic), Phase Dispersion Minimization (PDM), Conditional Entropy (CE), and the non-uniform FFT (NFFT) that powers them.
-
-These are release-candidate notes for the first planned PyPI release since **0.2.5 (October 2023)**. The candidate contains everything from the tagged-but-never-published 0.2.6 maintenance release (May 2025) plus all of the 1.0 development work. As checked on 24 September 2026, `pip install cuvarbase` still installs 0.2.5; use the `v1.0-fixes` branch to install the candidate.
+Version **1.0.1** preserves the existing June `v1.0.0` tag and gives the reviewed candidate a distinct version. These are release-candidate notes for the first planned PyPI release since **0.2.5 (October 2023)**. The candidate contains everything from the tagged-but-never-published 0.2.6 maintenance release (May 2025) plus all of the 1.0 development work. As checked on 27 September 2026 (America/Chicago), `pip install cuvarbase` still installs 0.2.5; use the `v1.0-fixes` branch to install the candidate.
 
 In production: cuvarbase's BLS has powered the TESS Quick-Look Pipeline's planet search since Sector 59 (Kunimoto et al. 2023, RNAAS 7, 28).
 
@@ -13,7 +11,7 @@ In production: cuvarbase's BLS has powered the TESS Quick-Look Pipeline's planet
 - **New GPU Transit Least Squares:** a GTLS-compatible observation-level default with full candidate and harmonic refinement. The [current ZTF/TESS benchmark](TRANSIT_BENCHMARKS.md) compares full searches with public GTLS and records numerical agreement, recovery and noise-only outcomes.
 - **Faster BLS searches and grid construction:** compare actual PyPI 0.2.5, v1 and tested CPU/GPU alternatives in the [current benchmark](TRANSIT_BENCHMARKS.md).
 - **Versus actual PyPI 0.2.5:** fused phase searches, conflict-scatter staging, reusable batch memory, vectorized host scans and grid construction, plus support for the current NumPy/PyCUDA stack. Both releases receive warmed kernels and reusable PyPI memory in the new comparison; its warm speedup is not attributed entirely to compilation caching.
-- **Correct results on absolute (BJD-scale) timestamps.** Pre-1.0, feeding BLS raw BJD times (~2.45 million days) silently destroyed the phase fold in float32. Measured: an injected P=3.46 d transit recovered at power 0.30 on near-zero timestamps collapses to power 0.089 at the wrong frequency when the same data carries BJD timestamps in 0.2.6 — no error, no warning. 1.0.0 returns identical periodograms on both timescales (r=1.000000); all BLS paths epoch-subtract in float64 first.
+- **Correct results on absolute (BJD-scale) timestamps.** Pre-1.0, feeding BLS raw BJD times (~2.45 million days) silently destroyed the phase fold in float32. Measured: an injected P=3.46 d transit recovered at power 0.30 on near-zero timestamps collapses to power 0.089 at the wrong frequency when the same data carries BJD timestamps in 0.2.6 — no error, no warning. The 1.0.1 candidate returns identical periodograms on both timescales (r=1.000000); all BLS paths epoch-subtract in float64 first.
 - **Fixed spurious BLS peaks from degenerate trial boxes.** A float32 guard bug produced run-to-run-varying peaks on single-site ground-based data (reported by @astrobatty against HATPI light curves). The guard is corrected, with regression tests checking that 500 ppm transits still survive. Native floating-point accumulation can still vary between calls: the [sustained benchmark](TRANSIT_BENCHMARKS.md) retains failed BLS repeatability qualification and labels its new rates as execution only.
 - **New algorithms and APIs**: sparse BLS for small datasets (Panahi & Zucker 2021), batched multi-lightcurve BLS, Keplerian frequency grids with stellar-density and duration constraints, multiharmonic generalized Lomb–Scargle on GPU, fast PDM kernels, CE log-probability periodograms, and an experimental NUFFT matched-filter transit search.
 - **Modern, lighter install**: Python 3.9–3.14, numpy 2.x, no more scikit-cuda or `future`; `import cuvarbase` works on GPU-less machines (the pure helpers need no pycuda at all; the method modules need the pycuda package but no device until the first GPU call).
@@ -84,7 +82,7 @@ Beyond the highlights above (BJD epoch handling, nondeterministic degenerate-box
 
 ## September 2026 audit fixes
 
-A read-only algorithm audit of the release candidate (September 2026, on-device) found a set of default-path defects that changed *results*, and a performance pass followed. Every item is reproduced on device before its fix and carries a regression test; the full per-item list with root causes is in the 1.0.0 section of [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/CHANGELOG.rst). The condensed list:
+A read-only algorithm audit of the release candidate (September 2026, on-device) found a set of default-path defects that changed *results*, and a performance pass followed. Every item is reproduced on device before its fix and carries a regression test; the full per-item list with root causes is in the 1.0 development section of [CHANGELOG.rst](https://github.com/johnh2o2/cuvarbase/blob/v1.0-fixes/CHANGELOG.rst). The condensed list:
 
 **Correctness (result-changing):**
 - **Input validation (BREAKING)** — every entry point rejects non-finite `t`/`y`/`dy`, `dy <= 0`, mismatched lengths, too-short light curves, bad frequency grids and inverted duration bounds with `ValueError` on the host, before any GPU work (see the migration table below). Previously a NaN gave a finite-but-wrong periodogram, and a bad `q` bound crashed the kernel and destroyed the process's CUDA context.
@@ -126,7 +124,7 @@ A read-only algorithm audit of the release candidate (September 2026, on-device)
 - Optional extras: `cuvarbase[test]` (pytest, nfft, astropy, batman-package, transitleastsquares — matplotlib is no longer required for the tests), `cuvarbase[cufinufft]`, `cuvarbase[docs]` (sphinx, matplotlib), and `cuvarbase[tls]` (CuPy 13 for CUDA 12 and batman-package; Python 3.9–3.13).
 - pytest is configured in `pyproject.toml` (`testpaths`, `-rs --strict-markers`, `gpu` marker); `cuvarbase/kernels/wavelet.cu` (never loaded) no longer ships, guarded by an orphan-kernel test.
 - GitHub Actions CI: the CPU suite on Python 3.9–3.14, wheel and sdist install legs (including `pytest --pyargs cuvarbase` from the installed wheel), a docs build, and flake8. The repository's Dockerfile was removed: it never installed cuvarbase (a rebuilt image is queued for 1.1).
-- **Release tag status:** as checked on 24 September 2026, `v1.0.0` still points to the earlier June commit `5553248`, not this candidate. Final tagging and PyPI publication remain pending; the candidate source is on `v1.0-fixes`.
+- **Release version:** the candidate is **1.0.1**. The existing `v1.0.0` tag retains June commit `5553248`; the prepared `v1.0.1` tag will identify this reviewed candidate. Source commits, release artifacts and the new tag are prepared locally. Remote pushes, GitHub release creation and PyPI publication are deferred at the owner's request. See [release preparation](RELEASE_PREPARATION.md).
 
 ## Credits
 

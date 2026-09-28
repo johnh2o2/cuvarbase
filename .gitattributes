@@ -7,3 +7,4 @@
 
 # Frozen receipts include byte hashes; retain their line endings and whitespace.
 benchmarks/results/tls_survey_2026-09-10/** -text -whitespace
+docs/validation/release-prepared-20260927/** -text -whitespace

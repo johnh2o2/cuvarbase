@@ -6,7 +6,7 @@
 # no longer allocates a context.
 
 # Version
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 # The public top-level names are resolved lazily (PEP 562): importing
 # the package imports none of the method modules, so `import cuvarbase`

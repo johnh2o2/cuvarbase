@@ -45,6 +45,18 @@ jobs:
         # testpaths / -rs / --strict-markers come from [tool.pytest.ini_options]
         python -m pytest -rs -v --tb=short
 
+  release-tools:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - name: Install host dependencies
+      run: python -m pip install numpy scipy matplotlib pytest batman-package
+    - name: Check benchmark qualification and monitoring recovery
+      run: python -m pytest -q benchmarks/tls_survey tools/test_watch_jobs.py
+
   # Packaging smoke test: build the sdist and wheel, check the metadata,
   # install each artifact into a clean environment (pycuda absent) and
   # import/run it from OUTSIDE the source tree. This catches

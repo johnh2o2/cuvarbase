@@ -1,5 +1,7 @@
 # v1.0 release validation
 
+The current candidate is **1.0.1**, prepared without publication. The expanded September 24–25 A40 suite passed **2,091 tests**, with one expected notebook failure and zero skips. The [September 27 installed-wheel gate](../../benchmarks/results/tls_survey_2026-09-10/release-gate-20260927/README.md) passed all 14 numerical/runtime checks and six dependency preflights after correcting the package-installation setup. The initial failed launcher receipt remains preserved. [Release preparation and source comparison](../RELEASE_PREPARATION.md) bind the final versioned artifacts to those tested package sources.
+
 The new observation-level TLS engine has its own [10 September validation](tls-default-20260910/README.md): **265 TLS tests passed on an A40**, plus installed-wheel checks. The [independent numerical study](../../benchmarks/results/tls_reference_2026-09-10/README.md) validates its search outputs and supplies the timing comparison.
 
 The checks below ran on 6 September 2026 against frozen source `1032caf029570dc4841db1c594a2cbb1654e8fd8`. They establish correctness and packaging checks for that source, separately from the [performance benchmark](../TRANSIT_BENCHMARKS.md). Later implementation and documentation changes are not covered by these original full-suite counts.
