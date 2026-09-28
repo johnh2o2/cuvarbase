@@ -1,10 +1,16 @@
 # Release preparation: 1.0.1
 
-The reviewed candidate is prepared as **1.0.1** on `v1.0-fixes`. The existing
-`v1.0.0` tag retains June commit `5553248`; it is not moved or replaced. The
-new local annotated tag `v1.0.1` identifies the prepared candidate. Publication
-is deferred at the owner's request: remote refs, GitHub releases, PyPI and the
-documentation site are unchanged.
+The reviewed candidate is prepared as **1.0.1**. The completed work on
+`v1.0-fixes` is integrated with `master` on **`release/v1.0.1`**, the source
+branch for the release pull request. The owner authorized pushing these source
+branches and the annotated `v1.0.1` tag on 28 September 2026. Creating a GitHub
+release, uploading to PyPI and deploying documentation remain deferred.
+The existing `v1.0.0` tag retains June commit `5553248`; it is not moved or replaced.
+
+The merge of `master` retains its normalization fixes, which were already in
+the reviewed implementation. Its complete tree matches the prepared candidate
+at `fcfee0e`; four normalization regression tests also pass. Subsequent handoff
+documentation updates do not change the prepared package or its build inputs.
 
 [Release notes](RELEASE_NOTES_v1.0.1.md) ·
 [Benchmark and retained qualifications](TRANSIT_BENCHMARKS.md) ·
@@ -33,6 +39,9 @@ It contains `dist/`, artifact checksums, build and verification logs, a Git
 bundle, the prepared GitHub release text and a publication runbook. The
 committed source and that delivery are backed up in the private R2 bucket;
 the local completion receipt records the exact object prefix and read-back.
+That directory preserves the original local preparation snapshot. The source
+push, pull request, final tag and CI receipts are recorded separately in
+`/Users/johnhoffman/Documents/cuvarbase-release-pr-20260928/`.
 
 To inspect the prepared state without publishing:
 
@@ -42,7 +51,9 @@ git show --no-patch v1.0.1
 git diff v1.0.1 -- cuvarbase pyproject.toml README.md CHANGELOG.rst
 ```
 
-When publication is authorized, use the delivery's `PUBLISH.md` to verify the
-commit, artifact checksums and current remote state before pushing the branch
-and new tag, creating a GitHub release and uploading the two distributions.
-That publication procedure does not move the existing `v1.0.0` tag.
+Before publication, review the pull request into `master` and its CI checks.
+The later delivery directory contains the current `PUBLISH.md`; it supersedes
+the original runbook's deferred branch/tag push steps. When publication is
+authorized, verify the recorded commit, artifact checksums and current remote
+state before creating a GitHub release and uploading the two distributions.
+Neither publication nor PR creation moves the existing `v1.0.0` tag.

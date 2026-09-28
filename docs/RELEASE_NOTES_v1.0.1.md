@@ -124,7 +124,7 @@ A read-only algorithm audit of the release candidate (September 2026, on-device)
 - Optional extras: `cuvarbase[test]` (pytest, nfft, astropy, batman-package, transitleastsquares — matplotlib is no longer required for the tests), `cuvarbase[cufinufft]`, `cuvarbase[docs]` (sphinx, matplotlib), and `cuvarbase[tls]` (CuPy 13 for CUDA 12 and batman-package; Python 3.9–3.13).
 - pytest is configured in `pyproject.toml` (`testpaths`, `-rs --strict-markers`, `gpu` marker); `cuvarbase/kernels/wavelet.cu` (never loaded) no longer ships, guarded by an orphan-kernel test.
 - GitHub Actions CI: the CPU suite on Python 3.9–3.14, wheel and sdist install legs (including `pytest --pyargs cuvarbase` from the installed wheel), a docs build, and flake8. The repository's Dockerfile was removed: it never installed cuvarbase (a rebuilt image is queued for 1.1).
-- **Release version:** the candidate is **1.0.1**. The existing `v1.0.0` tag retains June commit `5553248`; the prepared `v1.0.1` tag will identify this reviewed candidate. Source commits, release artifacts and the new tag are prepared locally. Remote pushes, GitHub release creation and PyPI publication are deferred at the owner's request. See [release preparation](RELEASE_PREPARATION.md).
+- **Release version:** the candidate is **1.0.1**. The existing `v1.0.0` tag retains June commit `5553248`; the annotated `v1.0.1` tag identifies the reviewed candidate. The owner authorized pushing the completed `v1.0-fixes` work, the `release/v1.0.1` integration branch and the new tag for a pull request into `master`. GitHub release creation, PyPI publication and documentation deployment remain deferred. See [release preparation](RELEASE_PREPARATION.md).
 
 ## Credits
 
