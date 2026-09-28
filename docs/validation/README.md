@@ -1,5 +1,9 @@
 # v1.0 release validation
 
+Complete logs and machine output are preserved in the
+[verified evidence archives](../BENCHMARK_ARCHIVES.md). Links below identify
+the corresponding study; its inventory retains each original file and checksum.
+
 The current candidate is **1.0.1**, prepared without publication. The expanded September 24–25 A40 suite passed **2,091 tests**, with one expected notebook failure and zero skips. The [September 27 installed-wheel gate](../../benchmarks/results/tls_survey_2026-09-10/release-gate-20260927/README.md) passed all 14 numerical/runtime checks and six dependency preflights after correcting the package-installation setup. The initial failed launcher receipt remains preserved. [Release preparation and source comparison](../RELEASE_PREPARATION.md) bind the final versioned artifacts to those tested package sources.
 
 The new observation-level TLS engine has its own [10 September validation](tls-default-20260910/README.md): **265 TLS tests passed on an A40**, plus installed-wheel checks. The [independent numerical study](../../benchmarks/results/tls_reference_2026-09-10/README.md) validates its search outputs and supplies the timing comparison.
@@ -8,14 +12,14 @@ The checks below ran on 6 September 2026 against frozen source `1032caf029570dc4
 
 | Check | Outcome | Evidence |
 |---|---|---|
-| Full source suite | 1,785 passed, 1 expected failure; no skips or failures | [Source test log](v1.0.0/suite_full.log) |
-| Additional release checks | 14/14 passed | [Release gate log](v1.0.0/release_gate.log) |
-| Clean GPU Sphinx build | Passed with warnings treated as errors | [Build log](v1.0.0/docs_build.log), [figure log](v1.0.0/docs_figures.log) |
-| Wheel and source distribution | Build and strict metadata checks passed | [Build log](v1.0.0/build.log), [Twine log](v1.0.0/twine_check.log) |
-| Installed wheel suite | 1,773 passed, 11 source-only skips; no failures | [Wheel test log](v1.0.0/wheel_pyargs.log) |
-| Installed source-distribution suite | 1,773 passed, 11 source-only skips; no failures | [Source-distribution test log](v1.0.0/sdist_pyargs.log) |
-| Import without PyCUDA | Wheel and source distribution passed | [Wheel smoke log](v1.0.0/wheel_smoke.log), [source-distribution smoke log](v1.0.0/sdist_smoke.log) |
+| Full source suite | 1,785 passed, 1 expected failure; no skips or failures | [Source test log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/suite_full.log") |
+| Additional release checks | 14/14 passed | [Release gate log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/release_gate.log") |
+| Clean GPU Sphinx build | Passed with warnings treated as errors | [Build log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/docs_build.log"), [figure log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/docs_figures.log") |
+| Wheel and source distribution | Build and strict metadata checks passed | [Build log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/build.log"), [Twine log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/twine_check.log") |
+| Installed wheel suite | 1,773 passed, 11 source-only skips; no failures | [Wheel test log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/wheel_pyargs.log") |
+| Installed source-distribution suite | 1,773 passed, 11 source-only skips; no failures | [Source-distribution test log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/sdist_pyargs.log") |
+| Import without PyCUDA | Wheel and source distribution passed | [Wheel smoke log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/wheel_smoke.log"), [source-distribution smoke log](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/sdist_smoke.log") |
 
-The expected failure covers the PDM notebook's known non-raw TeX label strings. [Environment details](v1.0.0/env_record.txt) and [source provenance](v1.0.0/source_provenance_final.log) accompany the logs. The full original execution record, including release orchestration, is available in [Git history](https://github.com/johnh2o2/cuvarbase/tree/f0dc981/analysis/v1.0-release-gate-20260906).
+The expected failure covers the PDM notebook's known non-raw TeX label strings. [Environment details](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/env_record.txt") and [source provenance](../BENCHMARK_ARCHIVES.md#validation-v100 "Archived file: docs/validation/v1.0.0/source_provenance_final.log") accompany the logs. The full original execution record, including release orchestration, is available in [Git history](https://github.com/johnh2o2/cuvarbase/tree/f0dc981/analysis/v1.0-release-gate-20260906).
 
 To run current checks, see [developer tools](../../tools/README.md).

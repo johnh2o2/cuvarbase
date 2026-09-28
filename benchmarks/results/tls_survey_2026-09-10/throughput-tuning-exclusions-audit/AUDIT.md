@@ -17,12 +17,12 @@ The called public GTLS implementation exposes no period-batch or memory-fraction
 
 Measurement has not yet run. Source inspection confirms that the absent BLS selection produces explicit missing panels for TESS solar, gapped TESS, ZTF solar and varied sampling; the other selected backends continue. The renderer marks missing results and excludes failed measurements from speed denominators. It separately requires the full held-out exactness receipt before presenting the global exactness status.
 
-The five original campaign/result files were downloaded and their bytes verified against remote SHA256 values. Four local timing/protocol source hashes also match the deployed sources; the three active public GTLS source hashes are recorded. All identities, exact cases, counts, deltas, and remote/local paths are in [audit.json](audit.json) and [transfer-and-source-hashes.json](transfer-and-source-hashes.json).
+The five original campaign/result files were downloaded and their bytes verified against remote SHA256 values. Four local timing/protocol source hashes also match the deployed sources; the three active public GTLS source hashes are recorded. All identities, exact cases, counts, deltas, and remote/local paths are in [audit.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-tuning-exclusions-audit/audit.json") and [transfer-and-source-hashes.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-tuning-exclusions-audit/transfer-and-source-hashes.json").
 
 Original receipts:
 
-- [Completed campaign](originals/campaign.json)
-- [GTLS 4 / 1](originals/gtls-mixed-w4-b1__result.json)
-- [GTLS 2 / 4](originals/gtls-mixed-w2-b4__result.json)
-- [GTLS 2 / 8](originals/gtls-mixed-w2-b8__result.json)
-- [BLS 1 / 1](originals/bls-mixed-w1-b1__result.json)
+- [Completed campaign](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-tuning-exclusions-audit/originals/campaign.json")
+- [GTLS 4 / 1](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-tuning-exclusions-audit/originals/gtls-mixed-w4-b1__result.json")
+- [GTLS 2 / 4](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-tuning-exclusions-audit/originals/gtls-mixed-w2-b4__result.json")
+- [GTLS 2 / 8](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-tuning-exclusions-audit/originals/gtls-mixed-w2-b8__result.json")
+- [BLS 1 / 1](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-tuning-exclusions-audit/originals/bls-mixed-w1-b1__result.json")

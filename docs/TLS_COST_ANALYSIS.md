@@ -26,7 +26,7 @@ The whole GPU/CPU rental is charged once, regardless of worker count. TLS cost i
 
 The TLS machine has a 7.65-CPU quota on a Xeon Gold 6342 host; each worker uses one numerical-library thread; the GTLS batch comparison tests one, two and four workers. The standard TLS engine evaluates individual observations with full refinement. The older phase-binned study and synthetic HATPI pilot used a different engine and cannot price this default. The [current TLS evidence](../benchmarks/results/tls_reference_2026-09-10/README.md) records numerical agreement and the separate search/diagnostic timing boundaries.
 
-The original timing campaign failed when four-worker GTLS ran out of memory in the separated-TESS warmup. These projections use the separately audited completed configurations; the two-worker pool was the fastest eligible completed setting for that cadence. [Timing assessment](../benchmarks/results/tls_reference_2026-09-10/reporting_acceptance.json).
+The original timing campaign failed when four-worker GTLS ran out of memory in the separated-TESS warmup. These projections use the separately audited completed configurations; the two-worker pool was the fastest eligible completed setting for that cadence. [Timing assessment](BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/reporting_acceptance.json").
 
 ## Included work and limits
 

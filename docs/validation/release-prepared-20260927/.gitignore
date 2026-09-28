@@ -1,0 +1,6 @@
+*
+!.gitignore
+!.gitattributes
+!*.md
+!checks.json
+!package-verification.json

@@ -12,7 +12,7 @@ This is the evidence for cuvarbase v1's new default TLS engine. It evaluates ind
 | TESS: separated sectors | 1.554 / 6.037 s | 3.88× | 1.534 / 3.684 s | 2.40× | 2 |
 | ZTF g/r | 3.231 / 14.899 s | 4.61× | 3.116 / 4.545 s | 1.46× | 4 |
 
-The original campaign **failed its all-configurations gate** because four-worker GTLS exhausted GPU memory during the separated-TESS warmup, before any measured repetitions. This report uses a separate, explicitly **post hoc assessment of the 11 completed configurations**, retaining the original numerical checks and fastest-eligible-pool rule. The original failure is preserved; failed or incomplete calls never supply a speed denominator. [Original gate](timing/acceptance.json) · [Reporting assessment](reporting_acceptance.json).
+The original campaign **failed its all-configurations gate** because four-worker GTLS exhausted GPU memory during the separated-TESS warmup, before any measured repetitions. This report uses a separate, explicitly **post hoc assessment of the 11 completed configurations**, retaining the original numerical checks and fastest-eligible-pool rule. The original failure is preserved; failed or incomplete calls never supply a speed denominator. [Original gate](../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/timing/acceptance.json") · [Reporting assessment](../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/reporting_acceptance.json").
 
 | Evidence | Contents |
 | --- | --- |
@@ -22,7 +22,7 @@ The original campaign **failed its all-configurations gate** because four-worker
 | [Timing records](timing/README.md) | Five single calls, three 16-source batch repetitions, GTLS pools of one/two/four workers, and separate common-search components |
 | [Exact inputs](inputs/README.md) | A portable 209-case array bank, original metadata and byte-identity verification |
 | [Executed sources](sources/README.md) | Original scientific and timing source snapshots, seals and production-test source identities |
-| [Rental ledger](rental-ledger.json) | Actual rental intervals, storage estimates, interrupted-run accounting and verified termination |
+| [Rental ledger](../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/rental-ledger.json") | Actual rental intervals, storage estimates, interrupted-run accounting and verified termination |
 
 The single timing source is selected by its declared input identity and paired API success. It is never selected for its elapsed time, recovery or SNR. Each measured search included in the report must reproduce its own frozen scientific outputs, and complete returned-object hashes must repeat. The 184-case sensitivity study uses the single-worker reference; GTLS pools qualify on the 16-source timing cohort, which is not a separate pooled injection/recovery study. Failures and incomplete calls are excluded from successful timing denominators and retained in the evidence. Common-search components are measured separately; GTLS's extra SNR/pink-noise diagnostics are not attributed to a slower fitting kernel.
 
@@ -34,7 +34,7 @@ The exact production sources passed [265 TLS tests on an A40](../../../docs/vali
 
 Input and result collection interruptions are documented in the collection receipts. The completed main acceptance is original; it was recovered from complete members of a truncated download and was not reconstructed. Reexecuting the same inputs does not create additional independent samples. Large output arrays remain outside this repository, with their numerical identities, retained/removed/missing status and reproduction route preserved.
 
-The [figure provenance](figure-provenance.json) records the plotted data, renderer and output hashes.
+The [figure provenance](../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/figure-provenance.json") records the plotted data, renderer and output hashes.
 
 To reproduce the study, start with the [maintained validation tools](../../tls_reference/README.md) and [timing protocol](../../tls_reference/timing/README.md). The [topline figure](../../../docs/figures/transit_benchmarks_20260910.png) combines this TLS campaign with the separately dated [BLS evidence](../transit_2026-09-08/README.md).
 

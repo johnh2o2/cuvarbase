@@ -434,7 +434,7 @@ Original TLS decisions at 1% target FPR.
 | hatpi_short | tls_detected | 0/0 finite — unavailable | 0/0 finite — unavailable |
 | hatpi_short | tls_missed_including_failures | 246/256 finite; +0.904% [-18.204, +1.564] | 246/256 finite; +0.333% [-21.526, +3.539] |
 
-Full native/box SNR distributions are in [snr_descriptive.csv](snr_descriptive.csv); the measured case values and original decision join are in [snr_cases.csv](snr_cases.csv).
+Full native/box SNR distributions are in [snr_descriptive.csv](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-report/snr_descriptive.csv"); the measured case values and original decision join are in [snr_cases.csv](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-report/snr_cases.csv").
 
 ## Baseline versus optimized TLS: finite implementation qualification
 
@@ -469,7 +469,7 @@ Individual implementation failures are retained in [exactness_mismatches.csv](ex
 
 ## Machine-readable tables and provenance
 
-[Recovery/FPR](recovery_fpr.csv), [paired contrasts](paired_contrasts.csv), [all subgroups](subgroups.csv), [thresholds](thresholds.csv), [per-regime exactness](exactness.csv), [provenance](provenance.json).
+[Recovery/FPR](recovery_fpr.csv), [paired contrasts](paired_contrasts.csv), [all subgroups](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-report/subgroups.csv"), [thresholds](thresholds.csv), [per-regime exactness](exactness.csv), [provenance](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-report/provenance.json").
 
 All interval bounds in the CSVs preserve the original JSON values. Displayed percentages are rounded only for readability.
 

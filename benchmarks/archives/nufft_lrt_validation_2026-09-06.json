@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "id": "nufft_lrt_validation_2026-09-06",
+  "source_commit": "403c75d7425e92b8a3d112672a04177189117a61",
+  "archive": {
+    "key": "benchmark-evidence/20260928/nufft_lrt_validation_2026-09-06.tar.gz",
+    "bucket": "cuvarbase",
+    "bytes": 290682,
+    "sha256": "d49f303beb26a6c6b86015415ec27b3b13c7912850636ffbff95cfcecf581376"
+  },
+  "columns": [
+    "path",
+    "bytes",
+    "sha256",
+    "kept_in_git"
+  ],
+  "files": [
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/README.md",5457,"7ef8c27a5eac29d3b80dd7d9f8e43dc4a86b540241b0b8fa76277987dec484b7",true],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/launch_campaign.sh",1516,"a793f87b9289ba4ed6eb63bbb85ef2f6e11b90ddff6857bf5b0cbe635e88b8ea",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/A_white.log",3535,"b6a901e804efb613bac5a9ac687bc6028081751014d4b71298add37060dd26ca",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/B_whitebjd.log",2863,"ed5888bc307efc99d885d5fb2f416d455cff3fcefb766fca0eddf6e95e39ece4",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/C_red1x.log",2907,"1972ec629a6f8f27c839e89a1b403bf70c41dbe8c2c97ec9a5082ba957883cf4",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/D_red3x.log",2907,"e5a65358722dceac8355dd5c392fd5bd5101b5e76081d9af3810f28d2a727347",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/E2_nzm_seq.log",2537,"c202c3743ddf3e4f9062a8f873d1d3afd084ab3f5c722c69e79d4b04f8f09ce9",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/E_redsys_main.log",2799,"70c6787dbdb3ded718bd97b103323708b246c1ffa87544e975646876ee39ab62",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/F2_nzm_marg.log",2540,"1fe082a08eddabd081d149da6bbf14884e88c654777ea8ab68b527cb87c46686",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/F_redsys_det.log",2568,"845008f980da9ba2f0fd04050e853629190aaad6a5cdd40e1113de5562021aed",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/null_calibration_check.log",427,"b35241b9557445d4412d4472ad339cce6a8e01e1be91f927f34449494671c66a",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/p4_first_nfft_ls_lrt.log",26475,"876f2f0d049294d3c93fcd15dbc9102d37a8e0f510db8f228dc2339ad9ad1431",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/logs/p4_full_suite.log",199301,"b03c9f79c52cadd8884d912d4f906860578e3aa81ef4e87edadd94614d773161",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/nufft_lrt_validation_2026-09-06.json",1611552,"d7bfbda00979a28844f3642e2f3bc084ddff5a0872b7109f18f77e2d297e2bef",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/null_calibration_check.py",1715,"f7874d059b661eb06d5f70bb17d3c5ccb41b633e64fd4c2d154e8ef1b9ef7b2b",false],
+    ["benchmarks/results/nufft_lrt_validation_2026-09-06/summary.md",13967,"ee710eeeb5a0d3c0028c8a22d6dba96f89252570e9529c462e7ae9e174c9449a",true]
+  ]
+}

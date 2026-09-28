@@ -1,3 +1,40 @@
-# Full returned periodograms are kept in the experiment archive, outside Git.
-/transit_2026-09-08/results/**/*.npz
-/tls_profile_2026-09-08/results/**/*.npz
+# Raw evidence is restored on demand and must stay outside Git.
+*
+!*/
+!.gitignore
+!.gitattributes
+!*.md
+!*.rst
+# Curated figures and small result tables are explicitly retained.
+!/tls_accuracy_2026-09-09/accuracy/summary.csv
+!/tls_profile_2026-09-08/ablation_output_comparison.csv
+!/tls_profile_2026-09-08/figures/tls_components.png
+!/tls_profile_2026-09-08/phase_timings.csv
+!/tls_profile_2026-09-08/timing_summary.csv
+!/tls_sensitivity_2026-09-09/hatpi_timing.csv
+!/tls_sensitivity_2026-09-09/recovery_by_snr.csv
+!/tls_sensitivity_2026-09-09/timing_analysis.csv
+!/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.csv
+!/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.png
+!/tls_survey_2026-09-10/final-figures/survey-throughput.png
+!/tls_survey_2026-09-10/final-report/exactness.csv
+!/tls_survey_2026-09-10/final-report/exactness_mismatches.csv
+!/tls_survey_2026-09-10/final-report/paired_contrasts.csv
+!/tls_survey_2026-09-10/final-report/recovery_fpr.csv
+!/tls_survey_2026-09-10/final-report/thresholds.csv
+!/tls_survey_2026-09-10/final-timing/reporting/survey-throughput-with-native-bls.csv
+!/tls_survey_2026-09-10/final-timing/reporting/survey-throughput-with-native-bls.png
+!/tls_survey_2026-09-10/grazing-development-diagnosis/figure/grazing-depths.png
+!/tls_survey_2026-09-10/throughput-followup-20260924/measurements.csv
+!/tls_survey_2026-09-10/throughput-followup-20260924/throughput.png
+!/transit_2026-09-08/benchmark_story.png
+!/transit_2026-09-08/component_ablations.csv
+!/transit_2026-09-08/component_phases.csv
+!/transit_2026-09-08/component_summary.csv
+!/transit_2026-09-08/paired_comparisons.csv
+!/transit_2026-09-08/recovery_by_snr.csv
+!/transit_2026-09-08/recovery_summary.csv
+!/transit_2026-09-08/runtime_by_cohort.csv
+!/transit_2026-09-08/runtime_cohort_ratios.csv
+!/transit_2026-09-08/speedups.csv
+!/transit_2026-09-08/timing_summary.csv

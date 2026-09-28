@@ -14,4 +14,4 @@ git show f0dc981:scripts/benchmark_transit_recovery/worker.py
 
 To regenerate the current figure without a GPU, see the [tool instructions](../../transit/README.md). Recomputing full-array validation requires restoring the omitted periodograms at the paths expected by the selected historical harness. A new GPU run is a new measurement and must record its own source, environment and timing provenance.
 
-The [rental ledger](rental-ledger.json) records the experiment cost and terminated resources. Viewing, checking summaries or plotting these records incurs no cloud expense.
+The [rental ledger](../../../docs/BENCHMARK_ARCHIVES.md#transit_2026-09-08 "Archived file: benchmarks/results/transit_2026-09-08/rental-ledger.json") records the experiment cost and terminated resources. Viewing, checking summaries or plotting these records incurs no cloud expense.

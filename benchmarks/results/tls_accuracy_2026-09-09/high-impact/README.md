@@ -51,7 +51,7 @@ five percentage points in either direction. **This pilot has not passed a
 5 pp equivalence test.** All intervals are descriptive for this targeted
 population and the frozen thresholds; comparisons are not adjusted together
 as a family. Per-SNR intervals and paired false-positive counts are retained
-in [analysis.json](analysis.json).
+in [analysis.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/analysis.json").
 
 ## What the configurations test
 
@@ -80,7 +80,7 @@ automatic bins do not reach the 8,192-bin cap in this short-period pilot.
 GTLS uses pinned
 [`74e449c`](https://github.com/Farthing-0/GTLS/tree/74e449c325792a763dde4fbffab98039c5e8c111),
 `fast=True`, one worker, `T0_fit_margin=0.125`, and `duration_grid_step=1.1`.
-Its accepted stellar bounds are in [configs/gtls.json](configs/gtls.json),
+Its accepted stellar bounds are in [configs/gtls.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/configs/gtls.json"),
 but the pinned implementation also uses internal host and CUDA duration
 limits. Every GTLS row records its actual template, integer duration cache
 and nominal CUDA width envelope. Every injected signal has a nominally
@@ -97,7 +97,7 @@ several approximation costs at the true period.
 
 ## Frozen protocol and retained evidence
 
-[design.json](design.json) was frozen at **19:46:34 UTC on 2026-09-09**.
+[design.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/design.json") was frozen at **19:46:34 UTC on 2026-09-09**.
 It specifies 256 calibration nulls, 256 injections and 256 independent test
 nulls, with seed `2026090943`. The base cadence has 9,736 samples over
 25.7568 days in one band. Each case randomly drops 0–3% of samples and retains
@@ -127,7 +127,7 @@ requires a score **strictly above** this threshold. Period recovery requires
 harmonics do not count. The frozen runner retains failed cases as injection
 misses or null scores of minus infinity.
 
-All calibrations completed by **20:05:16 UTC**. [thresholds.json](thresholds.json)
+All calibrations completed by **20:05:16 UTC**. [thresholds.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/thresholds.json")
 was frozen at **20:05:21 UTC**, and the first held-out run started at
 **20:05:22 UTC**. The runner requires thresholds before opening held-out
 arrays and refuses calibration if held-out results already exist. Every
@@ -138,7 +138,7 @@ attestation of operator actions.
 The conservative paired interval subtracts confidence limits for the two
 discordant-cell probabilities. Four one-sided exact binomial bounds, each
 with tail probability 0.0125, give at least 95% coverage by Bonferroni.
-[validation.json](validation.json) independently checks every count and
+[validation.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/validation.json") independently checks every count and
 recovery flag, Wilson intervals, paired intervals, numerical source pins,
 threshold chronology, and the privately retained input-array hashes.
 
@@ -156,17 +156,17 @@ The sole retained warning concerns an unclosed baseline CUDA source file;
 there were no template-fallback warnings.
 
 The archive preserves the original scalar results under [results/](results/),
-the [input manifest](inputs/manifest.json), four configurations, thresholds,
-analysis, [generation receipt](generation-environment.json), and the exact
-[runner snapshot](source_snapshots/high_impact.py). Generated light curves
+the [input manifest](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/inputs/manifest.json"), four configurations, thresholds,
+analysis, [generation receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/generation-environment.json"), and the exact
+[runner snapshot](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/source_snapshots/high_impact.py"). Generated light curves
 (approximately 90 MB) remain outside the release repository and were
 independently hash-checked before publication. Full periodograms were not
-retained; their hashes are recorded. [provenance.json](provenance.json) and
-[SHA256SUMS.json](SHA256SUMS.json) bind the public artifacts.
+retained; their hashes are recorded. [provenance.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/provenance.json") and
+[SHA256SUMS.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/SHA256SUMS.json") bind the public artifacts.
 
 ## Environment and timing scope
 
-The [search environment receipt](search-environment.json) records one NVIDIA
+The [search environment receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/search-environment.json") records one NVIDIA
 A40, driver 570.211.01, with Python
 3.11.10. Recorded package versions are NumPy 2.2.6, SciPy 1.15.3,
 `batman-package` 2.5.3, PyCUDA 2025.1.2, and `cupy-cuda12x` 13.6.0.
@@ -229,7 +229,7 @@ print('Verified; regenerated analysis:', scratch / 'analysis.json')
 PY
 ```
 
-[reanalysis-validation.json](reanalysis-validation.json) records a successful
+[reanalysis-validation.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/reanalysis-validation.json") records a successful
 CPU replay with Python 3.9.6, NumPy 1.26.4 and SciPy 1.12.0. All counts,
 strings, flags and hashes match exactly; the largest floating-point
 difference is below `7e-18`.
@@ -256,10 +256,10 @@ different numerical stack may also change model values. Keep the newly
 generated inputs, manifest, thresholds and results together.
 
 For searches, use a Linux CUDA host with the recorded Python 3.11 search
-packages. The earlier [search dependency pins](../../tls_sensitivity_2026-09-09/requirements-search.txt)
+packages. The earlier [search dependency pins](../../../../docs/BENCHMARK_ARCHIVES.md#tls_sensitivity_2026-09-09 "Archived file: benchmarks/results/tls_sensitivity_2026-09-09/requirements-search.txt")
 provide the compatible stack. Install cuvarbase from a checkout of
 `11317fb0ff1b68af05ae3f67de5f298c9a90e46b` and GTLS from the frozen
-[source archive](../../tls_profile_2026-09-08/sources/gtls-head.tar).
+[source archive](../../../../docs/BENCHMARK_ARCHIVES.md#tls_profile_2026-09-08 "Archived file: benchmarks/results/tls_profile_2026-09-08/sources/gtls-head.tar").
 The GTLS source installation may omit `.cu` resources; copy the unmodified
 `src/gputls/*.cu` files into its installed package directory. The runner
 checks 37 cuvarbase and 19 GTLS numerical source files and stops if any

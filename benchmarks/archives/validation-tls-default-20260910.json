@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "id": "validation-tls-default-20260910",
+  "source_commit": "403c75d7425e92b8a3d112672a04177189117a61",
+  "archive": {
+    "key": "benchmark-evidence/20260928/validation-tls-default-20260910.tar.gz",
+    "bucket": "cuvarbase",
+    "bytes": 24276,
+    "sha256": "fbeaff2c7f46f41d7afccb27d62a12799c7ba7c376295b850b2a8cea1932f89e"
+  },
+  "columns": [
+    "path",
+    "bytes",
+    "sha256",
+    "kept_in_git"
+  ],
+  "files": [
+    ["docs/validation/tls-default-20260910/.gitattributes",8,"705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",true],
+    ["docs/validation/tls-default-20260910/README.md",2244,"a104ba160afbad55f55db35ccf05bd950247af8c4e356ebf97b2a94fc8df9598",true],
+    ["docs/validation/tls-default-20260910/bls-source-continuity.json",25301,"f5a71d4ab76085f8ddab9fad3b921f64a9a930eb04b99284b19683ebd0fd7adf",false],
+    ["docs/validation/tls-default-20260910/cpu-suite.json",1307,"dd25bfc51b6305693a35a5ad2c6adc152633d336458f6c9e2d3740e40a8a2087",false],
+    ["docs/validation/tls-default-20260910/cpu-suite.log",36554,"70088c1e62d7fd92e7eeac96079e954bf187e0c9d6abb02591f3efd22d77d92b",false],
+    ["docs/validation/tls-default-20260910/distribution.json",1924,"25b5b7ae43d6526d630b7c1ec47e2444fd285f1a5fca72fa6cef1a62fe59bae5",false],
+    ["docs/validation/tls-default-20260910/docs-build.json",501,"5787374b477cb17a9c61b39d307545280d87b75c9dae5d3aefdce35b73db96df",false],
+    ["docs/validation/tls-default-20260910/docs-build.log",8240,"017b53cc29e448926f57606c11876041d6734c99dd80c285f0aff6be60028dd2",false],
+    ["docs/validation/tls-default-20260910/docs-warnings.log",3548,"65ffe55c1731ac952633bebaac604961886f63328ce5568a2435b4897e329895",false],
+    ["docs/validation/tls-default-20260910/host-environment.json",532,"945b11966abad283b8e658947b8a1fe3a8e5a0be254e4c2af623032c7d114476",false],
+    ["docs/validation/tls-default-20260910/receipt.json",18900,"0c87955dbc913ba3e2c30d6f210ef97e9a963846f4c89a83c1812fc5108773a2",false],
+    ["docs/validation/tls-default-20260910/tests.log",4037,"375fd3c9f134441854c1a0c0e4369b9cfdf3acaffa4a55181a84d2120d96bed4",false],
+    ["docs/validation/tls-default-20260910/tests.xml",37551,"fe186ff94c4f020dbc12e520ef3ba54577c9ecce133644d4609fec635e6b8847",false],
+    ["docs/validation/tls-default-20260910/wheel-tests.log",179,"af8fa3a4a6e1eef19766efae6324b5a5c181d74e647d58122b45d222f9e4220c",false]
+  ]
+}

@@ -16,7 +16,7 @@ Five panels stay unavailable:
 | GTLS | TESS long gap | Out-of-memory failure in the first measured queue. |
 | GTLS | Varied | Pre-queue power, chi2 and SDE differed for varied long-gap null 0011, and two API calls ran out of memory. The compared selected period agreed. |
 
-[Machine-readable review](failure-review.json) binds these observations to the
+[Machine-readable review](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/failure-review.json") binds these observations to the
 original receipt hashes. The TLS varied-case SDE changes were approximately
 `+4.29e-6` and `-2.38e-6`; the GTLS varied-case change was approximately `+0.0531`.
 No tolerance was widened, failure replaced, or scientific experiment repeated.
@@ -36,7 +36,7 @@ subsequently passed all 14 numerical/runtime checks and six dependency
 preflights. That fixes validation setup and does not alter any timing outcome.
 
 The figure's horizontal margins were corrected so unavailable labels remain
-inside their panels. [Review provenance](review.json) verifies that all 16 result
+inside their panels. [Review provenance](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/review.json") verifies that all 16 result
 rows and the original exactness evidence stayed unchanged. The original figure
 and report remain preserved locally and in the original immutable R2 bundle.
 

@@ -81,21 +81,21 @@ defines every metric and assumption.
 
 ## Evidence and reproduction
 
-[cases.csv](cases.csv) contains 2,014 rows: 1,824 uniform cases and 190
+[cases.csv](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/accuracy/cases.csv") contains 2,014 rows: 1,824 uniform cases and 190
 observed-cadence rows, including the 13 unsampled ephemerides. Each of the
 59 sampled observed ephemerides has three configuration rows.
-[manifest.json](manifest.json) records versions, parameters, source revision
+[manifest.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/accuracy/manifest.json") records versions, parameters, source revision
 and hashes; its file paths are relative to this directory. Historical source
 snapshots preserve the exact diagnostic, tests, template/grid code and kernel
 used to define the calculation.
 
-[validation.json](validation.json) records 12 passing mathematical tests,
+[validation.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/accuracy/validation.json") records 12 passing mathematical tests,
 projection-bound checks, fitting-boundary checks and numerical convergence.
 Doubling integration resolution and exposure quadrature changes the checked
 SNR quantities by less than **0.0015 percentage points**.
-[convergence.csv](convergence.csv) retains the refined run's comparison
+[convergence.csv](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/accuracy/convergence.csv") retains the refined run's comparison
 columns, matched to the baseline by regime, configuration and offset index.
-All packaged-file hashes are in [SHA256SUMS.json](SHA256SUMS.json).
+All packaged-file hashes are in [SHA256SUMS.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/accuracy/SHA256SUMS.json").
 
 Run from the repository root with NumPy, SciPy and `batman-package` installed:
 

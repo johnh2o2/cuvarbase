@@ -3,8 +3,8 @@
 On the recorded RTX A6000 allocation, cuvarbase's observation-level TLS search
 had **3.6–4.6× lower single-source latency** and **1.5–2.4× better throughput**
 than the fastest eligible tested GTLS pool on 16 distinct noise-only inputs.
-These are warm, complete public API calls. The [figure data](../timing_analysis.json)
-is bound to the separate [reporting assessment](../reporting_acceptance.json).
+These are warm, complete public API calls. The [figure data](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/timing_analysis.json")
+is bound to the separate [reporting assessment](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/reporting_acceptance.json").
 
 | Cadence | Single cuvarbase / GTLS (s) | Single speedup | Batch cuvarbase / GTLS (s/source) | Batch speedup | GTLS batch workers |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -22,7 +22,7 @@ or additional worker multiplier enters the denominator.
 
 The allocation had one **NVIDIA RTX A6000**, **7.65 CPU cores of cgroup quota**
 on an Intel Xeon Gold 6342 host, and one numerical library thread per worker.
-The [hardware receipt](../sources/timing/hardware.json) preserves the actual
+The [hardware receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/sources/timing/hardware.json") preserves the actual
 GPU identity, quota and hourly bundle rate. Startup and full warmup are recorded
 separately. Timed calls include construction, validation, cache creation, full
 search, final fit and completed GPU work. File loading, supplied period-grid
@@ -30,16 +30,16 @@ generation and result hashing are outside the measured interval.
 
 ## A failed configuration remains excluded
 
-The [original full campaign acceptance](acceptance.json) is **failed**. Gapped
+The [original full campaign acceptance](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/timing/acceptance.json") is **failed**. Gapped
 TESS with four GTLS workers ran out of GPU memory during warmup while requesting
 an additional 1,623,613,440-byte array. It completed no measured repetitions.
-Its [complete failure record](public/tess_gap/gtls_graph_4worker/record.json)
+Its [complete failure record](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/timing/public/tess_gap/gtls_graph_4worker/record.json")
 remains present; no elapsed time from this failure enters a speed ratio.
 
 After observing that failure, a separately labeled **post hoc reporting
 assessment** retained only complete comparisons. All 12 planned configurations
 are terminal and accounted for; 11 completed. The original campaign rejection
-and [original normalized output](timing_analysis.json) remain unchanged. The
+and [original normalized output](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/timing/timing_analysis.json") remain unchanged. The
 separate assessment replays the original final audit, requires every other
 original prerequisite, verifies all source/input/ownership receipts, and checks
 complete returned-object stability as well as the original frozen search
@@ -73,7 +73,7 @@ shows that a substantial improvement remains before that work. Stage timings
 are inclusive and can overlap; separately computed medians need not add to the
 median total. Raw records retain the individual repetitions and stage values.
 
-[raw-files.json](raw-files.json) inventories all 43 original timing files.
+[raw-files.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/timing/raw-files.json") inventories all 43 original timing files.
 [Source and CPU replay instructions](../sources/timing/README.md) reproduce the
 reporting assessment from the public evidence without a GPU. Earlier failed
 preflight attempts are retained under

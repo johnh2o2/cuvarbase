@@ -39,5 +39,5 @@ retained output NPZ containers were not collected; their complete numerical
 identities and prior on-host verification survive. The other 63 archives had
 already been removed under the original retention rule. These collection
 losses and the later control outcome do not alter this separately sealed
-24-case gate. [Collection details](collection.json) and
-[execution environment](execution_environment.json) keep those scopes explicit.
+24-case gate. [Collection details](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/supplement/collection.json") and
+[execution environment](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/supplement/execution_environment.json") keep those scopes explicit.

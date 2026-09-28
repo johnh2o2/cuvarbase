@@ -2,7 +2,7 @@
 
 The [current transit benchmark](TRANSIT_BENCHMARKS.md) replaces the older README timing, sensitivity and whole-survey cost claims. This audit explains why those claims were retired; its historical ratios are not current release performance promises.
 
-The audit inspected frozen v1 source `1032caf029570dc4841db1c594a2cbb1654e8fd8`. Original pre-audit wording is recoverable at commit `de0037dd8d2f81cd9296fc02f4ef73478b0b8908`; the [document SHA256 inventory](../benchmarks/results/transit_2026-09-08/claims-before.json) identifies the exact six files. For example:
+The audit inspected frozen v1 source `1032caf029570dc4841db1c594a2cbb1654e8fd8`. Original pre-audit wording is recoverable at commit `de0037dd8d2f81cd9296fc02f4ef73478b0b8908`; the [document SHA256 inventory](BENCHMARK_ARCHIVES.md#transit_2026-09-08 "Archived file: benchmarks/results/transit_2026-09-08/claims-before.json") identifies the exact six files. For example:
 
 ```bash
 git show de0037dd8d2f81cd9296fc02f4ef73478b0b8908:docs/GTLS_COMPARISON.md

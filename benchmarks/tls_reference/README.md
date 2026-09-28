@@ -65,7 +65,7 @@ record the executing source separately. Running the same frozen inputs again
 does not create a new independent study.
 
 The original Linux search environment used Python 3.11 and the dependencies in
-[execution_environment.json](../results/tls_reference_2026-09-10/validation/execution_environment.json).
+[execution_environment.json](../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/validation/execution_environment.json").
 In a fresh Python 3.11 environment with a working CUDA compiler and driver,
 the core installation can be reproduced from the repository root:
 

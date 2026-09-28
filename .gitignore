@@ -50,9 +50,6 @@ coverage.xml
 
 # Runtime logs
 *.log
-# ... but the on-device gate/validation logs cited by the release record
-# are evidence and are tracked
-!benchmarks/results/**/*.log
 
 # Sphinx documentation
 docs/build/
@@ -74,7 +71,6 @@ target/
 *.aux
 *.pdf
 !docs/figures/*.pdf
-!benchmarks/results/**/*.pdf
 
 # misc
 .DS_Store
@@ -82,7 +78,6 @@ work/
 *.png
 # ... except published documentation and benchmark figures
 !docs/**/*.png
-!benchmarks/results/**/*.png
 *.gif
 
 # RunPod configuration (contains credentials)
@@ -93,3 +88,8 @@ work/
 .env.*
 !.env.example
 !.env.sample
+
+# Downloaded benchmark archives and restored validation output
+.benchmark-archives/
+docs/validation/**/*.log
+docs/validation/**/*.xml

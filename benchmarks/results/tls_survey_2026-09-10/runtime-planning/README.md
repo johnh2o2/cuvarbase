@@ -11,17 +11,17 @@ tuned sustained-throughput measurements or detection-performance results.
 | ZTF high impact | 512 | 126.36 / 126.30 s | 16.17 / 17.76 s |
 | ZTF M dwarf | 4 | 197.93 / 198.01 s | 24.51 / 24.79 s |
 
-The [timing snapshot](calibration-timing-checkpoint-20260911T1008Z.json) records
+The [timing snapshot](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/runtime-planning/calibration-timing-checkpoint-20260911T1008Z.json") records
 per-regime counts, sums and descriptive timings, source-receipt identities,
-stage timestamps and spending. The [remaining-work calculation](remaining-envelope-20260911T1009Z.json)
-uses the unchanged [frozen forecast](../runtime-projection-selected-final.json):
+stage timestamps and spending. The [remaining-work calculation](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/runtime-planning/remaining-envelope-20260911T1009Z.json")
+uses the unchanged [frozen forecast](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/runtime-projection-selected-final.json"):
 512 calibration calls minus completed calls, 256 future injection calls and
 256 future independent test-null calls, per regime and selected method.
-In-flight calls remain counted in full. The [independent arithmetic review](root-envelope-review-20260911T1009Z.json)
-recomputes these counts, costs and allowances; [the copy index](index.json)
+In-flight calls remain counted in full. The [independent arithmetic review](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/runtime-planning/root-envelope-review-20260911T1009Z.json")
+recomputes these counts, costs and allowances; [the copy index](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/runtime-planning/index.json")
 identifies the preserved source files by SHA-256.
 
-The [10:22 UTC follow-up](mdwarf-first20-check-20260911T1022Z.json) preserves
+The [10:22 UTC follow-up](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/runtime-planning/mdwarf-first20-check-20260911T1022Z.json") preserves
 the first 20 completed M-dwarf calls per method as 40 timing-only rows. BLS
 averaged 196.78 s against a 198.01 s forecast (−0.62%); TLS averaged 25.01 s
 against 24.79 s (+0.87%). These five waves support leaving the forecast

@@ -227,7 +227,7 @@ estimate (about 4.84 GPU hours / $2.37 at $0.49 per hour), separately from measu
 sustained throughput. Finite paired checks do not establish universal physical
 or numerical equivalence.
 
-The retained [development implementation comparison](../results/tls_survey_2026-09-10/development-promoted-baseline-parity.json)
+The retained [development implementation comparison](../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/development-promoted-baseline-parity.json")
 has 79 exact results out of 80. One HATpi-like case changed its chi2 hash and SDE
 by about 3.34e-6 while retaining its period, valid mask and recovery/alias
 decisions; all 32 cases using the new short-row path matched. This is a recorded

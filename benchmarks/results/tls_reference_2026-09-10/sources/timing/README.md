@@ -88,6 +88,6 @@ python benchmarks/tls_reference/timing/report_completed.py \
 The resulting `timing_analysis.json` must have SHA-256
 `d428e8aadc337678db1112c6a0adf5de1cdcc2c4a7b4fc8283ce1900f607bb1b`.
 The reporting receipt has a fresh timestamp; its checked content is otherwise
-identical. [public-replay-proof.json](public-replay-proof.json) records the
+identical. [public-replay-proof.json](../../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/sources/timing/public-replay-proof.json") records the
 successful replay. To execute new measurements instead, follow the
 [maintained timing workflow](../../../../tls_reference/timing/README.md).

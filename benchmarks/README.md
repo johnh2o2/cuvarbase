@@ -1,5 +1,10 @@
 # Benchmarks and validation
 
+Complete inputs, per-case results, logs and source snapshots are stored in
+[checksum-verified archives](../docs/BENCHMARK_ARCHIVES.md). Restore the relevant
+study before running a reproduction. The reports, selected figures and small
+summary tables below remain available directly in Git.
+
 The [transit benchmark report](../docs/TRANSIT_BENCHMARKS.md) is the source for the README's performance claims. It compares v1 BLS with PyPI 0.2.5 and tested CPU/GPU alternatives, and v1 TLS with public GTLS, on observed TESS and ZTF cadences with synthetic transits and noise.
 
 | Directory | Purpose |

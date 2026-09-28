@@ -2,7 +2,7 @@
 
 The campaign has been collected and the owned GPU rental terminated. 11 of 16 panels have reportable results under their declared contracts.
 
-[Timing report](REPORT.md) · [Completed review and retained failures](REVIEW.md) · [Completion, GPU validation and cost receipt](completion.json).
+[Timing report](REPORT.md) · [Completed review and retained failures](REVIEW.md) · [Completion, GPU validation and cost receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/completion.json").
 
 The original experimental exactness and BLS qualification failures remain unchanged. BLS execution rates do not gain numerical qualification.
 

@@ -2,14 +2,14 @@
 
 The frozen science and timing campaigns are complete, their archives were
 verified locally, and the original rental was terminated. The
-[84-product publication receipt](FINAL_PUBLICATION.json) and
-[source-to-copy inventory](FINAL_ASSEMBLY.json) bind the collected science,
+[84-product publication receipt](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/FINAL_PUBLICATION.json") and
+[source-to-copy inventory](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/FINAL_ASSEMBLY.json") bind the collected science,
 report tables, original failed timing receipts and figures. Execution completion
 does not grant numerical qualification: the experimental TLS candidate matched
 **5,111/5,120** original held-out results, and the frozen zero-mismatch contract
 **failed**. All selected periods, recovery/alias flags and both frozen threshold
 decisions agreed. The nine chi2/SDE differences remain preserved in the
-[exactness report](final-science/exactness-final.json) and
+[exactness report](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-science/exactness-final.json") and
 [mismatch table](final-report/exactness_mismatches.csv). The
 [default-preserving release](release-validation/README.md) is now applied:
 `execution="baseline"` retains the original default, and
@@ -33,21 +33,21 @@ FPRs: [independent test-null rates and intervals](final-report/recovery_fpr.csv)
 remain explicit. No pooled advantage, universal sensitivity claim or
 sub-percentage equivalence follows from this finite experiment.
 
-The [held-out expected-SNR diagnostics](final-science/heldout-snr-final.json)
-cover all 2,560 injections, with [descriptive groups](final-report/snr_descriptive.csv)
-and [sampling/target-SNR recovery](final-report/subgroups.csv). They use common
+The [held-out expected-SNR diagnostics](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-science/heldout-snr-final.json")
+cover all 2,560 injections, with [descriptive groups](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-report/snr_descriptive.csv")
+and [sampling/target-SNR recovery](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-report/subgroups.csv"). They use common
 matched-filter definitions, not package SDE/SNR equivalence. White-noise responses
 are the enumerated template-family ceilings; OU responses evaluate those same
 white-selected filters, not independently OU-optimized maxima. Unsampled and
-few-event signals remain included. The [frozen science seal](seal-final.json)
-and [auxiliary plan](exactness-plan.json) preceded held-out generation, with
+few-event signals remain included. The [frozen science seal](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/seal-final.json")
+and [auxiliary plan](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/exactness-plan.json") preceded held-out generation, with
 **zero operative allowance** for approximation losses in every regime. Native
 GTLS compatibility and this synthetic-flux/cadence coverage do not establish
 canonical CPU TLS equivalence or universal physical coverage.
 
 The [final throughput figure](final-figures/survey-throughput-with-native-bls.png)
-([PDF](final-figures/survey-throughput-with-native-bls.pdf),
-[values/provenance](final-figures/survey-throughput-with-native-bls.data.json))
+([PDF](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.pdf"),
+[values/provenance](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.data.json"))
 shows **seven available and nine unavailable** backend/panel results. Both local
 qualification gates and the unchanged baseline/candidate pairing passed for
 ZTF solar and long-gap TESS. Their median-rate ratios are **1.850×** and
@@ -61,7 +61,7 @@ finite timing cohorts, not global sensitivity preservation. Baseline dense
 TESS failed its post-queue gate, baseline varied failed its pre-queue gate,
 and the candidate varied reference failed before selected-pool measurement.
 Public GTLS gap and varied failed with out-of-memory errors in their first
-queues. The [original final campaign](final-timing/primary/throughput-final/campaign.json)
+queues. The [original final campaign](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-timing/primary/throughput-final/campaign.json")
 and every failed reference/result remain unchanged. The varied-size workload
 therefore has no qualifying throughput result.
 
@@ -69,29 +69,29 @@ Native BLS has no qualifying original timing setting. The separate execution
 supplement also produced **no rates**: its launcher set four CPU-thread variables
 but omitted `VECLIB_MAXIMUM_THREADS` and `NUMEXPR_NUM_THREADS`. The frozen runner
 rejected their recorded unset values before creating workers. All
-[three development pilot receipts](final-timing/native-bls/tune/campaign.json)
+[three development pilot receipts](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-timing/native-bls/tune/campaign.json")
 retain that allocation-precheck failure; the
-[measurement campaign](final-timing/native-bls/measure/campaign.json) contains
+[measurement campaign](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-timing/native-bls/measure/campaign.json") contains
 four explicitly unavailable panels. This launcher/validation integration failure
 is separate from BLS's earlier numerical-repeatability failure. The
-[launch audit](final-timing/reporting/native-bls-launch-audit.json) pins the actual
+[launch audit](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-timing/reporting/native-bls-launch-audit.json") pins the actual
 launcher source and all failed pilot receipts. No replacement
 trial, passing tolerance or BLS speed bar was fabricated. The requested complete
 native BLS and varied-queue throughput comparisons remain unfulfilled.
 
-[Primary collection](collection/primary-collection-state.json) and
-[supplement collection](collection/supplement-collection-state.json) both verified
+[Primary collection](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/collection/primary-collection-state.json") and
+[supplement collection](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/collection/supplement-collection-state.json") both verified
 all archived bytes; the supplement handed control back before original teardown.
-The [closed original ledger](collection/original-rental-closed-ledger.json)
+The [closed original ledger](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/collection/original-rental-closed-ledger.json")
 retains the original compute estimate of **$20.9600**. The
-[final ledger](collection/final-ledger.json), including release validation and
+[final ledger](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/collection/final-ledger.json"), including release validation and
 elapsed container storage, records **$71.85225 cumulative estimated spend** and
 **$73.75634 conservatively including reserves**, within the existing **$100
 total**, not a new allowance. The conservative total retains the full $1.50
 uncertainty reserve for the rejected rental request; this is not an observed
 charge. These are estimates, not invoices. Both actual rentals are verified
 absent and all owned controls are closed. Bulk arrays and journals remain in the
-verified archives identified by [FINAL_ASSEMBLY.json](FINAL_ASSEMBLY.json) and the
+verified archives identified by [FINAL_ASSEMBLY.json](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/FINAL_ASSEMBLY.json") and the
 [release collection](release-validation/README.md#full-outputs-and-reproduction).
 
 ## Final requirements and remaining work
@@ -115,7 +115,7 @@ checkpoints; the collected results and remaining limitations above are current.
 Separately, [old-study storage reclamation](../../../docs/STUDY_STORAGE.md)
 reduced the retained file footprint by **39.62 GB**: 26.15 GB of archive-backed
 NPZ copies, followed by 13.47 GB from exact compression of 489 retained tar
-archives. The [independent postcheck](storage-archive-compression/summary.json)
+archives. The [independent postcheck](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/storage-archive-compression/summary.json")
 passed; restoration starts with the shared archive kit, then the unchanged NPZ
 kits. No active survey data was removed.
 
@@ -123,9 +123,9 @@ The [scientific protocol](../../tls_survey/README.md) declares the populations,
 development tuning, independent calibration, recovery endpoints, uncertainty,
 and approximation limits. The [throughput protocol](../../tls_survey/THROUGHPUT_PROTOCOL.md)
 declares separate operating-configuration tuning and long-queue measurements.
-Their [scientific seal](seal-final.json), [auxiliary plan](exactness-plan.json),
-and [interpretation](seal-final-interpretation-v2.json) were reviewed before any
-final input generation. The [launch review](root-final-launch-review.json)
+Their [scientific seal](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/seal-final.json"), [auxiliary plan](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/exactness-plan.json"),
+and [interpretation](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/seal-final-interpretation-v2.json") were reviewed before any
+final input generation. The [launch review](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/root-final-launch-review.json")
 verifies all 15 scientific sources, 82 candidate package files and 79 immutable
 baseline package files. Launching this experiment does not qualify its results.
 
@@ -140,7 +140,7 @@ resolution breaking ties; speed did not select the control.
 The detached workflow started on **2026-09-11 at 02:56 UTC**, initially tuning
 each competitor's batch size and concurrency. Its collection controllers must
 verify the final evidence before provider termination. The
-[selected-configuration projection](runtime-projection-selected-final.json)
+[selected-configuration projection](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/runtime-projection-selected-final.json")
 estimates 28.02 hours for the science searches and 4.84 hours for the additional
 baseline comparisons; throughput tuning and measurement have separate planning allowances.
 These are planning estimates, not measured final throughput or guaranteed
@@ -167,7 +167,7 @@ checkpoint, the remaining planning envelope left 11.38 hours before the study
 guard for reporting, archives, transfers and overruns; four M-dwarf calls per
 method do not establish a runtime bound.
 
-[Development throughput tuning](throughput-tuning-final.json) completed at
+[Development throughput tuning](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/throughput-tuning-final.json") completed at
 **2026-09-11 04:06 UTC**, with 12 of 16 attempted configurations eligible.
 The frozen selections are baseline four workers/batch eight, candidate four
 workers/batch four, and public GTLS two workers/batch one. All five eligible
@@ -229,8 +229,8 @@ introduced. Failed API calls consume elapsed time and reduce successful
 throughput. The original repeatability failure remains explicit beside any
 supplementary execution rates. Additional per-attempt journaling overhead is
 included. The supplementary GPU envelope is capped at one hour ($0.49), inside
-the existing study guard. Its [prospective seal](bls-execution-supplement/seal-v2.json)
-and [launch review](bls-execution-supplement/root-launch-review-v2.json) were
+the existing study guard. Its [prospective seal](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/bls-execution-supplement/seal-v2.json")
+and [launch review](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/bls-execution-supplement/root-launch-review-v2.json") were
 completed before arming a waiting sidecar at **2026-09-11 05:05 UTC**. No
 supplementary GPU work has started. The original collector is paused; after
 primary completion, the sidecar must finish its bounded attempt and verify all
@@ -238,10 +238,10 @@ supplementary evidence locally before resuming that collector for primary
 verification and provider teardown. The independent budget guard remains active.
 
 The integrated checks passed **186 survey tests** and **70 operations tests**;
-the [receipt](bls-execution-supplement/host-test-receipt-v2.json) retains commands,
+the [receipt](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/bls-execution-supplement/host-test-receipt-v2.json") retains commands,
 source identities and complete logs. A synthetic figure was rendered and
 visually checked; its values are not measurement results. An
-[unlaunched first plan](bls-execution-supplement/rejected-prospective-v1/rejection.json)
+[unlaunched first plan](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/bls-execution-supplement/rejected-prospective-v1/rejection.json")
 was rejected because its heartbeat files could race primary archive collection.
 The reviewed replacement keeps every mutable supplementary file outside the
 primary archive's input trees. All original scientific and timing definitions
@@ -255,28 +255,28 @@ frozen launch runbooks retain their historical prospective wording.
 
 ## Available evidence
 
-- [Host profile](host-profile.json): isolated candidate-ranking and duration-group
+- [Host profile](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/host-profile.json"): isolated candidate-ranking and duration-group
   allocation measurements. These are CPU component measurements, not GPU
   end-to-end speedups.
-- [Authorization](authorization.json): the user's updated **$100 cumulative**
+- [Authorization](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/authorization.json"): the user's updated **$100 cumulative**
   ceiling and the preceding ledger's **$50.258718277017** estimated expenditure.
   This is not an additional $100 allowance. Rental estimates are not invoices.
-- [Development grid audit](development-grid-audit.json): the rejected original
+- [Development grid audit](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/development-grid-audit.json"): the rejected original
   coarse-grid design. The final development policy increases period resolution
   for high-impact, eccentric, grazing and HATpi-like strata before held-out
   generation. The failure remains part of the evidence.
-- [BLS response diagnostic](bls-response-final.json): all four search resolutions
+- [BLS response diagnostic](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/bls-response-final.json"): all four search resolutions
   evaluated at the known injected period on the original 80 development inputs,
   with reconstructed box responses and common white/OU expected-SNR definitions.
   Unsupported settings remain recorded. This diagnoses discretization; it is
   separate from the blind-search comparison and configuration selection.
-- [Expected-SNR diagnostic](development-snr-final.json) and
-  [physical boundaries](boundaries-final.json): the final cloud development
+- [Expected-SNR diagnostic](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/development-snr-final.json") and
+  [physical boundaries](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/boundaries-final.json"): the final cloud development
   cohort, identified by manifest `a1d18d6c…`. The first compares ideal-box and
   native-template filter responses on common inputs; the second checks exposure
   integration and joint physical extremes. Annual-period boundary examples are
   known-transit diagnostics, not annual-period blind recovery.
-- [Development cohort provenance](development-cohort-provenance.json): the older
+- [Development cohort provenance](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/development-cohort-provenance.json"): the older
   local manifest `546f8319…` has identical times, bands and exposures, but small
   floating-point differences in periods, physical signals, fluxes and errors.
   Its original diagnostics and inputs remain separate dated evidence.
@@ -290,13 +290,13 @@ frozen launch runbooks retain their historical prospective wording.
   substantial, while the actual gate and ranking causes are unresolved.
   This analysis was added after freezing without changing the experiment.
   Its compact artifacts and input hashes are included; the original NPZs
-  remain outside git. [Integration verification](grazing-development-diagnosis/integration.json)
+  remain outside git. [Integration verification](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/grazing-development-diagnosis/integration.json")
   checks every original artifact and all 115 sealed local files.
   The [diagnostic figure](grazing-development-diagnosis/figure/grazing-depths.png)
   separates physical depths from the window means used by the gate; its
-  [PDF](grazing-development-diagnosis/figure/grazing-depths.pdf),
-  [SVG](grazing-development-diagnosis/figure/grazing-depths.svg), and
-  [source/data receipt](grazing-development-diagnosis/figure/grazing-depths.receipt.json)
+  [PDF](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/grazing-development-diagnosis/figure/grazing-depths.pdf"),
+  [SVG](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/grazing-development-diagnosis/figure/grazing-depths.svg"), and
+  [source/data receipt](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/grazing-development-diagnosis/figure/grazing-depths.receipt.json")
   preserve the same development-only scope. This figure does not replace
   the pending sustained-throughput figure.
 
@@ -321,29 +321,29 @@ evidence of sustained production throughput.
 The final numerical code passed **342 TLS GPU tests**. The host suite passed
 **762 tests**, with 18 skips and one expected failure. The preceding two host
 failures exposed the missing declaration of the newly packaged kernel in the
-inventory test; both the [failed run](host-tests-final.log) and
-[corrected run](host-tests-final-inventory-fixed.log) are retained.
+inventory test; both the [failed run](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/host-tests-final.log") and
+[corrected run](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/host-tests-final-inventory-fixed.log") are retained.
 The scientific and reporting harness passed **130 CPU tests** after the final
-launch integration fixes. The [test receipt](survey-host-tests-integration-final.json)
+launch integration fixes. The [test receipt](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/survey-host-tests-integration-final.json")
 identifies the tested Python sources and the
-[complete log](survey-host-tests-integration-final.log). A separate
-[operations suite](ops-host-tests-integration-final.json) passed **45 tests**,
+[complete log](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/survey-host-tests-integration-final.log"). A separate
+[operations suite](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/ops-host-tests-integration-final.json") passed **45 tests**,
 covering orchestration, archive collection and the guarded development probe.
-The [integration review](integration-review-final.json) records the corrected
+The [integration review](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/integration-review-final.json") records the corrected
 output paths, design identities, report/figure artifact checks and timing-source
 checks. These are harness checks; they do not supply missing science results.
-A later [wording clarification](target-snr-label-20260911.json), checked with
+A later [wording clarification](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/target-snr-label-20260911.json"), checked with
 the 19 renderer tests, distinguishes assigned target SNR from realized SNR.
 Unsampled injections can realize zero and remain in their original target
 groups; the grouping rules and scientific calculations are unchanged.
 
-The [final development baseline comparison](development-promoted-baseline-parity.json)
+The [final development baseline comparison](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/development-promoted-baseline-parity.json")
 matched **79/80** complete stored TLS fingerprints. All 32 cases using the new
 short-row scan matched. HATpi development case 0001, which uses the long-row
 fallback, changed its chi-squared hash and SDE by about −0.00000334; its selected
 period, finite mask and period-recovery flag matched. This is a retained
 numerical discrepancy, not aggregate bitwise qualification. Its cause is not
-assigned from the fallback status alone. A [separate repeat diagnostic](hatpi-repeat-diagnostic-summary.json)
+assigned from the fallback status alone. A [separate repeat diagnostic](../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/hatpi-repeat-diagnostic-summary.json")
 completed 24 calls: eight baseline calls in single-worker processes, eight
 candidate calls in single-worker processes and eight candidate calls with four
 workers. All matched the original baseline, including complete public and

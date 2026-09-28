@@ -1,6 +1,6 @@
 This experiment compares transit-search speed together with recovery on shared inputs. It is designed for a practical cuvarbase upgrade decision, with TESS QLP and sparse ZTF workloads. It does not estimate the completeness of either survey's planet catalog.
 
-Frozen before inspecting held-out search results, 2026-09-08. The generated held-out inputs are already hashed in [inputs/manifest.json](inputs/manifest.json). Pilot cases and tuning cases may be used to correct the harness and choose settings. Any later change to this protocol must be recorded explicitly.
+Frozen before inspecting held-out search results, 2026-09-08. The generated held-out inputs are already hashed in [inputs/manifest.json](../../../docs/BENCHMARK_ARCHIVES.md#transit_2026-09-08 "Archived file: benchmarks/results/transit_2026-09-08/inputs/manifest.json"). Pilot cases and tuning cases may be used to correct the harness and choose settings. Any later change to this protocol must be recorded explicitly.
 
 Three observing patterns:
 

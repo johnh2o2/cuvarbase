@@ -73,7 +73,7 @@ comparison and numerical-output digest survived. Of 75 retained NPZ output
 archives, 66 were recovered and independently checked; nine were not collected.
 Those nine are disclosed collection losses, not predeclared pruning.
 The separate 405 matching output archives had already been removed under the
-original retention rule. [Collection details](collection.json) preserve the
+original retention rule. [Collection details](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/validation/collection.json") preserve the
 original acceptance hash, recovery evidence and missing-container identities.
 
 Restore the exact inputs and replay the comparison with the

@@ -1,5 +1,14 @@
 # Release preparation: 1.0.1
 
+The owner authorized externalizing benchmark evidence and cleaning development
+history on 28 September 2026. Complete originals and all pre-cleanup refs are
+preserved in [verified archives](BENCHMARK_ARCHIVES.md). The cleaned branches
+and the unpublished `v1.0.1` release tag have new commit identities; the original
+prepared package files and build inputs remain byte-identical. Original source
+IDs in validation receipts refer to the preserved pre-cleanup Git bundle.
+Published release tags, `v1.0.0` and `master` are preserved. This source cleanup
+does not publish a release or change any numerical qualification.
+
 The reviewed candidate is prepared as **1.0.1**. The completed work on
 `v1.0-fixes` is integrated with `master` on **`release/v1.0.1`**, the source
 branch for the release pull request. The owner authorized pushing these source

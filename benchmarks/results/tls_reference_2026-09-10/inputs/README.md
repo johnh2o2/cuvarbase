@@ -15,7 +15,7 @@ the Python standard library are sufficient.
 
 `bank.json` identifies the lossless array archive, each unique dtype/shape/byte
 identity, and every unchanged original manifest under `manifests/`. The
-[restoration proof](../sources/input_restoration_proof.json) independently
+[restoration proof](../../../../docs/BENCHMARK_ARCHIVES.md#tls_reference_2026-09-10 "Archived file: benchmarks/results/tls_reference_2026-09-10/sources/input_restoration_proof.json") independently
 checked all 209 cases and all 1,463 numerical arrays against their original
 files. All arrays and metadata match. The two stronger controls have different
 NPZ container encodings after restoration; both container hashes are recorded.

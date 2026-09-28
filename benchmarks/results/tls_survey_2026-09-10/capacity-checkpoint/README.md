@@ -3,8 +3,8 @@
 The checkpoint was **secured locally at 06:57:26 UTC**. Its complete input
 backup contains all **10,240 frozen cases** across calibration, injections and
 test nulls: **71,680 array uses and 30,714 unique arrays**, verified using the
-unchanged, captured [exporter](helpers/inputs.py). The [promotion receipt](actual/bank-promotion.json)
-binds the published archive and local bank to the [numerical verification](actual/local-verification.json).
+unchanged, captured [exporter](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/helpers/inputs.py"). The [promotion receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/bank-promotion.json")
+binds the published archive and local bank to the [numerical verification](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/local-verification.json").
 This is an actual checkpoint record, separate from the unchanged
 [prospective workflow](plans/CHECKPOINT_BANK_WORKFLOW.md).
 
@@ -15,7 +15,7 @@ This is an actual checkpoint record, separate from the unchanged
 | Test nulls | 2,560 | 3,360 valid | Four running shards; partial |
 
 Stage1 captured individual files at approximately **06:36:13 UTC**, with no
-claim of a simultaneous snapshot across shards. Its [local receipt](actual/stage1-local-verification.json)
+claim of a simultaneous snapshot across shards. Its [local receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/stage1-local-verification.json")
 binds the eight completed calibration/injection shards and thresholds to the
 earlier completion audits. The original raw null-completion audit remains
 required after all null searches finish. This checkpoint does **not** establish
@@ -33,7 +33,7 @@ compressed NPZ bytes. No signals or inputs were regenerated here.
 
 The export ran once with one CPU thread at nice 19, overlapping the ongoing
 science search, and completed in **234.565 s** with exit 0 and unchanged source
-pins. The [raw launch/execution receipts](actual/provenance/bank-export-execution.json)
+pins. The [raw launch/execution receipts](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/provenance/bank-export-execution.json")
 are retained without alteration. The export wrapper used its exact Popen handle
 and `wait()`; it did not record /proc start ticks.
 
@@ -41,9 +41,9 @@ Packaging used an actual **180 s** command limit and completed in **5.575 s**;
 the prospective workflow's 600 s limit was not used. Transfer took **47.737 s**;
 local archive/exact-array verification took **6.728 s**. These elapsed times
 include their recorded command boundaries and are checkpoint operations, not
-search-throughput benchmarks. The [package execution](actual/bank-package-execution.json),
-[transfer](actual/bank-transfer.json), [local execution](actual/bank-local-verification-execution.json)
-and [promotion](actual/bank-promotion.json) retain the actual commands. Root
+search-throughput benchmarks. The [package execution](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/bank-package-execution.json"),
+[transfer](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/bank-transfer.json"), [local execution](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/bank-local-verification-execution.json")
+and [promotion](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/bank-promotion.json") retain the actual commands. Root
 promoted the verified tar from its `.partial` download name; the original local
 verification receipt still correctly records the earlier transport path.
 
@@ -65,22 +65,22 @@ assembling this compact directory did not re-read the large numerical files.
 
 ## Scope of these compact copies
 
-[INVENTORY.json](INVENTORY.json) records each selected original small file's
+[INVENTORY.json](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/INVENTORY.json") records each selected original small file's
 source path, destination, byte count and SHA256. It includes the reviewed designs,
 helpers, prospective commands, original raw export receipts, actual operations,
 and synthetic checks. Full archives, arrays ZIPs, large input manifests and
 search-result shards are intentionally kept at the verified external locations.
 Their original membership and hashes are in the retained
-[Stage1 receipt](actual/provenance/stage1-receipt.json) and
-[bank package inventory](actual/checkpoint.json).
+[Stage1 receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/provenance/stage1-receipt.json") and
+[bank package inventory](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/actual/checkpoint.json").
 
 Validation history is retained as history. The Stage1 helper's initial small
-check preceded capture, but the retained [synthetic driver and repeat receipt](validation/checkpoint-stage1-synthetic-repeat-receipt-v1.json)
+check preceded capture, but the retained [synthetic driver and repeat receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/validation/checkpoint-stage1-synthetic-repeat-receipt-v1.json")
 were created **after the actual Stage1 capture**; they do not backdate the earlier
 inline check. Both bank test iterations remain unchanged; the retained bank
 driver corresponds to the final v2 receipt. An independent reviewer incorrectly
 reported a JSON newline defect, then retracted it after checking character values.
-The [correction](validation/checkpoint-bank-review-correction-v1.json) is retained;
+The [correction](../../../../docs/BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/capacity-checkpoint/validation/checkpoint-bank-review-correction-v1.json") is retained;
 ordinary strict JSON parsing was used throughout, with no normalization exception.
 No new tests, remote operations or scientific changes were performed to assemble
 this documentation directory.
