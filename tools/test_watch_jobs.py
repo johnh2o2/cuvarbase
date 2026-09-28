@@ -166,7 +166,10 @@ def test_review_cannot_silence_an_unverified_backup(tmp_path, monkeypatch):
         watch_jobs.main()
 
 
-def test_guard_and_collector_restart_without_resetting_rental(tmp_path):
+def test_guard_and_collector_restart_without_resetting_rental(tmp_path, monkeypatch):
+    # Process identity must survive a narrow ps display without restarting
+    # a healthy collector alongside the deliberately stopped guard.
+    monkeypatch.setenv('COLUMNS', '40')
     ops = tmp_path/'ops'
     ops.mkdir()
     script = '''from pathlib import Path

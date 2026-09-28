@@ -10,7 +10,10 @@ The existing `v1.0.0` tag retains June commit `5553248`; it is not moved or repl
 The merge of `master` retains its normalization fixes, which were already in
 the reviewed implementation. Its complete tree matches the prepared candidate
 at `fcfee0e`; four normalization regression tests also pass. Subsequent handoff
-documentation updates do not change the prepared package or its build inputs.
+documentation and monitoring portability fixes do not change the prepared
+package or its build inputs. Initial Linux CI exposed truncated `ps` output in
+service detection; requesting the complete command line fixes that operational
+failure, with the recovery test checking a narrow display width explicitly.
 
 [Release notes](RELEASE_NOTES_v1.0.1.md) ·
 [Benchmark and retained qualifications](TRANSIT_BENCHMARKS.md) ·

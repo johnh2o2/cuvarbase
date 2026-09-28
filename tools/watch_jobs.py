@@ -111,7 +111,10 @@ def module(path, name):
 def service_alive(pid, script):
     if not isinstance(pid, int) or pid <= 0:
         return False
-    value = subprocess.run(['/bin/ps', '-p', str(pid), '-o', 'command='],
+    # Linux ps can truncate a captured command to the terminal width, hiding
+    # the script path and making a live service appear absent. Two -w flags
+    # request the full command on both Linux and macOS.
+    value = subprocess.run(['/bin/ps', '-ww', '-p', str(pid), '-o', 'command='],
                            capture_output=True, text=True, timeout=5)
     return value.returncode == 0 and str(script) in shlex.split(value.stdout.strip())
 
