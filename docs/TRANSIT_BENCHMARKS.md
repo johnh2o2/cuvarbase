@@ -1,69 +1,149 @@
-# Transit-search speed and recovery
+# Transit-search recovery and throughput
 
-cuvarbase v1 accelerates transit searches by reusing computation and reducing GPU memory traffic. BLS batches are **1.8–4.3× faster than PyPI 0.2.5** on these workloads. Standard TLS now evaluates individual observations, with GTLS's transit templates and complete refinement; it has no phase-bin cap or separate thin-transit preset.
+The completed science report finds a TLS detection advantage in four TESS populations, a severe grazing/smearing vulnerability and a failed aggregate implementation-exactness gate. This is the native GTLS-compatible observation-level search, not a reproduction of canonical CPU TLS. The release retains baseline execution by default and requires an experimental selector for the measured optimization bundle. [Numerical contract](TLS_NUMERICS.md) · [GTLS/CPU differences](GTLS_COMPARISON.md) · [Published evidence](TLS_LITERATURE.md).
 
-![BLS and TLS execution times](figures/transit_benchmarks_20260910.png)
+[Collected recovery report](../benchmarks/results/tls_survey_2026-09-10/final-report/RECOVERY.md) · [report provenance](../benchmarks/results/tls_survey_2026-09-10/final-report/provenance.json) · [held-out expected-SNR receipt](../benchmarks/results/tls_survey_2026-09-10/final-science/heldout-snr-final.json) · [original exactness receipt](../benchmarks/results/tls_survey_2026-09-10/final-science/exactness-final.json). The completed collection preserves the reviewed detection, expected-response and original mismatch receipts unchanged. **Sustained timing, release validation, collection and rental teardown are complete; failed timing panels remain unavailable.** Earlier September 8–10 speed figures retain their historical source/workload scopes and do not supply missing bars or denominators for the new sustained study.
 
-[PDF](figures/transit_benchmarks_20260910.pdf) · [SVG](figures/transit_benchmarks_20260910.svg) · [BLS evidence](../benchmarks/results/transit_2026-09-08/README.md) · [Current TLS evidence](../benchmarks/results/tls_reference_2026-09-10/README.md)
+The [September 24 follow-up](../benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/REPORT.md) is complete, with 11 of 16 reportable timing panels. Native BLS execution retains its numerical discrepancies; the TLS/GTLS panels use their original strict gates. Five panels remain unavailable after repeatability or memory failures. The expanded GPU suite passed 2,091 tests with one expected failure and zero skips. A separate gate initially failed because its launcher could not import the package; the [September 27 installed-wheel check](../benchmarks/results/tls_survey_2026-09-10/release-gate-20260927/README.md) passed all 14 additional checks and six dependency preflights. Both rentals were terminated after verified collection, and their evidence passed R2 checksum read-back. The original study and its failed qualifications remain unchanged.
 
-**TLS is 3.6–4.6× faster for one lightcurve and 1.5–2.4× faster per lightcurve in 16-source batches** than the qualifying GTLS comparisons. All times below are median seconds per lightcurve, including each API's normal output work.
+## Blind recovery by regime
 
-| Cadence | Single v1 / GTLS | Single speedup | Batch v1 / GTLS | Batch speedup | GTLS batch workers |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| TESS: dense sector | 0.149 / 0.533 s | 3.58× | 0.161 / 0.319 s | 1.98× | 4 |
-| TESS: separated sectors | 1.554 / 6.037 s | 3.88× | 1.534 / 3.684 s | 2.40× | 2 |
-| ZTF g/r | 3.231 / 14.899 s | 4.61× | 3.116 / 4.545 s | 1.46× | 4 |
+Each regime contains 256 injections, 256 independent test nulls and 512 independently generated calibration nulls. TLS and BLS share the same paired input banks and full period arrays. BLS duration/epoch settings and its ranking statistic were selected on development data before the seal; the comparison uses the strongest development-selected control, not an ideal-box oracle. No threshold or detector setting was retuned on held-out outcomes.
 
-The original campaign **failed its all-configurations gate** because four-worker GTLS exhausted GPU memory during the separated-TESS warmup, before any measured repetitions. This report uses a separate, explicitly **post hoc assessment of the 11 completed configurations**, retaining the original numerical checks and fastest-eligible-pool rule. The original failure is preserved; failed or incomplete calls never supply a speed denominator. [Original gate](../benchmarks/results/tls_reference_2026-09-10/timing/acceptance.json) · [Reporting assessment](../benchmarks/results/tls_reference_2026-09-10/reporting_acceptance.json).
+A detection requires strict threshold exceedance and a selected-period drift across the baseline no larger than half the physical contact duration. Aliases are separately descriptive. Unsampled/few-event signals remain in the denominator; all planned TLS/BLS injection and test-null executions completed validly.
 
-The hollow markers give single-lightcurve latency. Filled markers give the elapsed time for 16 sources divided by 16. TLS compares one cuvarbase worker with the fastest tested GTLS pool that preserves its frozen search outputs; the archive retains every tested pool. TLS times include each API's normal output work; separate measurements below end at final search-window selection, before GTLS's extra diagnostics. Ratios compare median elapsed times within an algorithm family. BLS and TLS use their respective recorded period domains; the figure does not rank them at identical sensitivity.
+Both tables show the original rates and simultaneous paired TLS-minus-BLS intervals in percentage points. The predeclared Bonferroni family covers 40 recovery/FPR contrasts across ten regimes and two operating points (at least 95% simultaneous coverage). These are not pooled rates or newly calculated intervals.
 
-## Sensitivity and thin transits
+### 5% calibrated target
 
-The new TLS comparison tests an implementation of GTLS's observation-level numerical search. It checks complete residual and power spectra, masks, candidate/harmonic ranks, refinements and final selections. Exact differential agreement uses GTLS with a disclosed host-mask correction; untouched GTLS outcomes are retained separately. Equal scalar SDE alone would not establish this agreement.
+| Regime | TLS recovery | BLS recovery | TLS − BLS, pp [simultaneous interval] |
+| --- | ---: | ---: | ---: |
+| TESS solar | 73/256 (28.52%) | 40/256 (15.62%) | +12.89 [+1.37, +23.50] |
+| TESS high impact | 128/256 (50.00%) | 53/256 (20.70%) | +29.30 [+17.05, +39.77] |
+| TESS eccentric | 83/256 (32.42%) | 28/256 (10.94%) | +21.48 [+9.34, +32.15] |
+| TESS M dwarf | 154/256 (60.16%) | 60/256 (23.44%) | +36.72 [+23.67, +47.52] |
+| ZTF solar | 183/256 (71.48%) | 197/256 (76.95%) | -5.47 [-13.55, +3.03] |
+| ZTF high impact | 147/256 (57.42%) | 159/256 (62.11%) | -4.69 [-15.71, +6.67] |
+| ZTF M dwarf | 103/256 (40.23%) | 124/256 (48.44%) | -8.20 [-20.98, +5.14] |
+| TESS long gap | 40/256 (15.62%) | 59/256 (23.05%) | -7.42 [-16.50, +2.21] |
+| TESS grazing/smeared | 1/256 (0.39%) | 109/256 (42.58%) | -42.19 [-53.06, -28.72] |
+| Synthetic HATpi short | 3/256 (1.17%) | 0/256 (0.00%) | +1.17 [-3.05, +5.55] |
 
-**All 160 main independent cases and all 24 separately sealed supplementary nulls match corrected GTLS numerically**, with no API failures. Untouched GTLS is also exactly equal in 151 of the 160 main cases and all 24 supplementary cases; the nine mask-defect differences leave the selected period, injected-signal recovery and the SDE > 8 decisions unchanged. Together, the 96 injection outcomes and 88 null decisions agree with both native variants at that threshold. The supplementary population remains separately reported; it does not enlarge the main study after the fact. The archive retains every comparison and the separately recorded native correction.
+### 1% calibrated target
 
-A fixed SDE of 8 is **not** a calibrated survey false-alarm threshold: all eight ordinary-ZTF nulls and four of eight separated-TESS nulls exceed it, versus none of the dense-TESS nulls. Numerical equivalence establishes agreement between the engines on these inputs; it does not make this threshold appropriate for every cadence. The per-regime outcome tables are in the [validation evidence](../benchmarks/results/tls_reference_2026-09-10/validation/README.md).
+| Regime | TLS recovery | BLS recovery | TLS − BLS, pp [simultaneous interval] |
+| --- | ---: | ---: | ---: |
+| TESS solar | 53/256 (20.70%) | 19/256 (7.42%) | +13.28 [+1.67, +23.95] |
+| TESS high impact | 112/256 (43.75%) | 33/256 (12.89%) | +30.86 [+18.42, +41.43] |
+| TESS eccentric | 73/256 (28.52%) | 6/256 (2.34%) | +26.17 [+13.30, +37.26] |
+| TESS M dwarf | 144/256 (56.25%) | 37/256 (14.45%) | +41.80 [+28.35, +52.67] |
+| ZTF solar | 176/256 (68.75%) | 192/256 (75.00%) | -6.25 [-14.10, +2.07] |
+| ZTF high impact | 131/256 (51.17%) | 156/256 (60.94%) | -9.77 [-20.76, +1.92] |
+| ZTF M dwarf | 98/256 (38.28%) | 122/256 (47.66%) | -9.38 [-22.35, +4.24] |
+| TESS long gap | 23/256 (8.98%) | 47/256 (18.36%) | -9.38 [-18.52, +0.46] |
+| TESS grazing/smeared | 0/256 (0.00%) | 97/256 (37.89%) | -37.89 [-48.72, -24.74] |
+| Synthetic HATpi short | 0/256 (0.00%) | 0/256 (0.00%) | +0.00 [-3.10, +3.10] |
 
-The independent population contains 96 injected transits and 64 noise-only curves across eight regimes: ordinary, high-impact, eccentric and dense-M-dwarf TESS; ordinary, high-impact and dense-M-dwarf ZTF; and separated TESS sectors. Each regime includes three injections at each white-noise oracle SNR of 6, 8, 10 and 12, plus eight nulls. These SNR labels exclude the additional correlated noise and differ from each package's reported statistics. The full-grid searches never insert the injected period. Observed cadences receive exposure-integrated physical transits, heteroscedastic Gaussian noise and correlated residuals. Band offsets are assumed removed; injected transit depths are achromatic. The searches receive time, flux and uncertainty arrays rather than a joint multiband model. Signals must have at least five in-transit observations and two sampled events; these are conditional examples, not random survey draws or injections into real flux. Recovery rates use paired successful searches; the archive lists planned cases and failures alongside them.
+Four TESS gains and the grazing/smearing deficit exclude zero at both targets in those simultaneous intervals. ZTF and long-gap TESS favor BLS in point estimates, but their simultaneous intervals cross zero. More favorable marginal contrasts remain in the full report and do not replace this simultaneous interpretation. Both methods recover very few synthetic-HATpi signals. At assigned target SNR 12, primary grazing recovery is still 0/64 versus 36/64; assigned levels are not realized/package SNR values.
 
-Separate numerical stress tests include grazing transits, phase wrap/ties, large absolute epochs, heteroscedasticity and long periods. At a 365-day period, both a roughly 8-hour solar-host transit and a 1.7-hour M-dwarf transit matched GTLS through complete spectra, refinement and final fitting. The latter has duration/period about **0.000197**. Those two tests use 77,888 observations from repeated TESS campaigns and a selected period grid containing the truth. Both engines refine the true period and admissible widths, but both choose an alias or unrelated period in these noisy fixtures. They establish numerical agreement, not positive recovery or annual-period survey throughput; the stress archive retains those misses.
+## Calibrated targets and realized false positives
 
-The stronger fixed-noise M-dwarf control recovers the annual-period fundamental within the predeclared half-duration drift limit. The stronger solar control selects a one-third-period alias in all three methods. Its original final results match, but one intermediate coarse residual differs; the original strict comparison remains failed. A separate repeated-run diagnostic reproduced that difference by changing only the float32 flux cumulative sums. GTLS itself varies across identical runs, sometimes changing depth gates, masks and final SDE. Both fitting kernels give bitwise-identical scores and winners on identical saved intermediate arrays. All nine repeats select the same alias and final fit; the true annual period is tied for the minimum residual. These are shared numerical and alias limits, not an omitted thin-transit template. The [diagnostic](../benchmarks/results/tls_reference_2026-09-10/stress/diagnostic/README.md) retains the complete evidence.
+The 5% and 1% labels are common calibrated target FPRs, not proven equal realized rates. Each method gets a separate threshold from the same paired calibration bank, independently of development and the test banks. Null noise-scale labels are IID draws from the equal four-level mixture; injection labels are balanced for subgroup precision.
 
-There is no extra phase-binning loss in the default. The shared numerical model still uses GTLS's sample-window/template approximation and a finite search domain. Small validation cohorts cannot measure population completeness to one or two percentage points; neither code can detect an unsampled transit or overcome arbitrary noise.
+With 512 calibration scores, strict exceedance of ascending ranks 488 and 508 gives no-tie marginal bounds 25/513 = 4.8733% and 5/513 = 0.9747%. Ties can only make the strict rule more conservative; this calibration had no additional conservatism at the selected cuts. The guarantee is marginal over calibration draws under exchangeability, not a guarantee for the conditional FPR of this particular threshold.
 
-For BLS, the September 8 study has 128 calibration nulls, 128 independent injections and 128 test nulls per cadence. The separated-TESS upgrade has the same **89/128** detections as PyPI and supports a recovery loss and false-positive increase below five percentage points under the paired nominal one-sided 95% bounds. It is **2.73× faster in batches**, or **10.18× including a fresh grid**. The other PyPI comparisons remain timing measurements with inconclusive sensitivity bounds. The BLS archive gives the external-competitor qualifications. A [source audit](validation/tls-default-20260910/bls-source-continuity.json) confirms that the measured BLS implementation and its local dependencies are unchanged except for one documentation link; these dated measurements are reused, not rerun.
+Observed test FPRs span 1.56–7.81% at the primary target and 0–2.73% at the secondary target. For grazing/smeared cases at 5%, TLS has 11/256 false positives (4.30%, marginal 95% interval 2.16–7.56%) and BLS 12/256 (4.69%, 2.45–8.04%). All paired simultaneous FPR intervals include zero; their width does not prove equal FPRs. Zero false positives in 256 still has a two-sided 95% upper bound near 1.43%. One outcome changes a regime rate by 0.390625 percentage points, so this study cannot establish 0.1-percentage-point noninferiority.
 
-## Where the speed comes from
+## Comparable expected signal response
 
-**BLS reuses folded phase histograms across phase offsets.** Disabling histogram fusion made diagnostic calls 1.35–1.57× slower. Vectorized host scans and Keplerian-grid construction remove Python loops; grid construction alone was 11–17× faster. Batch APIs amortize allocation and dispatch. These effects overlap and cannot be added. Both releases receive warmed kernels and reusable PyPI memory.
+At the known period, the native cached-template family and an ideal box use the same sampled noiseless signal, inverse-variance weights and fitted constant. White responses are ceilings for the enumerated families under the diagonal-error objective. OU values evaluate those same white-selected filters with the declared correlated-noise covariance; they are not independently OU-optimal maxima. All blind populations include heterogeneous errors and the OU component, so these white columns are not a separate white-noise recovery trial. These ratios are neither package SNR/SDE nor the selected blind BLS output.
 
-**TLS retains observations and removes repeated work.** Fused kernels reuse residual calculations and reduce winning trials on the GPU instead of storing the full duration-by-epoch residual tensor. Reusable CUDA graphs replay native row-wise cumulative sums without thousands of separate Python dispatches. Physical workspaces are bounded while preserving logical duration groups. An ordinary matrix-axis cumulative sum changes floating-point rounding and threshold decisions, so it is not substituted for the native flux scan.
+| Regime | Finite / 256 | White median advantage | OU median advantage |
+| --- | ---: | ---: | ---: |
+| TESS solar | 256/256 | +0.951% | +0.927% |
+| TESS high impact | 256/256 | +0.978% | +0.471% |
+| TESS eccentric | 256/256 | +0.903% | +0.663% |
+| TESS M dwarf | 256/256 | +1.359% | +0.890% |
+| ZTF solar | 254/256 | +0.589% | +0.580% |
+| ZTF high impact | 256/256 | +0.166% | +0.179% |
+| ZTF M dwarf | 256/256 | +0.348% | +0.308% |
+| TESS long gap | 255/256 | +0.953% | +0.445% |
+| TESS grazing/smeared | 256/256 | +0.936% | +0.708% |
+| Synthetic HATpi short | 246/256 | +0.904% | +0.333% |
 
-The separate component measurements use five complete calls per implementation and cadence:
+Medians are descriptive, not confidence intervals. Median white advantages of +0.166% to +1.359% coexist with large blind-recovery gains in four TESS regimes: the actual detection advantage is not inferred to be only about 1%. Conversely, available family response need not be attained by native admission, fitting, candidate competition or ranking.
 
-| Cadence | cuvarbase common search | GTLS common search | Search speedup | GTLS work after search |
+Negative tails matter. Observed minimum white family/box differences reach −51.353% in ZTF high impact, −37.484% in ZTF M dwarfs and −44.885% in long-gap TESS; their OU counterparts are −51.518%, −37.868% and −50.768%. These occur in the primary TLS-missed groups and are observed extrema, not confidence limits or a causal explanation of every miss. All ten regimes contain a negative OU difference. Undefined ratios are excluded only from descriptive ratios, never from recovery denominators.
+
+Grazing/smearing has a +0.936% median white family/box advantage despite only 1/256 primary detections. That ceiling does not quantify the actually admitted/scored filter or prove a specific native-gate mechanism. Ratios to the ideal box alone do not measure either filter's retained fraction of physical-oracle SNR. The eight-case development float64 window analysis did not reproduce actual GPU prefix/gate decisions; no held-out gate tracing was performed.
+
+## Exactness, approximation policy and coverage
+
+The operative approximation allowances were frozen at **zero**. Original baseline/candidate comparisons give **5,111/5,120 exact pairs and nine chi2/SDE mismatches**, with no changed selected period or either frozen-threshold decision. The aggregate zero-mismatch gate failed; repeats never replace failures. The baseline pass reuses candidate cuts and does not independently calibrate the baseline. All 512 grazing implementation pairs matched, so that observed detector deficit also occurs in the retained baseline under those cuts. No baseline-gate causation is established.
+
+Coverage is finite: fixed observed TESS/ZTF cadences and synthetic HATpi-like cadence, two stellar-density points including small M dwarfs, high-impact/eccentric/grazing configurations, thin ingress, exposure smearing, gaps, aliases, heterogeneous errors, OU noise and few/unsampled events. The grazing regime has 1,800-second exposures throughout. Earth-size planets, fixed limb darkening and eccentric orientation ω=90° limit transport to other systems. Main ZTF injections cover 2–6 days; broader/joint-extreme boundary diagnostics are not additional blind-recovery populations. Rescaled ZTF errors make this a controlled sampling/algorithm experiment, not a predicted Earth-size ZTF survey yield. No universal equivalence or recovery outside represented subgroups is established.
+
+## Sustained single-GPU throughput
+
+### September 24–25 follow-up
+
+![Follow-up throughput with five unavailable panels and BLS execution-only rates](../benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/throughput.png)
+
+[Full report and observed ranges](../benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/REPORT.md) · [exact CSV](../benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/measurements.csv) · [failure review](../benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/REVIEW.md) · [provenance](../benchmarks/results/tls_survey_2026-09-10/throughput-followup-20260924/review.json).
+
+These median rates are successful light curves per second on one A40 allocation at $0.49/hour. Each available panel contains three complete queues, each lasting at least 120 seconds with at least 96 attempts. Inputs, full period grids and numerical sources retain their frozen definitions.
+
+| Workload | Baseline TLS | Experimental TLS | Public GTLS | BLS execution only |
 | --- | ---: | ---: | ---: | ---: |
-| TESS: dense sector | 0.167 s | 0.463 s | 2.77× | 0.110 s |
-| TESS: separated sectors | 1.563 s | 6.249 s | 4.00× | 0.076 s |
-| ZTF g/r | 3.086 s | 16.181 s | 5.24× | 0.313 s |
+| TESS solar | unavailable | 8.0722 | 2.4760 | 6.3618 |
+| TESS long gap | 0.77039 | 0.77554 | unavailable | 11.4446 |
+| ZTF solar | 0.45455 | 0.82349 | 0.12111 | 29.8506 |
+| Varied | unavailable | unavailable | unavailable | 10.8464 |
 
-cuvarbase's own work after the search took 2.5 ms, 7.2 ms and 70.7 ms, respectively. In dense TESS, GTLS's nested SNR/pink-noise diagnostics took about 103 ms, contributing to the full-API ratio beyond the 2.77× search improvement. The longer-baseline wins chiefly come from search computation. Stage medians are computed separately; inclusive and nested stages must not be added. These measurements separate the combined search improvement from output work; they do not isolate the contributions of CUDA graphs and fused kernels.
+Seven TLS/GTLS panels passed their strict timing qualifications. Four BLS panels report execution speed under the separately declared contract: all 21,232 measured calls completed without API failures, but 1,654 selected-output discrepancies across queues and diagnostics remain recorded. Those BLS rates confer no numerical qualification. Repeated calls are not independent scientific populations.
 
-GTLS's full public API also computes extra CPU SNR and pink-noise diagnostics. The separate component experiment ends the common search clock after final window selection and reports subsequent output work separately. The public figure includes each API's normal output work. Neither omitted diagnostics nor the invalid-candidate correction is described as a faster fitting kernel. [Detailed implementation comparison](GTLS_COMPARISON.md).
+The experimental/baseline median ratios are **1.812×** for ZTF solar and **1.007×** for long-gap TESS, where the paired complete-spectrum timing checks passed. Baseline TESS solar and both TLS varied panels failed repeatability checks. GTLS long-gap ran out of memory; GTLS varied had both repeatability and memory failures. All five remain unavailable. No failed experiment was rerun to replace its outcome, and the original **5,111/5,120** aggregate exactness gate remains failed.
 
-## Timing boundary, competitors and cost
+The benchmark rental and the separate installed-wheel release check are terminated, with checksum-verified local collection and R2 read-back. Their estimated compute costs were $2.8053 and $0.0373. The [current conservative ledger](../benchmarks/results/tls_survey_2026-09-10/release-gate-20260927/summary.json), including prior allocations and retained storage reserves, is **$78.1846** within the authorized $100. These are estimates and reserves, not provider invoices.
 
-The BLS campaign used an NVIDIA A40. The new TLS timing campaign uses an NVIDIA RTX A6000, with both TLS implementations on that same machine. The A6000 was selected for availability after A40 allocation requests failed, before any timing results were observed. Both timing campaigns have a 7.65-CPU quota on Xeon Gold 6342 hosts, in separate rentals. TLS limits each worker's numerical libraries to one thread. Host-visible logical CPU counts are not the allocation. Software and actual hardware receipts are retained. Ratios compare implementations on the same device within each algorithm; the figure does not compare BLS with TLS on common hardware. Timings use warm APIs, five single calls and three batches of 16 sources. GTLS pools of one, two and four workers are tested; every timed search must retain its own frozen reference outputs. Input loading and explicit period-grid generation are excluded. TLS includes construction, validation, template preparation, the coarse search, complete candidate/harmonic refinement and final fitting. BLS's earlier prepared-array boundary and separate fresh-grid experiment are documented in its archive.
+### Original September 10–12 allocation
 
-The TLS grids contain 2,325 periods for dense TESS, 74,616 for separated TESS and 235,266 for ordinary ZTF. Gaps increase the baseline and therefore the period resolution needed to preserve transit alignment. Dense-M-dwarf ZTF validation uses 1,093,617 periods. cuvarbase and GTLS receive identical arrays and grids within every comparison.
+The original allocation below remains dated evidence. Its settings, rates, exclusions and ledger are separate from the follow-up above.
 
-TLS repeats one predeclared noise-only lightcurve per cadence five times and the predeclared 16-source null cohort three times. Single calls use one worker per implementation; batch comparisons test one, two and four GTLS workers against the standard cuvarbase batch. Repetitions measure variability on these fixed inputs, not a random survey population. Every search included in the reported timings must reproduce its own frozen study outputs. The 184-case sensitivity validation uses the single-worker reference; GTLS pools qualify by reproducing the frozen outputs on the 16-source timing cohort. Those batch repetitions are not an additional injection/recovery study. Failed calls and ineligible pools remain in the evidence and never serve as successful timing denominators. Selection follows the predeclared API-success rule.
+![Collected full-API throughput; all missing gates and aggregate exactness withheld remain visible](../benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.png)
 
-Actual PyPI cuvarbase 0.2.5 has no TLS. Astropy, periodfind and fBLS were screened as CPU BLS candidates; periodfind supplies the external GPU comparison. “Strongest tested” refers to successful settings in this campaign. Measured BLS batches were 19–57× faster than those CPU settings and 1.5–11.9× faster than periodfind GPU, with recovery qualifications in the BLS archive.
+[PDF](../benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.pdf) · [SVG](../benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.svg) · [exact CSV](../benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.csv) · [renderer provenance](../benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.data.json). The frozen figure label “Optimized” means the opt-in experimental candidate, not the release default.
 
-[Compute-cost calculations](TLS_COST_ANALYSIS.md) use the recorded $0.49/hour A40 bundle for BLS and $0.53/hour RTX A6000 bundle for TLS. Both cost tables project the measured 16-source throughput; they are not measured million-source jobs. They exclude I/O, preprocessing, idle time and vetting. The previous synthetic HATPI pilot measured the older binned engine; its cost and speed ratios do not price the new default or establish real-HATPI recovery.
+| Workload | Engine | Workers / batch | Median light curves/s | Observed repetition range |
+| --- | --- | ---: | ---: | ---: |
+| TESS solar | Experimental TLS | 4 / 4 | 8.203064 | 8.039095–8.209117 |
+| TESS solar | Public GTLS | 2 / 1 | 2.424906 | 2.254147–2.443050 |
+| TESS long gap | Baseline TLS | 4 / 8 | 0.770469 | 0.766306–0.773155 |
+| TESS long gap | Experimental TLS | 4 / 4 | 0.775998 | 0.774032–0.776135 |
+| ZTF solar | Baseline TLS | 4 / 8 | 0.452633 | 0.451925–0.455362 |
+| ZTF solar | Experimental TLS | 4 / 4 | 0.837289 | 0.826802–0.838994 |
+| ZTF solar | Public GTLS | 2 / 1 | 0.118107 | 0.115367–0.122672 |
 
-The earlier 93–284× TLS comparison and the subsequent 11.9–175.5× study measured the phase-binned engine against GTLS fast mode. They remain [dated evidence](../benchmarks/results/tls_sensitivity_2026-09-09/README.md), alongside the [provenance audit](BENCHMARK_PROVENANCE.md). They are superseded as default-engine headlines by this full-search comparison.
+Each rate has three whole-cohort queue repetitions of at least 96 calls and 120 seconds. The shared allocation was one A40, 7.65 CPU cores, 49,999,998,976 bytes of host RAM and $0.49/hour compute. Each backend independently tested workers 1/2/4 at batch 1, then batches 4/8 at the eligible winning worker count. This conditional search does not establish a global tuning optimum. Repetition ranges describe the three observed measurements, not inferential confidence intervals. Ordinary panels repeat 16 fresh null inputs; the varied panel uses 96 distinct deterministically masked null inputs and has no qualifying rate.
+
+The collected campaign has seven eligible engine/workload rates. The experimental candidate reaches a median 0.837289 light curves/s on ZTF solar versus baseline 0.452633, a **1.850×** ratio; long-gap TESS is 0.775998 versus 0.770469, **1.007×**. Both timing-cohort gates and the unchanged paired spectrum check passed in those two regimes. Baseline dense TESS and all varied-size panels remain excluded, so they supply no baseline/candidate ratio. These timings do not override the failed 5,111/5,120 aggregate gate. [Final rates, ranges and exclusions](../benchmarks/results/tls_survey_2026-09-10/final-timing/reporting/TIMING_LINKED.md) · [figure and value provenance](../benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.data.json).
+
+Seven of sixteen backend/panel bars are available. Baseline dense TESS failed post-queue required-output qualification after three queues; baseline varied failed pre-queue qualification; the experimental varied one-worker reference failed its post-queue gate before the selected pool ran. Public GTLS long-gap and varied failed with out-of-memory errors in their first queues. The original BLS trial failed selected-output repeatability; its execution supplement separately failed launcher/allocation checks because two required thread-limit variables were unset. All three supplemental worker-count pilots stopped before worker creation, leaving four explicitly unavailable measurement panels. No failed queue or reference supplies a passing speed denominator. [Full exclusions and native BLS launch audit](../benchmarks/results/tls_survey_2026-09-10/final-timing/reporting/native-bls-launch-audit.json).
+
+Queue wall time includes dispatch, public API validation, template work, transfers, search/refinement, result construction and scalar checks. Input loading, imports/context setup, first-cohort full-output checks and exact grid regeneration are recorded separately and included in cold amortization. Existing filesystem/compiler caches were retained; “cold” is a first complete cohort with setup, not single-lightcurve latency. On ZTF, cold first-cohort time was 149.757 seconds baseline and 85.627 experimental, with sampled GPU peaks 2.610/2.526 GB and worker RSS peaks 2.114/1.746 GB. Sampled memory is a lower bound, and GB here is decimal.
+
+Projected ZTF steady compute cost is $300.71 versus $162.56 per million calls, using the median repetition rates; cold-amortized projections are $371.04 versus $197.83 using total calls and summed queue elapsed plus preparation. No million-call run is claimed. Acquisition, detrending and vetting are outside this boundary. All seven rows’ cold, cost and memory values and the original cost-prose erratum are in the [collected timing note](../benchmarks/results/tls_survey_2026-09-10/final-timing/reporting/TIMING_LINKED.md) and [verification receipt](../benchmarks/results/tls_survey_2026-09-10/final-timing/reporting/timing-verification.json). The short-row dispatch was active for all four experimental ZTF workers with zero recorded fallbacks; both TESS panels used the shape fallback. These measurements do not isolate each optimization’s causal contribution.
+
+The [original allocation's final ledger](../benchmarks/results/tls_survey_2026-09-10/collection/final-ledger.json) estimates **$71.8522** for observed rentals including elapsed storage. Its conservative total was **$73.7563**, including full storage reserves and a retained $1.50 reserve for the rejected 80 GB request. All actual rentals and owned monitoring processes from that allocation were closed; final provider queries listed no pods. These are estimates and reserves, not provider invoices. The [original rental ledger](../benchmarks/results/tls_survey_2026-09-10/collection/original-rental-closed-ledger.json) remains separately preserved; the current cumulative estimate appears above.
+
+## Release validation
+
+The September 24–25 full A40 suite passed **2,091 tests**, with one expected notebook failure, no unexpected failures and zero skips. The separate gate launcher failed to import the package before running its checks. The [September 27 installed-wheel gate](../benchmarks/results/tls_survey_2026-09-10/release-gate-20260927/README.md) then passed all **14 numerical/runtime checks and six dependency preflights**, with all 86 installed package files matching the previously built wheel byte for byte. The original failed launcher receipt remains preserved. Both sets of evidence have verified R2 backups; this operational correction changes no numerical source or benchmark qualification.
+
+The earlier [release-wiring validation](../benchmarks/results/tls_survey_2026-09-10/release-validation/README.md) passed all 24 paired numerical comparisons and 86 device tests on eleven fixed development inputs. This checks release wiring; it does not requalify experimental sensitivity. The fixed run completed in **177.83 seconds** within its 900-second cap, with normal child teardown and an empty GPU. It also exercised scalar/convenience, batch and permutation-FAP routing, separate backend caches, short-kernel dispatch and native graph fallback.
+
+The separate A40 used Python 3.11.10, NVCC 12.4.131 and all 64 pinned dependency versions, with the same 7.65-CPU quota and RAM limit. Its GPU UUID and driver differed (570.211.01 versus 570.195.03), and its temporary disk was 20 GB. These checks supply no new throughput or population-sensitivity result. Earlier host validation passed 872 tests, with 18 skips, 1,117 deselections and one existing xfail; 219 focused checks also passed from the verified wheel. All installation and test receipts, including the first failed PyCUDA build before NumPy was installed, are retained.
+
+## Historical measurements
+
+The [September 8–10 BLS study](../benchmarks/results/transit_2026-09-08/README.md), [earlier full-GTLS comparison](../benchmarks/results/tls_reference_2026-09-10/README.md), [binned sensitivity study](../benchmarks/results/tls_sensitivity_2026-09-09/README.md) and [narrow-transit audit](../benchmarks/results/tls_accuracy_2026-09-09/README.md) remain reproducible dated evidence. Their speed ratios, source snapshots and numerical failures must remain attached to their original workloads. They neither replace the collected new queue result nor qualify the new release selector. [Provenance audit](BENCHMARK_PROVENANCE.md).

@@ -2090,12 +2090,16 @@ def _attach_null_fap(results, lightcurves, n_draws, seed, search_kwargs):
 
 
 def tls_search_gpu(t, y, dy, periods=None, *, qmin=None, qmax=None,
-                   R_star=1., M_star=1., method=None, **kwargs):
+                   R_star=1., M_star=1., method=None, execution='baseline', **kwargs):
     """Search for transits with the complete observation-level TLS algorithm.
 
     The default ``method='reference'`` follows the pinned GTLS numerical
     objective: native transit templates, duration grid, sample-window trials,
     depth estimates, spectrum ranking and full candidate/harmonic refinement.
+    ``execution='baseline'`` retains the 6ced75d execution implementation.
+    ``execution='experimental'`` opts into the survey optimization bundle,
+    which failed its frozen bitwise qualification (9 of 5,120 comparisons).
+    This selector changes execution, not the observation-level search policy.
     It does not phase-bin observations. GPU workspace size does not narrow the
     duration search. Install ``cuvarbase[tls]`` for its CUDA 12 dependencies.
 
@@ -2137,6 +2141,8 @@ def tls_search_gpu(t, y, dy, periods=None, *, qmin=None, qmax=None,
     the old shared-memory per-observation kernel. Neither is the new default.
     ``use_fast`` is a deprecated alias selecting those older engines.
     """
+    if execution not in ('baseline', 'experimental'):
+        raise ValueError("execution must be 'baseline' or 'experimental'")
     old_fast = kwargs.pop('use_fast', None)
     if {'fap_null_draws', 'fap_seed'} & kwargs.keys():
         raise TypeError('fap_null_draws/fap_seed are available only from tls_search_batch')
@@ -2148,10 +2154,12 @@ def tls_search_gpu(t, y, dy, periods=None, *, qmin=None, qmax=None,
                       "explicitly. The default observation-level engine is "
                       "method='reference'." % method, FutureWarning, stacklevel=2)
     method = 'reference' if method is None else method
+    if method != 'reference' and execution != 'baseline':
+        raise ValueError("experimental execution requires method='reference'")
     if method == 'reference':
         from .tls_reference_frontend import search
         return search(t, y, dy, periods=periods, qmin=qmin, qmax=qmax,
-                      R_star=R_star, M_star=M_star, **kwargs)
+                      R_star=R_star, M_star=M_star, execution=execution, **kwargs)
     if method in ('binned', 'legacy'):
         return _tls_search_gpu_binned(t, y, dy, periods=periods,
                                       qmin=qmin, qmax=qmax,
@@ -2173,7 +2181,7 @@ def tls_transit(t, y, dy, *, R_star=1., M_star=1., **kwargs):
 
 
 def tls_search_batch(lightcurves, *, R_star=1., M_star=1.,
-                     method='reference', **kwargs):
+                     method='reference', execution='baseline', **kwargs):
     """Search a survey with the same sensitivity policy as tls_search_gpu.
 
     The standard engine processes light curves sequentially, parallelizing
@@ -2187,13 +2195,19 @@ def tls_search_batch(lightcurves, *, R_star=1., M_star=1.,
     same full search, including refinement. This destroys correlated noise;
     it is a white-noise null, not a model of arbitrary survey systematics.
     ``fap_seed`` makes the permutations reproducible.
+    ``execution`` selects 'baseline' (default) or 'experimental' for every
+    observed curve and every null permutation.
 
     ``method='binned'`` opts into the older approximate multi-lightcurve
     kernel and its original controls; see :func:`tls_search_gpu`.
     """
+    if execution not in ('baseline', 'experimental'):
+        raise ValueError("execution must be 'baseline' or 'experimental'")
+    if method != 'reference' and execution != 'baseline':
+        raise ValueError("experimental execution requires method='reference'")
     if method == 'reference':
         from .tls_reference_frontend import search_batch
-        return search_batch(lightcurves, R_star=R_star, M_star=M_star, **kwargs)
+        return search_batch(lightcurves, R_star=R_star, M_star=M_star, execution=execution, **kwargs)
     if method == 'binned':
         return _tls_search_batch_binned(lightcurves, R_star=R_star, M_star=M_star,
                                         **kwargs)

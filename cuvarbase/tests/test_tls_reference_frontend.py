@@ -23,8 +23,11 @@ def lightcurve():
 
 
 @pytest.fixture
-def mock_engine(monkeypatch):
-    engine = types.ModuleType('cuvarbase.tls_reference')
+def mock_engine(monkeypatch, request):
+    execution = getattr(request, 'param', 'baseline')
+    name = 'tls_reference_experimental' if execution == 'experimental' else 'tls_reference'
+    engine = types.ModuleType('cuvarbase.' + name)
+    engine.execution = execution
     engine.calls, engine.final_calls, engine.fit_calls = [], [], []
     engine.context_calls = 0
     engine.null = False
@@ -101,8 +104,8 @@ def mock_engine(monkeypatch):
     engine.search_fast = lambda *args, **kwargs: run(False, *args, **kwargs)
     engine.raw_search = raw_search
     engine._select_durations = lambda selection, indices: None
-    monkeypatch.setitem(sys.modules, 'cuvarbase.tls_reference', engine)
-    monkeypatch.setattr(cuvarbase, 'tls_reference', engine, raising=False)
+    monkeypatch.setitem(sys.modules, 'cuvarbase.' + name, engine)
+    monkeypatch.setattr(cuvarbase, name, engine, raising=False)
     monkeypatch.setattr(base, 'ensure_context', context)
     monkeypatch.setattr(frontend.reference, 'final_parameters', final_parameters)
     return engine
@@ -324,3 +327,132 @@ def test_invalid_later_batch_input_is_rejected_before_any_gpu_work(lightcurve, m
         frontend.search_batch([lightcurve, (t, y, dy[:-1])], periods=[1., 2., 3.])
     assert not mock_engine.calls
     assert mock_engine.context_calls == 0
+
+
+@pytest.mark.parametrize('mock_engine', ['baseline', 'experimental'], indirect=True)
+@pytest.mark.parametrize('entry', [tls.tls_search_gpu, tls.tls_search, tls.tls_transit, frontend.search])
+@pytest.mark.parametrize('full', [True, False])
+def test_execution_selector_routes_scalar_and_final_fit(entry, full, lightcurve,
+                                                        mock_engine, monkeypatch):
+    chosen = mock_engine.execution
+    other = 'tls_reference' if chosen == 'experimental' else 'tls_reference_experimental'
+    original_import = builtins.__import__
+
+    def guard(name, globals=None, locals=None, fromlist=(), level=0):
+        if other in fromlist:
+            pytest.fail('Selected execution imported the other GPU backend')
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, '__import__', guard)
+    result = entry(*lightcurve, periods=[3., 1., 2.], execution=chosen, full=full,
+                   qmin=[.03, .01, .02], qmax=[.09, .07, .08], n_durations=7)
+    assert len(mock_engine.calls) == 1
+    call = mock_engine.calls[0]
+    assert call['full'] is full
+    np.testing.assert_array_equal(call['periods'], [1., 2., 3.])
+    np.testing.assert_array_equal(call['options']['qmin'], [.01, .02, .03])
+    np.testing.assert_array_equal(call['options']['qmax'], [.07, .08, .09])
+    assert call['options']['n_durations'] == 7
+    assert len(mock_engine.final_calls) == (0 if full else 1)
+    if not full:
+        assert mock_engine.final_calls[0]['options']['full'] is True
+    assert len(mock_engine.fit_calls) == 1
+    assert result['search_configuration']['execution'] == chosen
+    assert result['search_configuration']['experimental_execution'] == (chosen == 'experimental')
+    assert result['search_configuration']['full'] is full
+    np.testing.assert_array_equal(result['periods'], [3., 1., 2.])
+
+
+@pytest.mark.parametrize('mock_engine', ['baseline', 'experimental'], indirect=True)
+@pytest.mark.parametrize('failure', ['null', 'invalid_final'])
+@pytest.mark.parametrize('return_arrays', [False, True])
+def test_execution_metadata_survives_both_null_results(mock_engine, lightcurve,
+                                                      failure, return_arrays):
+    setattr(mock_engine, failure, True)
+    with pytest.warns(UserWarning):
+        result = tls.tls_search_gpu(*lightcurve, periods=[3., 1., 2.],
+                                   execution=mock_engine.execution, return_arrays=return_arrays)
+    assert result['SDE'] == result['SNR'] == 0
+    assert result['search_configuration']['execution'] == mock_engine.execution
+    assert result['search_configuration']['experimental_execution'] == (mock_engine.execution == 'experimental')
+    assert ('periods' in result) is return_arrays
+
+
+@pytest.mark.parametrize('mock_engine', ['baseline', 'experimental'], indirect=True)
+@pytest.mark.parametrize('entry', [tls.tls_search_batch, frontend.search_batch])
+@pytest.mark.parametrize('full', [True, False])
+def test_execution_choice_covers_every_observed_and_fap_call(mock_engine, lightcurve,
+                                                             entry, full, monkeypatch):
+    seen = []
+    search = frontend.search
+
+    def record(*args, **kwargs):
+        seen.append(kwargs.copy())
+        return search(*args, **kwargs)
+
+    monkeypatch.setattr(frontend, 'search', record)
+    results = entry([lightcurve, lightcurve], periods=[3., 1., 2.],
+                    execution=mock_engine.execution, full=full, fap_null_draws=2,
+                    fap_seed=20260912, qmin=.01, qmax=.09, n_durations=7,
+                    work_chunk=19, sde_kernel_size=31)
+    assert len(mock_engine.calls) == len(seen) == 6
+    for kwargs, call in zip(seen, mock_engine.calls):
+        assert kwargs['execution'] == mock_engine.execution
+        assert kwargs['return_arrays'] is False
+        assert call['full'] is full
+        assert call['options']['work_chunk'] == 19
+        assert call['options']['sde_kernel_size'] == 31
+        assert call['options']['n_durations'] == 7
+        np.testing.assert_array_equal(call['options']['qmin'], [.01]*3)
+        np.testing.assert_array_equal(call['options']['qmax'], [.09]*3)
+        assert sorted(zip(call['y'], call['dy'])) == sorted(zip(lightcurve[1], lightcurve[2]))
+    for result in results:
+        assert result['search_configuration']['execution'] == mock_engine.execution
+        np.testing.assert_array_equal(result['SDE_null'], [5., 5.])
+        assert result['FAP'] == 1.
+        assert 'periods' not in result
+
+
+@pytest.mark.parametrize('execution', ['unknown', '', None, 1, True])
+@pytest.mark.parametrize('entry', [tls.tls_search_gpu, tls.tls_search, tls.tls_transit,
+                                  frontend.search, tls.tls_search_batch, frontend.search_batch])
+def test_invalid_execution_fails_before_import_or_context(execution, entry, lightcurve,
+                                                          mock_engine, monkeypatch):
+    original_import = builtins.__import__
+
+    def guard(name, globals=None, locals=None, fromlist=(), level=0):
+        if {'tls_reference', 'tls_reference_experimental'}.intersection(fromlist):
+            pytest.fail('Invalid selector reached an engine import')
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, '__import__', guard)
+    args = ([],) if entry in (tls.tls_search_batch, frontend.search_batch) else lightcurve
+    with pytest.raises(ValueError, match='execution must be'):
+        entry(*args, execution=execution)
+    assert not mock_engine.calls
+    assert mock_engine.context_calls == 0
+
+
+@pytest.mark.parametrize('method', ['binned', 'legacy', 'misspelled'])
+@pytest.mark.parametrize('entry', [tls.tls_search_gpu, tls.tls_search_batch])
+def test_experimental_execution_is_rejected_on_other_methods(method, entry, lightcurve, mock_engine):
+    args = ([],) if entry is tls.tls_search_batch else lightcurve
+    with pytest.raises(ValueError, match="requires method='reference'"):
+        entry(*args, method=method, execution='experimental')
+    assert not mock_engine.calls
+    assert mock_engine.context_calls == 0
+
+
+@pytest.mark.parametrize('use_fast', [True, False])
+def test_deprecated_engine_alias_cannot_ignore_experimental_execution(use_fast, lightcurve, mock_engine):
+    with pytest.warns(FutureWarning), pytest.raises(ValueError, match="requires method='reference'"):
+        tls.tls_search_gpu(*lightcurve, use_fast=use_fast, execution='experimental')
+    assert not mock_engine.calls
+    assert mock_engine.context_calls == 0
+
+
+def test_default_success_metadata_is_baseline(lightcurve, mock_engine):
+    result = tls.tls_search_gpu(*lightcurve, periods=[1., 2., 3.], return_arrays=False)
+    assert result['search_configuration']['execution'] == 'baseline'
+    assert result['search_configuration']['experimental_execution'] is False
+    assert 'periods' not in result

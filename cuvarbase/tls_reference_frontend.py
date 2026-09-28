@@ -52,7 +52,7 @@ def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,
            qmin=None, qmax=None, qmin_fac=None, qmax_fac=None,
            duration_window=None, R_planet=1., n_durations=None,
            limb_dark='quadratic', u=None, transit_template='default',
-           template_parameters=None, full=True, T0_fit_margin=.125,
+           template_parameters=None, full=True, execution='baseline', T0_fit_margin=.125,
            transit_depth_min=1e-5, work_chunk=256, return_arrays=True,
            t0_oversample=None, refine_top_k=None, refine_oversample=None,
            nbins=None, block_size=None, sde_kernel_size=None):
@@ -63,6 +63,8 @@ def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,
     """
     from .tls import (_sort_period_grid, _to_caller_order, _null_result,
                       _validate_n_durations)
+    if execution not in ('baseline', 'experimental'):
+        raise ValueError("execution must be 'baseline' or 'experimental'")
     t, y, dy = _check_inputs(t, y, dy, 'tls_search_gpu')
     for name, value in (('R_star', R_star), ('M_star', M_star)):
         if not np.isscalar(value) or not np.isfinite(value) or value <= 0:
@@ -138,7 +140,10 @@ def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,
     epoch = float(np.floor(np.min(t)) - 1.)
     shifted_t = t - epoch
     try:
-        from . import tls_reference as engine
+        if execution == 'experimental':
+            from . import tls_reference_experimental as engine
+        else:
+            from . import tls_reference as engine
     except ImportError as exc:
         raise ImportError('The standard TLS engine requires CuPy and batman-package. '
                           'Install cuvarbase[tls] for CUDA 12, or install the CuPy '
@@ -158,7 +163,9 @@ def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,
         options['refine_top_k'] = refine_top_k
     result = runner(shifted_t, y, dy, periods, **options)
     prepared, cache, spectra = result['prepared'], result['cache'], result['spectra']
-    metadata = dict(method='reference', full=bool(full), phase_binning=False,
+    metadata = dict(method='reference', execution=execution,
+                    experimental_execution=execution == 'experimental',
+                    full=bool(full), phase_binning=False,
                     candidate_policy='finite_unmasked_before_ranking',
                     time_origin=epoch, input_count=len(t),
                     samples_used=len(prepared['t']),
@@ -266,8 +273,11 @@ def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,
 
 
 def search_batch(lightcurves, *, return_arrays=False, fap_null_draws=0,
-                 fap_seed=None, **kwargs):
+                 fap_seed=None, execution='baseline', **kwargs):
     """Process a survey with the same full search and one shared period grid."""
+    if execution not in ('baseline', 'experimental'):
+        raise ValueError("execution must be 'baseline' or 'experimental'")
+    kwargs['execution'] = execution
     lightcurves = list(lightcurves)
     if not lightcurves:
         return []

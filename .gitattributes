@@ -4,3 +4,6 @@
 *.jpg binary
 *.whl binary
 *.tar.gz binary
+
+# Frozen receipts include byte hashes; retain their line endings and whitespace.
+benchmarks/results/tls_survey_2026-09-10/** -text -whitespace

@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 from cuvarbase import tls_reference_math as ref
+from cuvarbase import tls_reference_experimental_math as experimental_ref
 from cuvarbase.tests._tls_reference_goldens import GOLDEN, PROVENANCE
 
 
@@ -271,15 +272,64 @@ def test_epoch_stride_covers_thin_windows_and_full_mode_visits_every_start():
     np.testing.assert_array_equal(ref.epoch_strides(widths, full=True), np.ones(len(widths)))
 
 
-def test_native_group_width_union_is_explicit():
-    masks = ref.chunk_width_masks([2, 4, 8, 16], [1, 6, 12], [5, 9, 20], chunk_size=2)
+@pytest.mark.parametrize('math_backend', [ref, experimental_ref], ids=['baseline', 'experimental'])
+def test_native_group_width_union_is_explicit(math_backend):
+    masks = math_backend.chunk_width_masks([2, 4, 8, 16], [1, 6, 12], [5, 9, 20], chunk_size=2)
     np.testing.assert_array_equal(masks, [[True, True, True, False], [False, False, False, True]])
 
 
-def test_unmasked_full_candidate_rank_order_matches_frozen_native_selection():
+@pytest.mark.parametrize('chunk_size', [1, 2, 17, 1000])
+@pytest.mark.parametrize('math_backend', [ref, experimental_ref], ids=['baseline', 'experimental'])
+def test_group_width_union_matches_literal_membership_with_gaps_and_duplicate_widths(math_backend, chunk_size):
+    rng = np.random.default_rng(16271)
+    # No monotonicity or overlapping-interval shortcut is permitted: explicit
+    # group unions may contain gaps and input widths need not be sorted.
+    widths = rng.integers(1, 70, 23)
+    minima = rng.integers(1, 100, 301)
+    maxima = minima + rng.integers(-3, 8, len(minima))
+    membership = ((widths[None, :] >= minima[:, None]) &
+                  (widths[None, :] <= maxima[:, None]))
+    expected = np.array([np.any(membership[first:first + chunk_size], axis=0)
+                         for first in range(0, len(minima), chunk_size)])
+    np.testing.assert_array_equal(
+        math_backend.chunk_width_masks(widths, minima, maxima, chunk_size), expected)
+
+
+def _literal_refinement_candidate_indices(periods, power):
+    """Pre-optimization finite-candidate implementation, retained as an oracle."""
+    periods, power = np.ma.asarray(periods), np.ma.asarray(power)
+    valid = (~np.ma.getmaskarray(periods) & ~np.ma.getmaskarray(power) &
+             np.isfinite(np.ma.getdata(periods)) &
+             np.isfinite(np.ma.getdata(power)))
+    combined = [(i, (periods.data[i], -power.data[i]))
+                for i in np.flatnonzero(valid)]
+    ranked = sorted(combined, key=lambda item: item[1][1])
+    top = [item[0] for item in ranked[:100]]
+    remaining = [item for item in combined if item[0] not in top and item[1][0] > 1]
+    next_best = sorted(remaining, key=lambda item: item[1][1])[:100]
+    return np.array(top + [item[0] for item in next_best], dtype=np.int64)
+
+
+@pytest.mark.parametrize('size', [0, 1, 99, 100, 101, 199, 200, 201, 1025])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+@pytest.mark.parametrize('math_backend', [ref, experimental_ref], ids=['baseline', 'experimental'])
+def test_candidate_vectorization_matches_literal_ranking_at_quota_boundaries(math_backend, size, dtype):
+    rng = np.random.default_rng(671 + size)
+    # Tie-heavy scores include both signs of zero, nonfinite entries and
+    # independent masks. Periods straddle the strict second-quota P>1 bound.
+    periods = rng.choice([.75, 1., np.nextafter(1., 2.), 2., np.nan, np.inf], size)
+    power = rng.choice([-np.inf, -2., -0., 0., 1., 2., np.inf, np.nan], size).astype(dtype)
+    periods = np.ma.array(periods, mask=rng.random(size) < .08)
+    power = np.ma.array(power, mask=rng.random(size) < .11)
+    np.testing.assert_array_equal(math_backend.refinement_candidate_indices(periods, power),
+                                  _literal_refinement_candidate_indices(periods, power))
+
+
+@pytest.mark.parametrize('math_backend', [ref, experimental_ref], ids=['baseline', 'experimental'])
+def test_unmasked_full_candidate_rank_order_matches_frozen_native_selection(math_backend):
     periods = np.linspace(.05, 5, 250)
     power = ((np.arange(250)*37) % 251)/251.
-    actual = ref.refinement_candidate_indices(periods, power).astype('<i8')
+    actual = math_backend.refinement_candidate_indices(periods, power).astype('<i8')
     expected = GOLDEN['candidates']['False']
     assert len(actual) == expected['count']
     np.testing.assert_array_equal(actual[:12], expected['first'])
@@ -287,7 +337,8 @@ def test_unmasked_full_candidate_rank_order_matches_frozen_native_selection():
     assert hashlib.sha256(actual.tobytes()).hexdigest() == expected['sha256']
 
 
-def test_full_candidates_exclude_masked_and_nonfinite_values_before_ranking():
+@pytest.mark.parametrize('math_backend', [ref, experimental_ref], ids=['baseline', 'experimental'])
+def test_full_candidates_exclude_masked_and_nonfinite_values_before_ranking(math_backend):
     periods = np.ma.array([.3, 1.5, 2., 3., np.nan, 4., 5., 6., 7., 8., .5, np.inf],
                           mask=[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     power = np.ma.array([100., 4., 8., 200., 500., np.nan, np.inf, -np.inf, 6., 6., -2., 9.],
@@ -296,26 +347,28 @@ def test_full_candidates_exclude_masked_and_nonfinite_values_before_ranking():
     # resolves the equal scores. A period below one day is valid in top100.
     with warnings.catch_warnings():
         warnings.simplefilter('error', UserWarning)
-        actual = ref.refinement_candidate_indices(periods, power)
+        actual = math_backend.refinement_candidate_indices(periods, power)
     np.testing.assert_array_equal(actual, [2, 8, 9, 1, 10])
 
 
-def test_masked_prefix_does_not_consume_finite_candidate_slots():
+@pytest.mark.parametrize('math_backend', [ref, experimental_ref], ids=['baseline', 'experimental'])
+def test_masked_prefix_does_not_consume_finite_candidate_slots(math_backend):
     periods = 2. + np.arange(320)*.01
     mask = np.arange(320) < 70
     power = np.ma.array(np.arange(320, dtype=float), mask=mask)
     # The 200 highest finite scores are rows 319 through 120. Native sorting
     # of masked scalar keys previously let leading masked rows consume slots.
-    actual = ref.refinement_candidate_indices(np.ma.array(periods, mask=mask), power)
+    actual = math_backend.refinement_candidate_indices(np.ma.array(periods, mask=mask), power)
     np.testing.assert_array_equal(actual, np.arange(319, 119, -1))
 
 
-def test_candidate_ties_keep_input_order_and_second_quota_requires_period_above_one():
+@pytest.mark.parametrize('math_backend', [ref, experimental_ref], ids=['baseline', 'experimental'])
+def test_candidate_ties_keep_input_order_and_second_quota_requires_period_above_one(math_backend):
     periods = np.r_[np.full(110, .75), np.ones(10), np.full(120, 2.)]
     power = np.ones(240)
     # Equal scores keep rows 0:100 in the first quota. Rows 100:120 fail the
     # strict P>1 condition; rows 120:220 fill the second quota in input order.
-    actual = ref.refinement_candidate_indices(periods, power)
+    actual = math_backend.refinement_candidate_indices(periods, power)
     np.testing.assert_array_equal(actual, np.r_[np.arange(100), np.arange(120, 220)])
 
 
@@ -326,8 +379,9 @@ def test_candidate_ties_keep_input_order_and_second_quota_requires_period_above_
     ([np.nan, np.inf, -np.inf], [1., 2., 3.]),
     ([1., 2., 3.], [np.nan, np.inf, -np.inf]),
 ])
-def test_full_candidate_selection_returns_empty_when_no_finite_unmasked_trial_exists(periods, power):
-    actual = ref.refinement_candidate_indices(periods, power)
+@pytest.mark.parametrize('math_backend', [ref, experimental_ref], ids=['baseline', 'experimental'])
+def test_full_candidate_selection_returns_empty_when_no_finite_unmasked_trial_exists(math_backend, periods, power):
+    actual = math_backend.refinement_candidate_indices(periods, power)
     assert actual.shape == (0,)
     assert np.issubdtype(actual.dtype, np.integer)
 

@@ -40,6 +40,7 @@ EXPECTED_STEMS = {
     'bls', 'bls_optimized', 'bls_batch', 'sparse_bls',
     'ce', 'cunfft', 'lomb', 'nufft_lrt', 'pdm',
     'tls', 'tls_fast', 'tls_reference', 'tls_reference_prepare',
+    'tls_reference_short_prefix', 'tls_reference_experimental',
 }
 
 
