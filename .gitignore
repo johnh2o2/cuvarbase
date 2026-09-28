@@ -87,3 +87,9 @@ work/
 
 # RunPod configuration (contains credentials)
 .runpod.env
+
+# Local service credentials
+.env
+.env.*
+!.env.example
+!.env.sample
