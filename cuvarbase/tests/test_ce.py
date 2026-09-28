@@ -1,15 +1,16 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+import types
 
-from builtins import zip
-from builtins import range
-from builtins import object
 import pytest
-from pycuda.tools import mark_cuda_test
+import pycuda.gpuarray as gpuarray
 import numpy as np
-from numpy.testing import assert_allclose
-from ..ce import ConditionalEntropyAsyncProcess
+from numpy.testing import assert_allclose, assert_array_equal
+from scipy.special import ndtr
+from .. import ce as ce_module
+from ..ce import (ConditionalEntropyAsyncProcess, _needs_compile,
+                  _CE_KERNELS, _is_single_freq_grid, _fast_grid_size,
+                  _MAX_BLOCKS_PER_SM)
+from ..memory import ConditionalEntropyMemory
+from ..utils import normalize_light_curves
 lsrtol = 1E-2
 lsatol = 1E-5
 seed = 100
@@ -37,6 +38,127 @@ def assert_similar(pdg0, pdg, top=5):
     diff = np.absolute(p - p0)
 
     assert(all(diff < lsrtol * 0.5 * (p + p0) + lsatol))
+
+
+# ---------------------------------------------------------------------------
+# Independent CPU references (float64 sums, cuvarbase's bin conventions)
+# ---------------------------------------------------------------------------
+
+def _prep(t, y, dtype):
+    """Emulate normalize_light_curves + ConditionalEntropyMemory.setdata."""
+    t = np.asarray(t, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    t = (t - t.mean()).astype(dtype)
+    y = (y - y.mean()).astype(dtype)
+    yscale = y.max() - y.min()
+    y0 = y.min()
+    return t, ((y - y0) / yscale).astype(dtype), yscale
+
+
+def _phase_bins(t, f, nphase, dtype):
+    ft = (t * dtype(f)).astype(dtype)
+    ph = ft - np.floor(ft)
+    return (np.floor(ph.astype(np.float64) * nphase).astype(int)) % nphase
+
+
+def cpu_ce(t, y, freqs, nphase, nmag, phase_overlap=0, mag_overlap=0,
+           dtype=np.float32):
+    """Graham et al. (2013) conditional entropy with cuvarbase's bin
+    definitions (uniform magnitude bins over [min, max], the brightest
+    point in the top bin), overlap handling and its density offset
+    ``log(dm)``; histogram counts are exact integers and the entropy sum
+    runs in float64."""
+    t, y01, _ = _prep(t, y, dtype)
+    m0 = np.minimum(np.floor(y01 * dtype(nmag)).astype(int), nmag - 1)
+    dm0 = (mag_overlap + 1.0) / nmag
+    mm = np.arange(nmag)
+    dm = np.where(mm + mag_overlap + 1 > nmag,
+                  (nmag - mm) * dm0 / (1.0 + mag_overlap), dm0)
+    out = np.empty(len(freqs))
+    for k, f in enumerate(freqs):
+        n0 = _phase_bins(t, f, nphase, dtype)
+        H = np.zeros((nphase, nmag))
+        for dn in range(phase_overlap + 1):
+            for dmm in range(mag_overlap + 1):
+                m = m0 - dmm
+                ok = m >= 0
+                np.add.at(H, ((n0[ok] - dn) % nphase, m[ok]), 1)
+        Nphi = H.sum(axis=1, keepdims=True)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            term = np.where(H > 0,
+                            H * np.log(dm[None, :] * Nphi
+                                       / np.where(H > 0, H, 1)), 0.0)
+        out[k] = term.sum() / H.sum()
+    return out
+
+
+def exact_weighted_hist(t, y, dy, freqs, nphase, nmag, mag_overlap=0):
+    """Weighted-CE histogram with the EXACT Gaussian probability mass of
+    every point in every magnitude bin (no truncation).
+
+    With ``mag_overlap > 0`` the weighted kernel widens every bin
+    upwards without clipping, so bin ``m`` spans
+    ``[m / nmag, (m + 1 + mag_overlap) / nmag]``.
+    """
+    t, Y, yscale = _prep(t, y, np.float32)
+    Y = Y.astype(np.float64)
+    DY = (np.asarray(dy, dtype=np.float32) / yscale).astype(np.float64)
+    m = np.arange(nmag)
+    P = (ndtr(((m + 1 + mag_overlap) / nmag - Y[:, None]) / DY[:, None])
+         - ndtr((m / nmag - Y[:, None]) / DY[:, None]))
+    H = np.zeros((len(freqs), nphase, nmag))
+    for i, f in enumerate(freqs):
+        n0 = _phase_bins(t, f, nphase, np.float32)
+        np.add.at(H, (i, n0), P)
+    return H
+
+
+def weighted_ce_from_hist(H, nmag, mag_overlap=0):
+    Nphi = H.sum(axis=2, keepdims=True)
+    # ``weighted_ce`` uses the constant window width for every bin
+    # (unlike the unweighted kernels, which truncate the top bins)
+    dm = (mag_overlap + 1.0) / nmag
+    with np.errstate(divide='ignore', invalid='ignore'):
+        term = np.where((H > 0) & (Nphi > 1e-10),
+                        H * np.log(dm * Nphi / np.where(H > 0, H, 1)), 0)
+    return term.sum(axis=(1, 2)) / H.sum(axis=(1, 2))
+
+
+def run_ce(proc, t, y, dy, freqs, **kw):
+    r = proc.run([(t, y, dy)], freqs=freqs, **kw)
+    proc.finish()
+    return np.copy(r[0][1])
+
+
+def run_ce_with_memory(proc, t, y, dy, freqs, **kw):
+    """Run and also return the memory object (to inspect ``bins_g``)."""
+    mems = proc.allocate(normalize_light_curves([(t, y, dy)]),
+                         freqs=[freqs], **kw)
+    mems[0].transfer_freqs_to_gpu()
+    r = proc.run([(t, y, dy)], memory=mems, freqs=[freqs], **kw)
+    proc.finish()
+    return np.copy(r[0][1]), mems[0]
+
+
+def balance_magbins_cpu(mag_bins, y):
+    """``ConditionalEntropyMemory.balance_magbins`` without a CUDA context.
+
+    The method is pure numpy; only ``mag_bins``, ``real_type`` and the
+    ``balanced_min_width`` class attribute are used, so it can be checked
+    on a machine without a GPU (the constructor would retain the primary
+    context).
+    """
+    stub = types.SimpleNamespace(
+        mag_bins=mag_bins, real_type=np.float32,
+        balanced_min_width=ConditionalEntropyMemory.balanced_min_width)
+    return ConditionalEntropyMemory.balance_magbins(stub, y)
+
+
+def lightcurve(ndata, seed, baseline=30., f0=1.3, noise=0.1, amp=0.3):
+    r = np.random.RandomState(seed)
+    t = np.sort(r.uniform(0, baseline, ndata))
+    y = amp * np.sin(2 * np.pi * f0 * t) + noise * r.randn(ndata)
+    return t, y, noise * np.ones(ndata)
 
 
 class TestCE(object):
@@ -190,19 +312,24 @@ class TestCE(object):
             assert_allclose(pnb, pb, rtol=lsrtol, atol=lsatol)
             assert_allclose(fnb, fb, rtol=lsrtol, atol=lsatol)
 
+    # balanced_magbins is only implemented for the standard, unweighted
+    # kernel (the other combinations raise ValueError); it used to be
+    # parametrized independently, which silently ran the uniform kernel
+    # because the constructor dropped the flag.
     @pytest.mark.parametrize('use_double', [True, False])
-    @pytest.mark.parametrize('use_fast,weighted,shmem_lc,freq_batch_size',
-                             [(True, False, False, 1),
-                              (True, False, True, None),
-                              (False, True, False, None),
-                              (False, False, False, None)])
+    @pytest.mark.parametrize(
+        'use_fast,weighted,shmem_lc,freq_batch_size,balanced_magbins',
+        [(True, False, False, 1, False),
+         (True, False, True, None, False),
+         (False, True, False, None, False),
+         (False, False, False, None, False),
+         (False, False, False, None, True)])
     @pytest.mark.parametrize('phase_bins,phase_overlap',
                              [(10, 1)])
     @pytest.mark.parametrize('mag_bins,mag_overlap',
                              [(5, 0)])
     @pytest.mark.parametrize('freq', [10.0])
     @pytest.mark.parametrize('t0', [0.0])
-    @pytest.mark.parametrize('balanced_magbins', [True, False])
     def test_inject_and_recover(self, freq,
                                 use_double, mag_bins, phase_bins, mag_overlap,
                                 phase_overlap, use_fast, t0, balanced_magbins,
@@ -264,14 +391,15 @@ class TestCE(object):
         assert_allclose(p0, p1, rtol=1e-4, atol=1e-2)
 
     @pytest.mark.parametrize('use_double', [True, False])
-    @pytest.mark.parametrize('use_fast,weighted,shmem_lc,freq_batch_size',
-                             [(True, False, False, 1)])
+    @pytest.mark.parametrize(
+        'use_fast,weighted,shmem_lc,freq_batch_size,balanced_magbins',
+        [(True, False, False, 1, False),
+         (False, False, False, None, True)])
     @pytest.mark.parametrize('phase_bins,phase_overlap',
                              [(10, 1)])
     @pytest.mark.parametrize('mag_bins,mag_overlap',
                              [(5, 0)])
     @pytest.mark.parametrize('freq', [10.0])
-    @pytest.mark.parametrize('balanced_magbins', [True, False])
     def test_time_shift_invariance(self, freq,
                                    use_double, mag_bins, phase_bins,
                                    mag_overlap, phase_overlap, use_fast,
@@ -334,14 +462,17 @@ class TestCE(object):
             print(pct_out_of_bounds, delta_f * baseline)
             assert(top_freq_is_close and pct_out_of_bounds < 5e-2)
 
+    # (phase_bins, mag_bins) combinations with (mag_bins + 1) * phase_bins
+    # odd -- (5, 4), (7, 6), (3, 4) -- used to crash the double-precision
+    # fast kernels with 'misaligned address' (defect 17).
     @pytest.mark.parametrize('use_double', [True, False])
     @pytest.mark.parametrize('shmem_lc', [True, False])
     @pytest.mark.parametrize('freq_batch_size', [1, None])
     @pytest.mark.parametrize('phase_bins,phase_overlap,mag_bins,mag_overlap',
-                             [(10, 0, 5, 0), (10, 1, 5, 1)])
+                             [(10, 0, 5, 0), (10, 1, 5, 1), (5, 0, 4, 0),
+                              (7, 0, 6, 0), (3, 0, 4, 0)])
     @pytest.mark.parametrize('freq', [12.0])
     @pytest.mark.parametrize('t0', [0.0])
-    #@pytest.mark.parametrize('balanced_magbins', [True, False])
     @pytest.mark.parametrize('balanced_magbins', [False])
     @pytest.mark.parametrize('weighted', [False])
     @pytest.mark.parametrize('force_nblocks', [1, None])
@@ -397,4 +528,1076 @@ class TestCE(object):
         # print best_freq, freq, abs(best_freq - freq) / freq
         assert(not any(np.isnan(p_slow)))
         assert(not any(np.isnan(p_fast)))
-        assert_allclose(p_slow, p_fast, atol=2e-2 * max(np.absolute(p_slow)))
+        # Both kernels histogram the same integer bins; the only
+        # difference is float summation order (the old 2e-2 * max
+        # tolerance hid the brightest-point mis-binning of defect 9).
+        assert_allclose(p_slow, p_fast, rtol=0,
+                        atol=(1e-10 if use_double else 1e-5))
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the Sep-2026 audit defects
+# ---------------------------------------------------------------------------
+
+class TestCEBrightestPoint(object):
+    """Defect 9 (ce-brightest-bin): the brightest point (normalized
+    magnitude exactly 1.0) got bin index ``mag_bins`` and spilled into the
+    next phase bin / next frequency / past the end of ``bins_g``."""
+
+    @pytest.mark.parametrize('phase_overlap,mag_overlap',
+                             [(0, 0), (1, 0), (0, 1), (1, 1)])
+    def test_histogram_totals_exact(self, phase_overlap, mag_overlap):
+        N = 100
+        t, y, dy = lightcurve(N, seed=3)
+        freqs = np.linspace(0.3, 1.2, 50)
+        proc = ConditionalEntropyAsyncProcess(phase_overlap=phase_overlap,
+                                              mag_overlap=mag_overlap)
+        _, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        assert mem.y[:N].max() == proc.mag_bins - 1
+        bins = mem.bins_g.get().reshape(len(freqs), proc.phase_bins,
+                                        proc.mag_bins)
+        totals = bins.sum(axis=(1, 2))
+        # every point is counted (phase_overlap + 1) times in each of its
+        # (mag_overlap + 1) magnitude bins, except that overlapping bins
+        # below bin 0 do not exist; the total is the same at EVERY
+        # frequency (it used to be N - 1 .. N + 1 from the spilled point)
+        m0 = mem.y[:N].astype(int)
+        expected = (phase_overlap + 1) * np.minimum(m0 + 1,
+                                                    mag_overlap + 1).sum()
+        if mag_overlap == 0:
+            assert expected == N * (phase_overlap + 1)
+        assert_array_equal(totals, np.full(len(freqs), expected))
+
+    def test_no_write_past_bins(self):
+        """The brightest point in the LAST phase bin of the LAST frequency
+        used to be written one element past ``bins_g``."""
+        N = 100
+        t, y, dy = lightcurve(N, seed=3)
+        imax = np.argmax(y)
+        tt = np.float32(t - t.mean())
+
+        def phase_bin(f):
+            return _phase_bins(tt[imax:imax + 1], f, 10, np.float32)[0]
+
+        cands = [f for f in np.linspace(0.3, 1.3, 4000) if phase_bin(f) == 9]
+        freqs = np.concatenate([np.linspace(0.5, 0.9, 63), [cands[0]]])
+        proc = ConditionalEntropyAsyncProcess()
+        mems = proc.allocate([(t, y, dy)], freqs=[freqs])
+        mem = mems[0]
+        # ``allocate`` only creates a zero-filled ``freqs_g``; without this
+        # upload every trial frequency would be f = 0, the brightest point
+        # would never reach the last phase bin of the last frequency and
+        # the guard below could not fire (defect 19 closes the same trap
+        # inside ``run``, this makes the test independent of it)
+        mem.transfer_freqs_to_gpu()
+        nb = mem.nbins
+        guard = np.uint32(0xDEAD)
+        big = gpuarray.zeros(nb + 8, dtype=np.uint32)
+        big.fill(guard)
+        mem.bins_g = big[:nb]
+        proc.run([(t, y, dy)], memory=mems, freqs=[freqs])
+        proc.finish()
+        assert mem.freqs_g.get().max() > 0
+        full = big.get()
+        assert_array_equal(full[nb:], np.full(8, guard))
+        totals = full[:nb].reshape(len(freqs), -1).sum(axis=1)
+        assert_array_equal(totals, np.full(len(freqs), N))
+        # the count that used to be written one element past ``bins_g``:
+        # brightest magnitude bin, last phase bin, last frequency
+        bins = full[:nb].reshape(len(freqs), proc.phase_bins, proc.mag_bins)
+        assert bins[-1, -1, -1] > 0
+
+    @pytest.mark.parametrize('ndata', [5, 60])
+    @pytest.mark.parametrize('use_double', [False, True])
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_matches_cpu_reference(self, ndata, use_double, use_fast):
+        t, y, dy = lightcurve(ndata, seed=1)
+        freqs = np.linspace(0.05, 3.0, 200)
+        proc = ConditionalEntropyAsyncProcess(use_double=use_double,
+                                              use_fast=use_fast)
+        p = run_ce(proc, t, y, dy, freqs)
+        dtype = np.float64 if use_double else np.float32
+        ref = cpu_ce(t, y, freqs, 10, 5, dtype=dtype)
+        assert np.all(np.isfinite(p))
+        atol = 1e-10 if use_double else 2e-6
+        assert_allclose(p, ref, rtol=0, atol=atol)
+        # (at N = 5 the CE takes few distinct values, so the argmin can
+        # legitimately land on a tied minimum: compare the values)
+        assert abs(ref[np.argmin(p)] - ref.min()) <= atol
+
+    @pytest.mark.parametrize('phase_overlap,mag_overlap', [(1, 1), (2, 1)])
+    def test_matches_cpu_reference_overlap(self, phase_overlap, mag_overlap):
+        t, y, dy = lightcurve(60, seed=1)
+        freqs = np.linspace(0.05, 3.0, 200)
+        proc = ConditionalEntropyAsyncProcess(phase_overlap=phase_overlap,
+                                              mag_overlap=mag_overlap,
+                                              phase_bins=8, mag_bins=6)
+        p = run_ce(proc, t, y, dy, freqs)
+        ref = cpu_ce(t, y, freqs, 8, 6, phase_overlap, mag_overlap)
+        assert_allclose(p, ref, rtol=0, atol=2e-6)
+
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_frequency_grid_order_invariance(self, use_fast):
+        """The standard kernel's output depended on the ORDER of the grid
+        because the spilled count landed in the next frequency's bin."""
+        t, y, dy = lightcurve(500, seed=1)
+        freqs = np.linspace(0.05, 3.0, 200)
+        proc = ConditionalEntropyAsyncProcess(use_fast=use_fast)
+        fwd = run_ce(proc, t, y, dy, freqs)
+        rev = run_ce(proc, t, y, dy, freqs[::-1].copy())[::-1]
+        assert_array_equal(fwd, rev)
+
+    def test_mag_bin_fracs_sum_to_one(self):
+        t, y, dy = lightcurve(100, seed=3)
+        mem = ConditionalEntropyMemory(phase_bins=10, mag_bins=5,
+                                       compute_log_prob=True)
+        mem.setdata(t - t.mean(), y - y.mean())
+        assert mem.y.max() == 4
+        assert_allclose(mem.mag_bin_fracs.sum(), 1.0, rtol=0, atol=1e-6)
+
+
+class TestCEWeighted(object):
+    """Defect 16 (ce-weighted-asym): the weighted histogram skipped a bin
+    by the distance to its LOWER edge only, dropping the mass of bins
+    below the datum, and the brightest point entirely."""
+
+    def test_hand_placed_points_match_exact_masses(self):
+        MB, PB, sig = 5, 1, 0.02
+        Yc = np.array([0.0, 0.41, 0.5, 0.59, 1.0])
+        proc = ConditionalEntropyAsyncProcess(phase_bins=PB, mag_bins=MB,
+                                              weighted=True, max_phi=3.0)
+        # any trial frequency gives the same answer here: with
+        # phase_bins=1 every point folds into the single phase bin.
+        # (It used to be f = 0; entry points now require freqs > 0,
+        # since every method folds the data at 1 / f.)
+        _, mem = run_ce_with_memory(proc, np.linspace(0, 1, 5), Yc,
+                                    sig * np.ones(5), np.array([1.0]))
+        bins = mem.bins_g.get().reshape(1, PB, MB)[0, 0]
+        m = np.arange(MB)
+        P = (ndtr(((m + 1) / MB - Yc[:, None]) / sig)
+             - ndtr((m / MB - Yc[:, None]) / sig))
+        # old kernel: [0.5, 0, 2.38, 0.31, 0] (bin 1 and the Y=1 point lost)
+        assert_allclose(bins, P.sum(axis=0), rtol=0, atol=1e-4)
+        assert bins[1] > 0.3 and bins[4] > 0.49
+
+    @pytest.mark.parametrize('mag_bins', [5, 10])
+    @pytest.mark.parametrize('noise', [0.05, 0.15])
+    @pytest.mark.parametrize('mag_overlap', [0, 1, 2])
+    def test_bins_and_ce_vs_ndtr_reference(self, mag_bins, noise,
+                                           mag_overlap):
+        # ``mag_overlap > 0`` is where the symmetric-truncation fix
+        # matters most (the audit measured a 0.21 nat change in the CE
+        # itself, 0.14 on the default lightcurve); the overlapping
+        # window makes bin m span [m, m + 1 + mag_overlap] / mag_bins.
+        r = np.random.RandomState(3)
+        N = 300
+        t = np.sort(r.rand(N)) * 20.0
+        y = (12 + np.sin(2 * np.pi * 1.3 * t) + 0.3 * np.sin(4 * np.pi * 1.3 * t)
+             + noise * r.randn(N))
+        dy = noise * np.ones(N)
+        freqs = np.linspace(0.1, 3.0, 40)
+        He = exact_weighted_hist(t, y, dy, freqs, 10, mag_bins,
+                                 mag_overlap=mag_overlap)
+        ce_exact = weighted_ce_from_hist(He, mag_bins,
+                                         mag_overlap=mag_overlap)
+
+        # default max_phi=3: only bins wholly beyond 3 sigma are skipped
+        proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=mag_bins,
+                                              mag_overlap=mag_overlap,
+                                              weighted=True, max_phi=3.0)
+        ce, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        bins = mem.bins_g.get().reshape(len(freqs), 10, mag_bins)
+        assert np.all(np.isfinite(ce))
+        # audit-measured post-fix levels: bins 6e-3 (mag_overlap 0) and
+        # 4.2e-3 (mag_overlap 1-2), CE 1.1e-3 (old: 1.5-4.2 in the bins,
+        # 2e-2 .. 5e-2 in the CE)
+        assert_allclose(bins, He, rtol=0, atol=2e-2)
+        assert_allclose(ce, ce_exact, rtol=0, atol=5e-3)
+        # the per-frequency mass totals match the exact ones to the mass
+        # of the skipped > 3-sigma bins (points near the range edges
+        # legitimately lose the mass outside [0, 1]; old: -2 .. -12%)
+        assert_allclose(bins.sum(axis=(1, 2)), He.sum(axis=(1, 2)),
+                        rtol=3e-3, atol=0)
+
+        # with a wide max_phi nothing is truncated: float32 normcdf level
+        proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=mag_bins,
+                                              mag_overlap=mag_overlap,
+                                              weighted=True, max_phi=50.0)
+        ce, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        bins = mem.bins_g.get().reshape(len(freqs), 10, mag_bins)
+        assert_allclose(bins, He, rtol=0, atol=2e-3)
+        assert_allclose(bins.sum(axis=(1, 2)), He.sum(axis=(1, 2)),
+                        rtol=1e-5, atol=0)
+        assert_allclose(ce, ce_exact, rtol=0, atol=1e-4)
+
+    def test_large_max_phi_is_finite(self):
+        """Tiny bin masses used to make ``dm * p_phi / pmn`` overflow to
+        inf (3 of 3000 frequencies for this lightcurve)."""
+        r = np.random.RandomState(2)
+        N = 200
+        t = np.sort(r.rand(N)) * 20.0
+        y = 12 + np.sin(2 * np.pi * 1.3 * t) + 0.3 * np.sin(4 * np.pi * 1.3 * t) + 0.05 * r.randn(N)
+        dy = 0.05 * np.ones(N)
+        freqs = np.linspace(0.1, 3.0, 3000)
+        proc = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5,
+                                              weighted=True, max_phi=1e6)
+        ce = run_ce(proc, t, y, dy, freqs)
+        assert np.all(np.isfinite(ce))
+        proc3 = ConditionalEntropyAsyncProcess(phase_bins=10, mag_bins=5,
+                                               weighted=True, max_phi=3.0)
+        ce3 = run_ce(proc3, t, y, dy, freqs)
+        assert np.all(np.isfinite(ce3))
+        assert abs(freqs[np.argmin(ce3)] - 1.3) < 0.01
+        assert abs(freqs[np.argmin(ce)] - 1.3) < 0.01
+
+
+class TestCEDoubleFast(object):
+    """Defect 17 (ce-double-fast-crash): shared-memory misalignment for
+    ``use_double=True, use_fast=True`` when (mag_bins + 1) * phase_bins is
+    odd, and a 4-byte shared-memory shortfall for odd ndata."""
+
+    @pytest.mark.parametrize('ndata', [200, 201])
+    @pytest.mark.parametrize('shmem_lc', [True, False])
+    @pytest.mark.parametrize('phase_bins,mag_bins',
+                             [(5, 4), (7, 6), (3, 4), (10, 5)])
+    def test_double_fast_matches_double_standard(self, phase_bins, mag_bins,
+                                                 shmem_lc, ndata):
+        r = np.random.RandomState(0)
+        t = np.sort(r.rand(ndata) * 20)
+        y = 12 + 0.3 * np.cos(2 * np.pi * t * 1.7) + 0.05 * r.randn(ndata)
+        dy = 0.05 * np.ones(ndata)
+        freqs = np.linspace(0.1, 3.0, 256)
+        ref = run_ce(ConditionalEntropyAsyncProcess(
+            phase_bins=phase_bins, mag_bins=mag_bins, use_double=True),
+            t, y, dy, freqs)
+        proc = ConditionalEntropyAsyncProcess(phase_bins=phase_bins,
+                                              mag_bins=mag_bins,
+                                              use_double=True, use_fast=True)
+        p = run_ce(proc, t, y, dy, freqs, shmem_lc=shmem_lc)
+        assert np.all(np.isfinite(p))
+        assert_allclose(p, ref, rtol=0, atol=1e-10)
+        cpu = cpu_ce(t, y, freqs, phase_bins, mag_bins, dtype=np.float64)
+        assert_allclose(p, cpu, rtol=0, atol=1e-10)
+
+
+class TestCEBalanced(object):
+    """Defect 18 (ce-balanced-ignored) and ids 105/106."""
+
+    @staticmethod
+    def _lc():
+        r = np.random.RandomState(0)
+        N = 400
+        t = np.sort(30 * r.rand(N))
+        y = 12 + 0.3 * np.cos(2 * np.pi * 3.1 * t) + 0.05 * r.randn(N)
+        y[:3] += 5.0     # outliers: balanced bins differ strongly from uniform
+        return t, y, 0.05 * np.ones(N)
+
+    def test_constructor_flag_is_forwarded(self):
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 1000)
+        plain = run_ce(ConditionalEntropyAsyncProcess(), t, y, dy, freqs)
+
+        def large(proc, **kw):
+            r = proc.large_run([(t, y, dy)], freqs=freqs, **kw)
+            proc.finish()
+            return np.copy(r[0][1])
+
+        def batched(proc, **kw):
+            r = proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs, **kw)
+            return np.copy(r[0][1])
+
+        for fn in (run_ce, large, batched):
+            if fn is run_ce:
+                ctor = fn(ConditionalEntropyAsyncProcess(balanced_magbins=True),
+                          t, y, dy, freqs)
+                runkw = fn(ConditionalEntropyAsyncProcess(), t, y, dy, freqs,
+                           balanced_magbins=True)
+            else:
+                ctor = fn(ConditionalEntropyAsyncProcess(balanced_magbins=True))
+                runkw = fn(ConditionalEntropyAsyncProcess(),
+                           balanced_magbins=True)
+            assert_array_equal(ctor, runkw)
+            assert np.max(np.abs(ctor - plain)) > 0.1
+
+        proc = ConditionalEntropyAsyncProcess(balanced_magbins=True)
+        assert proc.balanced_magbins
+        mems = proc.allocate([(t, y, dy)], freqs=[freqs])
+        assert mems[0].balanced_magbins
+        proc.preallocate(len(t), freqs, nlcs=1)
+        assert proc.memory[0].balanced_magbins
+
+    def test_widen_mag_range_is_forwarded(self):
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 500)
+        plain = run_ce(ConditionalEntropyAsyncProcess(weighted=True),
+                       t, y, dy, freqs)
+        ctor = run_ce(ConditionalEntropyAsyncProcess(weighted=True,
+                                                     widen_mag_range=True),
+                      t, y, dy, freqs)
+        runkw = run_ce(ConditionalEntropyAsyncProcess(weighted=True),
+                       t, y, dy, freqs, widen_mag_range=True)
+        assert_allclose(ctor, runkw, rtol=0, atol=1e-6)
+        assert np.max(np.abs(ctor - plain)) > 1e-3
+        proc = ConditionalEntropyAsyncProcess(weighted=True,
+                                              widen_mag_range=True)
+        proc.preallocate(len(t), freqs, nlcs=1)
+        assert proc.memory[0].widen_mag_range
+
+    def test_unsupported_combinations_raise_in_constructor(self):
+        # CPU-runnable: the checks run before the GPU context is touched
+        bad = [dict(weighted=True, use_fast=True),
+               dict(weighted=True, balanced_magbins=True),
+               dict(weighted=True, compute_log_prob=True),
+               dict(use_fast=True, balanced_magbins=True),
+               dict(use_fast=True, compute_log_prob=True),
+               dict(balanced_magbins=True, compute_log_prob=True),
+               dict(mag_overlap=1, balanced_magbins=True)]
+        for kw in bad:
+            with pytest.raises(ValueError):
+                ConditionalEntropyAsyncProcess(**kw)
+
+    def test_use_fast_with_log_prob_raises_everywhere(self):
+        # CPU-runnable: conditional_entropy_fast only launches the CE
+        # kernels, so this combination used to return the plain CE
+        # instead of the log-probability, without a word (Sep 2026
+        # review). The constructor, the memory class and the per-call
+        # kwargs of run/preallocate all reject it now, before any GPU
+        # work.
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 100)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            ConditionalEntropyAsyncProcess(use_fast=True,
+                                           compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            ConditionalEntropyMemory(use_fast=True, compute_log_prob=True)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.run([(t, y, dy)], freqs=freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.preallocate(len(t), freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.large_run([(t, y, dy)], freqs=freqs, compute_log_prob=True)
+        with pytest.raises(ValueError, match='compute_log_prob'):
+            proc.batched_run_const_nfreq([(t, y, dy)], freqs=freqs,
+                                         compute_log_prob=True)
+
+    @pytest.mark.parametrize('ctor', [dict(weighted=True), dict(use_fast=True),
+                                      dict(compute_log_prob=True),
+                                      dict(mag_overlap=1)])
+    def test_unsupported_combinations_raise_for_run_kwargs(self, ctor):
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 100)
+        proc = ConditionalEntropyAsyncProcess(**ctor)
+        with pytest.raises(ValueError):
+            proc.run([(t, y, dy)], freqs=freqs, balanced_magbins=True)
+        with pytest.raises(ValueError):
+            proc.preallocate(len(t), freqs, balanced_magbins=True)
+
+    def test_balanced_matches_reference(self):
+        t, y, dy = self._lc()
+        freqs = np.linspace(2.5, 3.7, 300)
+        proc = ConditionalEntropyAsyncProcess(balanced_magbins=True)
+        p, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        ybins = mem.y[:mem.n0].astype(int)
+        bwf = mem.mag_bwf.astype(np.float64)
+        # each bin holds N / mag_bins points; widths tile [0, 1]
+        assert_array_equal(np.bincount(ybins), np.full(5, 80))
+        assert_allclose(bwf.sum(), 1.0, rtol=0, atol=1e-6)
+        t32, _, _ = _prep(t, y, np.float32)
+        H = np.zeros((len(freqs), 10, 5))
+        for i, f in enumerate(freqs):
+            np.add.at(H, (i, _phase_bins(t32, f, 10, np.float32), ybins), 1)
+        Nphi = H.sum(axis=2, keepdims=True)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            term = np.where(H > 0, H * np.log(bwf[None, None, :] * Nphi
+                                              / np.where(H > 0, H, 1)), 0)
+        ref = term.sum(axis=(1, 2)) / H.sum(axis=(1, 2))
+        assert_allclose(p, ref, rtol=0, atol=2e-6)
+        assert abs(freqs[np.argmin(p)] - 3.1) < 0.01
+
+    def test_quantized_magnitudes_are_finite(self):
+        """id 106: a bin of identical values had zero width -> CE = -inf."""
+        r = np.random.RandomState(4)
+        N = 400
+        t = np.sort(r.rand(N) * 20)
+        y = np.round(12 + np.sin(2 * np.pi * 1.3 * t) + 0.3 * r.randn(N))
+        assert len(np.unique(y)) <= 6
+        dy = np.ones(N)
+        freqs = np.linspace(0.1, 3.0, 300)
+        proc = ConditionalEntropyAsyncProcess(balanced_magbins=True)
+        p, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        assert np.all(np.isfinite(p))
+        assert np.all(mem.mag_bwf > 0)
+        assert_allclose(mem.mag_bwf.sum(), 1.0, rtol=0, atol=1e-5)
+        assert abs(freqs[np.argmin(p)] - 1.3) < 0.02
+
+    @pytest.mark.parametrize('mag_bins', [2, 3, 5, 7, 11, 20])
+    def test_balanced_bin_bounds_cover_every_point(self, mag_bins):
+        """Defect 18 (2nd round): the group boundaries were
+        ``int(i * len(y) / mag_bins)``, and for 471 of the 37,810
+        ``(mag_bins, N)`` combinations with ``mag_bins`` in 2..20 and
+        ``N`` up to 2000 (e.g. ``(7, 61)``) the float product fell short
+        of ``len(y)``, so the brightest point(s) were never assigned and
+        kept ``ybins = 0`` -- the brightest star of the lightcurve was put
+        in the FAINTEST magnitude bin.  CPU-only (pure numpy)."""
+        r = np.random.RandomState(7)
+        for n in range(mag_bins, 4 * mag_bins + 260):
+            y = r.rand(n)
+            ybins, bwf = balance_magbins_cpu(mag_bins, y)
+            ybins = ybins.astype(int)
+            counts = np.bincount(ybins, minlength=mag_bins)
+            # every point is assigned, and to a group of the right size
+            assert counts.sum() == n
+            assert counts.min() == n // mag_bins
+            assert counts.max() == -(-n // mag_bins)
+            # bins increase monotonically with magnitude
+            assert np.all(np.diff(ybins[np.argsort(y, kind='stable')]) >= 0)
+            assert ybins[np.argmax(y)] == mag_bins - 1
+            assert ybins[np.argmin(y)] == 0
+            # widths still tile the magnitude range
+            assert len(bwf) == mag_bins
+            assert np.all(bwf > 0)
+            assert abs(float(bwf.astype(np.float64).sum()) - 1.0) < 1e-4
+
+    def test_balanced_brightest_point_on_gpu_ragged_n(self):
+        """End-to-end version of the above: ``mag_bins=7``, ``N=61`` was
+        one of the affected combinations (the brightest point landed in
+        bin 0, giving ``bincount = [9 9 9 8 9 9 8]``)."""
+        N, mag_bins = 61, 7
+        t, y, dy = lightcurve(N, seed=11)
+        freqs = np.linspace(0.5, 2.5, 200)
+        proc = ConditionalEntropyAsyncProcess(mag_bins=mag_bins,
+                                              balanced_magbins=True)
+        p, mem = run_ce_with_memory(proc, t, y, dy, freqs)
+        ybins = mem.y[:mem.n0].astype(int)
+        counts = np.bincount(ybins, minlength=mag_bins)
+        assert counts.sum() == N
+        expected = np.full(mag_bins, N // mag_bins)
+        expected[:N % mag_bins] += 1
+        assert_array_equal(np.sort(counts), np.sort(expected))
+        assert ybins[np.argmax(y)] == mag_bins - 1
+        assert np.all(np.isfinite(p))
+        assert_allclose(mem.mag_bwf.astype(np.float64).sum(), 1.0,
+                        rtol=0, atol=1e-5)
+
+
+class TestCEConstantY(object):
+    """Sep 2026 review (idx 17, audit id 115): a constant ``y`` passed
+    the validator; ``setdata`` then computed ``(y - min) / (max - min)``
+    = 0/0 and cast the NaN bin indices to uint32 (platform-defined),
+    so the spectrum was flat garbage. CPU-runnable: the validator
+    raises before any GPU work."""
+
+    def test_constant_y_is_rejected(self):
+        t, y, dy = lightcurve(60, seed=0)
+        const = np.full_like(y, 12.5)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=freqs),
+                      lambda d: proc.large_run(d, freqs=freqs),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=freqs)):
+            with pytest.raises(ValueError, match='lightcurve 1: y is '
+                                                 'constant'):
+                entry([(t, y, dy), (t, const, dy)])
+        # stub-independent: the validator itself raises (a regression
+        # would otherwise reach the pycuda stub and skip, not fail)
+        with pytest.raises(ValueError, match='y is constant'):
+            ce_module._check_ce_data([(t, const, dy)], 'x')
+        # two distinct values are enough to build the magnitude bins
+        two = np.where(np.arange(60) % 2 == 0, 12.0, 12.5)
+        ce_module._check_ce_data([(t, two, dy)], 'x')
+
+    def test_setdata_on_constant_y_was_the_failure(self):
+        # the defect the validator now prevents: NaN bin indices
+        mem = ConditionalEntropyMemory()
+        t = np.linspace(0, 10, 20)
+        with np.errstate(invalid='ignore'):
+            mem.setdata(t, np.full(20, 12.0))
+        assert mem.y.dtype == np.uint32
+        assert len(set(mem.y.tolist())) == 1     # every point in one bin
+
+
+class TestCEMemoryOptionMismatch(object):
+    """Sep 2026 review (idx 8): ``run(memory=...)`` dispatches on the
+    memory's flags, so a per-call option kwarg that disagreed with the
+    memory was silently ignored (the docs claimed it raised). All
+    CPU-runnable: the checks run before the kernels are compiled."""
+
+    @staticmethod
+    def _proc_and_mem(**kw):
+        proc = ConditionalEntropyAsyncProcess(**kw)
+        # no allocation: the option check needs only the flags
+        return proc, ConditionalEntropyMemory(**proc._memory_kwargs())
+
+    def test_matching_and_unrelated_kwargs_pass(self):
+        proc, mem = self._proc_and_mem(weighted=True, max_phi=2.5)
+        proc._check_memory_options(mem, {})
+        proc._check_memory_options(mem, dict(weighted=True, max_phi=2.5,
+                                             block_size=128,
+                                             samples_per_peak=5))
+
+    @pytest.mark.parametrize('kw', [dict(weighted=True),
+                                    dict(compute_log_prob=True),
+                                    dict(balanced_magbins=True),
+                                    dict(mag_bins=7), dict(phase_bins=20),
+                                    dict(mag_overlap=1),
+                                    dict(phase_overlap=1),
+                                    dict(max_phi=1.0),
+                                    dict(use_double=True),
+                                    dict(widen_mag_range=True)])
+    def test_mismatched_kwarg_raises(self, kw):
+        proc, mem = self._proc_and_mem()
+        key = list(kw)[0]
+        with pytest.raises(ValueError, match=key):
+            proc._check_memory_options(mem, kw)
+
+    def test_run_raises_before_any_gpu_work(self):
+        t, y, dy = lightcurve(60, seed=0)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc, mem = self._proc_and_mem()
+        with pytest.raises(ValueError, match='do not match the memory'):
+            proc.run([(t, y, dy)], memory=[mem], freqs=freqs,
+                     balanced_magbins=True)
+        proc.memory = [mem]     # what preallocate() would have set
+        with pytest.raises(ValueError, match='do not match the memory'):
+            proc.run([(t, y, dy)], freqs=freqs, weighted=True)
+        # stub-independent: the guard itself raises
+        with pytest.raises(ValueError, match='do not match the memory'):
+            proc._check_memory_options(mem, {'balanced_magbins': True})
+
+    def test_fast_process_rejects_a_weighted_memory(self):
+        # conditional_entropy_fast ignores ``weighted`` and would read
+        # the weighted memory's float magnitudes as uint32 bin indices
+        t, y, dy = lightcurve(60, seed=0)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        mem = ConditionalEntropyMemory(weighted=True)
+        with pytest.raises(ValueError, match='use_fast must be False'):
+            proc.run([(t, y, dy)], memory=[mem], freqs=freqs)
+
+
+class TestCEPreallocate(object):
+    """Defect 19 (ce-preallocate): ``preallocate()`` never uploaded the
+    frequency grid (every frequency evaluated at f = 0) and left
+    ``memory.stream = None`` (results read before the copy landed)."""
+
+    @staticmethod
+    def _lc(N, seed):
+        r = np.random.RandomState(seed)
+        t = np.sort(r.uniform(0, 100, N))
+        y = 0.3 * np.sin(2 * np.pi * t / 1.7) + 0.05 * r.randn(N)
+        return t, y, 0.05 * np.ones(N)
+
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_preallocate_then_run(self, use_fast):
+        F = np.linspace(0.05, 5.0, 4000)
+        B = self._lc(900, 2)
+        C = self._lc(300, 5)
+        proc = ConditionalEntropyAsyncProcess(use_fast=use_fast)
+        fB = run_ce(proc, *B, F)
+        fC = run_ce(proc, *C, F)
+        assert fB.std() > 0 and fC.std() > 0
+
+        proc.preallocate(max_nobs=900, freqs=F, nlcs=1)
+        mem = proc.memory[0]
+        assert mem.stream is proc.streams[0]
+        assert_allclose(mem.freqs_g.get(), F.astype(np.float32),
+                        rtol=0, atol=0)
+        for k in range(3):
+            for lc, ref in ((B, fB), (C, fC)):
+                r = proc.run([lc], freqs=[F])
+                proc.finish()
+                assert_array_equal(np.copy(r[0][1]), ref)
+
+    def test_preallocate_batch(self):
+        F = np.linspace(0.05, 5.0, 2000)
+        lcs = [self._lc(n, s) for n, s in ((900, 2), (300, 5), (600, 7))]
+        proc = ConditionalEntropyAsyncProcess()
+        refs = [run_ce(proc, *lc, F) for lc in lcs]
+        proc.preallocate(max_nobs=900, freqs=F, nlcs=3)
+        assert len(proc.memory) == 3
+        assert len(set(id(m.stream) for m in proc.memory)) == 3
+        r = proc.run(lcs, freqs=F)
+        proc.finish()
+        for (f, p), ref in zip(r, refs):
+            assert_array_equal(np.copy(p), ref)
+        with pytest.raises(ValueError):
+            proc.run(lcs + [lcs[0]], freqs=F)
+
+    def test_run_reuploads_changed_freqs(self):
+        F1 = np.linspace(0.05, 5.0, 2000)
+        F2 = np.linspace(0.5, 2.5, 2000)
+        F3 = np.linspace(0.5, 2.5, 1000)
+        lc = self._lc(500, 2)
+        proc = ConditionalEntropyAsyncProcess()
+        ref2 = run_ce(proc, *lc, F2)
+        proc.preallocate(max_nobs=500, freqs=F1, nlcs=1)
+        r = proc.run([lc], freqs=F2)
+        proc.finish()
+        assert_array_equal(np.copy(r[0][1]), ref2)
+        assert_allclose(proc.memory[0].freqs_g.get(), F2.astype(np.float32),
+                        rtol=0, atol=0)
+        with pytest.raises(ValueError):
+            proc.run([lc], freqs=F3)
+
+    def test_sync_memory_freqs_sees_in_place_mutation_cpu(self):
+        """Sep 2026 review (idx 15): ``transfer_freqs_to_gpu`` stored
+        ``np.ascontiguousarray(freqs, real_type)`` -- the caller's own
+        array for a float32 grid -- so ``_sync_memory_freqs`` compared a
+        grid modified in place with itself and skipped the upload.
+        CPU-runnable with a recording fake device array."""
+        class FakeDevice(object):
+            def __init__(self, n):
+                self.size = n
+                self.uploads = []
+
+            def set_async(self, a, stream=None):
+                self.uploads.append(np.array(a, copy=True))
+
+        n = 16
+        mem = ConditionalEntropyMemory()
+        mem.freqs_g = FakeDevice(n)
+        mem.nf = n
+        g = np.linspace(0.1, 2.0, n).astype(np.float32)
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert mem.freqs is not g
+        assert len(mem.freqs_g.uploads) == 1
+        # unchanged grid: no second upload
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert len(mem.freqs_g.uploads) == 1
+        g *= 2.0
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g)
+        assert len(mem.freqs_g.uploads) == 2
+        assert_array_equal(mem.freqs_g.uploads[-1], g)
+        # the float64 control case (a cast copy) was never affected
+        g64 = np.linspace(0.1, 2.0, n)
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g64)
+        g64 *= 2.0
+        ConditionalEntropyAsyncProcess._sync_memory_freqs(mem, g64)
+        assert len(mem.freqs_g.uploads) == 4
+
+    def test_run_reuploads_in_place_mutated_float32_grid(self):
+        """GPU counterpart: preallocate, run, mutate the same float32
+        grid object in place, run again -- the second spectrum must be
+        the one of the mutated grid."""
+        F = np.linspace(0.05, 5.0, 2000).astype(np.float32)
+        lc = self._lc(500, 3)
+        proc = ConditionalEntropyAsyncProcess()
+        proc.preallocate(max_nobs=500, freqs=F, nlcs=1)
+        r = proc.run([lc], freqs=F)
+        proc.finish()
+        first = np.copy(r[0][1])
+        F += np.float32(0.25)          # in place: same object, new grid
+        r = proc.run([lc], freqs=F)
+        proc.finish()
+        second = np.copy(r[0][1])
+        ref = run_ce(ConditionalEntropyAsyncProcess(), *lc,
+                     np.array(F, copy=True))
+        assert_array_equal(second, ref)
+        assert not np.array_equal(second, first)
+        assert_allclose(proc.memory[0].freqs_g.get(), F, rtol=0, atol=0)
+
+    def test_preallocate_then_large_run(self):
+        # large_run slices the grid into batches, so a preallocated
+        # self.memory (nf = the full grid) can never serve them: the
+        # combination raised "memory was allocated for N frequencies".
+        # large_run now allocates per batch and passes it explicitly.
+        F = np.linspace(0.05, 5.0, 3000)
+        lc = self._lc(400, 11)
+        proc = ConditionalEntropyAsyncProcess()
+        ref = proc.large_run([lc], freqs=F, max_memory=1e5)
+        proc.finish()
+        ref = np.copy(ref[0][1])
+        assert ref.std() > 0
+
+        proc.preallocate(max_nobs=400, freqs=F, nlcs=1)
+        r = proc.large_run([lc], freqs=F, max_memory=1e5)
+        proc.finish()
+        assert_array_equal(np.copy(r[0][1]), ref)
+        # the preallocated memory is untouched and still usable
+        assert_allclose(proc.memory[0].freqs_g.get(), F.astype(np.float32),
+                        rtol=0, atol=0)
+        r2 = proc.run([lc], freqs=F)
+        proc.finish()
+        assert np.all(np.isfinite(r2[0][1]))
+
+    def test_preallocate_then_run_without_freqs(self):
+        # run(freqs=None) used to build an autofrequency grid whose
+        # length is never mem.nf, so it raised on preallocated memory.
+        # The grid preallocate() uploaded is the one to use.
+        F = np.linspace(0.05, 5.0, 2000)
+        lc = self._lc(500, 13)
+        proc = ConditionalEntropyAsyncProcess()
+        ref = run_ce(proc, *lc, F)
+
+        proc.preallocate(max_nobs=500, freqs=F, nlcs=1)
+        r = proc.run([lc])
+        proc.finish()
+        assert_array_equal(np.asarray(r[0][0]), F.astype(np.float32))
+        assert_array_equal(np.copy(r[0][1]), ref)
+
+        # explicit memory from allocate() behaves the same way
+        proc2 = ConditionalEntropyAsyncProcess()
+        mems = proc2.allocate(normalize_light_curves([lc]), freqs=[F])
+        r = proc2.run([lc], memory=mems)
+        proc2.finish()
+        assert_array_equal(np.asarray(r[0][0]), F.astype(np.float32))
+        assert_allclose(np.copy(r[0][1]), ref, rtol=0, atol=1e-6)
+
+    def test_run_without_freqs_and_without_memory_uses_autofrequency(self):
+        lc = self._lc(200, 17)
+        proc = ConditionalEntropyAsyncProcess()
+        r = proc.run([lc])
+        proc.finish()
+        assert len(r[0][0]) == len(proc.autofrequency(lc[0]))
+
+
+class TestCEFastSharedMemoryLimit(object):
+    """audit section 4 row 122: a phase_bins x mag_bins histogram that
+    does not fit in shared memory died with an opaque pycuda
+    ``LogicError: cuLaunchKernel failed: invalid argument``."""
+
+    def test_oversized_histogram_raises_value_error(self):
+        t, y, dy = lightcurve(200, seed=1)
+        freqs = np.linspace(0.1, 3.0, 64)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              phase_bins=200, mag_bins=50)
+        with pytest.raises(ValueError,
+                           match=r"shared memory.*200 x 50"):
+            proc.run([(t, y, dy)], freqs=freqs)
+
+    def test_small_histogram_still_runs(self):
+        t, y, dy = lightcurve(200, seed=1)
+        freqs = np.linspace(0.1, 3.0, 64)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              phase_bins=10, mag_bins=5)
+        ce = run_ce(proc, t, y, dy, freqs)
+        assert np.all(np.isfinite(ce))
+
+
+class TestCEReuse(object):
+    """id 112 (``set_data=False`` accumulated histograms across calls) and
+    CE-1 (the module was recompiled with nvcc on every call)."""
+
+    @pytest.mark.parametrize('compute_log_prob', [False, True])
+    def test_set_data_false_repeat_is_idempotent(self, compute_log_prob):
+        r = np.random.RandomState(0)
+        N = 60
+        t = np.sort(r.rand(N) * 20)
+        d = [(t, r.randn(N), np.ones(N))]
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess(compute_log_prob=compute_log_prob)
+        mems = proc.allocate(normalize_light_curves(d), freqs=[freqs])
+        mems[0].transfer_freqs_to_gpu()
+        first = None
+        for k in range(3):
+            res = proc.run(d, memory=mems, freqs=[freqs], set_data=(k == 0))
+            proc.finish()
+            p = np.copy(res[0][1])
+            assert mems[0].bins_g.get().sum() == N * len(freqs)
+            if first is None:
+                first = p
+            else:
+                assert_array_equal(p, first)
+
+    def test_compile_gate_logic(self):
+        # CPU-runnable
+        assert _needs_compile({})
+        assert _needs_compile(None)
+        assert _needs_compile({'ce_wt': object()})   # the old sentinel
+        assert not _needs_compile({k: object() for k in _CE_KERNELS})
+        assert _needs_compile({k: object() for k in _CE_KERNELS[:-1]})
+
+    def test_compiles_once_per_process(self, monkeypatch):
+        calls = []
+        real = ce_module.SourceModule
+
+        def counting(*args, **kwargs):
+            calls.append(1)
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(ce_module, 'SourceModule', counting)
+        t, y, dy = lightcurve(100, seed=3)
+        freqs = np.linspace(0.3, 1.2, 50)
+        proc = ConditionalEntropyAsyncProcess()
+        run_ce(proc, t, y, dy, freqs)
+        run_ce(proc, t, y, dy, freqs)
+        proc.large_run([(t, y, dy)], freqs=freqs, max_memory=1e5)
+        assert len(calls) == 1
+
+
+class TestCEFastGridSize(object):
+    """CE-2 (audit ids 61/107): ``use_fast`` sized its grid from
+    ``floor(2 * shmem_lim / shmem)`` -- a per-block shared-memory ratio,
+    not a grid -- and capped the other branch at 200 blocks, so the
+    kernel ran on 3-34 blocks (5 at ndata = 2000) however large the
+    device.  The kernels are block-per-frequency with a ``gridDim.x``
+    stride, so the grid size must not change a single returned value.
+    """
+
+    # ------------------------------------------------------------------
+    # CPU-runnable: the sizing arithmetic itself
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _limits(monkeypatch, nsm=84, shmem_sm=102400, thr_sm=1536):
+        monkeypatch.setattr(ce_module, '_device_occupancy_limits',
+                            lambda: (nsm, shmem_sm, thr_sm))
+
+    def test_grid_fills_the_device(self, monkeypatch):
+        # A40-like: 84 SMs, 100 KB shared/SM, 1536 threads/SM. At
+        # ndata = 2000 (single precision) the fast kernel asks for
+        # 16440 B/block, so 6 blocks fit per SM by shared memory and 6
+        # by threads -> 504 blocks. The old heuristic gave 5.
+        self._limits(monkeypatch)
+        assert _fast_grid_size(16440, 256, 100000) == 84 * 6
+        # tiny histogram, no lightcurve in shared memory: threads bind
+        assert _fast_grid_size(440, 256, 100000) == 84 * 6
+        # small blocks: the hardware blocks/SM limit binds
+        assert _fast_grid_size(440, 64, 100000) == 84 * _MAX_BLOCKS_PER_SM
+
+    def test_grid_never_exceeds_the_frequency_count(self, monkeypatch):
+        self._limits(monkeypatch)
+        assert _fast_grid_size(16440, 256, 7) == 7
+        assert _fast_grid_size(16440, 256, 1) == 1
+
+    def test_grid_is_at_least_one_block_per_sm(self, monkeypatch):
+        # a block so large that not even one fits in the per-SM shared
+        # memory budget: still one block per SM, never zero
+        self._limits(monkeypatch)
+        assert _fast_grid_size(102401, 256, 1000) == 84
+        assert _fast_grid_size(0, 256, 1000) == 84 * 6
+
+    def test_grid_scales_with_the_device(self, monkeypatch):
+        self._limits(monkeypatch, nsm=8, shmem_sm=49152, thr_sm=1024)
+        assert _fast_grid_size(16440, 256, 100000) == 8 * min(2, 4)
+        self._limits(monkeypatch, nsm=132, shmem_sm=233472, thr_sm=2048)
+        assert _fast_grid_size(16440, 256, 100000) == 132 * 8
+
+    # ------------------------------------------------------------------
+    # GPU: the launch really uses it, and the result does not depend on it
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _record_grids():
+        """Patch ``prepared_async_call`` to record the grid of every
+        launch that uses dynamic shared memory (i.e. the fast kernels)."""
+        import pycuda.driver as cuda
+        grids = []
+        orig = cuda.Function.prepared_async_call
+
+        def rec(self, grid, block, stream, *args, **kwargs):
+            if kwargs.get('shared_size', 0) > 0:
+                grids.append(int(grid[0]))
+            return orig(self, grid, block, stream, *args, **kwargs)
+        return grids, orig, rec
+
+    def test_launch_grid_matches_the_occupancy_formula(self, monkeypatch):
+        import pycuda.driver as cuda
+        t, y, dy = lightcurve(2000, seed=5)
+        freqs = np.linspace(0.5, 3.0, 4001)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        run_ce(proc, t, y, dy, freqs[:16])          # compile
+        grids, orig, rec = self._record_grids()
+        monkeypatch.setattr(cuda.Function, 'prepared_async_call', rec)
+        run_ce(proc, t, y, dy, freqs)
+        assert len(grids) == 1
+        nsm = ce_module._device_occupancy_limits()[0]
+        # single precision, 10 x 5 bins, lightcurve in shared memory
+        shmem = 8 * 50 + 4 * 10 + 8 * 2000
+        assert grids[0] == _fast_grid_size(shmem, 256, len(freqs))
+        # the point of the change: at least one block per SM, and far
+        # more than the old floor(2 * shmem_lim / shmem) (5 on a 48 KB
+        # device at this ndata)
+        assert grids[0] >= nsm
+        assert grids[0] > 2 * 49152 // shmem
+
+    def test_max_nblocks_still_caps_when_given(self, monkeypatch):
+        import pycuda.driver as cuda
+        t, y, dy = lightcurve(400, seed=6)
+        freqs = np.linspace(0.5, 3.0, 1000)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        run_ce(proc, t, y, dy, freqs[:16])
+        grids, orig, rec = self._record_grids()
+        monkeypatch.setattr(cuda.Function, 'prepared_async_call', rec)
+        run_ce(proc, t, y, dy, freqs, max_nblocks=13)
+        run_ce(proc, t, y, dy, freqs, force_nblocks=3)
+        assert grids == [13, 3]
+
+    @pytest.mark.parametrize('use_double', [False, True])
+    @pytest.mark.parametrize('ndata,nfreq,phase_bins,mag_bins',
+                             [(300, 1013, 10, 5),
+                              (2000, 4001, 10, 5),
+                              (137, 257, 7, 6),
+                              (5000, 733, 20, 8)])
+    def test_result_is_bitwise_independent_of_the_grid(
+            self, ndata, nfreq, phase_bins, mag_bins, use_double):
+        """The frequency counts above are prime-ish on purpose: none of
+        the grids below divides them, so every block ends its stride
+        loop on a different frequency."""
+        t, y, dy = lightcurve(ndata, seed=11)
+        freqs = np.linspace(0.5, 4.0, nfreq)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              use_double=use_double,
+                                              phase_bins=phase_bins,
+                                              mag_bins=mag_bins)
+        ref = run_ce(proc, t, y, dy, freqs)          # library default
+        assert np.all(np.isfinite(ref))
+        for nblocks in (1, 3, 17, 64, 507, 4096):
+            other = run_ce(proc, t, y, dy, freqs, force_nblocks=nblocks)
+            assert_array_equal(other, ref)
+        # and through the batched frequency loop, whose last batch is
+        # shorter than the others
+        assert_array_equal(run_ce(proc, t, y, dy, freqs,
+                                  freq_batch_size=97), ref)
+
+
+class TestCEFastSkipsGlobalHistogram(object):
+    """CE-3 (audit id 161): ``allocate_bins`` allocated an
+    ``nf * phase_bins * mag_bins`` histogram -- 20 MB for a
+    100k-frequency 10 x 5 search -- that ``ce_classical_fast`` /
+    ``_faster`` never read, and ``run(memory=...)`` zero-filled it on
+    every call.  The fast memory now skips it entirely; the returned
+    numbers must not move."""
+
+    @staticmethod
+    def _memory(proc, t, y, dy, freqs, use_fast):
+        """A memory object for ``proc`` with ``bins_g`` forced on or off."""
+        kw = proc._memory_kwargs()
+        kw['use_fast'] = use_fast
+        if not proc.streams:
+            proc._create_streams(1)
+        kw['stream'] = proc.streams[0]
+        mem = ConditionalEntropyMemory(**kw)
+        tn, yn, dyn = normalize_light_curves([(t, y, dy)])[0]
+        mem.fromdata(tn, yn, dy=dyn, freqs=freqs, allocate=True)
+        mem.transfer_freqs_to_gpu()
+        return mem
+
+    def test_fast_memory_has_no_global_histogram(self):
+        t, y, dy = lightcurve(300, seed=2)
+        freqs = np.linspace(0.5, 3.0, 2000)
+        fast = ConditionalEntropyAsyncProcess(use_fast=True)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        mf = fast.allocate(normalize_light_curves([(t, y, dy)]),
+                           freqs=[freqs])[0]
+        ms = std.allocate(normalize_light_curves([(t, y, dy)]),
+                          freqs=[freqs])[0]
+        assert mf.bins_g is None
+        assert ms.bins_g is not None
+        assert ms.bins_g.size == len(freqs) * 10 * 5
+        # nbins is still reported (it describes the histogram shape)
+        assert mf.nbins == len(freqs) * 10 * 5
+
+    def test_memory_requirement_drops_the_histogram(self):
+        fast = ConditionalEntropyAsyncProcess(use_fast=True)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        n0, nf = 1000, 100000
+        hist = nf * 10 * 5 * 4
+        assert (std.memory_requirement(n0, nf)
+                - fast.memory_requirement(n0, nf)) == hist
+        assert fast.memory_requirement(n0, nf) > 0
+
+    @pytest.mark.parametrize('use_double', [False, True])
+    @pytest.mark.parametrize('ndata,nfreq', [(300, 1013), (2000, 4001)])
+    def test_results_identical_with_and_without_the_histogram(
+            self, ndata, nfreq, use_double):
+        t, y, dy = lightcurve(ndata, seed=4)
+        freqs = np.linspace(0.5, 4.0, nfreq)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True,
+                                              use_double=use_double)
+        with_bins = self._memory(proc, t, y, dy, freqs, use_fast=False)
+        assert with_bins.bins_g is not None
+        res = proc.run([(t, y, dy)], memory=[with_bins], freqs=freqs)
+        proc.finish()
+        old = np.copy(res[0][1])
+        new = run_ce(proc, t, y, dy, freqs)     # default: no bins_g
+        assert np.all(np.isfinite(old))
+        assert_array_equal(new, old)
+
+    def test_standard_kernels_reject_a_fast_memory(self):
+        t, y, dy = lightcurve(200, seed=5)
+        freqs = np.linspace(0.5, 3.0, 128)
+        std = ConditionalEntropyAsyncProcess(use_fast=False)
+        mem = self._memory(std, t, y, dy, freqs, use_fast=True)
+        with pytest.raises(ValueError, match="use_fast=True"):
+            std.run([(t, y, dy)], memory=[mem], freqs=freqs)
+
+    @pytest.mark.parametrize('use_fast', [False, True])
+    def test_set_data_false_repeat_is_still_idempotent(self, use_fast):
+        """``set_gpu_arrays_to_zero`` must keep zeroing ``bins_g`` when
+        there is one (id 112) and must not trip over its absence."""
+        t, y, dy = lightcurve(80, seed=6)
+        freqs = np.linspace(0.3, 3.0, 64)
+        proc = ConditionalEntropyAsyncProcess(use_fast=use_fast)
+        mems = proc.allocate(normalize_light_curves([(t, y, dy)]),
+                             freqs=[freqs])
+        mems[0].transfer_freqs_to_gpu()
+        first = None
+        for k in range(3):
+            res = proc.run([(t, y, dy)], memory=mems, freqs=[freqs],
+                           set_data=(k == 0))
+            proc.finish()
+            p = np.copy(res[0][1])
+            if mems[0].bins_g is not None:
+                assert mems[0].bins_g.get().sum() == 80 * len(freqs)
+            if first is None:
+                first = p
+            else:
+                assert_array_equal(p, first)
+
+    def test_preallocate_and_large_run_still_work(self):
+        t, y, dy = lightcurve(150, seed=7)
+        freqs = np.linspace(0.4, 3.0, 500)
+        proc = ConditionalEntropyAsyncProcess(use_fast=True)
+        mems = proc.preallocate(150, freqs, nlcs=1)
+        assert mems[0].bins_g is None
+        res = proc.run([(t, y, dy)], freqs=freqs)
+        proc.finish()
+        prealloc = np.copy(res[0][1])
+        big = proc.large_run([(t, y, dy)], freqs=freqs, max_memory=2e5)
+        ref = run_ce(ConditionalEntropyAsyncProcess(use_fast=True),
+                     t, y, dy, freqs)
+        assert_array_equal(prealloc, ref)
+        assert_allclose(big[0][1], ref, rtol=0, atol=1e-6)
+
+
+class TestCEFrequencyInput(object):
+    """ids 108/163: float32 (or any non-Python-float) frequency arrays
+    were rejected with a misleading 'number of frequency grids' error."""
+
+    def test_single_grid_detection(self):
+        # CPU-runnable
+        assert _is_single_freq_grid(np.linspace(0, 1, 5).astype(np.float32))
+        assert _is_single_freq_grid(np.linspace(0, 1, 5))
+        assert _is_single_freq_grid([0.1, 0.2, 0.3])
+        assert _is_single_freq_grid(np.arange(5))
+        assert not _is_single_freq_grid([np.linspace(0, 1, 5)])
+        assert not _is_single_freq_grid([[0.1, 0.2], [0.3, 0.4, 0.5]])
+        assert not _is_single_freq_grid(np.ones((2, 5)))
+
+    @pytest.mark.parametrize('ctor', [dict(), dict(use_fast=True),
+                                      dict(weighted=True)])
+    def test_float32_freqs_accepted(self, ctor):
+        t, y, dy = lightcurve(60, seed=0)
+        freqs = np.linspace(0.1, 3.0, 50)
+        proc = ConditionalEntropyAsyncProcess(**ctor)
+        ref = run_ce(proc, t, y, dy, freqs)
+
+        def same(p):
+            # (the weighted kernel's float32 atomicAdd order varies
+            # between runs at the 1e-7 level)
+            assert_allclose(p, ref, rtol=0, atol=1e-6)
+
+        same(run_ce(proc, t, y, dy, freqs.astype(np.float32)))
+        same(run_ce(proc, t, y, dy, list(freqs)))
+        r = proc.large_run([(t, y, dy)], freqs=freqs.astype(np.float32))
+        proc.finish()
+        same(np.copy(r[0][1]))
+        # a list of per-lightcurve grids still works
+        r = proc.run([(t, y, dy), (t, y, dy)],
+                     freqs=[freqs.astype(np.float32), freqs])
+        proc.finish()
+        same(np.copy(r[0][1]))
+        same(np.copy(r[1][1]))
+        mems = proc.allocate([(t, y, dy)], freqs=freqs.astype(np.float32))
+        assert mems[0].nf == len(freqs)

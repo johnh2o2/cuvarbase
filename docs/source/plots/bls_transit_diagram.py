@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import cuvarbase.bls as bls
 
 
 def transit_model(phi0, q, delta, q1=0.):
@@ -23,7 +22,7 @@ def plot_bls_sol(t, y, dy, freq, q, phi0):
     w = np.power(dy, -2)
     w /= sum(w)
 
-    phi_plot = np.linspace(0, 1, 50./q)
+    phi_plot = np.linspace(0, 1, int(50. / q))
 
     phi = (t * freq)
     phi -= np.floor(phi)

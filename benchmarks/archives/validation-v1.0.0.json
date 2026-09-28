@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "id": "validation-v1.0.0",
+  "source_commit": "403c75d7425e92b8a3d112672a04177189117a61",
+  "archive": {
+    "key": "benchmark-evidence/20260928/validation-v1.0.0.tar.gz",
+    "bucket": "cuvarbase",
+    "bytes": 66423,
+    "sha256": "8cadf337f0bba6289a442bac6e3cae3c45ee0d905cc5870400306d0f28d6fb55"
+  },
+  "columns": [
+    "path",
+    "bytes",
+    "sha256",
+    "kept_in_git"
+  ],
+  "files": [
+    ["docs/validation/v1.0.0/.gitattributes",54,"c03490fb1e9480ac3d401dac00f3265bd04aa633e1bab6778620ebbd9c13fda1",true],
+    ["docs/validation/v1.0.0/build.log",23825,"070717bdf4b46620628f03e9f299b5300cf341c9cdf4145f2ce6f74f257e33f4",false],
+    ["docs/validation/v1.0.0/docs_build.log",6189,"5a20a55717c9fbc45a65e317250a74ea1701c30198dc022d1bcbb171ca029a58",false],
+    ["docs/validation/v1.0.0/docs_figures.log",1241,"97d6ffea1bf68b571e0fd77332f71594e3649c63ccfacd84f2cfe15e2fef5403",false],
+    ["docs/validation/v1.0.0/env_record.txt",6010,"5a253984a2e10e6bac3b7e0af3d057e086c1de9469a18c1e3942b056b81869cd",false],
+    ["docs/validation/v1.0.0/release_gate.log",1474,"9b8f3cdbfd3e82016a144b4499df2c460a9e1aff7d55719551baec242145362e",false],
+    ["docs/validation/v1.0.0/sdist_pyargs.log",185249,"5db90a478f02ff1aee6d9473e81f49329d38d1f9783cd5f4946c7cc7420d566c",false],
+    ["docs/validation/v1.0.0/sdist_smoke.log",752,"9561f30dc096f103c0d37cd1228be135cc96ad6c7fa06bee1df3b9769b6bae9c",false],
+    ["docs/validation/v1.0.0/source_provenance_final.log",145,"36f6a96c796f20ab682e35e3d5d871538b63bb47d288a0121e29bafa48be1202",false],
+    ["docs/validation/v1.0.0/suite_full.log",199301,"a57b2acf369d755adb8eee643f8922c83196acd8fbee6aec78455ee8434663c1",false],
+    ["docs/validation/v1.0.0/twine_check.log",118,"67995ee1319a718222466563ea3f8daa6d06203b8917108d89b07753852fa820",false],
+    ["docs/validation/v1.0.0/wheel_pyargs.log",185249,"14a6e3f778090066d786bd873789821f9282627343e68605c867a6b03f14ecd3",false],
+    ["docs/validation/v1.0.0/wheel_smoke.log",752,"0650fa25101419bce42a46e80df2778f1faccc69fccf40c280b99423d60d912d",false]
+  ]
+}

@@ -1,0 +1,237 @@
+"""
+CPU tests for the NUFFT-LRT host-side algebra.
+
+``TestDetectorAlgebra`` checks the Detector-A (marginalized joint
+detector) statistic against a dense-inverse reference and the
+sequential detrend; ``TestPsdSmoothing`` checks the edge-corrected
+periodogram smoother.  (The repository-layout checks that used to live
+here -- source syntax, kernel/docs/example file existence -- were not
+tests of the package and could not run from an installed wheel; the
+kernel is exercised by ``test_nufft_lrt.py`` on a device.)
+"""
+
+
+class TestDetectorAlgebra:
+    """CPU tests for the Detector-A (marginalized joint detector)
+    algebra. The Woodbury frequency-domain path is verified against a
+    dense inverse of the realified combined covariance -- an
+    independent computation of the same statistic."""
+
+    @staticmethod
+    def _realify(a):
+        import numpy as np
+        return np.concatenate([np.real(a), np.imag(a)])
+
+    def _dense_statistic(self, Y, T, V_ks, psd, weights, prior_cov):
+        # Cov_s^{-1} is diagonal (w/P) in the realified space; the
+        # combined covariance is Cov_z = Cov_s + R Cov_c R^T with R the
+        # realified basis. Invert it densely (small nf) and evaluate
+        # the matched filter directly.
+        import numpy as np
+        d = np.concatenate([weights / psd, weights / psd])
+        Cov_s = np.diag(1.0 / d)
+        R = np.stack([self._realify(v) for v in V_ks], axis=1)
+        Cov_z = Cov_s + R @ np.atleast_2d(prior_cov) @ R.T
+        Wz = np.linalg.inv(Cov_z)
+        ry, rt = self._realify(Y), self._realify(T)
+        return float(ry @ Wz @ rt / np.sqrt(rt @ Wz @ rt))
+
+    def test_marginal_matches_dense_inverse(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import _marginal_statistic
+
+        rng = np.random.RandomState(7)
+        nf, K = 24, 3
+        Y = rng.randn(nf) + 1j * rng.randn(nf)
+        T = rng.randn(nf) + 1j * rng.randn(nf)
+        V_ks = [rng.randn(nf) + 1j * rng.randn(nf) for _ in range(K)]
+        psd = 0.5 + rng.rand(nf)
+        weights = np.ones(nf)
+        A = rng.randn(K, K)
+        prior_cov = A @ A.T + 0.5 * np.eye(K)   # positive definite
+
+        got = _marginal_statistic(Y, T, V_ks, psd, weights, prior_cov)
+        want = self._dense_statistic(Y, T, V_ks, psd, weights, prior_cov)
+        np.testing.assert_allclose(got, want, rtol=1e-9)
+
+    def test_no_basis_reduces_to_matched_filter(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import (_marginal_statistic,
+                                         _whitened_inner)
+
+        rng = np.random.RandomState(1)
+        nf = 32
+        Y = rng.randn(nf) + 1j * rng.randn(nf)
+        T = rng.randn(nf) + 1j * rng.randn(nf)
+        psd = 1.0 + rng.rand(nf)
+        w = np.ones(nf)
+        got = _marginal_statistic(Y, T, [], psd, w, np.zeros((0, 0)))
+        want = (_whitened_inner(Y, T, psd, w)
+                / np.sqrt(_whitened_inner(T, T, psd, w)))
+        np.testing.assert_allclose(got, want, rtol=1e-12)
+
+    def test_wide_prior_suppresses_basis_component(self):
+        # With a very wide prior, any data component along the basis is
+        # marginalized away: adding a huge basis-aligned contaminant to
+        # Y must not change the statistic (while it wrecks the plain
+        # matched filter).
+        import numpy as np
+        from cuvarbase.nufft_lrt import (_marginal_statistic,
+                                         _whitened_inner)
+
+        rng = np.random.RandomState(3)
+        nf = 24
+        Y = rng.randn(nf) + 1j * rng.randn(nf)
+        T = rng.randn(nf) + 1j * rng.randn(nf)
+        v = rng.randn(nf) + 1j * rng.randn(nf)
+        psd = np.ones(nf)
+        w = np.ones(nf)
+        prior = np.array([[1e8]])
+
+        clean = _marginal_statistic(Y, T, [v], psd, w, prior)
+        contaminated = _marginal_statistic(Y + 50.0 * v, T, [v], psd, w,
+                                           prior)
+        np.testing.assert_allclose(contaminated, clean, rtol=1e-4)
+
+        plain = _whitened_inner(Y, T, psd, w) \
+            / np.sqrt(_whitened_inner(T, T, psd, w))
+        plain_cont = _whitened_inner(Y + 50.0 * v, T, psd, w) \
+            / np.sqrt(_whitened_inner(T, T, psd, w))
+        assert abs(plain_cont - plain) > 10 * abs(contaminated - clean)
+
+    def test_sequential_detrend_removes_basis(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import _sequential_detrend
+
+        rng = np.random.RandomState(5)
+        n = 200
+        t = np.sort(rng.rand(n)) * 30
+        V = np.stack([t - t.mean(), (t - t.mean()) ** 2], axis=1)
+        y = 1.0 + 0.01 * rng.randn(n) + V @ np.array([0.3, -0.02])
+        r = _sequential_detrend(t, y, V)
+        # the fit has an intercept: the demeaned residual is orthogonal
+        # to the CENTRED basis (the second column has mean var(t) != 0),
+        # and the residual keeps the mean of y
+        Vc = V - V.mean(axis=0)
+        np.testing.assert_allclose(Vc.T @ (r - r.mean()), 0.0,
+                                   atol=1e-8 * n)
+        np.testing.assert_allclose(r.mean(), y.mean(), rtol=1e-10)
+
+    def test_sequential_detrend_nonzero_mean_column(self):
+        # audit Sep 2026 (lrt-sequential-intercept): OLS without an
+        # intercept on relative flux (mean 1) with a basis column of
+        # mean 0.01 and unit std absorbs the mean flux into the
+        # coefficient and leaves a residual systematic of amplitude
+        # ybar * m_v / s_v = 0.01 -- 10x this noise. With the intercept
+        # the residual is the noise (up to the O(sigma/sqrt n) fit error).
+        import numpy as np
+        from cuvarbase.nufft_lrt import _sequential_detrend
+
+        rng = np.random.RandomState(7)
+        n, sigma = 2000, 1e-3
+        t = np.sort(rng.rand(n)) * 90.0
+        v = np.sin(2 * np.pi * t / 30.0)
+        v = (v - v.mean()) / v.std() + 0.01          # mean 0.01, std 1
+        noise = sigma * rng.randn(n)
+        y = 1.0 + 0.004 * v + noise
+        r = _sequential_detrend(t, y, v[:, None])
+        leftover = (r - r.mean()) - (noise - noise.mean())
+        assert np.std(leftover) < 0.1 * sigma        # was ~10 sigma
+        assert np.std(r - r.mean()) < 1.2 * sigma
+
+    def test_prior_response_matrix_singular_prior_limit(self):
+        # audit Sep 2026 (ids 122/156): pinv(prior_cov) turned a zero
+        # prior variance into an improper FLAT prior (base tree:
+        # diag(1, 0) gave -1.5934 == diag(1, 1e12), vs -1.5999 for
+        # diag(1, 1e-12)). The push-through form C (I + G C)^-1 gives
+        # the correct "pinned to the prior mean" limit, equal to the
+        # 1e-12-variance result, and equals inv(inv(C) + G) for a
+        # positive-definite prior.
+        import numpy as np
+        from cuvarbase.nufft_lrt import (_marginal_statistic,
+                                         _prior_response_matrix)
+
+        rng = np.random.RandomState(7)
+        nf, K = 24, 2
+        Y = rng.randn(nf) + 1j * rng.randn(nf)
+        T = rng.randn(nf) + 1j * rng.randn(nf)
+        V_ks = [rng.randn(nf) + 1j * rng.randn(nf) for _ in range(K)]
+        psd = 0.5 + rng.rand(nf)
+        w = np.ones(nf)
+        pinned = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 0.0]))
+        tiny = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 1e-12]))
+        flat = _marginal_statistic(Y, T, V_ks, psd, w, np.diag([1.0, 1e12]))
+        np.testing.assert_allclose(pinned, tiny, rtol=1e-8)
+        assert abs(pinned - flat) > 1e-3 * abs(flat)
+
+        A = rng.randn(K, K)
+        C = A @ A.T + 0.5 * np.eye(K)
+        G = rng.randn(K, K)
+        G = G @ G.T + np.eye(K)
+        M = _prior_response_matrix(G, C)
+        np.testing.assert_allclose(M, np.linalg.inv(np.linalg.inv(C) + G),
+                                   rtol=1e-10, atol=1e-12)
+
+    def test_prior_response_matrix_rejects_bad_priors(self):
+        import numpy as np
+        import pytest
+        from cuvarbase.nufft_lrt import _prior_response_matrix
+
+        G = np.eye(2)
+        with pytest.raises(ValueError, match="positive semidefinite"):
+            _prior_response_matrix(G, np.diag([1.0, -1.0]))
+        with pytest.raises(ValueError, match="symmetric"):
+            _prior_response_matrix(G, np.array([[1.0, 0.5], [0.0, 1.0]]))
+        with pytest.raises(ValueError, match="\\(K, K\\)"):
+            _prior_response_matrix(G, np.eye(3))
+        with pytest.raises(ValueError, match="finite"):
+            _prior_response_matrix(G, np.array([[1.0, 0.0], [0.0, np.nan]]))
+
+    def test_epoch_grid(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import epoch_grid
+
+        g = epoch_grid(5.3, 0.22)                     # ceil(2*5.3/0.22)=49
+        assert len(g) == 49
+        assert g[0] == 0.0
+        np.testing.assert_allclose(np.diff(g), 5.3 / 49)
+        assert len(epoch_grid(0.5, 0.3)) == 8          # min clamp
+        assert len(epoch_grid(18.0, 0.12)) == 96       # max clamp
+        assert len(epoch_grid(18.0, 0.12, max_epochs=300)) == 300
+        assert len(epoch_grid(5.3, 0.22, oversample=3.0)) == 73
+
+
+class TestPsdSmoothing:
+    """CPU tests for the edge-corrected periodogram smoothing (audit
+    finding: plain np.convolve 'same' depressed the PSD at the spectrum
+    edges, overweighting those bins by up to ~2x after 1/P whitening)."""
+
+    def test_flat_periodogram_stays_flat_at_edges(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import _smoothed_periodogram
+
+        power = np.ones(64, dtype=np.float32)
+        smoothed = _smoothed_periodogram(power, 5)
+        # Un-corrected smoothing gives 3/5 and 4/5 at the edges; the
+        # count-normalized version is exactly flat everywhere.
+        np.testing.assert_allclose(smoothed, 1.0, rtol=1e-6)
+
+    def test_interior_matches_plain_boxcar(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import _smoothed_periodogram
+
+        rng = np.random.RandomState(0)
+        power = rng.rand(128).astype(np.float64)
+        k = 7
+        smoothed = _smoothed_periodogram(power, k)
+        plain = np.convolve(power, np.ones(k) / k, mode='same')
+        # away from the edges the two agree
+        np.testing.assert_allclose(smoothed[k:-k], plain[k:-k], rtol=1e-12)
+
+    def test_window_one_is_identity(self):
+        import numpy as np
+        from cuvarbase.nufft_lrt import _smoothed_periodogram
+
+        power = np.arange(16, dtype=np.float32)
+        out = _smoothed_periodogram(power, 1)
+        np.testing.assert_array_equal(out, power)

@@ -1,13 +1,10 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 import pytest
-from ..utils import weights
-from ..pdm import pdm2_cpu, binless_pdm_cpu, PDMAsyncProcess
 from pycuda.tools import mark_cuda_test
+from ..utils import weights
+from .. import pdm as pdm_module
+from ..pdm import pdm2_cpu, binless_pdm_cpu, PDMAsyncProcess
 
 pytest.nbins = 10
 pytest.seed = 100
@@ -71,7 +68,9 @@ def pow_gpu(request):
     freqs += 0.5 * (freqs[1] - freqs[0])
 
     pdm_proc = PDMAsyncProcess()
-    results = pdm_proc.run([(t, y, w, freqs)], kind=request.param, nbins=pytest.nbins)
+    # Test deprecated format
+    with pytest.warns(DeprecationWarning):
+        results = pdm_proc.run([(t, y, w, freqs)], kind=request.param, nbins=pytest.nbins)
     pdm_proc.finish()
 
     return results[0]
@@ -93,3 +92,533 @@ def test_cuda_pdm_binless_gauss(binless_pow_cpu,pow_gpu):
 @pytest.mark.parametrize(["binless_pow_cpu","pow_gpu"], [("binless_tophat","binless_tophat")], indirect=True)
 def test_cuda_pdm_binless_tophat(binless_pow_cpu,pow_gpu):
     assert_allclose(binless_pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+@pytest.mark.parametrize(["pow_cpu", "pow_gpu"], [("binned_linterp", "binned_linterp_fast")], indirect=True)
+def test_cuda_pdm_binned_linterp_fast(pow_cpu, pow_gpu):
+    assert_allclose(pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+@pytest.mark.parametrize(["pow_cpu", "pow_gpu"], [("binned_step", "binned_step_fast")], indirect=True)
+def test_cuda_pdm_binned_step_fast(pow_cpu, pow_gpu):
+    assert_allclose(pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+@pytest.mark.parametrize(["binless_pow_cpu", "pow_gpu"], [("binless_gauss", "binless_gauss_fast")], indirect=True)
+def test_cuda_pdm_binless_gauss_fast(binless_pow_cpu ,pow_gpu):
+    assert_allclose(binless_pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+@pytest.mark.parametrize(["binless_pow_cpu", "pow_gpu"], [("binless_tophat", "binless_tophat_fast")], indirect=True)
+def test_cuda_pdm_binless_tophat_fast(binless_pow_cpu, pow_gpu):
+    assert_allclose(binless_pow_cpu, pow_gpu, atol=1E-2, rtol=0)
+
+
+def test_pdm_new_format():
+    rand = np.random.RandomState(pytest.seed)
+
+    t = np.sort(rand.rand(pytest.ndata))
+    y = np.cos(2 * np.pi * (10./(max(t) - min(t))) * t)
+    y += pytest.sigma * rand.randn(len(t))
+    err = pytest.sigma * np.ones_like(y)
+
+    freqs = np.linspace(0, 100./(max(t) - min(t)), pytest.nfreqs)
+    freqs += 0.5 * (freqs[1] - freqs[0])
+
+    pdm_proc = PDMAsyncProcess()
+
+    # Test (t, y, err) with explicit freqs as array
+    results = pdm_proc.run([(t, y, err)], freqs=freqs, kind='binned_linterp', nbins=pytest.nbins)
+    assert_allclose(results[0][0], freqs)
+    # Test (t, y, err) with explicit freqs as list
+    results = pdm_proc.run([(t, y, err)], freqs=list(freqs), kind='binned_linterp', nbins=pytest.nbins)
+    assert_allclose(results[0][0], freqs)
+
+    # Test (t, y, err) with automatic freqs
+    results_auto = pdm_proc.run([(t, y, err)], kind='binned_linterp', nbins=pytest.nbins)
+    assert len(results_auto[0][0]) > 0
+    assert len(results_auto[0][1]) == len(results_auto[0][0])
+
+    pdm_proc.finish()
+
+
+class TestCpuFunctionsDoNotMutateInputs(object):
+    """The CPU reference functions used to do `t -= mean(t)` in place,
+    silently modifying the caller's arrays."""
+
+    def _data(self):
+        rand = np.random.RandomState(7)
+        t = np.sort(10 * rand.rand(40))
+        y = np.cos(2 * np.pi * 2.0 * t) + 0.1 * rand.randn(40)
+        w = np.ones_like(y) / len(y)
+        return t, y, w
+
+    def test_binless_pdm_cpu(self):
+        from ..pdm import binless_pdm_cpu
+        t, y, w = self._data()
+        t0, y0, w0 = t.copy(), y.copy(), w.copy()
+        binless_pdm_cpu(t, y, w, np.array([1.0, 2.0]))
+        assert np.array_equal(t, t0)
+        assert np.array_equal(y, y0)
+        assert np.array_equal(w, w0)
+
+    def test_pdm2_cpu(self):
+        from ..pdm import pdm2_cpu
+        t, y, w = self._data()
+        t0, y0, w0 = t.copy(), y.copy(), w.copy()
+        pdm2_cpu(t, y, w, np.array([1.0, 2.0]))
+        assert np.array_equal(t, t0)
+        assert np.array_equal(y, y0)
+        assert np.array_equal(w, w0)
+
+    def test_pdm2_single_freq(self):
+        from ..pdm import pdm2_single_freq
+        t, y, w = self._data()
+        t0, y0, w0 = t.copy(), y.copy(), w.copy()
+        pdm2_single_freq(t, y, w, 2.0)
+        assert np.array_equal(t, t0)
+        assert np.array_equal(y, y0)
+        assert np.array_equal(w, w0)
+
+
+# ---------------------------------------------------------------------------
+# Regression tests from the Sep-2026 algorithm audit (finding ids 110, 111, 113)
+# ---------------------------------------------------------------------------
+
+def _ref_binned_step(t, y, w, freqs, nbins, fold_dtype=np.float32):
+    """The documented statistic ``1 - SS_within / SS_total`` (float64
+    accumulation, weights normalized, no degrees-of-freedom factor) for
+    ``kind='binned_step'``, with the phase fold done in ``fold_dtype``.
+    ``np.float32`` emulates ``pdm.cu`` exactly (``PHASE(t, f) = t*f -
+    floorf(t*f)``, ``bin = int(phase*nbins) % nbins``).
+
+    Returns ``(power, n_occupied_bins)`` per frequency.
+    """
+    t = t - np.mean(t)
+    y = y - np.mean(y)
+    w = w / np.sum(w)
+    ybar = np.dot(w, y)
+    ss_tot = np.dot(w, (y - ybar) ** 2)
+    t32 = t.astype(fold_dtype)
+    f32 = np.asarray(freqs).astype(fold_dtype)
+    power = np.empty(len(f32))
+    n_occ = np.empty(len(f32), dtype=int)
+    for i, f in enumerate(f32):
+        tf = t32 * f
+        phase = (tf - np.floor(tf)).astype(np.float64)
+        b = (phase * nbins).astype(int) % nbins
+        wtot = np.bincount(b, weights=w, minlength=nbins)
+        wsum = np.bincount(b, weights=w * y, minlength=nbins)
+        means = np.where(wtot > 0, wsum / np.where(wtot > 0, wtot, 1.0), 0.0)
+        power[i] = 1 - np.dot(w, (y - means[b]) ** 2) / ss_tot
+        n_occ[i] = np.count_nonzero(wtot)
+    return power, n_occ
+
+
+def _phase_exactly_one_lightcurve():
+    """Times whose float64 mean is ~0 and which contain a point at t = -1e-9.
+
+    In float32, ``t*f`` for that point lies in (-2**-25, 0) at the trial
+    frequencies returned here, so ``PHASE(t, f) = t*f - floorf(t*f)`` rounds
+    to exactly 1.0f and ``(int)(PHASE * NBINS)`` is ``NBINS`` -- one past the
+    end of the per-thread bin arrays unless the kernel wraps it.
+    """
+    rand = np.random.RandomState(4)
+    base = np.array([-3.0, 3.0, -2.5, 2.5, -1.7, 1.7, -0.9, 0.9, -1e-9, 1e-9])
+    more = 3 * rand.rand(40)
+    t = np.concatenate([base, more, -more])
+    freqs = np.array([2.0, 3.0, 0.5, 4.0])
+    # precondition: the -1e-9 point really folds to float32 phase 1.0
+    t32 = (t - np.mean(t)).astype(np.float32)
+    tf = t32[8] * freqs.astype(np.float32)
+    assert np.all(tf - np.floor(tf) == np.float32(1.0))
+    return t, freqs
+
+
+@mark_cuda_test
+def test_binned_step_phase_exactly_one_no_oob_read():
+    """Audit id 113: ``var_step_function`` (kind='binned_step') indexed
+    ``bin_means[NBINS]`` when a float32 phase rounds to exactly 1.0, while
+    its own accumulation loop, the linterp kernel and the ``_fast`` kernels
+    all wrap with ``bin % NBINS``.  Pre-fix (A40): |binned_step -
+    binned_step_fast| = 0.012..0.024 at the affected frequencies; post-fix
+    the kernels agree to float32 round-off (< 1e-7).
+    """
+    t, freqs = _phase_exactly_one_lightcurve()
+    err = np.ones_like(t)
+    rand = np.random.RandomState(113)
+    proc = PDMAsyncProcess()
+
+    def run(kind, t, y, err):
+        res = proc.run([(t, y, err)], freqs=freqs, kind=kind, nbins=10)
+        proc.finish()
+        return np.copy(res[0][1])
+
+    worst_vs_fast, worst_vs_ref = 0.0, 0.0
+    for _ in range(10):
+        y = 12 + rand.randn(len(t))
+        step = run('binned_step', t, y, err)
+        fast = run('binned_step_fast', t, y, err)
+        ref, _ = _ref_binned_step(t, y, weights(err), freqs, 10)
+        assert np.all(np.isfinite(step))
+        worst_vs_fast = max(worst_vs_fast, np.max(np.abs(step - fast)))
+        worst_vs_ref = max(worst_vs_ref, np.max(np.abs(step - ref)))
+    assert worst_vs_fast < 5e-6
+    assert worst_vs_ref < 5e-6
+
+    # the statistic must not depend on the order of the observations
+    perm = rand.permutation(len(t))
+    assert_allclose(run('binned_step', t[perm], y[perm], err[perm]), step,
+                    atol=5e-6, rtol=0)
+
+
+@mark_cuda_test
+def test_deprecated_format_normalizes_weights():
+    """Audit id 111: the deprecated ``(t, y, w, freqs)`` input format assumed
+    ``sum(w) == 1``.  With raw inverse-variance weights (or all ones) the
+    host-side weighted mean and variance were scaled by ``sum(w)`` and every
+    kind returned a flat spectrum of exactly 1.0.  ``run()`` now normalizes
+    ``w`` (the statistic is invariant to the scale of ``w``), so the legacy
+    path must agree with the modern ``(t, y, err)`` path for any scaling.
+    """
+    rand = np.random.RandomState(111)
+    n = 300
+    t = np.sort(30 * rand.rand(n))
+    y = 12 + np.sin(2 * np.pi * 1.7 * t) + 0.2 * rand.randn(n)
+    err = 0.2 * (0.5 + rand.rand(n))
+    freqs = np.linspace(0.05, 5.0, 400)
+    proc = PDMAsyncProcess()
+
+    def run(data, kind, **kw):
+        res = proc.run(data, kind=kind, nbins=10, dphi=0.05, **kw)
+        proc.finish()
+        return res
+
+    cases = [
+        (err ** -2, err),           # raw inverse variance: sum(w) != 1
+        (weights(err), err),        # already normalized
+        (np.ones(n), np.ones(n)),   # uniform weights: sum(w) == n
+    ]
+    for kind in ['binned_linterp', 'binned_step_fast',
+                 'binless_tophat', 'binless_gauss_fast']:
+        for w, err_equiv in cases:
+            modern = np.copy(run([(t, y, err_equiv)], kind, freqs=freqs)[0][1])
+            with pytest.warns(DeprecationWarning):
+                legacy = np.copy(run([(t, y, w, freqs)], kind)[0])
+            assert np.ptp(modern) > 0.5          # a real periodogram
+            assert_allclose(legacy, modern, atol=1e-6, rtol=0)
+
+
+def test_pdm2_cpu_is_ss_ratio_without_dof_correction():
+    """Audit id 110: the statistic is ``1 - SS_within / SS_total`` with
+    normalized weights and *no* ``(N - M) / (N - 1)`` degrees-of-freedom
+    factor -- it is not Stellingwerf's ``1 - Theta``.
+    """
+    rand = np.random.RandomState(110)
+    n, nbins = 50, 10
+    t = np.sort(30 * rand.rand(n))
+    y = rand.randn(n)
+    w = weights(0.1 * (0.5 + rand.rand(n)))
+    freqs = np.linspace(0.1, 5.0, 40)
+
+    p = np.asarray(pdm2_cpu(t, y, w, freqs, nbins=nbins, linterp=False))
+    ref, n_occ = _ref_binned_step(t, y, w, freqs, nbins, fold_dtype=np.float64)
+    assert_allclose(p, ref, atol=1e-12, rtol=0)
+
+    # the dof-corrected statistic is a different function of the data
+    one_minus_theta = 1 - (n - 1) / (n - n_occ) * (1 - ref)
+    assert np.max(np.abs(one_minus_theta - p)) > 0.05
+
+
+def test_pdm2_cpu_noise_floor_is_M_minus_1_over_N_minus_1():
+    """Audit id 110: for pure Gaussian noise with uniform weights
+    ``SS_between / SS_total ~ Beta((M - 1)/2, (N - M)/2)``, so the returned
+    power has expectation ``(M - 1) / (N - 1)`` with ``M`` the number of
+    occupied bins -- about 0.4 at N = 20 in 10 bins, not ~0 as the
+    dof-corrected ``1 - Theta`` would give.
+    """
+    rand = np.random.RandomState(110)
+    n, nbins = 20, 10
+    p_all, expect_all = [], []
+    for _ in range(100):
+        t = np.sort(30 * rand.rand(n))
+        y = rand.randn(n)
+        w = np.ones(n) / n
+        freqs = 0.05 + 5.0 * rand.rand(30)
+        p_all.extend(pdm2_cpu(t, y, w, freqs, nbins=nbins, linterp=False))
+        _, n_occ = _ref_binned_step(t, y, w, freqs, nbins, fold_dtype=np.float64)
+        expect_all.extend((n_occ - 1) / (n - 1))
+    assert abs(np.mean(p_all) - np.mean(expect_all)) < 0.02   # measured 0.002
+    assert np.mean(p_all) > 0.3
+
+
+@mark_cuda_test
+def test_gpu_binned_step_statistic_and_noise_floor():
+    """Audit id 110 on the device: ``kind='binned_step'`` returns exactly
+    the float32-fold ``1 - SS_within / SS_total`` (no dof correction), so
+    pure noise sits at ``(M - 1) / (N - 1)`` (0.40 at N = 20 on the A40),
+    not near zero.
+    """
+    proc = PDMAsyncProcess()
+    freqs = np.linspace(0.05, 5.0, 500)
+    for n in (20, 200):
+        p_means, expect_means = [], []
+        for seed in range(4):
+            rand = np.random.RandomState(1000 * n + seed)
+            t = np.sort(30 * rand.rand(n))
+            y = rand.randn(n)
+            err = np.ones(n)
+            res = proc.run([(t, y, err)], freqs=freqs, kind='binned_step',
+                           nbins=10)
+            proc.finish()
+            p = np.copy(res[0][1])
+            ref, n_occ = _ref_binned_step(t, y, weights(err), freqs, 10)
+            assert_allclose(p, ref, atol=5e-6, rtol=0)   # measured 2e-7..2e-6
+            p_means.append(p.mean())
+            expect_means.append(np.mean((n_occ - 1) / (n - 1)))
+        assert abs(np.mean(p_means) - np.mean(expect_means)) < 0.03
+        if n == 20:
+            assert np.mean(p_means) > 0.3
+
+
+def test_run_docstring_states_statistic_and_dphi_semantics():
+    """Audit ids 110/117: run() must say what the returned power is and
+    what ``dphi`` means (tophat half-width / Gaussian standard deviation)."""
+    doc = PDMAsyncProcess.run.__doc__
+    assert 'half-width' in doc
+    assert 'standard deviation' in doc
+    assert 'no degrees-of-freedom correction' in doc
+
+
+# ---------------------------------------------------------------------------
+# PDM-1 (audit id 161): run() reallocated five device arrays, a page-locked
+# host buffer and a synchronous frequency upload on every call.  The device
+# buffers are now kept and reused when the next call asks for the same
+# shapes; nothing about the returned numbers may change.
+# ---------------------------------------------------------------------------
+
+def _reuse_lc(ndata, seed, baseline=20.):
+    r = np.random.RandomState(seed)
+    t = np.sort(r.uniform(0, baseline, ndata))
+    y = 0.4 * np.sin(2 * np.pi * 1.7 * t) + 0.1 * r.randn(ndata)
+    return t, y, 0.1 * np.ones(ndata)
+
+
+class TestPDMTupleShape(object):
+    """Sep 2026 review (idx 46): a (t, y) 2-tuple passed the validator
+    (``lc[2] if len(lc) > 2 else None``) and died in ``run()`` with a
+    raw "not enough values to unpack (expected 3, got 2)". CPU-runnable:
+    the validator raises before any GPU work."""
+
+    grid = np.linspace(0.2, 4.0, 65)
+
+    def test_two_tuple_is_rejected_with_a_clear_message(self):
+        t, y, dy = _reuse_lc(40, 21)
+        proc = PDMAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=self.grid),
+                      lambda d: proc.large_run(d, freqs=self.grid),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=self.grid)):
+            with pytest.raises(ValueError, match=r'\(t, y, err\) tuple'):
+                entry([(t, y)])
+            # the bad lightcurve is named when it is not the first one
+            with pytest.raises(ValueError, match='1'):
+                entry([(t, y, dy), (t, y)])
+        # stub-independent: the validator itself raises
+        from ..pdm import _check_pdm_data
+        with pytest.raises(ValueError, match=r'\(t, y, err\) tuple'):
+            _check_pdm_data([(t, y)], self.grid, 'x', False)
+
+    def test_mixed_deprecated_batch_is_rejected(self):
+        t, y, dy = _reuse_lc(40, 22)
+        w = weights(dy)
+        proc = PDMAsyncProcess()
+        with pytest.warns(DeprecationWarning):
+            with pytest.raises(ValueError,
+                               match=r'lightcurve 1: must be a \(t, y, w, '
+                                     r'freqs\) tuple'):
+                proc.run([(t, y, w, self.grid), (t, y, dy)])
+
+
+class TestPDMConstantY(object):
+    """Sep 2026 review (idx 17, audit id 115): a constant ``y`` passed
+    the validator and the kernels returned ``1 - x / 0`` = NaN at every
+    frequency. CPU-runnable: the validator raises before any GPU work."""
+
+    grid = np.linspace(0.2, 4.0, 65)
+
+    def test_constant_y_is_rejected(self):
+        t, y, dy = _reuse_lc(40, 31)
+        const = np.full_like(y, 12.5)
+        proc = PDMAsyncProcess()
+        for entry in (lambda d: proc.run(d, freqs=self.grid),
+                      lambda d: proc.large_run(d, freqs=self.grid),
+                      lambda d: proc.batched_run_const_nfreq(
+                          d, freqs=self.grid)):
+            with pytest.raises(ValueError, match='lightcurve 1: y is '
+                                                 'constant'):
+                entry([(t, y, dy), (t, const, dy)])
+        # stub-independent: the validator itself raises
+        from ..pdm import _check_pdm_data
+        with pytest.raises(ValueError, match='y is constant'):
+            _check_pdm_data([(t, const, dy)], self.grid, 'x', False)
+        with pytest.warns(DeprecationWarning):
+            with pytest.raises(ValueError, match='y is constant'):
+                proc.run([(t, const, weights(dy), self.grid)])
+        # the host-side variance the kernels divide by really is zero
+        w = weights(dy)
+        yc = const - np.mean(const)
+        assert np.dot(w, (yc - np.dot(w, yc)) ** 2) == 0.0
+
+
+class TestPDMAllocationReuse(object):
+
+    grid = np.linspace(0.2, 4.0, 257)
+
+    def test_same_shapes_reuse_the_device_buffers(self):
+        proc = PDMAsyncProcess()
+        t, y, dy = _reuse_lc(120, 1)
+        proc.run([(t, y, dy)], freqs=self.grid)
+        proc.finish()
+        first = proc._alloc_cache[1][0]
+        proc.run([(t, y, dy)], freqs=self.grid)
+        proc.finish()
+        second = proc._alloc_cache[1][0]
+        # t_g, y_g, w_g, freqs_g, pow_g: the same five device arrays
+        assert all(a is b for a, b in zip(first, second))
+
+    def test_new_shapes_replace_the_cache(self):
+        proc = PDMAsyncProcess()
+        t, y, dy = _reuse_lc(120, 2)
+        proc.run([(t, y, dy)], freqs=self.grid)
+        proc.finish()
+        first = proc._alloc_cache[1][0]
+        t2, y2, dy2 = _reuse_lc(200, 3)
+        proc.run([(t2, y2, dy2)], freqs=self.grid)
+        proc.finish()
+        assert proc._alloc_cache[0] == ((200, len(self.grid)),)
+        assert proc._alloc_cache[1][0][0] is not first[0]
+        # ... and a different grid length too
+        proc.run([(t2, y2, dy2)], freqs=self.grid[:64])
+        proc.finish()
+        assert proc._alloc_cache[0] == ((200, 64),)
+
+    def test_results_are_not_shared_between_calls(self):
+        """The reused buffers are on the device; each call still gets its
+        own host result array, so an earlier result is never clobbered."""
+        proc = PDMAsyncProcess()
+        a = _reuse_lc(150, 4)
+        b = _reuse_lc(150, 5)
+        r1 = proc.run([a], freqs=self.grid)
+        proc.finish()
+        keep = np.copy(r1[0][1])
+        r2 = proc.run([b], freqs=self.grid)
+        proc.finish()
+        assert r1[0][1] is not r2[0][1]
+        assert_array_equal(np.asarray(r1[0][1]), keep)
+        assert not np.array_equal(np.asarray(r2[0][1]), keep)
+
+    @pytest.mark.parametrize('kind', ['binned_linterp', 'binned_step',
+                                      'binned_linterp_fast',
+                                      'binless_tophat'])
+    def test_reused_buffers_give_identical_results(self, kind):
+        """Bit-for-bit: the same call through a fresh allocation and
+        through the reused one."""
+        warm = PDMAsyncProcess()
+        warm.run([_reuse_lc(150, 6)], freqs=self.grid, kind=kind)
+        warm.finish()
+        for seed in (7, 8, 9):
+            d = _reuse_lc(150, seed)
+            fresh = PDMAsyncProcess()
+            p_fresh = fresh.run([d], freqs=self.grid, kind=kind)
+            fresh.finish()
+            ref = np.copy(p_fresh[0][1])
+            p_warm = warm.run([d], freqs=self.grid, kind=kind)
+            warm.finish()
+            assert_array_equal(np.asarray(p_warm[0][1]), ref)
+
+    def test_changed_grid_of_the_same_length_is_reuploaded(self):
+        """The cache keys on shapes only, so a *different* grid with the
+        same length has to be pushed to the device again."""
+        proc = PDMAsyncProcess()
+        d = _reuse_lc(150, 10)
+        g1 = self.grid
+        g2 = self.grid + 0.37
+        proc.run([d], freqs=g1)
+        proc.finish()
+        got = proc.run([d], freqs=g2)
+        proc.finish()
+        clean = PDMAsyncProcess()
+        ref = clean.run([d], freqs=g2)
+        clean.finish()
+        assert_array_equal(np.asarray(got[0][1]), np.asarray(ref[0][1]))
+        assert_array_equal(np.asarray(got[0][0]), g2)
+
+    def test_in_place_mutated_float32_grid_is_reuploaded_cpu(self,
+                                                             monkeypatch):
+        """Sep 2026 review (idx 15): the cache stored ``np.asarray(f,
+        float32)`` -- the caller's own array for a float32 grid -- so a
+        grid modified in place compared equal to itself and the device
+        kept the old one. CPU-runnable with recording fake device
+        arrays."""
+        class FakeDevice(object):
+            def __init__(self):
+                self.sets = []
+
+            def set(self, a):
+                self.sets.append(np.array(a, copy=True))
+
+        proc = PDMAsyncProcess()
+
+        def fake_allocate(norm_data, freqs=None, **kw):
+            gpu = [(None, None, None, FakeDevice(), None) for _ in norm_data]
+            return gpu, [np.zeros(len(f), np.float32)
+                         for (t, y, w, f) in norm_data]
+
+        monkeypatch.setattr(proc, 'allocate', fake_allocate)
+        monkeypatch.setattr(pdm_module, 'host_array',
+                            lambda shape, dtype: np.zeros(shape, dtype))
+        t, y, dy = _reuse_lc(40, 11)
+        w = weights(dy)
+        f = np.linspace(0.2, 4.0, 33).astype(np.float32)
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        assert proc._alloc_cache[2][0] is not f
+        f *= 2.0
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        dev = gpu_data[0][3]
+        assert len(dev.sets) == 1
+        assert_array_equal(dev.sets[0], f)
+        assert_array_equal(proc._alloc_cache[2][0], f)
+        # the stored grid is still private: a later mutation is seen too
+        f += 0.5
+        gpu_data, _ = proc._allocate_cached([(t, y, w, f)], [f])
+        assert len(dev.sets) == 2
+        assert_array_equal(dev.sets[1], f)
+
+    def test_in_place_mutated_float32_grid_is_reuploaded(self):
+        """GPU counterpart: the powers of the second call must be those
+        of the mutated grid, not of the grid the first call uploaded."""
+        proc = PDMAsyncProcess()
+        d = _reuse_lc(150, 12)
+        g = np.asarray(self.grid, dtype=np.float32)
+        proc.run([d], freqs=g)
+        proc.finish()
+        g += np.float32(0.37)          # in place: same object, new grid
+        got = proc.run([d], freqs=g)
+        proc.finish()
+        clean = PDMAsyncProcess()
+        ref = clean.run([d], freqs=np.array(g, copy=True))
+        clean.finish()
+        assert_array_equal(np.asarray(got[0][1]), np.asarray(ref[0][1]))
+
+    def test_batched_run_matches_single_runs(self):
+        data = [_reuse_lc(90 + 0 * i, 20 + i) for i in range(7)]
+        freqs = np.linspace(0.3, 3.0, 129)
+        proc = PDMAsyncProcess()
+        batched = proc.batched_run_const_nfreq(data, batch_size=3,
+                                               freqs=freqs)
+        for (t, y, dy), (_f, p) in zip(data, batched):
+            clean = PDMAsyncProcess()
+            single = clean.run([(t, y, dy)], freqs=freqs)
+            clean.finish()
+            assert_array_equal(np.asarray(p), np.asarray(single[0][1]))

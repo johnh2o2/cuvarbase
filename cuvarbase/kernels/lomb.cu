@@ -3,11 +3,18 @@
 //{CPP_DEFS}
 
 #define EPSILON 1E-8
-#define PI 3.141592653589793238462643383279502884f
 #ifdef DOUBLE_PRECISION
 	#define FLT double
+	// PI must be a double literal here: the float32 literal's relative
+	// error (2.8e-8) rescales the un-reduced phase arguments in cossum/
+	// sinsum (2*pi*f*(t + 0.5), with t on the caller's original time
+	// scale) so the direct-sums kernels evaluate the periodogram on a
+	// frequency axis stretched by 1 + 2.8e-8 even in double-precision
+	// mode (same defect class as the cunfft.cu A3 fix, Jul 2026).
+	#define PI 3.14159265358979323846264338327950288
 #else
 	#define FLT float
+	#define PI 3.14159265358979323846264338327950288f
 #endif
 
 #define STANDARD 0
@@ -220,36 +227,7 @@ __global__ void lomb(pycuda::complex<FLT>  *sw,
 }
 
 
-__global__ void lomb_mh(pycuda::complex<FLT>  *sw,
-					    pycuda::complex<FLT>  *syw,
-					    FLT *lsp,
-					    FLT *reg,
-					    int nfreq, 
-					    int nharmonics,
-					    FLT YY, 
-					    FLT Y, 
-					    int k0, 
-					    int mode){
-
-	// least squares (lomb scargle with FLTing mean)
-
-	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-	// reg = (lambda_a, lambda_b, lambda_c)
-	if (i < nfreq){
-		pycuda::complex<FLT> SW, SW2, SYW;
-		SW = sw[i];
-		SW2 = sw[2 * i + k0];
-		SYW = syw[i];
-
-		FLT C = SW.real();
-		FLT S = SW.imag();
-
-		FLT C2 = SW2.real();
-		FLT S2 = SW2.imag();
-
-		FLT YCh = SYW.real();
-		FLT YSh = SYW.imag();
-
-        lsp[i] = lspow(C, S, C2, S2, YCh, YSh, YY, Y, reg, mode);
-	}
-}
+// Multiharmonic (H>1) GLS is handled on the host in
+// cuvarbase.lombscargle._mh_power_from_spectra (the small per-frequency
+// 2H x 2H solve runs in float64), reusing the GPU NFFT spectra. There is
+// deliberately no in-kernel multiharmonic solver.

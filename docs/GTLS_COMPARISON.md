@@ -1,0 +1,46 @@
+# cuvarbase TLS and GTLS
+
+cuvarbase's observation-level search follows [GTLS full mode at commit 74e449c](https://github.com/Farthing-0/GTLS/tree/74e449c325792a763dde4fbffab98039c5e8c111). The release keeps original `6ced75d` execution as the default and makes the measured optimization bundle explicit through `execution='experimental'`. The frozen survey evaluates its actual archived sources, not this later release wiring. [Release validation](../benchmarks/results/tls_survey_2026-09-10/release-validation/README.md) passed all 24 paired numerical comparisons and 86 device tests on eleven fixed development inputs. This checks release wiring; it does not requalify experimental sensitivity.
+
+| Contract | cuvarbase reference search | Pinned public GTLS |
+| --- | --- | --- |
+| Samples and templates | Individual observations; native sample-index cache | Same model family |
+| Coarse/full policy | Native coarse epoch spacing; candidate and harmonic full refinement | Same logical search policy |
+| Candidate eligibility | Finite, unmasked period/score pairs before ranking | Host masked-sort defect can admit NaN periods |
+| Duration grouping | Logical groups fixed independently of workspace chunks | Physical groups can depend on available memory |
+| Time cleaning | Shift in float64; retain valid nonpositive timestamps | Nonpositive timestamps otherwise dropped |
+| Reported statistics | Native SDE; cuvarbase input-error-unit `sqrt(delta chi2)` SNR | Additional native depth/scatter and pink-noise diagnostics |
+
+Identical-input comparisons supply the same positive-origin timestamps, errors and full period grid to both packages. Small automatic grids, stellar-range validation and unrepresentable zero-sample rows have separately documented input-handling differences. The [API guide](source/tls.rst) specifies the supported input domain.
+
+## Canonical CPU TLS is a different comparison
+
+This is **not numerical equivalence to CPU `transitleastsquares`**. Archived CPU TLS 1.32 normally steps epochs by 1% of a window duration. GTLS uses 12.5% in the coarse stage, then every sample start for selected candidates/harmonics. GTLS's top-100 plus next-100-above-one-day policy does not fully refine every period. Float32 GPU prefixes and coarse/full residual arithmetic also differ from the CPU implementation. [Archived CPU source](BENCHMARK_ARCHIVES.md#tls_profile_2026-09-08 "Archived file: benchmarks/results/tls_profile_2026-09-08/sources/cpu-tls/transitleastsquares/core.py") · [Archived GTLS source](BENCHMARK_ARCHIVES.md#transit_2026-09-08 "Archived file: benchmarks/results/transit_2026-09-08/sources/gtls-head/core.py").
+
+Neither search automatically integrates every exposure or searches a full eccentric, grazing and multiband physical family. Both use an unweighted sample-window mean with template overshoot to estimate depth, rather than solving an unrestricted weighted amplitude and constant at every trial. Sample-index templates can distort irregularly sampled signals. These retained choices must be separated from implementation-optimization losses.
+
+The default 10 ppm gate applies strictly to the unweighted mean before overshoot. CPU float64 window diagnostics cannot establish whether the actual float32 raw-flux prefix admitted a particular GPU trial. The grazing/smearing deficit in the new population is observed; attributing it to this gate, cancellation or a specific fit would exceed the persisted evidence.
+
+## What the completed science comparison establishes
+
+Native GTLS-compatible TLS and development-selected GPU BLS received identical physical signals, errors and full grids. Each regime used 512 paired calibration nulls and separate method-specific thresholds, independently of development, 256 test nulls and 256 injections. These are common **calibrated target** FPRs, with uncertain realized test FPRs. Package SDE/SNR values were not equated. [Recovery, simultaneous intervals and expected-SNR diagnostics](TRANSIT_BENCHMARKS.md).
+
+At both 5% and 1% targets, simultaneous intervals establish positive TLS-minus-BLS recovery differences in four TESS regimes and a negative difference in the grazing/smeared regime. Other subgroup results and poor synthetic-HATpi recovery prevent a universal advantage claim. Published canonical TLS results remain a separate body of evidence. [Literature interpretation](TLS_LITERATURE.md).
+
+## Implementation qualification failed
+
+The original optimized-versus-immutable-baseline comparison retained **nine chi-squared-spectrum/SDE mismatches among 5,120 pairs**, with no changed selected periods or either frozen-threshold decision. Its zero tolerance remains unchanged. The separate baseline pass used the candidate TLS thresholds on injections and independent test nulls; it did not recalculate baseline calibration spectra or cuts. No aggregate bitwise-equivalence or independently recalibrated baseline-FPR claim follows.
+
+The nine failures comprise two TESS high-impact, three TESS eccentric and four HATpi cases. Original development was already 79/80 exact. Repeats remain diagnostic, never replacements for a failed primary comparison. Earlier [184 corrected-GTLS comparisons](../benchmarks/results/tls_reference_2026-09-10/README.md) and the [long-control failure](../benchmarks/results/tls_reference_2026-09-10/stress/diagnostic/README.md) retain their dated source/input scopes; they do not certify this newer bundle.
+
+The release therefore restores the full baseline implementation and exposes the whole optimization bundle only experimentally. Disabling only its short-row kernel would leave the other changes active. Baseline restoration does not promise that native long-row scans are deterministic.
+
+## Invalid-candidate correction and timing scope
+
+Pinned GTLS can sort masked scores into its first candidate list, convert the associated periods to NaN on the GPU, and assign finite results for invalid trials back into the spectrum. cuvarbase filters nonfinite/masked candidates before sorting while preserving the valid-entry quotas and tie policy. This correction predates the new optimization bundle and remains in both execution modes. Comparisons distinguish untouched public GTLS from a separately corrected reference; no failed public call becomes a successful timing denominator.
+
+Full API timing includes normal output work. A common-search boundary ending at final GPU winner selection excludes GTLS's additional parameter/noise diagnostics and must be labeled separately. The [collected full-API campaign](BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-timing/primary/throughput-final/campaign.json") independently selected baseline four workers/batch eight, experimental four/batch four and public GTLS two/batch one. Its seven eligible panel rates include public GTLS at median 2.424906 light curves/s on dense TESS and 0.118107 on ZTF solar. GTLS long-gap and varied pools failed with out-of-memory errors in their first queues, and both remain excluded. The pinned automatic internal period grouping has no supported override; these are conditional tested operating settings, not a global optimum.
+
+The collected campaign has seven eligible engine/workload rates. The experimental candidate reaches a median 0.837289 light curves/s on ZTF solar versus baseline 0.452633, a **1.850×** ratio; long-gap TESS is 0.775998 versus 0.770469, **1.007×**. Both timing-cohort gates and the unchanged paired spectrum check passed in those two regimes. Baseline dense TESS and all varied-size panels remain excluded, so they supply no baseline/candidate ratio. These timings do not override the failed 5,111/5,120 aggregate gate. [Final rates, ranges and exclusions](../benchmarks/results/tls_survey_2026-09-10/final-timing/reporting/TIMING_LINKED.md) · [figure and value provenance](BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-figures/survey-throughput-with-native-bls.data.json").
+
+The original BLS pool failed its selected-output repeatability gate. The separate native BLS execution supplement obtained no rates: its launcher omitted `VECLIB_MAXIMUM_THREADS` and `NUMEXPR_NUM_THREADS`, and the allocation guard rejected those unset values before creating workers. Its [failed pilot receipts and launch provenance](BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-timing/reporting/native-bls-launch-audit.json") remain separate from the numerical failure; no replacement denominator is supplied. [Cold preparation, amortized cost and sampled memory](../benchmarks/results/tls_survey_2026-09-10/final-timing/reporting/TIMING_LINKED.md).  [Collected recovery report](../benchmarks/results/tls_survey_2026-09-10/final-report/RECOVERY.md) · [original exactness receipt](BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-science/exactness-final.json") · [report provenance](BENCHMARK_ARCHIVES.md#tls_survey_2026-09-10 "Archived file: benchmarks/results/tls_survey_2026-09-10/final-report/provenance.json"). Historical phase-binned-versus-fast-GTLS ratios do not describe this default.

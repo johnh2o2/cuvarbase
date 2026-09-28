@@ -1,21 +1,100 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from builtins import zip
-from builtins import range
-
 import numpy as np
-import resource
 import warnings
+from typing import Literal
 
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-# import pycuda.autoinit
 
-from .core import GPUAsyncProcess
-from .utils import weights, find_kernel, dphase, normalize_light_curves
+from .base import GPUAsyncProcess
+from .memory._host import host_array
+from .utils import weights, find_kernel, dphase, normalize_light_curves, autofrequency
+from .utils import check_lightcurve, check_freqs
+
+
+__all__ = [
+    'var_tophat',
+    'var_gauss',
+    'binned_pdm_model',
+    'var_binned',
+    'binless_pdm_cpu',
+    'pdm2_cpu',
+    'pdm2_single_freq',
+    'pdm_async',
+    'PDMAsyncProcess',
+]
+
+
+# Minimum number of observations the PDM entry points accept. The
+# statistic is 1 - sum(w (y - model)^2) / sum(w (y - ybar)^2); the
+# denominator is identically zero for a single point, and the whole
+# spectrum came back NaN with no warning.
+_PDM_MIN_NDATA = 2
+
+
+def _check_pdm_data(data, freqs, where, is_deprecated):
+    """Validate a PDM batch before any GPU work.
+
+    Two input formats: the current ``(t, y, err)`` (validated with
+    :func:`cuvarbase.utils.check_lightcurve`) and the deprecated
+    ``(t, y, w, freqs)``, whose third column is a weight rather than an
+    uncertainty -- it must still be finite and strictly positive, and
+    its own frequency grid is validated per light curve. A NaN sample,
+    ``dy = 0`` or a negative weight used to give an all-NaN spectrum
+    with no warning at all (Sep 2026 audit, defect 23), and so did a
+    constant ``y`` (audit id 115): the statistic divides by the
+    variance of ``y``, which is then zero.
+    """
+    def _check_not_constant(y, name):
+        if np.all(y == y[0]):
+            raise ValueError(
+                "%s: y is constant (all %d values equal %r); the PDM "
+                "statistic divides by the variance of y, which is zero "
+                "(the spectrum was all NaN). Remove constant lightcurves "
+                "before searching" % (name, y.size, y[0]))
+
+    for i, lc in enumerate(data):
+        name = '%s lightcurve %d' % (where, i)
+        # exactly (t, y, err) -- or (t, y, w, freqs) for the deprecated
+        # format, which is detected from the FIRST lightcurve: run()
+        # unpacks the tuples downstream, so a 2-tuple died there with a
+        # raw "not enough values to unpack" instead of this message
+        if is_deprecated:
+            if len(lc) != 4:
+                raise ValueError(
+                    "%s: must be a (t, y, w, freqs) tuple like the first "
+                    "lightcurve (deprecated format); got %d elements"
+                    % (name, len(lc)))
+            t, y, w, frqs = lc
+            _t, y, _dy = check_lightcurve(t, y, min_n=_PDM_MIN_NDATA,
+                                          name=name)
+            _check_not_constant(y, name)
+            w = np.asarray(w)
+            if w.shape != np.asarray(t).shape:
+                raise ValueError("%s: t and w must have the same length; "
+                                 "got %d and %d"
+                                 % (name, len(t), w.size))
+            if not np.all(np.isfinite(w)) or not np.all(w > 0):
+                raise ValueError(
+                    "%s: w must be finite and > 0 (weights of any scale; "
+                    "they are normalized to sum to one internally)" % name)
+            check_freqs(frqs, name=name)
+        else:
+            if len(lc) != 3:
+                raise ValueError(
+                    "%s: must be a (t, y, err) tuple; got %d elements "
+                    "(the deprecated (t, y, w, freqs) format is accepted "
+                    "only when every lightcurve, the first included, "
+                    "uses it)" % (name, len(lc)))
+            _t, y, _dy = check_lightcurve(lc[0], lc[1], lc[2],
+                                          min_n=_PDM_MIN_NDATA, name=name)
+            _check_not_constant(y, name)
+    if not is_deprecated and freqs is not None:
+        # ``freqs`` is either one shared grid or one per light curve
+        # (the same test run() makes)
+        grids = freqs if len(freqs) and np.ndim(freqs[0]) else [freqs]
+        for frq in grids:
+            check_freqs(frq, name=where)
 
 
 def var_tophat(t, y, w, freq, dphi):
@@ -33,8 +112,9 @@ def var_tophat(t, y, w, freq, dphi):
 
     return var
 
+
 def var_gauss(t, y, w, freq, dphi):
-    gaussian = lambda x: np.exp(-0.5 *x**2)
+    def gaussian(x): return np.exp(-0.5 * x**2)
     var = 0.
     for i, (T, Y, W) in enumerate(zip(t, y, w)):
         mbar = 0.
@@ -42,13 +122,14 @@ def var_gauss(t, y, w, freq, dphi):
 
         for j, (T2, Y2, W2) in enumerate(zip(t, y, w)):
             dph = dphase(abs(T2 - T), freq)
-            wgt   = W2 * gaussian(dph / dphi)
+            wgt = W2 * gaussian(dph / dphi)
             mbar += wgt * Y2
             wtot += wgt
 
         var += W * (Y - mbar / wtot)**2
 
     return var
+
 
 def binned_pdm_model(t, y, w, freq, nbins, linterp=True):
 
@@ -88,9 +169,9 @@ def var_binned(t, y, w, freq, nbins, linterp=True):
 
 
 def binless_pdm_cpu(t, y, w, freqs, dphi=0.05, tophat=True):
-    # Prepare data
-    t -= np.mean(t)
-    y -= np.mean(y)
+    # Prepare data (copies: don't mutate the caller's arrays)
+    t = t - np.mean(t)
+    y = y - np.mean(y)
 
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
@@ -99,10 +180,11 @@ def binless_pdm_cpu(t, y, w, freqs, dphi=0.05, tophat=True):
     else:
         return [1 - var_gauss(t, y, w, freq, dphi) / var for freq in freqs]
 
+
 def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True):
-    # Prepare data
-    t -= np.mean(t)
-    y -= np.mean(y)
+    # Prepare data (copies: don't mutate the caller's arrays)
+    t = t - np.mean(t)
+    y = y - np.mean(y)
 
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
@@ -112,9 +194,9 @@ def pdm2_cpu(t, y, w, freqs, nbins=30, linterp=True):
 
 
 def pdm2_single_freq(t, y, w, freq, nbins=30, linterp=True):
-    # Prepare data
-    t -= np.mean(t)
-    y -= np.mean(y)
+    # Prepare data (copies: don't mutate the caller's arrays)
+    t = t - np.mean(t)
+    y = y - np.mean(y)
 
     ybar = np.dot(w, y)
     var = np.dot(w, np.power(y - ybar, 2))
@@ -122,7 +204,15 @@ def pdm2_single_freq(t, y, w, freq, nbins=30, linterp=True):
 
 
 def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
-              dphi=0.05, block_size=256):
+              dphi=0.05, block_size=256, **kwargs):
+    # The *_fast kernels statically allocate shared-memory tiles of
+    # MAX_BLOCK_SIZE (= 256) floats; a larger launch would write past them.
+    if not (0 < block_size <= 256):
+        raise ValueError("block_size must be in (0, 256] "
+                         "(the PDM kernels' shared-memory tiles are "
+                         "sized for at most 256 threads per block); "
+                         "got %r" % (block_size,))
+
     t, y, w, freqs = data_cpu
     t_g, y_g, w_g, freqs_g, pow_g = data_gpu
 
@@ -139,14 +229,17 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
     grid = (grid_size, 1)
     block = (block_size, 1, 1)
 
-    # weights + weighted variance
+    # weighted mean + weighted variance
     ybar = np.dot(w, y)
     var = np.float32(np.dot(w, np.power(y - ybar, 2)))
 
     # transfer data
     w_g.set_async(np.asarray(w).astype(np.float32), stream=stream)
     t_g.set_async(np.asarray(t).astype(np.float32), stream=stream)
-    y_g.set_async(np.asarray(y).astype(np.float32), stream=stream)
+
+    # Ensure y is zero-weighted-meaned for fast kernels (one-pass SS_between)
+    y_norm = (np.asarray(y) - ybar).astype(np.float32)
+    y_g.set_async(y_norm, stream=stream)
 
     function.prepared_async_call(grid, block, stream,
                                  t_g.ptr, y_g.ptr, w_g.ptr,
@@ -159,42 +252,97 @@ def pdm_async(stream, data_cpu, data_gpu, pow_cpu, function,
 
 
 class PDMAsyncProcess(GPUAsyncProcess):
+    """
+    GPUAsyncProcess for the Phase Dispersion Minimization (PDM) period finder.
+
+    Example
+    -------
+    >>> proc = PDMAsyncProcess()
+    >>> Ndata = 1000
+    >>> t = np.sort(365 * np.random.rand(Ndata))
+    >>> y = 12 + 0.01 * np.cos(2 * np.pi * t / 5.0)
+    >>> y += 0.01 * np.random.randn(len(t))
+    >>> dy = 0.01 * np.ones_like(y)
+    >>> results = proc.run([(t, y, dy)])
+    >>> proc.finish()
+    >>> pdm_freqs, pdm_powers = results[0]
+    """
 
     def __init__(self, *args, **kwargs):
         super(PDMAsyncProcess, self).__init__(*args, **kwargs)
+        # Device buffers kept from the last run() with allocation of its
+        # own, reused by the next call that asks for the same shapes.
+        # See _allocate_cached.
+        self._alloc_cache = None
 
     def _compile_and_prepare_functions(self, nbins=10):
-        pdm2_txt = open(find_kernel('pdm'), 'r').read()
+        with open(find_kernel('pdm'), 'r') as f:
+            pdm2_txt = f.read()
         pdm2_txt = pdm2_txt.replace('//INSERT_NBINS_HERE',
-                                    '#define NBINS %d' % (nbins))
+                                    '#define NBINS %d' % nbins)
 
         self.module = SourceModule(pdm2_txt, options=['--use_fast_math'])
 
         self.dtypes = [np.intp, np.intp, np.intp, np.intp, np.intp,
                        np.int32, np.int32, np.float32, np.float32]
         for function in ['pdm_binless_tophat', 'pdm_binless_gauss',
-                         'pdm_binned_linterp_%dbins' % (nbins),
-                         'pdm_binned_step_%dbins' % (nbins)]:
-            func = function.replace('_%dbins' % (nbins), '')
+                         'pdm_binned_linterp_%dbins' % nbins,
+                         'pdm_binned_step_%dbins' % nbins,
+                         'pdm_binned_linterp_fast_%dbins' % nbins,
+                         'pdm_binned_step_fast_%dbins' % nbins,
+                         'pdm_binless_tophat_fast',
+                         'pdm_binless_gauss_fast']:
+            func = function.replace('_%dbins' % nbins, '')
             func = self.module.get_function(func).prepare(self.dtypes)
             self.prepared_functions[function] = func
 
-    def allocate(self, data):
+    def allocate(self, data, freqs=None, **kwargs):
+        """
+        Allocate GPU memory for PDM computations.
+
+        Parameters
+        ----------
+        data: list of tuples
+            List of [(t, y, err), ...] or [(t, y, w, freqs), ...] (deprecated)
+        freqs: list or np.ndarray, optional
+            Frequency grid(s) to search.
+
+        Returns
+        -------
+        gpu_data: list
+            List of GPU arrays.
+        pow_cpus: list
+            List of CPU arrays for results.
+        """
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
         gpu_data, pow_cpus = [], []
 
-        for t, y, w, freqs in data:
+        is_deprecated = len(data) > 0 and len(data[0]) == 4
 
-            pow_cpu = cuda.aligned_zeros(shape=(len(freqs),),
-                                         dtype=np.float32,
-                                         alignment=resource.getpagesize())
+        plot_data = []
+        if is_deprecated:
+            plot_data = data
+        else:
+            frqs = freqs
+            if frqs is None:
+                frqs = [autofrequency(d[0], **kwargs) for d in data]
+            elif isinstance(frqs[0], (float, np.floating)):
+                frqs = [frqs] * len(data)
+
+            for i, (t, y, err) in enumerate(data):
+                # We only need lengths for allocation
+                plot_data.append((t, y, None, frqs[i]))
+
+        for t, y, w, freqs in plot_data:
+
+            pow_cpu = host_array((len(freqs),), np.float32)
 
             t_g, y_g, w_g = None, None, None
             if len(t) > 0:
                 t_g, y_g, w_g = tuple([gpuarray.zeros(len(t), dtype=np.float32)
-                                       for i in range(3)])
+                                       for _ in range(3)])
 
             pow_g = gpuarray.zeros(len(pow_cpu), dtype=pow_cpu.dtype)
             freqs_g = gpuarray.to_gpu(np.asarray(freqs).astype(np.float32))
@@ -203,29 +351,315 @@ class PDMAsyncProcess(GPUAsyncProcess):
             pow_cpus.append(pow_cpu)
         return gpu_data, pow_cpus
 
-    def run(self, data, gpu_data=None, pow_cpus=None,
-            kind='binned_linterp', nbins=10, dphi=0.05, **pdm_kwargs):
+    def _allocate_cached(self, norm_data, frqs, **kwargs):
+        """:meth:`allocate`, with the *device* buffers reused between
+        calls of the same shape.
 
-        if kind in ['binless_tophat', 'binless_gauss']:
-            function = 'pdm_%s' % (kind)
-        elif kind in ['binned_linterp','binned_step']:
+        ``run()`` allocated and zero-filled five device arrays plus a
+        page-locked host buffer per lightcurve on every call, and
+        uploaded the frequency grid synchronously with
+        ``gpuarray.to_gpu``.  For short lightcurves and modest grids
+        that is most of the wall time (Sep 2026 audit, id 161), and it
+        repeats for every chunk of :meth:`batched_run_const_nfreq` /
+        :meth:`large_run`, which always ask for the same shapes.
+
+        The device buffers depend only on ``(len(t), len(freqs))`` per
+        lightcurve, so the last set is kept and reused whenever the
+        shape signature matches; the frequency grid is re-uploaded only
+        when it actually changed.  The *result* buffers are always
+        freshly allocated, so arrays returned by an earlier ``run()``
+        are never overwritten by a later one.
+
+        Peak device memory is unchanged for repeated calls of the same
+        shape (the same buffers, reused rather than freed and
+        reallocated). A call with different shapes drops the cached set
+        *before* allocating the new one, so the two sets are never held
+        at once.
+        """
+        sig = tuple((len(t), len(f)) for (t, y, w, f) in norm_data)
+        cache = self._alloc_cache
+
+        if cache is None or cache[0] != sig:
+            # release the previous buffers BEFORE allocating the new
+            # ones, so a shape change never transiently holds both
+            # sets (the short final chunk of batched_run_const_nfreq /
+            # large_run is exactly that case)
+            self._alloc_cache = None
+            del cache
+            gpu_data, pow_cpus = self.allocate(norm_data, freqs=frqs,
+                                               **kwargs)
+            # a private copy: ``np.asarray`` returns the caller's own
+            # array for a float32 grid, and the change detection below
+            # then compared the caller's grid with itself -- a grid
+            # modified in place between two same-shape calls was never
+            # re-uploaded (the powers came back labelled with the new
+            # grid but computed on the old one)
+            grids = [np.array(f, dtype=np.float32, copy=True)
+                     for (t, y, w, f) in norm_data]
+            self._alloc_cache = (sig, gpu_data, grids)
+            return gpu_data, pow_cpus
+
+        _sig, gpu_data, grids = cache
+        for i, (t, y, w, f) in enumerate(norm_data):
+            f32 = np.asarray(f).astype(np.float32)
+            if not np.array_equal(f32, grids[i]):
+                # synchronous, exactly as gpuarray.to_gpu was
+                gpu_data[i][3].set(f32)
+                grids[i] = f32
+        pow_cpus = [host_array((len(f),), np.float32)
+                    for (t, y, w, f) in norm_data]
+        return gpu_data, pow_cpus
+
+    def run(self, data, gpu_data=None, pow_cpus=None, freqs=None,
+            kind: Literal['binless_tophat', 'binless_gauss',
+                          'binless_tophat_fast', 'binless_gauss_fast',
+                          'binned_linterp', 'binned_step',
+                          'binned_linterp_fast', 'binned_step_fast'] = 'binned_linterp',
+            nbins=10, dphi=0.05, **pdm_kwargs):
+        """
+        Run PDM on a batch of data.
+
+        Parameters
+        ----------
+        data: list of tuples
+            list of [(t, y, err), ...] containing
+            * ``t``: observation times
+            * ``y``: observations
+            * ``err``: observation uncertainties
+            Alternatively, [(t, y, w, freqs), ...] for backward compatibility
+            (deprecated). ``w`` are observation weights of any scale (they
+            are normalized to sum to one internally); like ``err`` they
+            must be finite and strictly positive -- a zero weight (used
+            before 1.0 to mask a point) is rejected, so drop masked
+            points from the arrays instead.
+        gpu_data: list, optional
+            list of GPU arrays from ``allocate``
+        pow_cpus: list, optional
+            list of CPU arrays from ``allocate``
+        freqs: list or np.ndarray, optional
+            Frequency grid(s) to search.
+        kind: str, optional (default: 'binned_linterp')
+            PDM variant to use. Available options:
+            * 'binless_tophat'
+            * 'binless_gauss'
+            * 'binless_tophat_fast'
+            * 'binless_gauss_fast'
+            * 'binned_linterp'
+            * 'binned_step'
+            * 'binned_linterp_fast'
+            * 'binned_step_fast'
+        nbins: int, optional (default: 10)
+            Number of bins for binned PDM.
+        dphi: float, optional (default: 0.05)
+            Kernel width of the binless kinds, in units of phase (cycles):
+            the **half-width** of the tophat window for
+            ``binless_tophat[_fast]`` (points with phase distance
+            ``< dphi`` enter the local mean) and the **standard deviation**
+            of the Gaussian weight for ``binless_gauss[_fast]``. Ignored by
+            the binned kinds.
+        **pdm_kwargs:
+            Extra arguments passed to ``autofrequency`` (when ``freqs``
+            is not given) and to ``pdm_async`` (e.g. ``block_size``,
+            which must be <= 256).
+
+        Returns
+        -------
+        results: list
+            If depracated format is used: list of power arrays.
+            If new format is used: list of (freqs, power) tuples.
+            The power arrays are page-locked host buffers filled
+            asynchronously: call :meth:`finish` before reading them
+            (or use :meth:`batched_run_const_nfreq` / :meth:`large_run`,
+            which synchronize for you).
+
+        Notes
+        -----
+        The returned power is the weighted sum-of-squares ratio
+        ``1 - sum(w * (y - model)**2) / sum(w * (y - ybar)**2)`` with
+        ``w`` normalized to sum to one and ``model`` the folded-lightcurve
+        model of the chosen ``kind`` at each observation's phase. It has
+        **no degrees-of-freedom correction**, so it is not Stellingwerf's
+        ``1 - Theta``: for pure noise its expectation is
+        ``(M - 1) / (N - 1)`` (``M`` occupied bins, ``N`` observations;
+        ~0.4 for 20 points in 10 bins) rather than 0, and values are only
+        comparable between runs with the same ``nbins`` / ``dphi`` and
+        ``N``. See ``docs/source/pdm.rst``.
+        """
+
+        if kind in ['binless_tophat', 'binless_gauss',
+                    'binless_tophat_fast', 'binless_gauss_fast']:
+            function = 'pdm_%s' % kind
+        elif kind in ['binned_linterp', 'binned_step',
+                      'binned_linterp_fast', 'binned_step_fast']:
             function = 'pdm_%s_%dbins' % (kind, nbins)
         else:
-            raise KeyError('Function not available. Please use one of the followings: ' + \
-                            'binless_tophat, binless_gauss, binned_linterp, binned_step')
+            raise KeyError('Function not available. Please use one of the followings: '
+                           'binless_tophat, binless_gauss, '
+                           'binless_tophat_fast, binless_gauss_fast, '
+                           'binned_linterp, binned_step, '
+                           'binned_linterp_fast, binned_step_fast')
+
+        # Backward compatibility check (before kernel compilation, so the
+        # warning is emitted even if compilation fails / no GPU is present)
+        is_deprecated = len(data) > 0 and len(data[0]) == 4
+        if is_deprecated:
+            warnings.warn("The (t, y, w, freqs) format is deprecated "
+                          "and will be removed in 2.0. Note that its "
+                          "third element is the NORMALIZED WEIGHTS "
+                          "(cuvarbase.utils.weights(err), summing to 1), "
+                          "not the uncertainties. Please use the "
+                          "(t, y, err) format with the uncertainties "
+                          "and pass freqs as a separate argument "
+                          "or pass optional keyword arguments "
+                          "passed to ``autofrequency``.",
+                          DeprecationWarning, stacklevel=2)
+
+        _check_pdm_data(data, freqs, 'PDMAsyncProcess.run', is_deprecated)
 
         if function not in self.prepared_functions:
             self._compile_and_prepare_functions(nbins=nbins)
 
-        # Prepare data
-        data = normalize_light_curves(data)
+        # Prepare data and determine frequencies
+        if is_deprecated:
+            norm_data = normalize_light_curves(data)
+            # The host-side weighted mean/variance and the kernels assume
+            # sum(w) == 1; the statistic is invariant to the scale of w,
+            # so normalize whatever the caller supplied (raw 1/err^2 or
+            # all-ones weights used to give a flat spectrum of 1.0).
+            norm_data = [(t, y, np.asarray(w, dtype=np.float64) / np.sum(w), f)
+                         for (t, y, w, f) in norm_data]
+            frqs = [d[3] for d in data]
+        else:
+            frqs = freqs
+            if frqs is None:
+                frqs = [autofrequency(d[0], **pdm_kwargs) for d in data]
+            elif isinstance(frqs[0], (float, np.floating)):
+                frqs = [frqs] * len(data)
+
+            # Normalize t and y
+            norm_data_temp = normalize_light_curves(data)
+            norm_data = []
+            for i, (t, y, err) in enumerate(norm_data_temp):
+                w = weights(err)
+                norm_data.append((t, y, w, frqs[i]))
 
         if pow_cpus is None or gpu_data is None:
-            gpu_data, pow_cpus = self.allocate(data)
+            gpu_data, pow_cpus = self._allocate_cached(norm_data, frqs,
+                                                       **pdm_kwargs)
+
         streams = [s for i, s in enumerate(self.streams) if i < len(data)]
         func = self.prepared_functions[function]
+
         results = [pdm_async(stream, cdat, gdat, pcpu, func, dphi=dphi, **pdm_kwargs)
                    for stream, cdat, gdat, pcpu in
-                   zip(streams, data, gpu_data, pow_cpus)]
+                   zip(streams, norm_data, gpu_data, pow_cpus)]
 
+        if is_deprecated:
+            return results
+        return list(zip(frqs, results))
+
+    @staticmethod
+    def _bytes_per_lc(max_ndata, nf):
+        """Approximate GPU bytes for one lightcurve's PDM buffers.
+
+        t_g, y_g, w_g (``max_ndata`` float32 each) plus freqs_g and pow_g
+        (``nf`` float32 each).
+        """
+        return (3 * int(max_ndata) + 2 * int(nf)) * 4
+
+    # run() creates one CUDA stream and one page-locked host buffer per
+    # lightcurve in the chunk, so device-buffer arithmetic alone would
+    # let a huge free-memory pod pick a batch size in the millions --
+    # exhausting driver stream/pinned-allocation resources long before
+    # GPU memory runs out.
+    MAX_BATCH_SIZE = 256
+
+    def _batch_size_from_memory(self, max_ndata, nf, n_lcs, max_memory=None):
+        """Largest batch (number of lightcurves held on the GPU at once)
+        that fits in ``max_memory`` bytes; capped at ``n_lcs``,
+        ``MAX_BATCH_SIZE`` and >= 1.
+
+        ``max_memory`` defaults to 90% of the device's free memory.
+        """
+        if max_memory is None:
+            free, _total = cuda.mem_get_info()
+            max_memory = int(0.9 * free)
+        per_lc = self._bytes_per_lc(max_ndata, nf)
+        batch_size = max(1, int(max_memory // per_lc))
+        return min(batch_size, int(n_lcs), self.MAX_BATCH_SIZE)
+
+    def batched_run_const_nfreq(self, data, batch_size=10, freqs=None,
+                                **kwargs):
+        """Run PDM on many lightcurves that share one frequency grid.
+
+        Processes ``data`` in chunks of ``batch_size`` lightcurves,
+        synchronizing after each chunk and reusing its GPU buffers for
+        the next one (so peak GPU memory scales with ``batch_size``, not
+        ``len(data)``), and resolves the shared frequency grid once.
+        Results match per-lightcurve :meth:`run`.
+
+        Parameters
+        ----------
+        data : list of (t, y, err)
+        batch_size : int, optional (default: 10)
+            Lightcurves resident on the GPU per chunk.
+        freqs : array_like, optional
+            Shared frequency grid. If None, it is derived once from the
+            longest-baseline lightcurve via ``autofrequency`` and reused.
+        **kwargs :
+            Passed to :meth:`run` (e.g. ``kind``, ``nbins``, ``dphi``,
+            ``block_size``).
+
+        Returns
+        -------
+        list of (freqs, power)
+        """
+        batch_size = int(batch_size)
+        if batch_size < 1:
+            raise ValueError("batch_size must be >= 1; got %d" % batch_size)
+        for i, d in enumerate(data):
+            if len(d) != 3:
+                raise ValueError(
+                    "batched_run_const_nfreq lightcurve %d: must be a "
+                    "(t, y, err) tuple; got %d elements (the deprecated "
+                    "(t, y, w, freqs) run() format is not supported here)"
+                    % (i, len(d)))
+        if len(data) == 0:
+            return []
+        _check_pdm_data(data, freqs, 'batched_run_const_nfreq', False)
+        if freqs is None:
+            dmax = max(data, key=lambda d: np.max(d[0]) - np.min(d[0]))
+            freqs = autofrequency(dmax[0], **kwargs)
+        freqs = np.asarray(freqs).astype(np.float32)
+
+        results = []
+        for start in range(0, len(data), int(batch_size)):
+            chunk = data[start:start + int(batch_size)]
+            chunk_res = self.run(chunk, freqs=freqs, **kwargs)
+            self.finish()
+            for _f, p in chunk_res:
+                results.append((freqs, np.copy(p)))
         return results
+
+    def large_run(self, data, freqs=None, max_memory=None, **kwargs):
+        """Memory-capped batched PDM for lightcurve collections too large
+        to fit on the GPU at once.
+
+        Picks ``batch_size`` so that no more than ``max_memory`` bytes
+        (default: 90% of free GPU memory) of lightcurve buffers are
+        resident at a time, then defers to :meth:`batched_run_const_nfreq`.
+        Results match per-lightcurve :meth:`run`.
+        """
+        if len(data) == 0:
+            return []
+        _check_pdm_data(data, freqs, 'large_run', False)
+        if freqs is None:
+            dmax = max(data, key=lambda d: np.max(d[0]) - np.min(d[0]))
+            freqs = autofrequency(dmax[0], **kwargs)
+        freqs = np.asarray(freqs).astype(np.float32)
+
+        max_ndata = max(len(d[0]) for d in data)
+        batch_size = self._batch_size_from_memory(
+            max_ndata, len(freqs), len(data), max_memory=max_memory)
+        return self.batched_run_const_nfreq(
+            data, batch_size=batch_size, freqs=freqs, **kwargs)

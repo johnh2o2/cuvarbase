@@ -1,0 +1,208 @@
+job,profile,phase,exclusive_mean_s,calls_mean,fraction_of_profile
+component_tess_200s_bls_v1,tess_200s,Common candidate ranking,0.0014457982033491135,1.0,0.4678197517961959
+component_tess_200s_bls_v1,tess_200s,GPU kernel launches (synchronized),0.0004615914076566696,1.0,0.14935803437919817
+component_tess_200s_bls_v1,tess_200s,Host maximum-bin scan,3.50121408700943e-05,2.0,0.011328946884675214
+component_tess_200s_bls_v1,tess_200s,Host preparation and H2D,0.0006653200834989548,1.0,0.21527892039602195
+component_tess_200s_bls_v1,tess_200s,Kernel cache lookup,1.7799437046051025e-05,1.0,0.005759398650314217
+component_tess_200s_bls_v1,tess_200s,Memory pool / allocation,2.5019049644470215e-05,1.0,0.008095462816138611
+component_tess_200s_bls_v1,tess_200s,Remaining public API work,0.00035481713712215424,1.0,0.1148088748741111
+component_tess_200s_bls_v1,tess_200s,Spectrum D2H,8.514523506164551e-05,1.0,0.02755061020334486
+component_tess_200s_bls_pypi,tess_200s,Common candidate ranking,0.0017596632242202759,1.0,0.1564221426829327
+component_tess_200s_bls_pypi,tess_200s,GPU kernel launches (synchronized),0.003529401496052742,4.0,0.31373988886171594
+component_tess_200s_bls_pypi,tess_200s,Host maximum-bin scan,0.0013583861291408539,4.0,0.12075132672340753
+component_tess_200s_bls_pypi,tess_200s,Host preparation and H2D,0.0038889311254024506,1.0,0.34569963786755303
+component_tess_200s_bls_pypi,tess_200s,Remaining public API work,0.0007130689918994904,1.0,0.06338700386439083
+component_tess_200s_bls_v1_unfused,tess_200s,Common candidate ranking,0.0012189913541078568,1.0,0.17289076703847478
+component_tess_200s_bls_v1_unfused,tess_200s,GPU kernel launches (synchronized),0.004324117675423622,8.0,0.6132939492550893
+component_tess_200s_bls_v1_unfused,tess_200s,Host maximum-bin scan,0.00010992959141731262,8.0,0.015591424267545438
+component_tess_200s_bls_v1_unfused,tess_200s,Host preparation and H2D,0.0005663968622684479,1.0,0.08033263536757856
+component_tess_200s_bls_v1_unfused,tess_200s,Memory pool / allocation,2.714991569519043e-05,1.0,0.0038506997886024992
+component_tess_200s_bls_v1_unfused,tess_200s,Remaining public API work,0.0007249452173709869,1.0,0.10281970767862719
+component_tess_200s_bls_v1_unfused,tess_200s,Spectrum D2H,7.911399006843567e-05,1.0,0.011220816604082228
+component_tess_200s_bls_v1_no_scatter,tess_200s,Common candidate ranking,0.0014533791691064835,1.0,0.4838771090792731
+component_tess_200s_bls_v1_no_scatter,tess_200s,GPU kernel launches (synchronized),0.0003926306962966919,1.0,0.13071950547951322
+component_tess_200s_bls_v1_no_scatter,tess_200s,Host maximum-bin scan,3.634020686149597e-05,2.0,0.012098834642231692
+component_tess_200s_bls_v1_no_scatter,tess_200s,Host preparation and H2D,0.0006233919411897659,1.0,0.20754741552520478
+component_tess_200s_bls_v1_no_scatter,tess_200s,Kernel cache lookup,1.7268583178520203e-05,1.0,0.005749271961462328
+component_tess_200s_bls_v1_no_scatter,tess_200s,Memory pool / allocation,2.520531415939331e-05,1.0,0.00839166736948638
+component_tess_200s_bls_v1_no_scatter,tess_200s,Remaining public API work,0.00036853738129138947,1.0,0.12269805872926888
+component_tess_200s_bls_v1_no_scatter,tess_200s,Spectrum D2H,8.685886859893799e-05,1.0,0.028918137213559625
+component_tess_200s_tls_v1_native,tess_200s,API remainder,0.0004906486719846725,1.0,0.09929887825798822
+component_tess_200s_tls_v1_native,tess_200s,v1 CPU statistics/results,0.0006386563181877136,1.0,0.12925308802302818
+component_tess_200s_tls_v1_native,tess_200s,v1 buffer allocations/transfers,0.0003417748957872391,1.0,0.06916937863325931
+component_tess_200s_tls_v1_native,tess_200s,v1 candidate selection/refinement/transfers,0.0008424967527389526,1.0,0.170506896807802
+component_tess_200s_tls_v1_native,tess_200s,v1 coarse search kernel,0.00072491355240345,1.0,0.14671007321084656
+component_tess_200s_tls_v1_native,tess_200s,v1 coarse spectrum transfer,6.70701265335083e-05,1.0,0.01357384358640791
+component_tess_200s_tls_v1_native,tess_200s,v1 final packaging,1.7844140529632568e-06,1.0,0.00036113480770325426
+component_tess_200s_tls_v1_native,tess_200s,v1 grid/configuration,0.0003332439810037613,1.0,0.06744286775718321
+component_tess_200s_tls_v1_native,tess_200s,v1 host lightcurve preparation,0.00022405944764614105,1.0,0.045345790348050266
+component_tess_200s_tls_v1_native,tess_200s,v1 kernel lookup/grid transfers,0.0008692238479852676,1.0,0.17591600260710683
+component_tess_200s_tls_v1_native,tess_200s,v1 lightcurve transfers,0.000230446457862854,1.0,0.0466384117004662
+component_tess_200s_tls_v1_native,tess_200s,v1 parameter-spectrum transfers,0.00015328079462051392,1.0,0.0310214045882215
+component_tess_200s_tls_v1_native,tess_200s,v1 template tables,2.353079617023468e-05,1.0,0.004762229671936546
+component_tess_200s_gtls_native,tess_200s,API remainder,0.030899541452527046,1.0,0.058698553536938446
+component_tess_200s_gtls_native,tess_200s,GTLS CUDA module lookup/compile,8.279271423816681e-05,1.0,0.0001572778216351179
+component_tess_200s_gtls_native,tess_200s,GTLS chunk allocations/transfers,0.0329737551510334,31.0,0.06263884967420909
+component_tess_200s_gtls_native,tess_200s,GTLS duration-mask union,0.04017096199095249,31.0,0.07631107945983459
+component_tess_200s_gtls_native,tess_200s,GTLS error prefixes/out-of-transit terms,0.012317284941673279,31.0,0.02339862585628776
+component_tess_200s_gtls_native,tess_200s,GTLS folding/sorting,0.0852726474404335,31.0,0.16198884597393953
+component_tess_200s_gtls_native,tess_200s,GTLS full search call,0.0015978123992681503,1.0,0.0030352967148240726
+component_tess_200s_gtls_native,tess_200s,GTLS input/template setup,0.0045480262488126755,1.0,0.008639693332131932
+component_tess_200s_gtls_native,tess_200s,GTLS reductions/chunk cleanup,0.018665535375475883,31.0,0.035458129021632624
+component_tess_200s_gtls_native,tess_200s,GTLS reorder/weights,0.011350728571414948,31.0,0.02156249955217273
+component_tess_200s_gtls_native,tess_200s,GTLS result/statistics processing,0.00403103232383728,1.0,0.007657581813420113
+component_tess_200s_gtls_native,tess_200s,GTLS row-wise flux prefix sums,0.1267741583287716,31.0,0.24082751296469898
+component_tess_200s_gtls_native,tess_200s,GTLS setup and allocations,0.002985825762152672,2.0,0.005672047063253592
+component_tess_200s_gtls_native,tess_200s,GTLS transit residual kernel,0.15474050864577293,31.0,0.29395400721502146
+component_tess_200s_gtls_both,tess_200s,API remainder,0.04094011150300503,1.0,0.10221400576939524
+component_tess_200s_gtls_both,tess_200s,GTLS CUDA module lookup/compile,0.00014571473002433777,1.0,0.0003638017999609086
+component_tess_200s_gtls_both,tess_200s,GTLS chunk allocations/transfers,0.041688404977321625,31.0,0.10408224869040886
+component_tess_200s_gtls_both,tess_200s,GTLS duration-mask union,0.003837728872895241,31.0,0.00958154794294334
+component_tess_200s_gtls_both,tess_200s,GTLS error prefixes/out-of-transit terms,0.01274438202381134,31.0,0.031818534192649024
+component_tess_200s_gtls_both,tess_200s,GTLS folding/sorting,0.09245731867849827,31.0,0.23083554386834457
+component_tess_200s_gtls_both,tess_200s,GTLS full search call,0.0019599981606006622,1.0,0.004893471364408353
+component_tess_200s_gtls_both,tess_200s,GTLS input/template setup,0.006785642355680466,1.0,0.016941519244315348
+component_tess_200s_gtls_both,tess_200s,GTLS reductions/chunk cleanup,0.019195588305592537,31.0,0.04792507645395042
+component_tess_200s_gtls_both,tess_200s,GTLS reorder/weights,0.011461375281214714,31.0,0.028615287944032466
+component_tess_200s_gtls_both,tess_200s,GTLS result/statistics processing,0.0051626767963171005,1.0,0.01288950753848205
+component_tess_200s_gtls_both,tess_200s,GTLS row-wise flux prefix sums,0.004711395129561424,31.0,0.011762805504805341
+component_tess_200s_gtls_both,tess_200s,GTLS setup and allocations,0.004503676667809486,2.0,0.011244200760742442
+component_tess_200s_gtls_both,tess_200s,GTLS transit residual kernel,0.15493927150964737,31.0,0.3868324489255616
+component_tess_gap_bls_v1,tess_gap,Common candidate ranking,0.01718251220881939,1.0,0.5900512105694542
+component_tess_gap_bls_v1,tess_gap,GPU kernel launches (synchronized),0.007307970896363258,16.0,0.2509573118180117
+component_tess_gap_bls_v1,tess_gap,Host maximum-bin scan,0.0002911631017923355,17.0,0.00999860431337527
+component_tess_gap_bls_v1,tess_gap,Host preparation and H2D,0.0021207649260759354,1.0,0.07282752933660366
+component_tess_gap_bls_v1,tess_gap,Kernel cache lookup,1.9006431102752686e-05,1.0,0.0006526849825270525
+component_tess_gap_bls_v1,tess_gap,Memory pool / allocation,2.45608389377594e-05,1.0,0.0008434245569974239
+component_tess_gap_bls_v1,tess_gap,Remaining public API work,0.0018674489110708237,1.0,0.06412860222432279
+component_tess_gap_bls_v1,tess_gap,Spectrum D2H,0.00030694715678691864,1.0,0.010540632198707909
+component_tess_gap_bls_pypi,tess_gap,Common candidate ranking,0.011737870052456856,1.0,0.19317090094550338
+component_tess_gap_bls_pypi,tess_gap,GPU kernel launches (synchronized),0.02439713664352894,4.0,0.4015052854444064
+component_tess_gap_bls_pypi,tess_gap,Host maximum-bin scan,0.021706391125917435,4.0,0.35722350914860435
+component_tess_gap_bls_pypi,tess_gap,Host preparation and H2D,0.001999625936150551,1.0,0.03290797580088624
+component_tess_gap_bls_pypi,tess_gap,Remaining public API work,0.0009231492877006531,1.0,0.015192328660599672
+component_tess_gap_bls_v1_unfused,tess_gap,Common candidate ranking,0.012663584202528,1.0,0.33719033234726126
+component_tess_gap_bls_v1_unfused,tess_gap,GPU kernel launches (synchronized),0.021273473277688026,4.0,0.5664438605977158
+component_tess_gap_bls_v1_unfused,tess_gap,Host maximum-bin scan,0.00012584775686264038,4.0,0.003350919161827811
+component_tess_gap_bls_v1_unfused,tess_gap,Host preparation and H2D,0.0017589908093214035,1.0,0.046836242102173575
+component_tess_gap_bls_v1_unfused,tess_gap,Memory pool / allocation,2.2085383534431458e-05,1.0,0.000588062407521644
+component_tess_gap_bls_v1_unfused,tess_gap,Remaining public API work,0.0014199819415807724,1.0,0.0378095312631275
+component_tess_gap_bls_v1_unfused,tess_gap,Spectrum D2H,0.0002922266721725464,1.0,0.007781052120372412
+component_tess_gap_bls_v1_no_scatter,tess_gap,Common candidate ranking,0.014266159385442734,1.0,0.5565255466263479
+component_tess_gap_bls_v1_no_scatter,tess_gap,GPU kernel launches (synchronized),0.006024157628417015,16.0,0.23500351612074877
+component_tess_gap_bls_v1_no_scatter,tess_gap,Host maximum-bin scan,0.00018339604139328003,17.0,0.007154313885603349
+component_tess_gap_bls_v1_no_scatter,tess_gap,Host preparation and H2D,0.002499530091881752,1.0,0.09750713651166235
+component_tess_gap_bls_v1_no_scatter,tess_gap,Kernel cache lookup,2.464093267917633e-05,1.0,0.0009612473937908461
+component_tess_gap_bls_v1_no_scatter,tess_gap,Memory pool / allocation,2.779439091682434e-05,1.0,0.0010842643896097216
+component_tess_gap_bls_v1_no_scatter,tess_gap,Remaining public API work,0.0021777842193841934,1.0,0.08495576983134973
+component_tess_gap_bls_v1_no_scatter,tess_gap,Spectrum D2H,0.000430867075920105,1.0,0.016808205240887334
+component_tess_gap_tls_v1_native,tess_gap,API remainder,0.0032449327409267426,1.0,0.0935574661125321
+component_tess_gap_tls_v1_native,tess_gap,v1 CPU statistics/results,0.009152121841907501,1.0,0.2638727509764914
+component_tess_gap_tls_v1_native,tess_gap,v1 buffer allocations/transfers,0.0014069471508264542,1.0,0.04056491178549863
+component_tess_gap_tls_v1_native,tess_gap,v1 candidate selection/refinement/transfers,0.0007381774485111237,1.0,0.021283033313162284
+component_tess_gap_tls_v1_native,tess_gap,v1 coarse search kernel,0.013218048959970474,1.0,0.3811010169945912
+component_tess_gap_tls_v1_native,tess_gap,v1 coarse spectrum transfer,0.0002222154289484024,1.0,0.006406885480647716
+component_tess_gap_tls_v1_native,tess_gap,v1 final packaging,2.209097146987915e-06,1.0,6.369239302309446e-05
+component_tess_gap_tls_v1_native,tess_gap,v1 grid/configuration,0.0028517525643110275,1.0,0.08222134792866538
+component_tess_gap_tls_v1_native,tess_gap,v1 host lightcurve preparation,0.00015196017920970917,1.0,0.004381295531199928
+component_tess_gap_tls_v1_native,tess_gap,v1 kernel lookup/grid transfers,0.0029579810798168182,1.0,0.08528411425792347
+component_tess_gap_tls_v1_native,tess_gap,v1 lightcurve transfers,0.00022634491324424744,1.0,0.006525946218701848
+component_tess_gap_tls_v1_native,tess_gap,v1 parameter-spectrum transfers,0.0004830397665500641,1.0,0.013926937843742904
+component_tess_gap_tls_v1_native,tess_gap,v1 template tables,2.8114765882492065e-05,1.0,0.0008106011638200571
+component_tess_gap_gtls_native,tess_gap,API remainder,0.01227208785712719,1.0,0.0016206132498344924
+component_tess_gap_gtls_native,tess_gap,GTLS CUDA module lookup/compile,8.981674909591675e-05,1.0,1.1860916849398845e-05
+component_tess_gap_gtls_native,tess_gap,GTLS chunk allocations/transfers,0.03378216736018658,31.0,0.004461166565088524
+component_tess_gap_gtls_native,tess_gap,GTLS duration-mask union,1.1300838515162468,31.0,0.14923531223968514
+component_tess_gap_gtls_native,tess_gap,GTLS error prefixes/out-of-transit terms,0.16025540977716446,31.0,0.021162824408211624
+component_tess_gap_gtls_native,tess_gap,GTLS folding/sorting,0.6577333062887192,31.0,0.08685818773778514
+component_tess_gap_gtls_native,tess_gap,GTLS full search call,0.0022016502916812897,1.0,0.0002907429995400899
+component_tess_gap_gtls_native,tess_gap,GTLS input/template setup,0.011174468323588371,1.0,0.001475665073123299
+component_tess_gap_gtls_native,tess_gap,GTLS reductions/chunk cleanup,0.1123081911355257,31.0,0.014831065808698056
+component_tess_gap_gtls_native,tess_gap,GTLS reorder/weights,0.021856509149074554,31.0,0.002886301722615831
+component_tess_gap_gtls_native,tess_gap,GTLS result/statistics processing,0.08828630298376083,1.0,0.011658810958665907
+component_tess_gap_gtls_native,tess_gap,GTLS row-wise flux prefix sums,3.683847291395068,31.0,0.48647726452956724
+component_tess_gap_gtls_native,tess_gap,GTLS setup and allocations,0.002687370404601097,2.0,0.0003548856670204069
+component_tess_gap_gtls_native,tess_gap,GTLS transit residual kernel,1.655917888507247,31.0,0.21867529812331485
+component_tess_gap_gtls_both,tess_gap,API remainder,0.012644346803426743,1.0,0.004488254718199207
+component_tess_gap_gtls_both,tess_gap,GTLS CUDA module lookup/compile,9.878724813461304e-05,1.0,3.5065657359060405e-05
+component_tess_gap_gtls_both,tess_gap,GTLS chunk allocations/transfers,0.0357176810503006,31.0,0.012678397151658359
+component_tess_gap_gtls_both,tess_gap,GTLS duration-mask union,0.005258811637759209,31.0,0.0018666750060111492
+component_tess_gap_gtls_both,tess_gap,GTLS error prefixes/out-of-transit terms,0.15920797176659107,31.0,0.056512680454373035
+component_tess_gap_gtls_both,tess_gap,GTLS folding/sorting,0.6598600596189499,31.0,0.234224833593882
+component_tess_gap_gtls_both,tess_gap,GTLS full search call,0.0021453499794006348,1.0,0.0007615163769965524
+component_tess_gap_gtls_both,tess_gap,GTLS input/template setup,0.01433069072663784,1.0,0.005086841674688535
+component_tess_gap_gtls_both,tess_gap,GTLS reductions/chunk cleanup,0.11240757070481777,31.0,0.03990034577669771
+component_tess_gap_gtls_both,tess_gap,GTLS reorder/weights,0.021939393132925034,31.0,0.007787637137300904
+component_tess_gap_gtls_both,tess_gap,GTLS result/statistics processing,0.09422308206558228,1.0,0.03344555469876162
+component_tess_gap_gtls_both,tess_gap,GTLS row-wise flux prefix sums,0.039466336369514465,31.0,0.014009024995463188
+component_tess_gap_gtls_both,tess_gap,GTLS setup and allocations,0.002745244652032852,2.0,0.0009744558144164776
+component_tess_gap_gtls_both,tess_gap,GTLS transit residual kernel,1.6571626085788012,31.0,0.5882287169441922
+component_ztf_bls_v1,ztf,Common candidate ranking,0.04566686227917671,1.0,0.6423105964962214
+component_ztf_bls_v1,ztf,GPU kernel launches (synchronized),0.010050255805253983,1.0,0.1413582076593828
+component_ztf_bls_v1,ztf,Host maximum-bin scan,0.0001864694058895111,2.0,0.0026227174223835714
+component_ztf_bls_v1,ztf,Host preparation and H2D,0.006062814965844154,1.0,0.08527431276865431
+component_ztf_bls_v1,ztf,Kernel cache lookup,2.64681875705719e-05,1.0,0.00037227863921756617
+component_ztf_bls_v1,ztf,Memory pool / allocation,3.658421337604523e-05,1.0,0.0005145619108284459
+component_ztf_bls_v1,ztf,Remaining public API work,0.008393488824367523,1.0,0.11805555591942161
+component_ztf_bls_v1,ztf,Spectrum D2H,0.0006748437881469727,1.0,0.009491769183890296
+component_ztf_bls_pypi,ztf,Common candidate ranking,0.05024977773427963,1.0,0.34208604841881196
+component_ztf_bls_pypi,ztf,GPU kernel launches (synchronized),0.031496988609433174,3.0,0.21442244834334864
+component_ztf_bls_pypi,ztf,Host maximum-bin scan,0.05443061888217926,3.0,0.3705480136620152
+component_ztf_bls_pypi,ztf,Host preparation and H2D,0.006050091236829758,1.0,0.04118728275226757
+component_ztf_bls_pypi,ztf,Remaining public API work,0.004664739593863487,1.0,0.031756206823556614
+component_ztf_bls_v1_unfused,ztf,Common candidate ranking,0.04156269505620003,1.0,0.3128966386408033
+component_ztf_bls_v1_unfused,ztf,GPU kernel launches (synchronized),0.06964085251092911,8.0,0.5242775674985766
+component_ztf_bls_v1_unfused,ztf,Host maximum-bin scan,0.0013039801269769669,8.0,0.009816759910150163
+component_ztf_bls_v1_unfused,ztf,Host preparation and H2D,0.007113086059689522,1.0,0.053549480259403905
+component_ztf_bls_v1_unfused,ztf,Memory pool / allocation,3.361143171787262e-05,1.0,0.0002530371043120888
+component_ztf_bls_v1_unfused,ztf,Remaining public API work,0.010407499969005585,1.0,0.07835083246052242
+component_ztf_bls_v1_unfused,ztf,Spectrum D2H,0.0027703028172254562,1.0,0.02085568412623154
+component_ztf_bls_v1_no_scatter,ztf,Common candidate ranking,0.04121182672679424,1.0,0.6744202605860352
+component_ztf_bls_v1_no_scatter,ztf,GPU kernel launches (synchronized),0.009987063705921173,1.0,0.16343556308940707
+component_ztf_bls_v1_no_scatter,ztf,Host maximum-bin scan,0.00014768727123737335,2.0,0.002416861757025486
+component_ztf_bls_v1_no_scatter,ztf,Host preparation and H2D,0.005354398861527443,1.0,0.08762327133451499
+component_ztf_bls_v1_no_scatter,ztf,Kernel cache lookup,1.9431114196777344e-05,1.0,0.0003179848635912909
+component_ztf_bls_v1_no_scatter,ztf,Memory pool / allocation,2.4382025003433228e-05,1.0,0.00039900516338286027
+component_ztf_bls_v1_no_scatter,ztf,Remaining public API work,0.0037697572261095047,1.0,0.061691044845772314
+component_ztf_bls_v1_no_scatter,ztf,Spectrum D2H,0.0005924943834543228,1.0,0.009696008360270755
+component_ztf_tls_v1_native,ztf,API remainder,0.008227681741118431,1.0,0.08801654340068259
+component_ztf_tls_v1_native,ztf,v1 CPU statistics/results,0.0320548340678215,1.0,0.34291016384751033
+component_ztf_tls_v1_native,ztf,v1 buffer allocations/transfers,0.004712600260972977,1.0,0.05041356708379583
+component_ztf_tls_v1_native,ztf,v1 candidate selection/refinement/transfers,0.0015720482915639877,1.0,0.016817161994844225
+component_ztf_tls_v1_native,ztf,v1 coarse search kernel,0.029358403757214546,1.0,0.31406479975492796
+component_ztf_tls_v1_native,ztf,v1 coarse spectrum transfer,0.0003435332328081131,1.0,0.0036749850864943477
+component_ztf_tls_v1_native,ztf,v1 final packaging,1.8421560525894165e-06,1.0,1.970666990475083e-05
+component_ztf_tls_v1_native,ztf,v1 grid/configuration,0.009270580485463142,1.0,0.09917306907612222
+component_ztf_tls_v1_native,ztf,v1 host lightcurve preparation,0.00016255676746368408,1.0,0.0017389691566505707
+component_ztf_tls_v1_native,ztf,v1 kernel lookup/grid transfers,0.006630975753068924,1.0,0.07093560294658752
+component_ztf_tls_v1_native,ztf,v1 lightcurve transfers,0.0002206452190876007,1.0,0.0023603768489150394
+component_ztf_tls_v1_native,ztf,v1 parameter-spectrum transfers,0.0008868332952260971,1.0,0.00948699812103179
+component_ztf_tls_v1_native,ztf,v1 template tables,3.627501428127289e-05,1.0,0.00038805601253288414
+component_ztf_gtls_native,ztf,API remainder,0.005538733676075935,1.0,0.0003156931538975029
+component_ztf_gtls_native,ztf,GTLS CUDA module lookup/compile,9.682588279247284e-05,1.0,5.5188189404553404e-06
+component_ztf_gtls_native,ztf,GTLS chunk allocations/transfers,0.03372389078140259,31.0,0.0019221724793271945
+component_ztf_gtls_native,ztf,GTLS duration-mask union,3.6899108346551657,31.0,0.21031514730965487
+component_ztf_gtls_native,ztf,GTLS error prefixes/out-of-transit terms,0.15672518871724606,31.0,0.008932920774840739
+component_ztf_gtls_native,ztf,GTLS folding/sorting,0.6371670421212912,31.0,0.036316834289335805
+component_ztf_gtls_native,ztf,GTLS full search call,0.0024172496050596237,1.0,0.0001377768270164257
+component_ztf_gtls_native,ztf,GTLS input/template setup,0.029394283890724182,1.0,0.0016753963506321978
+component_ztf_gtls_native,ztf,GTLS reductions/chunk cleanup,0.10246017388999462,31.0,0.0058399586143552135
+component_ztf_gtls_native,ztf,GTLS reorder/weights,0.019939199090003967,31.0,0.001136481552471611
+component_ztf_gtls_native,ztf,GTLS result/statistics processing,0.2834222801029682,1.0,0.0161543195111555
+component_ztf_gtls_native,ztf,GTLS row-wise flux prefix sums,11.942916456609964,31.0,0.6807146151848842
+component_ztf_gtls_native,ztf,GTLS setup and allocations,0.0032957233488559723,2.0,0.00018784750436152183
+component_ztf_gtls_native,ztf,GTLS transit residual kernel,0.6376667730510235,31.0,0.03634531762912677
+component_ztf_gtls_both,ztf,API remainder,0.006823141127824783,1.0,0.003150220680201975
+component_ztf_gtls_both,ztf,GTLS CUDA module lookup/compile,0.00013399124145507812,1.0,6.186329315048029e-05
+component_ztf_gtls_both,ztf,GTLS chunk allocations/transfers,0.046900562942028046,31.0,0.021653827837530438
+component_ztf_gtls_both,ztf,GTLS duration-mask union,0.011204591020941734,31.0,0.005173120955015139
+component_ztf_gtls_both,ztf,GTLS error prefixes/out-of-transit terms,0.15666196309030056,31.0,0.072330286986961
+component_ztf_gtls_both,ztf,GTLS folding/sorting,0.6473332922905684,31.0,0.29887154408120653
+component_ztf_gtls_both,ztf,GTLS full search call,0.003210758790373802,1.0,0.0014823962381971664
+component_ztf_gtls_both,ztf,GTLS input/template setup,0.03356537967920303,1.0,0.015497019807058556
+component_ztf_gtls_both,ztf,GTLS reductions/chunk cleanup,0.10546543635427952,31.0,0.0486930275111713
+component_ztf_gtls_both,ztf,GTLS reorder/weights,0.02052878402173519,31.0,0.00947806864216026
+component_ztf_gtls_both,ztf,GTLS result/statistics processing,0.4485912397503853,1.0,0.2071130252100797
+component_ztf_gtls_both,ztf,GTLS row-wise flux prefix sums,0.03856702521443367,31.0,0.017806262266644987
+component_ztf_gtls_both,ztf,GTLS setup and allocations,0.003832675516605377,2.0,0.0017695330415601655
+component_ztf_gtls_both,ztf,GTLS transit residual kernel,0.6431059688329697,31.0,0.29691980344906227

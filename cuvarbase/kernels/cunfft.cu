@@ -3,17 +3,22 @@
 
 #define RESTRICT __restrict__
 #define CONSTANT const
-#define PI 3.14159265358979323846264338327950288f
 #define FILTER gauss_filter
 //{CPP_DEFS}
 
 #ifdef DOUBLE_PRECISION
 	#define ATOMIC_ADD atomicAddDouble
 	#define FLT double
-
+	// PI must be a double literal here: the float32 literal's relative
+	// error (2.8e-8) times the un-reduced phase arguments in nfft_shift/
+	// normalize (up to 2*pi*|k0|) produced an m-independent absolute
+	// error floor ~1e-3 that swamped the truncation bound (A3 diagnosis,
+	// Jul 2026 batch 3).
+	#define PI 3.14159265358979323846264338327950288
 #else
 	#define ATOMIC_ADD atomicAdd
 	#define FLT float
+	#define PI 3.14159265358979323846264338327950288f
 #endif
 
 #define CMPLX pycuda::complex<FLT>
@@ -42,13 +47,13 @@ __device__ int mod(CONSTANT int a, CONSTANT int b) {
    return (ret < 0) ? ret + b : ret;
 }
 
-__device__ float modflt(CONSTANT FLT a, CONSTANT FLT b){
+__device__ FLT modflt(CONSTANT FLT a, CONSTANT FLT b){
 	return a - floor(a / b) * b;
 }
 
 __device__ FLT diffmod(CONSTANT FLT a, CONSTANT FLT b, CONSTANT FLT M) {
 	FLT ret = a - b;
-	if (fabsf(ret) > M/2){
+	if (fabs(ret) > M/2){
 		if (ret > 0)
 			return ret - M;
 		return M + ret;
@@ -61,19 +66,32 @@ __global__ void nfft_shift(
 	CMPLX *out,
 	CONSTANT int ng,
 	CONSTANT int nbatch,
-	CONSTANT FLT x0,
-	CONSTANT FLT xf,
+	CONSTANT FLT x0,     // unused since the host passes k0 (kept for
+	CONSTANT FLT xf,     // a stable prepared signature)
 	CONSTANT FLT spp,
-	CONSTANT FLT f0){
+	CONSTANT int k0){    // first mode (integer, computed on the host)
 
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
 	int batch = i / ng;
 
 	if (batch < nbatch) {
-        FLT k0 = f0 * spp * (xf - x0);
+		// The first mode k0 = f0 / df = f0 * spp * (xf - x0) is an
+		// INTEGER by construction (the periodic grid only has integer
+		// modes; a fractional k0 would give a Dirichlet-leakage mixture,
+		// not the transform). It is rounded on the host in float64 and
+		// passed in: re-deriving it here from the FLT product misrounded
+		// by one mode from k0 ~ 2e6 upward in the float32 build, and
+		// this kernel and normalize could round to different integers
+		// (ids 104 and 24 of the Sep-2026 readiness review).
 
-		FLT phi = (2.f * PI * (i % ng) * k0) / ng;
+		// phi = 2 pi (i mod ng) k0 / ng, reduced modulo one cycle in exact
+		// integer arithmetic. The un-reduced float32 product
+		// (i mod ng) * k0 reached ~1e12 at survey scale (ulp ~ 1e5 ->
+		// 0.1-0.4 rad phase errors at the top of the grid; ids 98/160).
+		long long r = (((long long) (i % ng)) * k0) % ((long long) ng);
+		if (r < 0) r += ng;
+		FLT phi = (2.f * PI * ((FLT) r)) / ng;
 
         CMPLX shift = CMPLX(cos(phi), sin(phi));
 
@@ -142,8 +160,15 @@ __global__ void fast_gaussian_grid(
 		// observation
 		FLT yi = y[i];
 
-		// nearest gridpoint (rounding down)
-		int u = (int) floorf(ng * xval - m);
+		// nearest gridpoint (rounding down). Must be the FLT-typed
+		// floor(): under DOUBLE_PRECISION floorf() rounded the double
+		// coordinate to float32 first, so points within a float32 ulp
+		// below an integer were deposited one cell to the right of
+		// where precompute_psi (which uses the exact fraction) placed
+		// the window -- ~n0*ng/2^24 misplaced points, making
+		// use_double=True LESS accurate than float32 at survey scale
+		// (nfft-floorf-double, Sep 2026). For float, floor() is floorf().
+		int u = (int) floor(ng * xval - m);
 
 		// precomputed filter values
 		FLT Q  = q1[di];
@@ -221,7 +246,8 @@ __global__ void normalize(
 	CONSTANT FLT x0,     // min(x)
 	CONSTANT FLT xf,     // max(x)
 	CONSTANT FLT spp,    // samples per peak
-	CONSTANT FLT f0)     // first frequency
+	CONSTANT int k0)     // first mode (integer, computed on the host;
+	                     // see nfft_shift)
 {
 	int i = blockIdx.x *blockDim.x + threadIdx.x;
 
@@ -231,17 +257,23 @@ __global__ void normalize(
 		int k = i % nf;
 
 		FLT sT = spp * (xf - x0);
-        FLT n0 = (x0 / sT) * ng;
-		FLT k0 = f0 * sT;
+		// mode index of this entry, in 64-bit integer arithmetic
+		long long kk = ((long long) k0) + k;
 		CMPLX G = gin[batch * ng + k];
 
-		// *= exp(2pi i (k0 + k) * n0 / n)
-		FLT theta_k = (2.f * PI * n0 * (k0 + k)) / ng;
+		// *= exp(2 pi i f_k x0) with f_k = (k0 + k) / sT: the phase of the
+		// time origin x0 the gridding subtracted. The argument is
+		// 2 pi f |tmin| (1e4-1e6 rad at survey scale), so reduce it modulo
+		// one cycle in double BEFORE the FLT trig -- evaluated as the
+		// float32 2 pi n0 (k0 + k) / ng it lost ~0.05-0.1 rad (ids 98/160).
+		double cyc = ((double) kk) * ((double) x0) / ((double) sT);
+		cyc -= floor(cyc);
+		FLT theta_k = (FLT) (2.0 * 3.14159265358979323846264338327950288 * cyc);
 
 		G *= CMPLX(cos(theta_k), sin(theta_k));
 
 		// normalization factor from gridding kernel (gaussian)
-		FLT khat = PI * (k0 + k) / ng;
+		FLT khat = PI * ((FLT) kk) / ng;
 		gout[i] = G * exp(b * khat * khat);
 	}
 

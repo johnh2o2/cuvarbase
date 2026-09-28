@@ -1,163 +1,99 @@
-#!/usr/bin/env python
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+"""
+NFFT (Non-equispaced Fast Fourier Transform) implementation.
 
-from builtins import object
-
-import sys
-import resource
+This module provides GPU-accelerated NFFT functionality for periodogram computation.
+"""
 import numpy as np
 
 import pycuda.driver as cuda
-import pycuda.gpuarray as gpuarray
 from pycuda.compiler import SourceModule
-# import pycuda.autoinit
 
-import skcuda.fft as cufft
+from . import _cufft as cufft
 
-from .core import GPUAsyncProcess
-from .utils import find_kernel, _module_reader
+from .base import GPUAsyncProcess
+from .utils import find_kernel, _module_reader, check_lightcurve
+from .memory import NFFTMemory
 
 
-class NFFTMemory(object):
-    def __init__(self, sigma, stream, m, use_double=False,
-                 precomp_psi=True, **kwargs):
+__all__ = [
+    'nfft_adjoint_async',
+    'NFFTAsyncProcess',
+]
 
-        self.sigma = sigma
-        self.stream = stream
-        self.m = m
-        self.use_double = use_double
-        self.precomp_psi = precomp_psi
 
-        # set datatypes
-        self.real_type = np.float32 if not self.use_double \
-            else np.float64
-        self.complex_type = np.complex64 if not self.use_double \
-            else np.complex128
+def _first_mode(minimum_frequency, samples_per_peak, tmin, tmax):
+    """The integer first mode ``k0 = round(f0 * spp * (tmax - tmin))``
+    of an adjoint NFFT starting at ``minimum_frequency``, computed in
+    float64 on the host.
 
-        self.other_settings = {}
-        self.other_settings.update(kwargs)
+    The periodic grid only has integer modes, so the kernels
+    (``nfft_shift``/``normalize``) need ``k0`` as an integer. They used
+    to re-derive it from the float32 product of their ``f0``, ``spp``
+    and ``xf - x0`` arguments, whose rounding reaches half a mode from
+    ``k0 ~ 2e6`` upward (about 0.5% of grids in [2e6, 3e6), ~18% in
+    [4e6, 5e6)); the two kernels could even round to *different*
+    integers (Sep-2026 readiness review, idx 24). The float64 product
+    here is exact to well beyond ``1e9``.
+    """
+    k0 = np.rint(float(minimum_frequency) * float(samples_per_peak)
+                 * (float(tmax) - float(tmin)))
+    if not np.isfinite(k0) or abs(k0) >= 2 ** 31:
+        raise ValueError(
+            "nfft_adjoint_async: the first mode "
+            "minimum_frequency * samples_per_peak * (tmax - tmin) = %r "
+            "does not fit the kernels' int32 mode index" % (k0,))
+    return int(k0)
 
-        self.t = kwargs.get('t', None)
-        self.y = kwargs.get('y', None)
-        self.f0 = kwargs.get('f0', 0.)
-        self.n0 = kwargs.get('n0', None)
-        self.nf = kwargs.get('nf', None)
-        self.t_g = kwargs.get('t_g', None)
-        self.y_g = kwargs.get('y_g', None)
-        self.ghat_g = kwargs.get('ghat_g', None)
-        self.ghat_c = kwargs.get('ghat_c', None)
-        self.q1 = kwargs.get('q1', None)
-        self.q2 = kwargs.get('q2', None)
-        self.q3 = kwargs.get('q3', None)
-        self.cu_plan = kwargs.get('cu_plan', None)
 
-        D = (2 * self.sigma - 1) * np.pi
-        self.b = float(2 * self.sigma * self.m) / D
+def _reject_precision_override(process, kwargs, name):
+    """Return ``kwargs`` without a ``use_double`` key, raising
+    ``ValueError`` when that key disagrees with ``process.use_double``.
 
-    def allocate_data(self, **kwargs):
-        self.n0 = kwargs.get('n0', self.n0)
-        self.nf = kwargs.get('nf', self.nf)
+    Precision is a property of the process object: the kernels are
+    compiled and prepared once, at construction, in ``process.real_type``.
+    The memory classes take ``use_double`` too, so a per-call
+    ``use_double=True`` on a single-precision process used to build
+    float64/complex128 device buffers that the float32 kernels then read
+    as float32 -- a wrong periodogram with a plausible float64 dtype
+    (Sep-2026 readiness review). Every entry point that forwards its
+    keywords to a memory constructor runs this first, before any device
+    work. A value equal to the process precision is accepted (and
+    dropped, so it can neither reach a constructor that also receives
+    the process value positionally nor perturb a memory cache key).
+    """
+    if 'use_double' not in kwargs:
+        return kwargs
+    kwargs = dict(kwargs)
+    requested = bool(kwargs.pop('use_double'))
+    have = bool(process.use_double)
+    if requested != have:
+        raise ValueError(
+            "%s: use_double=%r does not match the precision this process "
+            "was built with (use_double=%r). The kernels are compiled at "
+            "construction, so construct %s(use_double=%r) instead."
+            % (name, requested, have, type(process).__name__, requested))
+    return kwargs
 
-        assert(self.n0 is not None)
-        assert(self.nf is not None)
 
-        self.t_g = gpuarray.zeros(self.n0, dtype=self.real_type)
-        self.y_g = gpuarray.zeros(self.n0, dtype=self.real_type)
-
-        return self
-
-    def allocate_precomp_psi(self,  **kwargs):
-        self.n0 = kwargs.get('n0', self.n0)
-
-        assert(self.n0 is not None)
-
-        self.q1 = gpuarray.zeros(self.n0, dtype=self.real_type)
-        self.q2 = gpuarray.zeros(self.n0, dtype=self.real_type)
-        self.q3 = gpuarray.zeros(2 * self.m + 1, dtype=self.real_type)
-
-        return self
-
-    def allocate_grid(self, **kwargs):
-        self.nf = kwargs.get('nf', self.nf)
-
-        assert(self.nf is not None)
-
-        self.n = int(self.sigma * self.nf)
-        self.ghat_g = gpuarray.zeros(self.n,
-                                     dtype=self.complex_type)
-        self.cu_plan = cufft.Plan(self.n, self.complex_type, self.complex_type,
-                                  stream=self.stream)
-        return self
-
-    def allocate_pinned_cpu(self, **kwargs):
-        self.nf = kwargs.get('nf', self.nf)
-
-        assert(self.nf is not None)
-        self.ghat_c = cuda.aligned_zeros(shape=(self.nf,),
-                                         dtype=self.complex_type,
-                                         alignment=resource.getpagesize())
-
-        return self
-
-    def is_ready(self):
-        assert(self.n0 == len(self.t_g))
-        assert(self.n0 == len(self.y_g))
-        assert(self.n == len(self.ghat_g))
-
-        if self.ghat_c is not None:
-            assert(self.nf == len(self.ghat_c))
-
-        if self.precomp_psi:
-            assert(self.n0 == len(self.q1))
-            assert(self.n0 == len(self.q2))
-            assert(2 * self.m + 1 == len(self.q3))
-
-    def allocate(self, **kwargs):
-        self.n0 = kwargs.get('n0', self.n0)
-        self.nf = kwargs.get('nf', self.nf)
-
-        assert(self.n0 is not None)
-        assert(self.nf is not None)
-        self.n = int(self.sigma * self.nf)
-
-        self.allocate_data(**kwargs)
-        self.allocate_grid(**kwargs)
-        self.allocate_pinned_cpu(**kwargs)
-        if self.precomp_psi:
-            self.allocate_precomp_psi(**kwargs)
-
-        return self
-
-    def transfer_data_to_gpu(self, **kwargs):
-        t = kwargs.get('t', self.t)
-        y = kwargs.get('y', self.y)
-
-        assert(t is not None)
-        assert(y is not None)
-
-        self.t_g.set_async(t, stream=self.stream)
-        self.y_g.set_async(y, stream=self.stream)
-
-    def transfer_nfft_to_cpu(self, **kwargs):
-        cuda.memcpy_dtoh_async(self.ghat_c, self.ghat_g.ptr,
-                               stream=self.stream)
-
-    def fromdata(self, t, y, allocate=True, **kwargs):
-        self.tmin = min(t)
-        self.tmax = max(t)
-
-        self.t = np.asarray(t).astype(self.real_type)
-        self.y = np.asarray(y).astype(self.real_type)
-
-        self.n0 = kwargs.get('n0', len(t))
-        self.nf = kwargs.get('nf', self.nf)
-
-        if self.nf is not None and allocate:
-            self.allocate(**kwargs)
-
-        return self
+def _check_memory_precision(process, memories, name):
+    """Raise ``ValueError`` if any memory object in ``memories`` was
+    allocated at a precision other than ``process.use_double`` (see
+    :func:`_reject_precision_override`: the prepared kernels read the
+    buffers in the process precision whatever they were allocated as).
+    Objects without a ``use_double`` attribute are not checked."""
+    have = bool(process.use_double)
+    for i, mem in enumerate(memories):
+        mem_double = getattr(mem, 'use_double', None)
+        if mem_double is None:
+            continue
+        if bool(mem_double) != have:
+            raise ValueError(
+                "%s: memory %d was allocated with use_double=%r but this "
+                "process runs its kernels with use_double=%r. Allocate the "
+                "memory from this process (allocate/preallocate), or "
+                "construct %s(use_double=%r)."
+                % (name, i, bool(mem_double), have,
+                   type(process).__name__, bool(mem_double)))
 
 
 def nfft_adjoint_async(memory, functions,
@@ -175,12 +111,18 @@ def nfft_adjoint_async(memory, functions,
     ----------
     memory: ``NFFTMemory``
         Allocated memory, must have data already set (see, e.g.,
-        ``NFFTAsyncProcess.allocate()``)
+        ``NFFTAsyncProcess.allocate()``, which validates the light
+        curve with :func:`cuvarbase.utils.check_lightcurve`; this
+        low-level entry point cannot re-check data it does not see)
     functions: tuple, length 5
         Tuple of compiled functions from `SourceModule`. Must be prepared with
         their appropriate dtype.
     minimum_frequency: float, optional (default: 0)
-        First frequency of transform
+        First frequency of transform. The transform starts at the
+        integer mode ``k0 = round(minimum_frequency * samples_per_peak
+        * (tmax - tmin))`` (rounded in float64 on the host; see
+        :func:`_first_mode`), so a fractional first mode gives the
+        nearest integer mode's transform.
     block_size: int, optional
         Number of CUDA threads per block
     just_return_gridded_data: bool, optional
@@ -193,10 +135,23 @@ def nfft_adjoint_async(memory, functions,
     transfer_to_device: bool, optional, (default: True)
         If the data is already on the gpu, set as False
     transfer_to_host: bool, optional, (default: True)
-        If False, will not transfer the resulting nfft to CPU memory
+        If False, will not transfer the resulting nfft to CPU memory.
+        If True, the stream is synchronized before returning, so the
+        returned host buffer is complete (before Sep 2026 the pinned
+        buffer was returned while the device-to-host copy was still in
+        flight: immediate reads were stale on reused memory).
     precomp_psi: bool, optional, (default: True)
-        Only relevant if ``fast`` is True. Will precompute values for the
-        fast gridding procedure.
+        Only relevant if ``fast_grid`` is True. When True *and* the
+        memory was built with ``precomp_psi=True`` (so it carries the
+        psi tables ``q1``/``q2``/``q3``), the tables are filled by
+        ``precompute_psi`` and the data is spread with
+        ``fast_gaussian_grid``; otherwise (``False`` here, or a memory
+        without tables) the inline-psi ``slow_gaussian_grid`` kernel is
+        used, which needs no tables. A memory flagged
+        ``precomp_psi=True`` whose tables are not allocated raises
+        ``ValueError``. Before 1.0 the ``fast_grid`` branch
+        dereferenced the tables unconditionally, so ``precomp_psi=False``
+        raised ``AttributeError``.
     samples_per_peak: float, optional (default: 1)
         Frequency spacing is reduced by this factor, but number of frequencies
         is kept the same
@@ -204,8 +159,33 @@ def nfft_adjoint_async(memory, functions,
     Returns
     -------
     ghat_cpu: ``np.array``
-        The resulting NFFT
+        The resulting NFFT (``memory.ghat_c``, the memory's pinned host
+        buffer -- copy it out before reusing the memory)
+
+    Notes
+    -----
+    The gridding kernels accumulate with atomic adds, so ``memory.ghat_g``
+    is zeroed here on every call; a memory object can be reused across
+    calls (before Sep 2026 a second call on the same memory summed onto
+    the previous grid). With ``transfer_to_host=False`` nothing is
+    synchronized: call ``memory.stream.synchronize()`` (or
+    ``NFFTAsyncProcess.finish()``) before reading ``ghat_g``.
     """
+
+    # The light curve behind ``memory`` was validated where it was
+    # loaded (NFFTAsyncProcess.allocate / LombScargleMemory.setdata);
+    # only the transform's own scalars can be checked here. A
+    # non-finite minimum_frequency poisons every mode's phase factor
+    # and a non-positive samples_per_peak collapses the grid.
+    # ``minimum_frequency`` may be negative: the adjoint transform is
+    # defined over modes -nf/2 .. nf/2 and the tests exercise
+    # ``minimum_frequency = -nf // 2``.
+    if not np.isfinite(minimum_frequency):
+        raise ValueError("nfft_adjoint_async: minimum_frequency must be "
+                         "finite; got %r" % (minimum_frequency,))
+    if not (np.isfinite(samples_per_peak) and samples_per_peak > 0):
+        raise ValueError("nfft_adjoint_async: samples_per_peak must be "
+                         "finite and > 0; got %r" % (samples_per_peak,))
 
     precompute_psi, fast_gaussian_grid, slow_gaussian_grid, \
         nfft_shift, normalize = functions
@@ -219,25 +199,50 @@ def nfft_adjoint_async(memory, functions,
     def grid_size(nthreads):
         return int(np.ceil(float(nthreads) / block_size))
 
-    minimum_frequency = memory.real_type(minimum_frequency)
+    # integer first mode, exact on the host (the kernels used to
+    # recompute it from float32 arguments; see _first_mode)
+    k0 = _first_mode(minimum_frequency, samples_per_peak,
+                     memory.tmin, memory.tmax)
 
     # transfer data -> gpu
     if transfer_to_device:
         memory.transfer_data_to_gpu()
 
-    # smooth data onto uniform grid
-    if fast_grid:
-        if memory.precomp_psi:
-            grid = (grid_size(memory.n0 + 2 * memory.m + 1), 1)
-            args = (grid, block, stream)
-            args += (memory.t_g.ptr,)
-            args += (memory.q1.ptr, memory.q2.ptr, memory.q3.ptr)
-            args += (np.int32(memory.n0), np.int32(memory.n),
-                     np.int32(memory.m), memory.real_type(memory.b))
-            args += (memory.real_type(memory.tmin),
-                     memory.real_type(memory.tmax),
-                     memory.real_type(samples_per_peak))
-            precompute_psi.prepared_async_call(*args)
+    # The gridding kernels accumulate into ghat_g with atomic adds: zero
+    # it on every call so reused memory does not sum onto the previous
+    # transform (only fresh gpuarray.zeros buffers were ever clean).
+    if use_grid is None:
+        memory.ghat_g.fill(memory.complex_type(0), stream=stream)
+
+    # smooth data onto uniform grid.
+    # ``fast_gaussian_grid`` reads the psi tables q1/q2/q3, which
+    # NFFTMemory allocates only when it was built with precomp_psi=True.
+    # Before 1.0 this branch dispatched on ``fast_grid`` alone and then
+    # dereferenced ``memory.q1.ptr`` unconditionally, so precomp_psi=False
+    # (through NFFTAsyncProcess.run/allocate or LombScargleAsyncProcess)
+    # raised AttributeError on every release (Sep-2026 readiness audit,
+    # Phase 2 verification carry-over). The inline-psi kernel
+    # ``slow_gaussian_grid`` needs no tables, so a call without them is
+    # routed there; the default (tables allocated and requested) is
+    # unchanged.
+    use_precomp_psi = bool(fast_grid) and bool(precomp_psi) \
+        and bool(memory.precomp_psi)
+    if use_precomp_psi:
+        if memory.q1 is None or memory.q2 is None or memory.q3 is None:
+            raise ValueError(
+                "nfft_adjoint_async: memory.precomp_psi is True but the "
+                "psi tables q1/q2/q3 are not allocated; call "
+                "memory.allocate_precomp_psi() (or memory.allocate())")
+        grid = (grid_size(memory.n0 + 2 * memory.m + 1), 1)
+        args = (grid, block, stream)
+        args += (memory.t_g.ptr,)
+        args += (memory.q1.ptr, memory.q2.ptr, memory.q3.ptr)
+        args += (np.int32(memory.n0), np.int32(memory.n),
+                 np.int32(memory.m), memory.real_type(memory.b))
+        args += (memory.real_type(memory.tmin),
+                 memory.real_type(memory.tmax),
+                 memory.real_type(samples_per_peak))
+        precompute_psi.prepared_async_call(*args)
 
         grid = (grid_size(memory.n0), 1)
         args = (grid, block, stream)
@@ -272,8 +277,8 @@ def nfft_adjoint_async(memory, functions,
     if use_grid is not None:
         memory.ghat_g.set(use_grid)
 
-    # for a non-zero minimum frequency, do a shift
-    if abs(minimum_frequency) > 1E-9:
+    # for a non-zero first mode, do a shift (k0 = 0 is the identity)
+    if k0 != 0:
         grid = (grid_size(memory.n), 1)
         args = (grid, block, stream)
         args += (memory.ghat_g.ptr, memory.ghat_g.ptr)
@@ -281,7 +286,7 @@ def nfft_adjoint_async(memory, functions,
         args += (memory.real_type(memory.tmin),
                  memory.real_type(memory.tmax),
                  memory.real_type(samples_per_peak),
-                 memory.real_type(minimum_frequency))
+                 np.int32(k0))
         nfft_shift.prepared_async_call(*args)
 
     # Run IFFT on grid
@@ -298,12 +303,17 @@ def nfft_adjoint_async(memory, functions,
     args += (memory.real_type(memory.tmin),
              memory.real_type(memory.tmax),
              memory.real_type(samples_per_peak),
-             memory.real_type(minimum_frequency))
+             np.int32(k0))
     normalize.prepared_async_call(*args)
 
-    # Transfer result!
+    # Transfer result and wait for it: the caller gets the pinned host
+    # buffer, which is only valid once the async D2H copy has landed.
     if transfer_to_host:
         memory.transfer_nfft_to_cpu()
+        if stream is not None:
+            stream.synchronize()
+        else:
+            cuda.Context.synchronize()
 
     return memory.ghat_c
 
@@ -314,15 +324,20 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
     Parameters
     ----------
-    sigma: float, optional (default: 2)
-        Size of NFFT grid will be NFFT_SIZE * sigma
+    sigma: float, optional (default: 4)
+        Size of NFFT grid will be NFFT_SIZE * sigma. The transform
+        returns the one-sided modes ``k = 0..nf-1`` on a grid of
+        ``sigma * nf`` points, so the effective oversampling at the top
+        of the band is ``sigma / 2``: ``sigma >= 4`` is required for
+        full-band accuracy in this layout (with ``sigma = 2`` the modes
+        ``k >= nf/2`` are aliased at O(1), in double precision too).
     m: int, optional (default: 8)
-        Maximum radius for grid contributions (by default,
-        this value will automatically be set based on a specified
-        error tolerance)
-    autoset_m: bool, optional (default: True)
+        Maximum radius for grid contributions, used when
+        ``autoset_m`` is False.
+    autoset_m: bool, optional (default: False)
         Automatically set the ``m`` parameter based on the
-        error tolerance given by the ``m_tol`` parameter
+        error tolerance given by the ``tol`` parameter (see
+        :meth:`estimate_m`)
     tol: float, optional (default: 1E-8)
         Error tolerance for the NFFT (used to auto set ``m``)
     block_size: int, optional (default: 256)
@@ -385,14 +400,20 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         D = (np.pi * (1. - 1. / (2. * sigma - 1.)))
         return int(np.ceil(-np.log(0.25 * C) / D))
 
-    def estimate_m(self, N):
+    def estimate_m(self, N=None, y=None):
         """
-        Estimate ``m`` based on an error tolerance of ``self.tol``.
+        Choose the filter radius ``m`` to meet the error tolerance
+        ``self.m_tol``.
 
         Parameters
         ----------
-        N: int
-            size of NFFT
+        N: int, optional
+            Size of the NFFT. Required when ``y`` is not given
+            (heuristic fallback below).
+        y: array_like, optional
+            The input coefficients of the adjoint NFFT (the
+            observations). When given, ``m`` is chosen from the
+            rigorous L1-norm error bound below.
 
         Returns
         -------
@@ -401,24 +422,78 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
         Notes
         -----
-        Pulled from <https://github.com/jakevdp/nfft>_.
+        The approximation error of the (adjoint) NFFT with a Gaussian
+        window satisfies (NFFT3 guide, p. 11, eq. (5.9); Steidl 1998)
 
+        .. math::
+
+            \\max_k |E_k| \\le 4 e^{-m \\pi (1 - 1/(2\\sigma - 1))}
+            \\, \\|y\\|_1
+
+        so given the data ``y``, ``m`` is set to the smallest integer
+        with :math:`4 e^{-m \\pi (1 - 1/(2\\sigma-1))} \\|y\\|_1 \\le`
+        ``tol``.
+
+        In double precision (``use_double=True``) the realized error
+        tracks this bound down to the ``~1e-10`` absolute level
+        (A5000-validated, Jul 2026: max error is *below* the bound for
+        every ``m <= 14`` on the reference configuration, bottoming out
+        near ``1e-11`` from FFT roundoff amplified by the Gaussian
+        deconvolution). That figure assumes the gridding kernel rounds
+        the grid coordinate in double: while ``cunfft.cu`` used
+        ``floorf()`` on that coordinate (the case before the Sep-2026
+        NFFT fixes) the double-precision error floor was ~1e-2 for
+        times far from the origin, and the ``~1e-10`` level was reached
+        only when the coordinates were exactly representable in
+        float32. An earlier revision of this docstring described
+        a ``~1e-3``, m-independent error floor as inherent; that floor
+        was a kernel defect -- a float32 ``PI`` literal in the phase
+        factors of ``nfft_shift``/``normalize`` (error
+        ``~2.8e-8 * 2*pi*|k0|* ||y||_1``, amplified with ``m`` by the
+        deconvolution) -- fixed in the same pass. In single precision a
+        genuine floor of roughly ``1e-3`` absolute (``1e-5`` relative)
+        remains: it comes from float32 trig on large un-reduced phase
+        arguments and float32 grid/FFT roundoff, and very large ``m``
+        *increases* it (the wider Gaussian amplifies grid noise).
+        Requesting ``tol`` below that floor at single precision will not
+        be honored -- use ``use_double=True`` for tolerances below
+        ``~1e-2``.
+
+        When ``y`` is unavailable, this falls back to the historical
+        heuristic (from `jakevdp/nfft
+        <https://github.com/jakevdp/nfft>`_) that substitutes ``N``
+        for :math:`\\|y\\|_1`, which guarantees the tolerance only
+        when ``max|y| <= 1``.
         """
+        if y is not None:
+            l1 = float(np.sum(np.absolute(y)))
+            if l1 <= 0:
+                # zero input: the transform is exactly zero for any m
+                return 1
+            return max(1, self.m_from_C(self.m_tol / l1, self.sigma))
 
-        # TODO: this should be computed in terms of the L1-norm of the true
-        #   Fourier coefficients... see p. 11 of
-        #   https://www-user.tu-chemnitz.de/~potts/nfft/guide/nfft3.pdf
-        #   Need to think about how to estimate the value of m more accurately
-        return self.m_from_C(self.m_tol / N, self.sigma)
+        if N is None:
+            raise ValueError("estimate_m requires N when y is not given")
+        # Clamp like the y-path above: pathological tolerances
+        # (m_tol > 4N) would give m <= 0, i.e. a negative Gaussian
+        # shape parameter b and garbage gridding.
+        return max(1, self.m_from_C(self.m_tol / N, self.sigma))
 
-    def get_m(self, N=None):
-        """ 
+    def get_m(self, N=None, y=None):
+        """
         Returns the ``m`` value for ``N`` frequencies.
 
         Parameters
         ----------
         N: int
-            Number of frequencies, only needed if ``autoset_m`` is ``False``.
+            Number of frequencies, only needed if ``autoset_m`` is ``True``
+            and ``y`` is not given.
+        y: array_like, optional
+            Adjoint-NFFT input coefficients; when given (and
+            ``autoset_m`` is ``True``), ``m`` comes from the rigorous
+            L1-norm bound in :func:`estimate_m`. Callers that size
+            shared buffers before seeing the data (e.g. the
+            Lomb-Scargle memory layouts) use the ``N`` fallback.
 
         Returns
         -------
@@ -426,7 +501,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             The filter radius (in grid points)
         """
         if self.autoset_m:
-            return self.estimate_m(N)
+            return self.estimate_m(N=N, y=y)
         else:
             return self.m
 
@@ -450,12 +525,14 @@ class NFFTAsyncProcess(GPUAsyncProcess):
                                 self.real_type, self.real_type,
                                 self.real_type],
 
+            # the last argument of normalize/nfft_shift is the integer
+            # first mode k0 (host-computed; see _first_mode)
             normalize=[np.intp, np.intp, np.int32, np.int32, np.int32,
                        self.real_type, self.real_type, self.real_type,
-                       self.real_type, self.real_type],
+                       self.real_type, np.int32],
 
             nfft_shift=[np.intp, np.intp, np.int32, np.int32, self.real_type,
-                        self.real_type, self.real_type, self.real_type]
+                        self.real_type, self.real_type, np.int32]
         )
 
         for function, dtype in self.dtypes.items():
@@ -488,12 +565,27 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         # Purge any previously allocated memory
         allocated_memory = []
 
+        # Precision is fixed at construction (the kernels are compiled
+        # in self.real_type); a per-call use_double that disagrees
+        # raises here, before any device work, and an equal one is
+        # dropped (NFFTMemory below also gets it positionally).
+        kwargs = _reject_precision_override(self, kwargs,
+                                            'NFFTAsyncProcess.allocate')
+
+        for i, d in enumerate(data):
+            if len(d) != 3:
+                raise ValueError(
+                    "NFFTAsyncProcess.allocate: dataset %d must be a "
+                    "(t, y, nf) tuple; got %d elements" % (i, len(d)))
+            check_lightcurve(d[0], d[1], min_n=2,
+                             name='NFFTAsyncProcess.allocate dataset %d' % i)
+
         if len(data) > len(self.streams):
             self._create_streams(len(data) - len(self.streams))
 
         for i, (t, y, nf) in enumerate(data):
 
-            m = self.get_m(nf)
+            m = self.get_m(nf, y=y)
 
             mem = NFFTMemory(self.sigma, self.streams[i], m,
                              use_double=self.use_double, **kwargs)
@@ -515,15 +607,59 @@ class NFFTAsyncProcess(GPUAsyncProcess):
             * ``t``: observation times
             * ``y``: observations
             * ``nf``: int, size of NFFT
-        memory:
+        memory: list of ``NFFTMemory``, optional
+            Preallocated memory (from :meth:`allocate`), one per
+            dataset; ``data`` is ignored when given. The memory may be
+            reused across calls: the grid is zeroed on every transform.
+            It must have been allocated at the process precision
+            (``ValueError`` otherwise).
         **kwargs
+            Passed to :func:`nfft_adjoint_async` (``transfer_to_host``,
+            ``transfer_to_device``, ``fast_grid``, ...). ``use_double``
+            is **not** a per-call option: the kernels are compiled at
+            construction in the process precision, so a ``use_double``
+            that differs from ``NFFTAsyncProcess(use_double=...)``
+            raises ``ValueError`` before any device work (an equal value
+            is accepted and ignored). Before 1.0 the keyword reached the
+            memory constructor and, with a user-supplied ``memory``,
+            silently paired float64 buffers with float32 kernels.
 
         Returns
         -------
         powers: list of np.ndarrays
-            List of adjoint NFFTs
+            List of adjoint NFFTs. Each is the memory's pinned host
+            buffer ``ghat_c``; with the default ``transfer_to_host=True``
+            the stream has been synchronized and the buffer is complete
+            on return (copy it before reusing the memory). With
+            ``transfer_to_host=False`` call :meth:`finish` (or
+            ``memory.stream.synchronize()``) before reading ``ghat_g``.
 
         """
+        # Validate before any device work (kernel compile included).
+        # ``data`` is ignored when ``memory`` is supplied, and the
+        # light curve behind a memory object was validated when it was
+        # allocated. min_n = 2: NFFTMemory rescales the times to
+        # [-1/2, 1/2) by the baseline max(t) - min(t), which is zero
+        # for a single sample -- the transform came back all-NaN.
+        kwargs = _reject_precision_override(self, kwargs,
+                                            'NFFTAsyncProcess.run')
+        if memory is not None:
+            _check_memory_precision(self, memory, 'NFFTAsyncProcess.run')
+        if memory is None:
+            for i, d in enumerate(data):
+                if len(d) != 3:
+                    raise ValueError(
+                        "NFFTAsyncProcess.run: dataset %d must be a "
+                        "(t, y, nf) tuple; got %d elements" % (i, len(d)))
+                check_lightcurve(d[0], d[1], min_n=2,
+                                 name='NFFTAsyncProcess.run dataset %d' % i)
+                nf = d[2]
+                if not (np.isscalar(nf) and np.isfinite(nf)
+                        and nf > 0 and int(nf) == nf):
+                    raise ValueError(
+                        "NFFTAsyncProcess.run: dataset %d: nf must be a "
+                        "positive integer; got %r" % (i, nf))
+
         if not hasattr(self, 'prepared_functions') or \
             not all([func in self.prepared_functions
                      for func in self.function_names]):

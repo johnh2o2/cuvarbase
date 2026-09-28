@@ -48,7 +48,7 @@ coverage.xml
 *.mo
 *.pot
 
-# Django stuff:
+# Runtime logs
 *.log
 
 # Sphinx documentation
@@ -63,8 +63,6 @@ target/
 
 .ipynb_checkpoints
 .idea/*
-tools/repos
-Untitled*.ipynb
 
 # vim backups
 *.swp
@@ -72,13 +70,26 @@ Untitled*.ipynb
 # LaTeX
 *.aux
 *.pdf
+!docs/figures/*.pdf
 
 # misc
-scripts/saved_results
 .DS_Store
 work/
 *.png
+# ... except published documentation and benchmark figures
+!docs/**/*.png
 *.gif
-*HAT*txt
-testing/*
-custom_test_ce.py
+
+# RunPod configuration (contains credentials)
+.runpod.env
+
+# Local service credentials
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Downloaded benchmark archives and restored validation output
+.benchmark-archives/
+docs/validation/**/*.log
+docs/validation/**/*.xml

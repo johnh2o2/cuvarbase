@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "id": "validation-release-prepared-20260927",
+  "source_commit": "403c75d7425e92b8a3d112672a04177189117a61",
+  "archive": {
+    "key": "benchmark-evidence/20260928/validation-release-prepared-20260927.tar.gz",
+    "bucket": "cuvarbase",
+    "bytes": 39631,
+    "sha256": "ce9c787c6db964b50dd84dff5d835cfa5fd05666167f4daec47a54f4f8b43dbf"
+  },
+  "columns": [
+    "path",
+    "bytes",
+    "sha256",
+    "kept_in_git"
+  ],
+  "files": [
+    ["docs/validation/release-prepared-20260927/checks.json",3292,"e306a30f42c9909687e08d4f7c6795100962cad06cf16e09ae50fab516df0dd4",true],
+    ["docs/validation/release-prepared-20260927/host-suite.log",37417,"64b817a0a978d460a16d9af524186db7383d5db0d999f3d3f4280209a1464f17",false],
+    ["docs/validation/release-prepared-20260927/host-suite.xml",494714,"7334e2eeab840b5751b016f59bb62e550cf272d84a200976ddc5addd9725c188",false],
+    ["docs/validation/release-prepared-20260927/package-verification.json",10205,"2480a7d9be165d3b63d9c5ff7512c00189f08978343cf0f2565702366901e81b",true],
+    ["docs/validation/release-prepared-20260927/release-tools-with-batman.log",379,"6dd9d7d6248fd93d21c8c55492a9ce03236919b3bbe0aadc272381452905f7e8",false],
+    ["docs/validation/release-prepared-20260927/release-tools-with-batman.xml",32875,"59d9a61c9572889a5f4b969e0ec97f42cc5e4581b0fa2cc7292e89af83097af8",false],
+    ["docs/validation/release-prepared-20260927/sdist-installed-smoke.log",1883,"474ea321b21ad0fe5c6c3b3ac9b9f54d3e0fab1f7a9935dbb9b68d2b34c7a2fe",false],
+    ["docs/validation/release-prepared-20260927/twine-check.log",530,"429938d5e7c3145bbd9f6487f1015376ac6e6fa08f18e02f3143d141694d2047",false],
+    ["docs/validation/release-prepared-20260927/wheel-installed-smoke.log",1231,"2eb7208a5089661c5ba446ffd1b5a80093d7ea7dbc528302e80731870657a266",false]
+  ]
+}

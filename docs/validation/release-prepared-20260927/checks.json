@@ -1,0 +1,108 @@
+{
+  "checked_utc": "2026-09-28T02:57:14.296880+00:00",
+  "version": "1.0.1",
+  "host_suite": {
+    "collected": 2008,
+    "passed": 1141,
+    "skipped": 866,
+    "xfailed": 1,
+    "failed": 0
+  },
+  "release_tools_with_batman": {
+    "collected": 211,
+    "passed": 211,
+    "skipped": 0,
+    "xfailed": 0,
+    "failed": 0
+  },
+  "installed_artifacts": {
+    "checked_utc": "2026-09-28T02:53:44.765587+00:00",
+    "checks": [
+      {
+        "artifact": "cuvarbase-1.0.1-py3-none-any.whl",
+        "status": "installed_and_smoke_checked",
+        "package_path_verified": true,
+        "dependencies": "inherited existing host dependency environment; package installed into fresh venv",
+        "version": "1.0.1"
+      },
+      {
+        "artifact": "cuvarbase-1.0.1.tar.gz",
+        "status": "installed_and_smoke_checked",
+        "package_path_verified": true,
+        "dependencies": "inherited existing host dependency environment; package installed into fresh venv",
+        "version": "1.0.1"
+      }
+    ]
+  },
+  "fatal_lint_passed": true,
+  "sphinx": {
+    "unexpected_warnings": 0,
+    "expected_gpu_plot_warnings": 5
+  },
+  "workflow_yaml_parsed": true,
+  "preservation": {
+    "files_checked_for_current_credential_values": 2473,
+    "credential_files_excluded": true,
+    "timing_rows_unchanged": 16,
+    "original_exactness_evidence_unchanged": true,
+    "exactness_receipt_sha256": "1931a7a9f7ab7c34f7e882406926da7e44b446c7d8c7fa4b57120dde4fe4c9eb"
+  },
+  "prior_gpu_suite": {
+    "passed": 2091,
+    "xfailed": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "prior_gpu_gate": {
+    "numerical_runtime_checks_passed": 14,
+    "dependency_preflights_passed": 6
+  },
+  "version_only_package_change": true,
+  "gpu_experiments_repeated": false,
+  "new_rentals": false,
+  "evidence_files": {
+    "host-suite.xml": {
+      "bytes": 494714,
+      "sha256": "7334e2eeab840b5751b016f59bb62e550cf272d84a200976ddc5addd9725c188"
+    },
+    "host-suite.log": {
+      "bytes": 37417,
+      "sha256": "64b817a0a978d460a16d9af524186db7383d5db0d999f3d3f4280209a1464f17"
+    },
+    "release-tools-with-batman.xml": {
+      "bytes": 32875,
+      "sha256": "59d9a61c9572889a5f4b969e0ec97f42cc5e4581b0fa2cc7292e89af83097af8"
+    },
+    "release-tools-with-batman.log": {
+      "bytes": 379,
+      "sha256": "6dd9d7d6248fd93d21c8c55492a9ce03236919b3bbe0aadc272381452905f7e8"
+    },
+    "wheel-installed-smoke.log": {
+      "bytes": 1231,
+      "sha256": "2eb7208a5089661c5ba446ffd1b5a80093d7ea7dbc528302e80731870657a266"
+    },
+    "sdist-installed-smoke.log": {
+      "bytes": 1883,
+      "sha256": "474ea321b21ad0fe5c6c3b3ac9b9f54d3e0fab1f7a9935dbb9b68d2b34c7a2fe"
+    },
+    "twine-check.log": {
+      "bytes": 530,
+      "sha256": "429938d5e7c3145bbd9f6487f1015376ac6e6fa08f18e02f3143d141694d2047"
+    }
+  },
+  "current_release_local_links": {
+    "checked": 106,
+    "missing": []
+  },
+  "git_evidence_bytes": {
+    "staged_files_verified": 566,
+    "all_staged_bytes_identical_to_working_files": true,
+    "frozen_study_line_endings_preserved": true
+  },
+  "advisory_whitespace": {
+    "path": "cuvarbase/tls_reference_experimental_math.py",
+    "issue": "Existing final blank line in the GPU-validated source",
+    "retained_for_source_byte_identity": true,
+    "fatal_lint_passed": true
+  }
+}
