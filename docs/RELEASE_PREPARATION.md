@@ -51,9 +51,11 @@ It contains `dist/`, artifact checksums, build and verification logs, a Git
 bundle, the prepared GitHub release text and a publication runbook. The
 committed source and that delivery are backed up in the private R2 bucket;
 the local completion receipt records the exact object prefix and read-back.
-That directory preserves the original local preparation snapshot. The source
-push, pull request, final tag and CI receipts are recorded separately in
-`/Users/johnhoffman/Documents/cuvarbase-release-pr-20260928/`.
+That directory preserves the original local preparation snapshot. The first
+source push, pull request, tag and CI receipts are recorded separately in
+`/Users/johnhoffman/Documents/cuvarbase-release-pr-20260928/`. The subsequent
+archive and history cleanup, current source refs and current CI receipts are in
+`/Users/johnhoffman/Documents/cuvarbase-history-cleanup-20260928/`.
 
 To inspect the prepared state without publishing:
 
@@ -64,8 +66,9 @@ git diff v1.0.1 -- cuvarbase pyproject.toml README.md CHANGELOG.rst
 ```
 
 Before publication, review the pull request into `master` and its CI checks.
-The later delivery directory contains the current `PUBLISH.md`; it supersedes
-the original runbook's deferred branch/tag push steps. When publication is
+The history-cleanup delivery directory contains the current `PUBLISH.md`; it
+supersedes the earlier runbooks' source identities and branch/tag push steps.
+When publication is
 authorized, verify the recorded commit, artifact checksums and current remote
 state before creating a GitHub release and uploading the two distributions.
 Neither publication nor PR creation moves the existing `v1.0.0` tag.
