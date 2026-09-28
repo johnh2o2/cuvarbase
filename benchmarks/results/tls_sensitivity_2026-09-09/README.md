@@ -17,7 +17,7 @@ These results support bounded, workload-specific comparisons of complete searche
 | Separated TESS sectors | Original | 26.4 ms | 4.64 s | 175.5× | Pass |
 | ZTF g/r | Original | 67.9 ms | 10.6 s | 155.6× | Inconclusive |
 
-The [historical combined timing figure](../../../docs/figures/transit_benchmarks_20260909.png) used the fastest predeclared passing binned setting for each TESS cadence. ZTF retained an explicitly unqualified original-grid timing. These settings superseded the earlier 93–284× binned-TLS headline; they do not measure the current observation-level default. BLS competitor measurements remain in the [earlier experiment](../transit_2026-09-08/README.md).
+The historical combined timing figure (`docs/figures/transit_benchmarks_20260909.png`, preserved in the [original Git history](../../../docs/BENCHMARK_ARCHIVES.md#original-git-history)) used the fastest predeclared passing binned setting for each TESS cadence. ZTF retained an explicitly unqualified original-grid timing. These settings superseded the earlier 93–284× binned-TLS headline; they do not measure the current observation-level default. BLS competitor measurements remain in the [earlier experiment](../transit_2026-09-08/README.md).
 
 ## Independent detection results
 
