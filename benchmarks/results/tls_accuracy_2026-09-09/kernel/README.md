@@ -65,7 +65,7 @@ includes the warnings. A compact synthetic regression checks the numerical
 sensitivity of template-tail integral subtraction.
 
 This is an engineering runtime and numerical-parity check using the earlier
-[transit benchmark inputs](../../transit_2026-09-08/inputs/). It does not
+[transit benchmark inputs](../../../../docs/BENCHMARK_ARCHIVES.md#transit_2026-09-08 "Archived directory: benchmarks/results/transit_2026-09-08/inputs"). It does not
 establish new recovery-rate or false-positive equivalence, or reduce the
 scientific approximation from phase binning.
 

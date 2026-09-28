@@ -155,7 +155,7 @@ sample in 251/256 cases per split, a difference of one sample when present.
 The sole retained warning concerns an unclosed baseline CUDA source file;
 there were no template-fallback warnings.
 
-The archive preserves the original scalar results under [results/](results/),
+The archive preserves the original scalar results under [results/](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived directory: benchmarks/results/tls_accuracy_2026-09-09/high-impact/results"),
 the [input manifest](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/inputs/manifest.json"), four configurations, thresholds,
 analysis, [generation receipt](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/generation-environment.json"), and the exact
 [runner snapshot](../../../../docs/BENCHMARK_ARCHIVES.md#tls_accuracy_2026-09-09 "Archived file: benchmarks/results/tls_accuracy_2026-09-09/high-impact/source_snapshots/high_impact.py"). Generated light curves

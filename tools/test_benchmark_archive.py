@@ -3,11 +3,14 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import tarfile
 
 import pytest
 
-from tools.benchmark_archive import load_manifest, restore, sha256
+from tools.benchmark_archive import fetch, load_manifest, restore, sha256
+from tools.check_repository_artifacts import check
 
 
 def fixture(tmp_path, extra=None, wrong_member_hash=False):
@@ -92,3 +95,48 @@ def test_manifest_cannot_escape_destination(tmp_path):
     (tmp_path / 'study.json').write_text(json.dumps(record))
     with pytest.raises(ValueError, match='Unsafe member path'):
         load_manifest('study', tmp_path)
+
+
+def test_fetch_verifies_download_and_reuses_verified_cache(tmp_path, monkeypatch):
+    archive, record, _ = fixture(tmp_path)
+    record['archive']['key'] = 'evidence/study.tar.gz'
+    calls = []
+
+    def copy(command, **kwargs):
+        calls.append(command)
+        shutil.copyfile(archive, command[3])
+
+    monkeypatch.setattr(subprocess, 'run', copy)
+    cache = tmp_path / 'cache'
+    first = fetch(record, 'archive:bucket', cache)
+    assert sha256(first) == record['archive']['sha256']
+    assert fetch(record, 'archive:bucket', cache) == first
+    assert len(calls) == 1 and calls[0][2] == 'archive:bucket/evidence/study.tar.gz'
+
+
+def test_failed_download_is_not_installed_in_cache(tmp_path, monkeypatch):
+    _, record, _ = fixture(tmp_path)
+    record['archive']['key'] = 'evidence/study.tar.gz'
+
+    def corrupt(command, **kwargs):
+        Path(command[3]).write_bytes(b'incomplete transfer')
+
+    monkeypatch.setattr(subprocess, 'run', corrupt)
+    cache = tmp_path / 'cache'
+    with pytest.raises(ValueError, match='Archive checksum'):
+        fetch(record, 'archive:bucket', cache)
+    assert list(cache.iterdir()) == []
+
+
+def test_repository_guard_rejects_accidental_raw_evidence_and_large_files(tmp_path):
+    subprocess.run(['git', 'init', '-q', str(tmp_path)], check=True)
+    evidence = tmp_path / 'benchmarks/results/study'
+    evidence.mkdir(parents=True)
+    (evidence / 'README.md').write_text('Small report\n')
+    (evidence / 'raw.json').write_text('{"result":1}\n')
+    (tmp_path / 'large.bin').write_bytes(b'x' * (1024 * 1024 + 1))
+    subprocess.run(['git', '-C', str(tmp_path), 'add', '.'], check=True)
+    problems = check(tmp_path)
+    assert len(problems) == 2
+    assert any('raw.json' in problem for problem in problems)
+    assert any('large.bin' in problem for problem in problems)
