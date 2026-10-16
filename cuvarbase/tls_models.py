@@ -37,7 +37,8 @@ try:
     BATMAN_AVAILABLE = True
 except ImportError:
     BATMAN_AVAILABLE = False
-    warnings.warn("batman package not available. Install with: pip install batman-package")
+    warnings.warn(
+        "batman package not available. Install with: pip install batman-package")
 
 # Set by _warn_template_fallback so generate_template_tables can tell a
 # batman template from the trapezoid substituted for a batman call that
@@ -120,7 +121,7 @@ def create_reference_transit(n_samples=1000, limb_dark='quadratic',
         u = [0.4804, 0.1867]
     if not BATMAN_AVAILABLE:
         raise ImportError("batman package required for transit models. "
-                         "Install with: pip install batman-package")
+                          "Install with: pip install batman-package")
 
     # Batman parameters for reference transit
     params = batman.TransitParams()
@@ -162,7 +163,7 @@ def create_reference_transit(n_samples=1000, limb_dark='quadratic',
 
 def create_transit_model_cache(durations, period=1.0, n_samples=1000,
                                limb_dark='quadratic', u=None,
-                               R_star=1.0, M_star=1.0):
+                               R_star=1.0, M_star=1.0):  # noqa: N803
     """
     Create cache of transit models for different durations.
 
@@ -499,9 +500,9 @@ def generate_template_tables(n_table=1024, limb_dark='quadratic',
             [0.0], np.cumsum(0.5 * (values[1:] + values[:-1]) * dx)])
         return cum[::oversample]
 
-    S1 = running_integral(fine)
-    S2 = running_integral(fine ** 2)
-    T = fine[::oversample]
+    S1 = running_integral(fine)  # noqa: N803
+    S2 = running_integral(fine ** 2)  # noqa: N803
+    T = fine[::oversample]  # noqa: N803
 
     tables = (T.astype(np.float32),
               S1.astype(np.float32),
@@ -555,7 +556,7 @@ def _trapezoid_template(n_template=1000, ingress_fraction=0.1):
     return template
 
 
-def get_default_limb_darkening(filter='Kepler', T_eff=5500):
+def get_default_limb_darkening(filter='Kepler', T_eff=5500):  # noqa: N803
     """
     Get default limb darkening coefficients for common filters and T_eff.
 

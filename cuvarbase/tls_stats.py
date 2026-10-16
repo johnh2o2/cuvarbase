@@ -80,7 +80,7 @@ def signal_residue(chi2, chi2_null=None):
     chi2 = np.maximum(chi2, 0.0)
     chi2_min = np.min(chi2)
     with np.errstate(divide='ignore', invalid='ignore'):
-        SR = chi2_min / chi2
+        SR = chi2_min / chi2  # noqa: N803
     # 0/0 at a perfect (noiseless) fit; the best period has SR = 1 by
     # definition
     SR[chi2 == chi2_min] = 1.0
@@ -203,16 +203,16 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
     chi2 = np.asarray(chi2)
 
     # Calculate signal residue
-    SR = signal_residue(chi2, chi2_null)
+    SR = signal_residue(chi2, chi2_null)  # noqa: N803
 
     # Raw SDE (before detrending)
-    mean_SR = np.mean(SR)
-    std_SR = np.std(SR)
+    mean_SR = np.mean(SR)  # noqa: N803
+    std_SR = np.std(SR)  # noqa: N803
 
     if std_SR < 1e-10:
-        SDE_raw = 0.0
+        SDE_raw = 0.0  # noqa: N803
     else:
-        SDE_raw = (np.max(SR) - mean_SR) / std_SR
+        SDE_raw = (np.max(SR) - mean_SR) / std_SR  # noqa: N803
 
     # Detrend with a running median if requested
     if detrend:
@@ -234,28 +234,28 @@ def signal_detection_efficiency(chi2, chi2_null=None, detrend=True,
         if len(SR) <= 2 * kernel_size:
             # Too few points to estimate a trend; follow the reference
             # transitleastsquares behavior and skip detrending.
-            SDE = SDE_raw
+            SDE = SDE_raw  # noqa: N803
             power = SR
         else:
             # Edge-extended running median (reference convention)
-            SR_trend = running_median(SR, kernel_size)
+            SR_trend = running_median(SR, kernel_size)  # noqa: N803
 
             # Detrended signal residue
-            SR_detrended = SR - SR_trend + np.median(SR)
+            SR_detrended = SR - SR_trend + np.median(SR)  # noqa: N803
 
             # Calculate SDE on detrended signal
-            mean_SR_detrended = np.mean(SR_detrended)
-            std_SR_detrended = np.std(SR_detrended)
+            mean_SR_detrended = np.mean(SR_detrended)  # noqa: N803
+            std_SR_detrended = np.std(SR_detrended)  # noqa: N803
 
             if std_SR_detrended < 1e-10:
-                SDE = 0.0
+                SDE = 0.0  # noqa: N803
             else:
-                SDE = ((np.max(SR_detrended) - mean_SR_detrended)
-                       / std_SR_detrended)
+                SDE = ((np.max(SR_detrended) - mean_SR_detrended)  # noqa: N803
+                       / std_SR_detrended)  # noqa: N803
 
             power = SR_detrended
     else:
-        SDE = SDE_raw
+        SDE = SDE_raw  # noqa: N803
         power = SR
 
     return SDE, SDE_raw, power
@@ -314,7 +314,7 @@ def signal_to_noise(depth, depth_err=None,
     return depth / depth_err
 
 
-def false_alarm_probability(SDE, method='empirical'):
+def false_alarm_probability(SDE, method='empirical'):  # noqa: N803
     """
     Heuristic SDE -> "FAP" map. NOT a calibrated false-alarm
     probability; kept only as an explicit opt-in helper.
@@ -355,7 +355,7 @@ def false_alarm_probability(SDE, method='empirical'):
     """
     if method == 'gaussian':
         # Gaussian approximation: FAP = 1 - Phi(SDE)
-        FAP = 1.0 - stats.norm.cdf(SDE)
+        FAP = 1.0 - stats.norm.cdf(SDE)  # noqa: N803
     else:
         warnings.warn(
             "false_alarm_probability: this is an uncalibrated heuristic "
@@ -367,14 +367,14 @@ def false_alarm_probability(SDE, method='empirical'):
         # Values: FAP(5) = 1, FAP(6) = 0.32, FAP(7-) = 0.1, FAP(7) = 0.01
         # (discontinuous), FAP(9) = 1e-4.
         if SDE < 5:
-            FAP = 1.0
+            FAP = 1.0  # noqa: N803
         elif SDE < 7:
-            FAP = 10 ** (-0.5 * (SDE - 5))
+            FAP = 10 ** (-0.5 * (SDE - 5))  # noqa: N803
         else:
-            FAP = 10 ** (-(SDE - 5))
+            FAP = 10 ** (-(SDE - 5))  # noqa: N803
 
         # Clip to reasonable range
-        FAP = np.clip(FAP, 1e-10, 1.0)
+        FAP = np.clip(FAP, 1e-10, 1.0)  # noqa: N803
 
     return FAP
 
@@ -484,17 +484,17 @@ def compute_all_statistics(chi2, periods, best_period_idx,
     chi2 = np.asarray(chi2, dtype=np.float64)
 
     # Signal residue and SDE
-    SDE, SDE_raw, power = signal_detection_efficiency(
+    SDE, SDE_raw, power = signal_detection_efficiency(  # noqa: N803
         chi2, detrend=True, kernel_size=kernel_size)
 
-    SR = signal_residue(chi2)
+    SR = signal_residue(chi2)  # noqa: N803
 
     # SNR (delta-chi2 of the best fit over the constant model)
     if chi2_null is None:
         chi2_null = np.max(chi2)
     if chi2_best is None:
         chi2_best = chi2[best_period_idx]
-    SNR = signal_to_noise(depth, chi2_null=chi2_null, chi2_best=chi2_best)
+    SNR = signal_to_noise(depth, chi2_null=chi2_null, chi2_best=chi2_best)  # noqa: N803
 
     # Compile statistics
     stats = {

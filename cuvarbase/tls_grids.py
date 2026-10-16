@@ -36,7 +36,7 @@ M_sun = 1.98840e30  # Solar mass (kg)
 R_earth = 6.371e6  # Earth radius (m)
 
 
-def q_transit(period, R_star=1.0, M_star=1.0, R_planet=1.0):
+def q_transit(period, R_star=1.0, M_star=1.0, R_planet=1.0):  # noqa: N803
     """
     Calculate fractional transit duration (q = duration/period) for Keplerian orbit.
 
@@ -77,7 +77,7 @@ def q_transit(period, R_star=1.0, M_star=1.0, R_planet=1.0):
     return duration / period
 
 
-def transit_duration_max(period, R_star=1.0, M_star=1.0, R_planet=1.0):
+def transit_duration_max(period, R_star=1.0, M_star=1.0, R_planet=1.0):  # noqa: N803
     """
     Calculate maximum transit duration for circular orbit.
 
@@ -107,8 +107,8 @@ def transit_duration_max(period, R_star=1.0, M_star=1.0, R_planet=1.0):
     - Planet + stellar radii contribute to transit chord
     """
     period_sec = period * 86400.0  # Convert to seconds
-    R_total = R_star * R_sun + R_planet * R_earth  # Total radius in meters
-    M_star_kg = M_star * M_sun  # Mass in kg
+    R_total = R_star * R_sun + R_planet * R_earth  # Total radius in meters  # noqa: N803
+    M_star_kg = M_star * M_sun  # Mass in kg  # noqa: N803
 
     # Duration in seconds
     duration_sec = R_total * (4.0 * period_sec / (np.pi * G * M_star_kg))**(1.0/3.0)
@@ -119,7 +119,7 @@ def transit_duration_max(period, R_star=1.0, M_star=1.0, R_planet=1.0):
     return duration_days
 
 
-def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,
+def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,  # noqa: N803
                      period_min=None, period_max=None, n_transits_min=2):
     """
     Generate optimal period grid using Ofir (2014) algorithm.
@@ -164,7 +164,7 @@ def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,
     This ensures optimal statistical sampling across the period space.
     """
     t = np.asarray(t)
-    T_span = np.max(t) - np.min(t)  # Total observation span
+    T_span = np.max(t) - np.min(t)  # Total observation span  # noqa: N803
 
     # Store user's requested limits (for filtering later)
     user_period_min = period_min
@@ -176,19 +176,19 @@ def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,
 
     # f_max: Roche limit (maximum possible frequency)
     # P_roche = 2π * sqrt(a^3 / (G*M)) where a = 3*R at Roche limit
-    R_star_m = R_star * R_sun
-    M_star_kg = M_star * M_sun
+    R_star_m = R_star * R_sun  # noqa: N803
+    M_star_kg = M_star * M_sun  # noqa: N803
     f_max = 1.0 / (2.0 * np.pi) * np.sqrt(G * M_star_kg / (3.0 * R_star_m)**3)
 
     # Ofir (2014) parameters - equations (5), (6), (7)
-    T_span_sec = T_span * 86400.0  # Convert to seconds
+    T_span_sec = T_span * 86400.0  # Convert to seconds  # noqa: N803
 
     # Equation (5): optimal frequency sampling parameter
-    A = ((2.0 * np.pi)**(2.0/3.0) / np.pi * R_star_m /
+    A = ((2.0 * np.pi)**(2.0/3.0) / np.pi * R_star_m /  # noqa: N803
          (G * M_star_kg)**(1.0/3.0) / (T_span_sec * oversampling_factor))
 
     # Equation (6): offset parameter
-    C = f_min**(1.0/3.0) - A / 3.0
+    C = f_min**(1.0/3.0) - A / 3.0  # noqa: N803
 
     # Equation (7): optimal number of frequency samples
     n_freq = int(np.ceil((f_max**(1.0/3.0) - f_min**(1.0/3.0) + A / 3.0) * 3.0 / A))
@@ -229,8 +229,8 @@ def period_grid_ofir(t, R_star=1.0, M_star=1.0, oversampling_factor=3,
     return periods
 
 
-def duration_grid(periods, R_star=1.0, M_star=1.0, R_planet_min=0.5,
-                  R_planet_max=5.0, duration_grid_step=1.1):
+def duration_grid(periods, R_star=1.0, M_star=1.0, R_planet_min=0.5,  # noqa: N803
+                  R_planet_max=5.0, duration_grid_step=1.1):  # noqa: N803
     """
     Generate logarithmically-spaced duration grid for each period.
 
@@ -268,8 +268,8 @@ def duration_grid(periods, R_star=1.0, M_star=1.0, R_planet_min=0.5,
     periods = np.asarray(periods)
 
     # Calculate duration bounds for each period
-    T_min = transit_duration_max(periods, R_star, M_star, R_planet_min)
-    T_max = transit_duration_max(periods, R_star, M_star, R_planet_max)
+    T_min = transit_duration_max(periods, R_star, M_star, R_planet_min)  # noqa: N803
+    T_max = transit_duration_max(periods, R_star, M_star, R_planet_max)  # noqa: N803
 
     durations = []
     duration_counts = np.zeros(len(periods), dtype=np.int32)
@@ -292,7 +292,7 @@ def duration_grid(periods, R_star=1.0, M_star=1.0, R_planet_min=0.5,
     return durations, duration_counts
 
 
-def duration_grid_keplerian(periods, R_star=1.0, M_star=1.0, R_planet=1.0,
+def duration_grid_keplerian(periods, R_star=1.0, M_star=1.0, R_planet=1.0,  # noqa: N803
                             qmin_fac=0.5, qmax_fac=2.0, n_durations=15):
     """
     Generate Keplerian-aware duration grid for each period.
@@ -382,7 +382,7 @@ FIXED_QMIN = 0.005
 FIXED_QMAX = 0.15
 
 
-def duration_window(periods, R_star=1.0, M_star=1.0, R_planet=1.0,
+def duration_window(periods, R_star=1.0, M_star=1.0, R_planet=1.0,  # noqa: N803
                     qmin_fac=0.5, qmax_fac=2.0, window='keplerian'):
     """
     Per-period fractional transit-duration bounds for a TLS search.
@@ -528,9 +528,9 @@ def t0_grid_size(duration_phase, oversample=3.0, n_min=30, n_max=20000):
     return int(np.clip(n, n_min, n_max))
 
 
-def validate_stellar_parameters(R_star=1.0, M_star=1.0,
-                                R_star_min=0.13, R_star_max=3.5,
-                                M_star_min=0.1, M_star_max=2.0):
+def validate_stellar_parameters(R_star=1.0, M_star=1.0,  # noqa: N803
+                                R_star_min=0.13, R_star_max=3.5,  # noqa: N803
+                                M_star_min=0.1, M_star_max=2.0):  # noqa: N803
     """
     Validate stellar parameters are within reasonable bounds.
 
@@ -552,8 +552,8 @@ def validate_stellar_parameters(R_star=1.0, M_star=1.0,
     """
     if not (R_star_min <= R_star <= R_star_max):
         raise ValueError(f"R_star={R_star} outside allowed range "
-                        f"[{R_star_min}, {R_star_max}] solar radii")
+                         f"[{R_star_min}, {R_star_max}] solar radii")
 
     if not (M_star_min <= M_star <= M_star_max):
         raise ValueError(f"M_star={M_star} outside allowed range "
-                        f"[{M_star_min}, {M_star_max}] solar masses")
+                         f"[{M_star_min}, {M_star_max}] solar masses")

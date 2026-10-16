@@ -22,7 +22,7 @@ def _positive_integer(value, name, minimum=1):
     return value
 
 
-def _grid(t, periods, R_star, M_star, period_min, period_max,
+def _grid(t, periods, R_star, M_star, period_min, period_max,  # noqa: N803
           oversampling_factor, n_transits_min):
     from .tls import _validate_periods
     if periods is None:
@@ -46,13 +46,13 @@ def _check_inputs(t, y, dy, name):
     return t, y, dy
 
 
-def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,
+def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,  # noqa: N803
            period_min=None, period_max=None, n_transits_min=2,
            oversampling_factor=3, duration_grid_step=1.1,
            qmin=None, qmax=None, qmin_fac=None, qmax_fac=None,
-           duration_window=None, R_planet=1., n_durations=None,
+           duration_window=None, R_planet=1., n_durations=None,  # noqa: N803
            limb_dark='quadratic', u=None, transit_template='default',
-           template_parameters=None, full=True, execution='baseline', T0_fit_margin=.125,
+           template_parameters=None, full=True, execution='baseline', T0_fit_margin=.125,  # noqa: N803
            transit_depth_min=1e-5, work_chunk=256, return_arrays=True,
            t0_oversample=None, refine_top_k=None, refine_oversample=None,
            nbins=None, block_size=None, sde_kernel_size=None):
@@ -89,7 +89,7 @@ def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,
     if t0_oversample is not None:
         if not np.isfinite(t0_oversample) or t0_oversample <= 0:
             raise ValueError('t0_oversample must be finite and positive')
-        T0_fit_margin = 1. / max(8., t0_oversample)
+        T0_fit_margin = 1. / max(8., t0_oversample)  # noqa: N803
     if refine_top_k is not None:
         refine_top_k = _positive_integer(refine_top_k, 'refine_top_k', 0)
         if refine_top_k == 0:
@@ -104,7 +104,7 @@ def search(t, y, dy, periods=None, *, R_star=1., M_star=1.,
     if duration_window not in (None, 'reference', 'keplerian', 'fixed'):
         raise ValueError("duration_window must be 'reference', 'keplerian' or 'fixed'")
     periods_in = _grid(t, periods, R_star, M_star, period_min, period_max,
-                      oversampling_factor, n_transits_min)
+                       oversampling_factor, n_transits_min)
     periods, order = _sort_period_grid(periods_in)
     explicit_q = qmin is not None
     if explicit_q and (qmin_fac is not None or qmax_fac is not None or

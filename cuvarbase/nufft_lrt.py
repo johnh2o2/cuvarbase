@@ -94,7 +94,7 @@ _EXPERIMENTAL_MSG = (
     "https://johnh2o2.github.io/cuvarbase/nufft_lrt.html).")
 
 
-def _whitened_inner(A, B, psd, weights):
+def _whitened_inner(A, B, psd, weights):  # noqa: N803
     """Whitened frequency-domain inner product Re sum_k A_k B_k* w_k / P_k
     -- the metric of the stationary matched filter.
 
@@ -105,7 +105,7 @@ def _whitened_inner(A, B, psd, weights):
     return float(np.real(np.sum(A * np.conj(B) * weights / psd)))
 
 
-def _matched_filter_statistic(Yw, wp, T):
+def _matched_filter_statistic(Yw, wp, T):  # noqa: N803
     """The stationary whitened matched filter of the module docstring,
     ``Re <Y, T>_W / sqrt(<T, T>_W)``, with the data side precomputed:
     ``Yw = Y w / P`` and ``wp = w / P`` (float64), ``T`` the template
@@ -115,13 +115,13 @@ def _matched_filter_statistic(Yw, wp, T):
     wrapper :meth:`NUFFTLRTAsyncProcess._compute_matched_filter_snr`
     call it too, so the tests of the latter cover the shipped
     arithmetic. Returns 0.0 for a template with no whitened power."""
-    T = np.asarray(T)
+    T = np.asarray(T)  # noqa: N803
     num = float(np.real(np.sum(Yw * np.conj(T))))
     den = float(np.sum((np.abs(T) ** 2) * wp))
     return num / np.sqrt(den) if den > 0 else 0.0
 
 
-def _prior_response_matrix(G, prior_cov):
+def _prior_response_matrix(G, prior_cov):  # noqa: N803
     """Return ``M = (Cov_c^{-1} + G)^{-1}`` for the Detector A Woodbury
     term without ever inverting the prior covariance:
 
@@ -137,9 +137,9 @@ def _prior_response_matrix(G, prior_cov):
     Raises ``ValueError`` if ``prior_cov`` is not a symmetric positive
     semidefinite ``(K, K)`` matrix.
     """
-    G = np.asarray(G, dtype=np.float64)
-    K = G.shape[0]
-    C = np.atleast_2d(np.asarray(prior_cov, dtype=np.float64))
+    G = np.asarray(G, dtype=np.float64)  # noqa: N803
+    K = G.shape[0]  # noqa: N803
+    C = np.atleast_2d(np.asarray(prior_cov, dtype=np.float64))  # noqa: N803
     if C.shape != (K, K):
         raise ValueError("coeff_prior_cov must be (K, K) with K = %d "
                          "basis vectors (got shape %r)" % (K, C.shape))
@@ -152,35 +152,35 @@ def _prior_response_matrix(G, prior_cov):
     if ev.min() < -1e-10 * scale:
         raise ValueError("coeff_prior_cov must be positive semidefinite "
                          "(smallest eigenvalue %g)" % ev.min())
-    A = np.eye(K) + G @ C
-    M = np.linalg.solve(A.T, C.T).T          # C A^{-1}
+    A = np.eye(K) + G @ C  # noqa: N803
+    M = np.linalg.solve(A.T, C.T).T          # C A^{-1}  # noqa: N803
     return 0.5 * (M + M.T)
 
 
-def _marginal_precompute(Y, V_ks, psd, weights, prior_cov):
+def _marginal_precompute(Y, V_ks, psd, weights, prior_cov):  # noqa: N803
     """Template-independent part of Detector A (hoisted out of the
     template loop). Returns ``(Vw, M, w_y)`` with ``Vw = V_k w / P``
     (K, nf), ``M`` the (K, K) response matrix of
     :func:`_prior_response_matrix` and ``w_y[j] = <v_j, Y>_W``."""
-    K = len(V_ks)
+    K = len(V_ks)  # noqa: N803
     if K == 0:
         raise ValueError("Detector A needs at least one basis vector "
                          "(K >= 1); use the plain matched filter for "
                          "K = 0")
-    Vk = np.asarray(V_ks).reshape(K, -1)
+    Vk = np.asarray(V_ks).reshape(K, -1)  # noqa: N803
     wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd, np.float64)
-    Vw = Vk * wp
-    G = np.real(Vw @ np.conj(Vk).T)
-    G = 0.5 * (G + G.T)
-    M = _prior_response_matrix(G, prior_cov)
+    Vw = Vk * wp  # noqa: N803
+    G = np.real(Vw @ np.conj(Vk).T)  # noqa: N803
+    G = 0.5 * (G + G.T)  # noqa: N803
+    M = _prior_response_matrix(G, prior_cov)  # noqa: N803
     w_y = np.real(Vw @ np.conj(np.asarray(Y)))
     return Vw, M, w_y
 
 
-def _marginal_evaluate(Yw, wp, T, Vw, M, w_y, eps_floor=1e-12):
+def _marginal_evaluate(Yw, wp, T, Vw, M, w_y, eps_floor=1e-12):  # noqa: N803
     """Per-template part of Detector A: ``Yw = Y w / P`` and ``wp = w / P``
     are precomputed; ``T`` is the template transform."""
-    T = np.asarray(T)
+    T = np.asarray(T)  # noqa: N803
     w_t = np.real(Vw @ np.conj(T))
     num = float(np.real(np.sum(Yw * np.conj(T)))) - float(w_y @ M @ w_t)
     den = float(np.sum((np.abs(T) ** 2) * wp)) - float(w_t @ M @ w_t)
@@ -189,7 +189,7 @@ def _marginal_evaluate(Yw, wp, T, Vw, M, w_y, eps_floor=1e-12):
     return float(num / np.sqrt(den))
 
 
-def _marginal_statistic(Y, T, V_ks, psd, weights, prior_cov,
+def _marginal_statistic(Y, T, V_ks, psd, weights, prior_cov,  # noqa: N803
                         eps_floor=1e-12):
     """Taaki et al. (2020) Detector A (marginalized joint detector) in
     the whitened frequency domain, via the Woodbury identity.
@@ -215,12 +215,12 @@ def _marginal_statistic(Y, T, V_ks, psd, weights, prior_cov,
     V_ks = list/array of K basis NFFTs; prior_cov = Cov_c (K x K).
     Returns the marginalized SNR (float).
     """
-    K = len(V_ks)
+    K = len(V_ks)  # noqa: N803
     wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd, np.float64)
-    Y = np.asarray(Y)
+    Y = np.asarray(Y)  # noqa: N803
     if K == 0:
         return _matched_filter_statistic(Y * wp, wp, T)
-    Vw, M, w_y = _marginal_precompute(Y, V_ks, psd, weights, prior_cov)
+    Vw, M, w_y = _marginal_precompute(Y, V_ks, psd, weights, prior_cov)  # noqa: N803
     return _marginal_evaluate(Y * wp, wp, T, Vw, M, w_y, eps_floor)
 
 
@@ -240,11 +240,11 @@ def _sequential_detrend(t, y, basis):
     residual systematic of amplitude ``ybar m_v / s_v`` (a 1% column
     mean on relative flux left 10x the noise; audit Sep 2026).
     """
-    V = np.asarray(basis, dtype=np.float64)
+    V = np.asarray(basis, dtype=np.float64)  # noqa: N803
     if V.ndim == 1:
-        V = V[:, None]
+        V = V[:, None]  # noqa: N803
     y = np.asarray(y, dtype=np.float64)
-    Vc = V - V.mean(axis=0)
+    Vc = V - V.mean(axis=0)  # noqa: N803
     coeff, *_ = np.linalg.lstsq(Vc, y - y.mean(), rcond=None)
     return y - Vc @ coeff
 
@@ -780,15 +780,15 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         if detector not in ('matched', 'marginal', 'sequential'):
             raise ValueError("detector must be 'matched', 'marginal' or "
                              "'sequential' (got %r)" % (detector,))
-        V = None
+        V = None  # noqa: N803
         if detector in ('marginal', 'sequential'):
             if systematics_basis is None:
                 raise ValueError("detector=%r requires systematics_basis"
                                  % (detector,))
-            V = np.atleast_2d(np.asarray(systematics_basis,
+            V = np.atleast_2d(np.asarray(systematics_basis,  # noqa: N803
                                          dtype=np.float64))
             if V.shape[0] != n:
-                V = V.T
+                V = V.T  # noqa: N803
             if V.shape[0] != n:
                 raise ValueError("systematics_basis must be (n, K) with "
                                  "n = len(t)")
@@ -848,7 +848,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         if detector == 'sequential':
             y_work = _sequential_detrend(t, y, V)
         elif detector == 'marginal':
-            K = V.shape[1]
+            K = V.shape[1]  # noqa: N803
             mu = (np.zeros(K) if coeff_prior_mean is None
                   else np.asarray(coeff_prior_mean, dtype=np.float64).ravel())
             if mu.shape != (K,):
@@ -865,9 +865,9 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         else:
             y_work = y
         y_demeaned = y_work - np.mean(y_work)
-        Vc = None
+        Vc = None  # noqa: N803
         if detector == 'marginal':
-            Vc = V - V.mean(axis=0)
+            Vc = V - V.mean(axis=0)  # noqa: N803
 
         # ---- one NFFT buffer set for everything transformed in this run
         l1 = [float(np.sum(np.abs(y_demeaned))), float(n * abs(depth))]
@@ -879,7 +879,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         mem = self._nfft_memory(t, nf, max(l1), **kwargs)
 
         # Compute NUFFT of lightcurve
-        Y_nufft = self.compute_nufft(t, y_demeaned, nf, memory=mem,
+        Y_nufft = self.compute_nufft(t, y_demeaned, nf, memory=mem,  # noqa: N803
                                      **kwargs)
 
         # ---- power spectrum: estimated or supplied, floored ONCE here.
@@ -912,29 +912,29 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         weights = np.ones(nf, dtype=self.real_type)
         wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd,
                                                                 np.float64)
-        Yw = np.asarray(Y_nufft) * wp
+        Yw = np.asarray(Y_nufft) * wp  # noqa: N803
 
         # Detector A: transform the (demeaned) systematics basis once and
         # hoist the template-independent algebra (G, M, w_y) out of the
         # template loop; per template only K inner products remain.
         if detector == 'marginal':
-            V_ks = [self.compute_nufft(t, Vc[:, j], nf, memory=mem,
+            V_ks = [self.compute_nufft(t, Vc[:, j], nf, memory=mem,  # noqa: N803
                                        **kwargs)
                     for j in range(Vc.shape[1])]
-            Vw, M, w_y = _marginal_precompute(Y_nufft, V_ks, psd, weights,
+            Vw, M, w_y = _marginal_precompute(Y_nufft, V_ks, psd, weights,  # noqa: N803
                                               coeff_prior_cov)
 
-            def _statistic(T_nufft):
+            def _statistic(T_nufft):  # noqa: N803
                 return _marginal_evaluate(Yw, wp, T_nufft, Vw, M, w_y)
         else:
-            def _statistic(T_nufft):
+            def _statistic(T_nufft):  # noqa: N803
                 return _matched_filter_statistic(Yw, wp, T_nufft)
 
         def _template_statistic(period, epoch, duration):
             template = self._generate_template(t, period, epoch, duration,
                                                depth)
             template = template - np.mean(template)
-            T_nufft = self.compute_nufft(t, template, nf, memory=mem,
+            T_nufft = self.compute_nufft(t, template, nf, memory=mem,  # noqa: N803
                                          **kwargs)
             return _statistic(T_nufft)
 
@@ -1000,7 +1000,7 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
 
         return template
 
-    def _compute_matched_filter_snr(self, Y, T, P_s, weights, eps_floor):
+    def _compute_matched_filter_snr(self, Y, T, P_s, weights, eps_floor):  # noqa: N803
         """
         Matched-filter statistic of one template from the raw transforms.
 
@@ -1036,5 +1036,5 @@ class NUFFTLRTAsyncProcess(GPUAsyncProcess):
         psd = _floor_psd(P_s, eps_floor, self.real_type)
         wp = np.asarray(weights, dtype=np.float64) / np.asarray(psd,
                                                                 np.float64)
-        Yw = np.asarray(Y) * wp
+        Yw = np.asarray(Y) * wp  # noqa: N803
         return _matched_filter_statistic(Yw, wp, T)
