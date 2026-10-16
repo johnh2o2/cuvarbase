@@ -10,6 +10,7 @@ class does not import the others' modules: ``nfft_memory`` and
 which BLS/CE users never need to load.
 """
 
+
 _LAZY_ATTRS = {
     'NFFTMemory': '.nfft_memory',
     'ConditionalEntropyMemory': '.ce_memory',

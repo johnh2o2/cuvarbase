@@ -268,17 +268,17 @@ _function_signatures = {
                         np.uint32, np.uint32, np.uint32,
                         np.float32, np.float32, np.uint32],
     'full_bls_no_sol_optimized': [np.intp, np.intp, np.intp,
-                        np.intp, np.intp, np.intp,
-                        np.intp, np.uint32, np.uint32,
-                        np.uint32, np.uint32, np.uint32,
-                        np.float32, np.float32, np.uint32],
+                                  np.intp, np.intp, np.intp,
+                                  np.intp, np.uint32, np.uint32,
+                                  np.uint32, np.uint32, np.uint32,
+                                  np.float32, np.float32, np.uint32],
     # fused-noverlap variant (bls_common.cuh, present in both modules);
     # identical argument list, hist_size = noverlap * max_nbins
     'full_bls_no_sol_fused': [np.intp, np.intp, np.intp,
-                        np.intp, np.intp, np.intp,
-                        np.intp, np.uint32, np.uint32,
-                        np.uint32, np.uint32, np.uint32,
-                        np.float32, np.float32, np.uint32],
+                              np.intp, np.intp, np.intp,
+                              np.intp, np.uint32, np.uint32,
+                              np.uint32, np.uint32, np.uint32,
+                              np.float32, np.float32, np.uint32],
     'bin_and_phase_fold_custom': [np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.intp,
                                   np.intp, np.intp, np.float64,
@@ -319,7 +319,7 @@ def _reduction_max(max_func, arr, arr_args, nfreq, nbins,
     nbins0 = nbins
 
     init = np.uint32(1)
-    while (grid_size > nfreq):
+    while grid_size > nfreq:
 
         max_func.prepared_async_call(grid, block, stream,
                                      arr.ptr, arr_args.ptr,
@@ -500,7 +500,7 @@ def transit_autofreq(t, fmin=None, fmax=None, samples_per_peak=2,
     if fmax is None:
         fmax = fmax_transit(rho=rho, qmax=0.5 / qmax_fac, **kwargs)
 
-    T = np.max(t) - np.min(t)
+    T = np.max(t) - np.min(t)  # noqa: N806
     _validate_grid_method(method)
     if method == 'recursion':
         freqs = _recursion_transit_grid(fmin, fmax, qmin_fac,
@@ -1038,7 +1038,6 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
     # there (see full_bls_no_sol_fused in bls_common.cuh); any other
     # (noverlap, dphi) combination keeps the host-side loop, as do
     # caller-provided ``functions`` dicts without the fused kernel.
-    fused_func = None
     try:
         fused_func = functions.get('full_bls_no_sol_fused')
     except AttributeError:
@@ -1123,7 +1122,7 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
         dphi_pass = dphi + float(i_pass) / noverlap
 
         i_freq = 0
-        while (i_freq < len(freqs)):
+        while i_freq < len(freqs):
             j_freq = min([i_freq + freq_batch_size, len(freqs)])
             nfreqs = j_freq - i_freq
 
@@ -1141,7 +1140,7 @@ def _eebls_gpu_fast_impl(t, y, dy, freqs, fname, use_optimized,
             if mem_req > shmem_lim:
                 s = "qmin = %.2e requires too much shared memory." \
                     % (1. / max_nbins)
-                s += " Either try a larger value of qmin (> %e)" % (qmin_min)
+                s += " Either try a larger value of qmin (> %e)" % qmin_min
                 s += " or avoid using %s." % (
                     'eebls_gpu_fast_optimized' if use_optimized
                     else 'eebls_gpu_fast')
@@ -1218,7 +1217,8 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
                    force_nblocks=None, dphi=0.0,
                    shmem_lim=None, freq_batch_size=None,
                    transfer_to_device=True,
-                   transfer_to_host=True, **kwargs):
+                   transfer_to_host=True,
+                   convention='chi2ratio', **kwargs):
     """
     Box-Least Squares with PyCUDA but about 2-3 orders of magnitude
     faster than eebls_gpu. Uses shared memory for the binned data,
@@ -1339,6 +1339,8 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         Transfer BLS back to CPU.
     transfer_to_device: bool, optional (default: True)
         Transfer data to GPU
+    stream: pycuda.driver.Stream, optional (default: None)
+        CUDA stream for async execution
     **kwargs:
         passed to `compile_bls`
 
@@ -1370,17 +1372,18 @@ def eebls_gpu_fast(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         force_nblocks=force_nblocks, dphi=dphi,
         shmem_lim=shmem_lim, freq_batch_size=freq_batch_size,
         transfer_to_device=transfer_to_device,
-        transfer_to_host=transfer_to_host, **kwargs)
+        transfer_to_host=transfer_to_host,
+        convention=convention, **kwargs)
 
 
 def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
-                   ignore_negative_delta_sols=False,
-                   functions=None, stream=None, dlogq=0.3,
-                   memory=None, noverlap=2, max_nblocks=5000,
-                   force_nblocks=None, dphi=0.0,
-                   shmem_lim=None, freq_batch_size=None,
-                   transfer_to_device=True,
-                   transfer_to_host=True, **kwargs):
+                             ignore_negative_delta_sols=False,
+                             functions=None, stream=None, dlogq=0.3,
+                             memory=None, noverlap=2, max_nblocks=5000,
+                             force_nblocks=None, dphi=0.0,
+                             shmem_lim=None, freq_batch_size=None,
+                             transfer_to_device=True,
+                             transfer_to_host=True, **kwargs):
     """
     Variant of eebls_gpu_fast built from the bls_optimized.cu module.
 
@@ -1460,6 +1463,8 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         Transfer BLS back to CPU.
     transfer_to_device: bool, optional (default: True)
         Transfer data to GPU
+    stream: pycuda.driver.Stream, optional (default: None)
+        CUDA stream for async execution
     **kwargs:
         passed to `compile_bls`
 
@@ -1484,15 +1489,15 @@ def eebls_gpu_fast_optimized(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
 
 
 def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
-                   ignore_negative_delta_sols=False,
-                   functions=None, stream=None, dlogq=0.3,
-                   memory=None, noverlap=2, max_nblocks=5000,
-                   force_nblocks=None, dphi=0.0,
-                   shmem_lim=None, freq_batch_size=None,
-                   transfer_to_device=True,
-                   transfer_to_host=True,
-                   use_optimized=True,
-                   **kwargs):
+                            ignore_negative_delta_sols=False,
+                            functions=None, stream=None, dlogq=0.3,
+                            memory=None, noverlap=2, max_nblocks=5000,
+                            force_nblocks=None, dphi=0.0,
+                            shmem_lim=None, freq_batch_size=None,
+                            transfer_to_device=True,
+                            transfer_to_host=True,
+                            use_optimized=True,
+                            **kwargs):
     """
     Adaptive BLS with dynamic block sizing for optimal performance.
 
@@ -1554,6 +1559,42 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         Whether or not to ignore solutions with a negative delta
     use_optimized: bool, optional (default: True)
         Use optimized kernel with bank conflict fixes and warp shuffles
+    dphi: float, optional (default: 0.)
+        Base phase-bin offset in units of the finest grid spacing;
+        pass ``i_pass`` adds ``i_pass / noverlap`` to it.
+    dlogq: float
+        The logarithmic spacing of the q values to use. If negative,
+        the q values increase by ``dq = qmin``.
+    noverlap: int, optional (default: 2)
+        Phase-offset oversampling: the periodogram is the elementwise
+        maximum over ``noverlap`` passes, with the phase-bin grid
+        shifted by ``1/noverlap`` of the finest bin width between
+        passes. This recovers box solutions whose phase offset falls
+        between bin boundaries (important when the best ``q`` is close
+        to ``qmin``); runtime scales linearly with ``noverlap``.
+        ``noverlap=1`` is a single unshifted pass.
+    functions: dict
+        Dictionary of compiled functions (see :func:`compile_bls`)
+    freq_batch_size: int, optional (default: None)
+        Number of frequencies to compute in a single batch; if
+        ``None`` this will run a single batch for all frequencies
+        simultaneously
+    shmem_lim: int, optional (default: None)
+        Maximum amount of shared memory to use per block in bytes.
+        This is GPU-dependent but usually around 48KB. If ``None``,
+        uses device information provided by PyCUDA (recommended).
+    max_nblocks: int, optional (default: 5000)
+        Maximum grid size to use
+    force_nblocks: int, optional (default: None)
+        If this is set the gridsize is forced to be this value
+    memory: :class:`BLSMemory` instance, optional (default: None)
+        See :class:`BLSMemory`.
+    transfer_to_host: bool, optional (default: True)
+        Transfer BLS back to CPU.
+    transfer_to_device: bool, optional (default: True)
+        Transfer data to GPU
+    stream: pycuda.driver.Stream, optional (default: None)
+        CUDA stream for async execution
     **kwargs:
         All other parameters passed to underlying implementation
 
@@ -1665,6 +1706,11 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         the free memory reported by ``pycuda.driver.mem_get_info()``.
     functions: tuple of CUDA functions
         Dictionary of prepared functions from :func:`compile_bls`.
+    convention: str, optional (default: 'chi2ratio')
+        Power-spectrum convention for the returned periodogram
+        ('chi2ratio', 'snr' or 'loglik'); see
+        :func:`convert_bls_power`. Requires ``transfer_to_host=True``
+        for non-default values.
     **kwargs:
         passed to :func:`compile_bls`
 
@@ -1716,7 +1762,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         # yw_g_bins, w_g_bins, bls_tmp_gs, bls_tmp_sol_gs (int32)
         mem_per_f = 4 * nstreams * nq * nphi * real_type_size
 
-        freq_batch_size = int(float(max_memory - mem0) / (mem_per_f))
+        freq_batch_size = int(float(max_memory - mem0) / mem_per_f)
 
         if freq_batch_size <= 0:
             raise RuntimeError("Not enough memory (freq_batch_size = 0)")
@@ -1737,7 +1783,7 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
     # and none for einsum).  Same operation, last-ulp float64 summation
     # order.  See BLSMemory.setdata (Sep 2026 audit, id 45).
     ybar = float(np.einsum('i,i->', w, y))
-    YY = float(np.einsum('i,i->', w, np.power(np.array(y) - ybar, 2)))
+    YY = float(np.einsum('i,i->', w, np.power(np.array(y) - ybar, 2)))  # noqa: N806
     yw = (np.array(y) - ybar) * np.array(w)
 
     t, epoch = subtract_epoch(t)
@@ -1856,7 +1902,7 @@ def dnbins(nbins, dlogq):
     Bit-identical to the old float64 arithmetic at the default
     ``dlogq`` values (0.2, 0.3) for every ``nbins <= 200000``.
     """
-    if (dlogq < 0):
+    if dlogq < 0:
         return 1
 
     n = int(np.floor(np.float32(dlogq) * np.float32(nbins)))
@@ -2117,7 +2163,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         nbins_tot_bound = _max_nbins_tot(nbins0_f, nbinsf_f, dlogq)
         mem_per_f = 4 * nstreams * nbins_tot_bound * noverlap * real_type_size
 
-        freq_batch_size = int(float(max_memory - mem0) / (mem_per_f))
+        freq_batch_size = int(float(max_memory - mem0) / mem_per_f)
 
         if freq_batch_size <= 0:
             raise RuntimeError("Not enough memory (freq_batch_size = 0)")
@@ -2148,7 +2194,7 @@ def eebls_gpu(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
     # and none for einsum).  Same operation, last-ulp float64 summation
     # order.  See BLSMemory.setdata (Sep 2026 audit, id 45).
     ybar = float(np.einsum('i,i->', w, y))
-    YY = float(np.einsum('i,i->', w, np.power(np.array(y) - ybar, 2)))
+    YY = float(np.einsum('i,i->', w, np.power(np.array(y) - ybar, 2)))  # noqa: N806
     yw = (np.array(y) - ybar) * np.array(w)
 
     t, epoch = subtract_epoch(t)
@@ -2341,10 +2387,10 @@ def single_bls(t, y, dy, freq, q, phi0, ignore_negative_delta_sols=False):
     # n_solutions times per eebls_transit call (measured median 93.9 ms
     # per call at ndata = 20000, min 0.79 ms).
     ybar = float(np.einsum('i,i->', w, yc))
-    YY = float(np.einsum('i,i->', w, np.power(yc - ybar, 2)))
+    YY = float(np.einsum('i,i->', w, np.power(yc - ybar, 2)))  # noqa: N806
 
-    W = np.sum(w[mask])
-    YW = float(np.einsum('i,i->', w[mask], yc[mask])) - ybar * W
+    W = np.sum(w[mask])  # noqa: N806
+    YW = float(np.einsum('i,i->', w[mask], yc[mask])) - ybar * W  # noqa: N806
 
     if YW > 0 and ignore_negative_delta_sols:
         return 0
@@ -2603,7 +2649,7 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
     # eebls_gpu; Sep 2026 audit, id 45).  Same operation, different
     # summation order.
     ybar = float(np.einsum('i,i->', w, y))
-    YY = float(np.einsum('i,i->', w, np.power(y - ybar, 2)))
+    YY = float(np.einsum('i,i->', w, np.power(y - ybar, 2)))  # noqa: N806
 
     # Vectorized pair scan. Transit candidates are exactly the
     # contiguous runs of phase-sorted observations (plus wrap-around
@@ -2640,8 +2686,8 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
 
         # ---- Non-wrapped transits: obs i..j-1, 0 <= i < j <= ndata.
         # Matrices indexed [i, j-1].
-        W_nw = cw[None, 1:] - cw[i_idx, None]
-        YW_nw = cyw[None, 1:] - cyw[i_idx, None] - ybar * W_nw
+        W_nw = cw[None, 1:] - cw[i_idx, None]  # noqa: N806
+        YW_nw = cyw[None, 1:] - cyw[i_idx, None] - ybar * W_nw  # noqa: N806
         q_nw = mid[None, 1:] - phi_s[:, None]
         valid_nw = np.triu(np.ones((ndata, ndata), dtype=bool))
 
@@ -2651,8 +2697,8 @@ def sparse_bls_cpu(t, y, dy, freqs, *, qmin=None, qmax=None,
         head_q = np.empty(ndata)
         head_q[0] = 1e-7
         head_q[1:] = mid[1:ndata]
-        W_w = (cw[ndata] - cw[:ndata, None]) + cw[None, :ndata]
-        YW_w = ((cyw[ndata] - cyw[:ndata, None]) + cyw[None, :ndata]
+        W_w = (cw[ndata] - cw[:ndata, None]) + cw[None, :ndata]  # noqa: N806
+        YW_w = ((cyw[ndata] - cyw[:ndata, None]) + cyw[None, :ndata]  # noqa: N806
                 - ybar * W_w)
         q_w = (1.0 - phi_s[:, None]) + head_q[None, :]
         valid_w = i_idx[None, :] < i_idx[:, None]
@@ -3002,8 +3048,8 @@ def _fast_bls_box_scan(t32, yw32, w32, freq, nbins0, nbinsf, dlogq,
         cyw = np.concatenate(([0.0],
                               np.cumsum(np.concatenate([hyw, hyw]))))
         for m in ms:
-            W = cw[n + m] - cw[n]
-            YW = cyw[n + m] - cyw[n]
+            W = cw[n + m] - cw[n]  # noqa: N806
+            YW = cyw[n + m] - cyw[n]  # noqa: N806
             # same guards as bls_value in bls_common.cuh
             ok = (W > 1e-10) & (W < 1.0 - 1e-4)
             if ignore_negative_delta_sols:
@@ -3166,7 +3212,8 @@ def eebls_transit(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         and use_sparse is None, sparse BLS is used.
     use_gpu: bool, optional (default: True)
         Use GPU implementation. If True, uses GPU for both sparse and standard BLS.
-        If False, uses CPU for sparse BLS. The use_gpu parameter only affects sparse BLS; standard BLS always uses GPU.
+        If False, uses CPU for sparse BLS.
+        The use_gpu parameter only affects sparse BLS; standard BLS always uses GPU.
     ignore_negative_delta_sols: bool, optional (default: False)
         Whether or not to ignore inverted dips
     n_solutions: int, optional (default: 10)
@@ -3482,6 +3529,15 @@ def eebls_gpu_batch(lightcurves, freqs, *, qmin=1e-2, qmax=0.5,
         whole grid at once unless shared memory would limit occupancy
         (large bin counts from small Keplerian ``qmin``), in which
         case an occupancy-aware chunk size is used automatically.
+    convention: str, optional (default: 'chi2ratio')
+        Power-spectrum convention for the returned periodogram
+        ('chi2ratio', 'snr' or 'loglik'); see
+        :func:`convert_bls_power`. Requires ``transfer_to_host=True``
+        for non-default values.
+    shmem_lim: int, optional (default: None)
+        Maximum amount of shared memory to use per block in bytes.
+        This is GPU-dependent but usually around 48KB. If ``None``,
+        uses device information provided by PyCUDA (recommended).
 
     Returns
     -------
@@ -3845,13 +3901,10 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         Overrides the auto-generated frequency grid
     qvals: array_like, optional (default: None)
         Overrides the keplerian q values
-    functions: tuple, optional (default=None)
-        result of ``compile_bls(**kwargs)``.
     use_fast: bool, optional (default: False)
         Use fast GPU implementation.
     use_optimized: bool, optional (default: False)
         Use optimized GPU implementation (if not using fast).
-
     ignore_negative_delta_sols: bool
         Whether or not to ignore inverted dips
     **kwargs:
@@ -3913,4 +3966,3 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
                              ignore_negative_delta_sols=ignore_negative_delta_sols,
                              **kwargs)
     return freqs, powers, sols
-

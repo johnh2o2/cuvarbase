@@ -34,9 +34,20 @@ except ImportError:
     print("Standard TLS requires batman-package; install cuvarbase[tls].")
 
 
-def generate_synthetic_transit(period=10.0, depth=0.01, duration=0.1,
+def transit_duration(params):
+    """
+    T14 for a circular orbit (e=0).
+    """
+    b = params.a * np.cos(np.radians(params.inc))
+    arg = np.sqrt((1 + params.rp)**2 - b**2) / (
+        params.a * np.sin(np.radians(params.inc))
+    )
+    return params.per / np.pi * np.arcsin(np.clip(arg, -1, 1))
+
+
+def generate_synthetic_transit(period=10.0, depth=0.01,
                                t0=0.0, ndata=1000, noise_level=0.001,
-                               T_span=100.0):
+                               T_span=100.0):  # noqa: N803
     """
     Generate synthetic light curve with transit.
 
@@ -46,8 +57,6 @@ def generate_synthetic_transit(period=10.0, depth=0.01, duration=0.1,
         Orbital period (days)
     depth : float
         Transit depth (fractional)
-    duration : float
-        Transit duration (days)
     t0 : float
         Mid-transit time (days)
     ndata : int
@@ -64,9 +73,6 @@ def generate_synthetic_transit(period=10.0, depth=0.01, duration=0.1,
     """
     # Generate time series
     t = np.sort(np.random.uniform(0, T_span, ndata))
-
-    # Start with flat light curve
-    y = np.ones(ndata)
 
     if not BATMAN_AVAILABLE:
         raise ImportError('This example requires batman-package (cuvarbase[tls])')
@@ -92,7 +98,10 @@ def generate_synthetic_transit(period=10.0, depth=0.01, duration=0.1,
     # Uncertainties
     dy = np.ones(ndata) * noise_level
 
-    return t, y, dy
+    # Transit duration
+    duration_days = transit_duration(params)
+
+    return t, y, dy, duration_days
 
 
 def run_tls_example(use_gpu=True):
@@ -116,12 +125,10 @@ def run_tls_example(use_gpu=True):
     print("\n1. Generating synthetic transit...")
     period_true = 12.5  # days
     depth_true = 0.008  # 0.8% depth
-    duration_true = 0.12  # days
 
-    t, y, dy = generate_synthetic_transit(
+    t, y, dy, duration_true = generate_synthetic_transit(
         period=period_true,
         depth=depth_true,
-        duration=duration_true,
         ndata=800,
         noise_level=0.0005,
         T_span=100.0

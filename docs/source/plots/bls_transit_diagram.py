@@ -20,7 +20,7 @@ def transit_model(phi0, q, delta, q1=0.):
 def plot_bls_sol(t, y, dy, freq, q, phi0):
 
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
 
     phi_plot = np.linspace(0, 1, int(50. / q))
 
@@ -30,8 +30,8 @@ def plot_bls_sol(t, y, dy, freq, q, phi0):
     dphi = phi - phi0 - np.floor(phi - phi0)
     mask = dphi < q
 
-    ybt = np.dot(w[mask], y[mask]) / sum(w[mask])
-    yb0 = np.dot(w[~mask], y[~mask]) / sum(w[~mask])
+    ybt = np.dot(w[mask], y[mask]) / np.sum(w[mask])
+    yb0 = np.dot(w[~mask], y[~mask]) / np.sum(w[~mask])
 
     delta = yb0 - ybt
 

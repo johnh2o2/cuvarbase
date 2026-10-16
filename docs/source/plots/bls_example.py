@@ -19,7 +19,7 @@ def transit_model(t, freq, y0=0.0, delta=1., q=0.01, phi0=0.5):
     return y
 
 
-def data(ndata=100, baseline=1, freq=10, sigma=1., **kwargs):
+def data(ndata=100, baseline=1., freq=10, sigma=1., **kwargs):
     t = baseline * np.sort(np.random.rand(ndata))
     y = transit_model(t, freq, **kwargs)
     dy = sigma * np.ones_like(t)
@@ -39,13 +39,13 @@ def plot_bls_model(ax, y0, delta, q, phi0, **kwargs):
 
 def plot_bls_sol(ax, t, y, dy, freq, q, phi0, **kwargs):
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
 
     phi = phase(t, freq, phi0=phi0)
     transit = phi < q
 
     def ybar(mask):
-        return np.dot(w[mask], y[mask]) / sum(w[mask])
+        return np.dot(w[mask], y[mask]) / np.sum(w[mask])
 
     y0 = ybar(~transit)
     delta = y0 - ybar(transit)
@@ -85,7 +85,7 @@ search_params = dict(qmin=1e-2,
                      noverlap=3)
 
 # derive baseline from the data for consistency
-baseline = max(t) - min(t)
+baseline = np.max(t) - np.min(t)
 
 # df ~ qmin / baseline
 df = search_params['qmin'] / baseline

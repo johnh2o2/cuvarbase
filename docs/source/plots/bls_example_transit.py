@@ -39,13 +39,13 @@ def plot_bls_model(ax, y0, delta, q, phi0, **kwargs):
 
 def plot_bls_sol(ax, t, y, dy, freq, q, phi0, **kwargs):
     w = np.power(dy, -2)
-    w /= sum(w)
+    w /= np.sum(w)
 
     phi = phase(t, freq, phi0=phi0)
     transit = phi < q
 
     def ybar(mask):
-        return np.dot(w[mask], y[mask]) / sum(w[mask])
+        return np.dot(w[mask], y[mask]) / np.sum(w[mask])
 
     y0 = ybar(~transit)
     delta = y0 - ybar(transit)

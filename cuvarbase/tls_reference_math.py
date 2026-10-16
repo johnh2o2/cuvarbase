@@ -85,7 +85,7 @@ def preprocess_inputs(t, y, dy=None):
                 input_count=len(t), error_scale=dy_scale)
 
 
-def period_grid(time_span, R_star=1., M_star=1., period_min=0., period_max=np.inf,
+def period_grid(time_span, R_star=1., M_star=1., period_min=0., period_max=np.inf,  # noqa: N803
                 oversampling_factor=3., n_transits_min=2, native_fallback=False):
     """Ofir grid using pinned GTLS constants; returns native descending order.
 
@@ -95,7 +95,7 @@ def period_grid(time_span, R_star=1., M_star=1., period_min=0., period_max=np.in
     fallback, which discards requested bounds. That option is for fixtures only.
     The search caller must sort the result ascending, as GTLS.main.power does.
     """
-    R_star, M_star, time_span = float(R_star), float(M_star), float(time_span)
+    R_star, M_star, time_span = float(R_star), float(M_star), float(time_span)  # noqa: N803
     if not np.isfinite(time_span) or time_span <= 0 or not np.isfinite(oversampling_factor) or oversampling_factor <= 0:
         raise ValueError('time_span and oversampling_factor must be finite and positive')
     if not isinstance(n_transits_min, (int, np.integer)) or n_transits_min < 1:
@@ -107,27 +107,27 @@ def period_grid(time_span, R_star=1., M_star=1., period_min=0., period_max=np.in
     if native_fallback:
         if R_star < .01:
             warnings.warn('Native GTLS radius clamp sets R_star=0.1 below 0.01')
-            R_star = .1
+            R_star = .1  # noqa: N803
         if R_star > 10000:
             warnings.warn('Native GTLS radius clamp sets R_star=10000')
-            R_star = 10000.
+            R_star = 10000.  # noqa: N803
         if M_star < .01:
             warnings.warn('Native GTLS mass clamp sets M_star=0.01')
-            M_star = .01
+            M_star = .01  # noqa: N803
         if M_star > 1000:
             warnings.warn('Native GTLS mass clamp sets M_star=1000')
-            M_star = 1000.
+            M_star = 1000.  # noqa: N803
     elif not (.01 <= R_star <= 10000 and .01 <= M_star <= 1000):
         raise ValueError('Reference period grid supports 0.01 <= R_star <= 10000 and 0.01 <= M_star <= 1000; provide explicit periods for other ranges')
 
     radius, mass, span = R_star * R_SUN, M_star * M_SUN, time_span * SECONDS_PER_DAY
     f_min = n_transits_min / span
     f_max = 1. / (2 * np.pi) * np.sqrt(G * mass / (3 * radius)**3)
-    A = ((2 * np.pi)**(2. / 3) / np.pi * radius / (G * mass)**(1. / 3) /
+    A = ((2 * np.pi)**(2. / 3) / np.pi * radius / (G * mass)**(1. / 3) /  # noqa: N803
          (span * oversampling_factor))
-    C = f_min**(1. / 3) - A / 3.
+    C = f_min**(1. / 3) - A / 3.  # noqa: N803
     count = (f_max**(1. / 3) - f_min**(1. / 3) + A / 3) * 3 / A
-    X = np.arange(count) + 1
+    X = np.arange(count) + 1  # noqa: N803
     frequencies = (A / 3 * X + C)**3
     periods = (1 / frequencies) / SECONDS_PER_DAY
     periods = periods[(periods > period_min) & (periods <= period_max)]
@@ -139,7 +139,7 @@ def period_grid(time_span, R_star=1., M_star=1., period_min=0., period_max=np.in
     return np.asarray(periods, dtype=np.float64)
 
 
-def _t14(R_s, M_s, period, small=False, upper_limit=.12):
+def _t14(R_s, M_s, period, small=False, upper_limit=.12):  # noqa: N803
     seconds = period * SECONDS_PER_DAY
     radius = R_SUN * R_s
     mass = M_SUN * M_s
@@ -164,7 +164,7 @@ def duration_grid(periods, duration_grid_step=1.1):
     maximum = _t14(3.5, 1., min(periods), small=False)
     minimum = _t14(.13, .1, max(periods), small=True)
     estimated_rows = max(2., np.ceil((np.log(maximum) - np.log(minimum)) /
-                                    np.log(duration_grid_step)) + 1.)
+                                     np.log(duration_grid_step)) + 1.)
     if not np.isfinite(estimated_rows) or estimated_rows > 1_000_000:
         raise ValueError('duration_grid_step would create more than 1,000,000 '
                          'duration rows; choose a coarser duration_grid_step '
@@ -479,7 +479,7 @@ def chunk_width_masks(widths, minima, maxima, chunk_size):
                      for start in range(0, len(minima), chunk_size)], dtype=bool)
 
 
-def epoch_strides(widths, T0_fit_margin=.125, full=False):
+def epoch_strides(widths, T0_fit_margin=.125, full=False):  # noqa: N803
     """Native coarse window-start stride; full candidate stages use every row."""
     widths = np.asarray(widths, dtype=np.int32)
     if full or T0_fit_margin <= 0:
@@ -543,17 +543,17 @@ def native_spectra(chi2, oversampling_factor=3, mask_outliers=True, kernel_size=
         mask = raw_input > (100 * np.median(raw_input))
         chi2 = np.ma.array(raw_input, mask=np.ma.getmaskarray(raw_input) | np.ma.filled(mask, True))
     with np.errstate(divide='ignore', invalid='ignore'):
-        SR = np.min(chi2) / chi2
-        SDE_raw = (1 - np.mean(SR)) / np.std(SR)
+        SR = np.min(chi2) / chi2  # noqa: N803
+        SDE_raw = (1 - np.mean(SR)) / np.std(SR)  # noqa: N803
         power_raw = SR - np.mean(SR)
         power_raw = power_raw * (SDE_raw / np.max(power_raw))
         if len(power_raw) > 2 * kernel:
             power = power_raw - _running_median(power_raw, kernel)
             power = power - np.mean(power)
-            SDE = np.max(power / np.std(power))
+            SDE = np.max(power / np.std(power))  # noqa: N803
             power = power * (SDE / np.max(power))
         else:
-            power, SDE = power_raw, SDE_raw
+            power, SDE = power_raw, SDE_raw  # noqa: N803
     finite_power = np.ma.filled(power, np.nan)
     primary = int(np.nanargmax(finite_power)) if np.any(np.isfinite(finite_power)) else None
     return dict(chi2=chi2, SR=SR, power_raw=power_raw, power=power,
@@ -591,7 +591,7 @@ def harmonic_candidate_indices(periods, primary_period):
                      for scale in (.5, 1., 2., 2./3, 3./2)], dtype=np.int64)
 
 
-def _native_transit_times(T0, t, period):
+def _native_transit_times(T0, t, period):  # noqa: N803
     times = [T0 + period] if T0 < min(t) else [T0]
     previous = times[0]
     while True:
@@ -655,7 +655,7 @@ def final_parameters(t, y, dy, period, cache, width_index, epoch_index,
     start_epoch = first_time - int((first_time - min(t)) / period) * period - period
     duration = float(_native_duration_days(t, period, start_epoch, raw_duration))
     predicted_times = _native_transit_times(start_epoch, t, period) + duration / 2
-    T0 = start_epoch + duration / 2
+    T0 = start_epoch + duration / 2  # noqa: N803
     if T0 < min(t):
         T0 += period
 

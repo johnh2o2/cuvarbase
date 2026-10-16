@@ -80,7 +80,7 @@ class NativeShortPrefixCache:
                         ['-I' + str(include / name)
                          for name in ('cub', 'thrust', 'libcudacxx')])
         cubin = cp.cuda.compiler.compile_using_nvcc(code, options=options,
-                                                   arch='86', code_type='cubin')
+                                                    arch='86', code_type='cubin')
         module = cp.cuda.function.Module()
         module.load(cubin)
         return module, module.get_function('native_cub_short_rows')

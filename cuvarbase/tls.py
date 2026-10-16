@@ -534,7 +534,7 @@ class TLSMemory:
         # Transfer to GPU
         if transfer:
             self.transfer_to_gpu(ndata, len(periods) if periods is not None else None,
-                               qmin is not None, qmax is not None)
+                                 qmin is not None, qmax is not None)
 
     def transfer_to_gpu(self, ndata, nperiods=None, has_qmin=False, has_qmax=False):
         """Transfer data from CPU to GPU."""
@@ -623,20 +623,20 @@ class TLSMemory:
 
 
 def _tls_search_gpu_binned(t, y, dy, periods=None, *,
-                   qmin=None, qmax=None, n_durations=15,
-                   R_star=1.0, M_star=1.0,
-                   period_min=None, period_max=None, n_transits_min=2,
-                   oversampling_factor=3, duration_grid_step=1.1,
-                   R_planet_min=0.5, R_planet_max=5.0,
-                   limb_dark='quadratic', u=None,
-                   block_size=None, t0_oversample=3.0,
-                   kernel=None, memory=None, stream=None,
-                   transfer_to_device=True, transfer_to_host=True,
-                   use_fast=True, refine_top_k=50,
-                   refine_oversample=33.0, nbins=None,
-                   R_planet=1.0, qmin_fac=0.5, qmax_fac=2.0,
-                   duration_window='keplerian', sde_kernel_size=None,
-                   **kwargs):
+                           qmin=None, qmax=None, n_durations=15,
+                           R_star=1.0, M_star=1.0,  # noqa: N803
+                           period_min=None, period_max=None, n_transits_min=2,
+                           oversampling_factor=3, duration_grid_step=1.1,
+                           R_planet_min=0.5, R_planet_max=5.0,  # noqa: N803
+                           limb_dark='quadratic', u=None,
+                           block_size=None, t0_oversample=3.0,
+                           kernel=None, memory=None, stream=None,
+                           transfer_to_device=True, transfer_to_host=True,
+                           use_fast=True, refine_top_k=50,
+                           refine_oversample=33.0, nbins=None,
+                           R_planet=1.0, qmin_fac=0.5, qmax_fac=2.0,  # noqa: N803
+                           duration_window='keplerian', sde_kernel_size=None,
+                           **kwargs):
     """
     Run Transit Least Squares search on GPU.
 
@@ -1075,7 +1075,7 @@ def _tls_search_gpu_binned(t, y, dy, periods=None, *,
         best_depth = float(best_depth_vals[best_idx])
 
         # Estimate number of transits
-        T_span = float(t64.max() - tmin)
+        T_span = float(t64.max() - tmin)  # noqa: N803
         n_transits = int(T_span / best_period)
 
         # Compute statistics on the valid periods only
@@ -1092,7 +1092,7 @@ def _tls_search_gpu_binned(t, y, dy, periods=None, *,
 
         # Absolute mid-transit time: the kernel's phase is relative to
         # the epoch floor(min t); report the first transit >= min(t)
-        T0 = _first_transit_at_or_after(epoch + best_t0 * best_period,
+        T0 = _first_transit_at_or_after(epoch + best_t0 * best_period,  # noqa: N803
                                         best_period, tmin)
 
         # Failed periods appear as NaN in the returned spectra; every
@@ -1177,10 +1177,10 @@ def tls_search(t, y, dy, **kwargs):
     return tls_search_gpu(t, y, dy, **kwargs)
 
 
-def _tls_transit_binned(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,
-                qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
-                period_min=None, period_max=None, n_transits_min=2,
-                oversampling_factor=3, **kwargs):
+def _tls_transit_binned(t, y, dy, *, R_star=1.0, M_star=1.0, R_planet=1.0,  # noqa: N803
+                        qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
+                        period_min=None, period_max=None, n_transits_min=2,
+                        oversampling_factor=3, **kwargs):
     """
     Transit Least Squares search with Keplerian duration constraints.
 
@@ -1507,18 +1507,18 @@ def _preprocess_batch(lightcurves):
     return t_hi, t_lo, a_c, b_c, offs, lens, chi2_0, epochs, spans
 
 
-def _tls_search_batch_binned(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,
-                     periods=None, qmin=None, qmax=None,
-                     period_min=None, period_max=None,
-                     n_transits_min=2, oversampling_factor=3,
-                     qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
-                     t0_oversample=3.0,
-                     refine_top_k=50, refine_oversample=33.0,
-                     block_size=None, nbins=None,
-                     limb_dark='quadratic', u=None,
-                     return_arrays=False, sde_kernel_size=None,
-                     fap_null_draws=0, fap_seed=None,
-                     _warn_failed=False):
+def _tls_search_batch_binned(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.0,  # noqa: N803
+                             periods=None, qmin=None, qmax=None,
+                             period_min=None, period_max=None,
+                             n_transits_min=2, oversampling_factor=3,
+                             qmin_fac=0.5, qmax_fac=2.0, n_durations=15,
+                             t0_oversample=3.0,
+                             refine_top_k=50, refine_oversample=33.0,
+                             block_size=None, nbins=None,
+                             limb_dark='quadratic', u=None,
+                             return_arrays=False, sde_kernel_size=None,
+                             fap_null_draws=0, fap_seed=None,
+                             _warn_failed=False):
     """
     Survey-scale Transit Least Squares search over a batch of
     lightcurves sharing one trial-period grid.
@@ -1782,7 +1782,7 @@ def _tls_search_batch_binned(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.
     t0_halfwidth = min(3.0, max(0.5, 1.5 / (nbins_finest * qmin_global)))
 
     # ---- Template tables ----
-    T_tab, S1_tab, S2_tab = tls_models.generate_template_tables(
+    T_tab, S1_tab, S2_tab = tls_models.generate_template_tables(  # noqa: N803
         n_table=_TLS_FAST_NTEMPLATE, limb_dark=limb_dark, u=u)
 
     # ---- Host preprocessing ----
@@ -1794,9 +1794,9 @@ def _tls_search_batch_binned(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.
 
     # ---- Static GPU arrays ----
     periods_g = gpuarray.to_gpu(periods)
-    T_g = gpuarray.to_gpu(T_tab)
-    S1_g = gpuarray.to_gpu(S1_tab)
-    S2_g = gpuarray.to_gpu(S2_tab)
+    T_g = gpuarray.to_gpu(T_tab)  # noqa: N803
+    S1_g = gpuarray.to_gpu(S1_tab)  # noqa: N803
+    S2_g = gpuarray.to_gpu(S2_tab)  # noqa: N803
 
     # ---- Chunk plan: bound output size, data size, and grid.y ----
     max_lcs_by_out = max(1, _TLS_FAST_MAX_OUT_FLOATS // max(nperiods, 1))
@@ -1834,7 +1834,7 @@ def _tls_search_batch_binned(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.
     # grid keeps the SDE background dominated by uniformly-treated
     # (coarse) periods, so the refined peak stands out the same way it
     # would in a full-fidelity spectrum.
-    K = int(min(refine_top_k, max(16, nperiods // 10),
+    K = int(min(refine_top_k, max(16, nperiods // 10),  # noqa: N803
                 nperiods)) if refine_top_k else 0
     if K:
         cand_g = gpuarray.empty(max_chunk_lcs * K, np.int32)
@@ -1985,7 +1985,7 @@ def _tls_search_batch_binned(lightcurves, *, R_star=1.0, M_star=1.0, R_planet=1.
             # Absolute mid-transit time: the kernel phase is relative
             # to the epoch floor(min t); report the first transit at
             # or after the first observation
-            T0 = _first_transit_at_or_after(
+            T0 = _first_transit_at_or_after(  # noqa: N803
                 epochs[lc_idx] + best_t0 * best_period, best_period,
                 tmins[lc_idx])
 
@@ -2090,7 +2090,7 @@ def _attach_null_fap(results, lightcurves, n_draws, seed, search_kwargs):
 
 
 def tls_search_gpu(t, y, dy, periods=None, *, qmin=None, qmax=None,
-                   R_star=1., M_star=1., method=None, execution='baseline', **kwargs):
+                   R_star=1., M_star=1., method=None, execution='baseline', **kwargs):  # noqa: N803
     """Search for transits with the complete observation-level TLS algorithm.
 
     The default ``method='reference'`` follows the pinned GTLS numerical
@@ -2168,7 +2168,7 @@ def tls_search_gpu(t, y, dy, periods=None, *, qmin=None, qmax=None,
     raise ValueError("method must be 'reference', 'binned' or 'legacy'")
 
 
-def tls_transit(t, y, dy, *, R_star=1., M_star=1., **kwargs):
+def tls_transit(t, y, dy, *, R_star=1., M_star=1., **kwargs):  # noqa: N803
     """Stellar-aware TLS convenience wrapper; see :func:`tls_search_gpu`.
 
     Uses the same broad observation-level search by default. A narrow
@@ -2180,7 +2180,7 @@ def tls_transit(t, y, dy, *, R_star=1., M_star=1., **kwargs):
     return tls_search_gpu(t, y, dy, R_star=R_star, M_star=M_star, **kwargs)
 
 
-def tls_search_batch(lightcurves, *, R_star=1., M_star=1.,
+def tls_search_batch(lightcurves, *, R_star=1., M_star=1.,  # noqa: N803
                      method='reference', execution='baseline', **kwargs):
     """Search a survey with the same sensitivity policy as tls_search_gpu.
 
@@ -2207,7 +2207,8 @@ def tls_search_batch(lightcurves, *, R_star=1., M_star=1.,
         raise ValueError("experimental execution requires method='reference'")
     if method == 'reference':
         from .tls_reference_frontend import search_batch
-        return search_batch(lightcurves, R_star=R_star, M_star=M_star, execution=execution, **kwargs)
+        return search_batch(lightcurves, R_star=R_star, M_star=M_star,
+                            execution=execution, **kwargs)
     if method == 'binned':
         return _tls_search_batch_binned(lightcurves, R_star=R_star, M_star=M_star,
                                         **kwargs)

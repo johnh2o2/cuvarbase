@@ -100,7 +100,7 @@ def _candidate_libs():
     for p in sys.path:
         if p and os.path.isdir(p):
             patterns.append(os.path.join(p, 'nvidia', 'cufft', 'lib',
-                                          'libcufft.so*'))
+                                         'libcufft.so*'))
     # CUDA toolkit install dirs
     patterns += ['/usr/local/cuda*/lib64/libcufft.so*',
                  '/usr/local/cuda/lib64/libcufft.so*',

@@ -182,7 +182,7 @@ def check_k0(freqs, k0=None, rtol=1E-6, atol=0.):
             % (f[0], df, f[0] / df, k0))
 
 
-def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
+def mhdirect_sums(t, yw, w, freq, YY, nharms=1):  # noqa: N803
     """
     Compute the set of frequency-dependent sums
     for (multi-harmonic) Lomb Scargle at a given frequency
@@ -228,15 +228,15 @@ def mhdirect_sums(t, yw, w, freq, YY, nharms=1):
                      for n in ns[1:nharms+1]])
 
     ybar = np.sum(yw)
-    C = np.asarray(c)[1:nharms+1]
-    S = np.asarray(s)[1:nharms+1]
-    YC = yc - ybar * C
-    YS = ys - ybar * S
+    C = np.asarray(c)[1:nharms+1]  # noqa: N803
+    S = np.asarray(s)[1:nharms+1]  # noqa: N803
+    YC = yc - ybar * C  # noqa: N803
+    YS = ys - ybar * S  # noqa: N803
 
     return _mh_assemble_from_centered(c, s, YC, YS, nharms)
 
 
-def _mh_assemble_from_centered(c, s, YC, YS, nharms):
+def _mh_assemble_from_centered(c, s, YC, YS, nharms):  # noqa: N803
     """Assemble the (C, S, CC, CS, SS, YC, YS) multiharmonic GLS sums from
     raw weight moments and already-mean-subtracted YC/YS.
 
@@ -259,7 +259,7 @@ def _mh_assemble_from_centered(c, s, YC, YS, nharms):
     """
     c = np.asarray(c, dtype=np.float64)
     s = np.asarray(s, dtype=np.float64)
-    H = nharms
+    H = nharms  # noqa: N803
 
     def sgn(n):
         return 1 if n == 0 else np.sign(n)
@@ -269,12 +269,12 @@ def _mh_assemble_from_centered(c, s, YC, YS, nharms):
     cs = [[0.5 * (s[n+m] - sgn(n-m) * s[abs(n-m)]) for m in hs] for n in hs]
     ss = [[0.5 * (c[abs(n-m)] - c[n+m]) for m in hs] for n in hs]
 
-    C = c[1:H+1]
-    S = s[1:H+1]
+    C = c[1:H+1]  # noqa: N803
+    S = s[1:H+1]  # noqa: N803
 
-    CC = np.asarray(cc) - np.outer(C, C)
-    CS = np.asarray(cs) - np.outer(C, S)
-    SS = np.asarray(ss) - np.outer(S, S)
+    CC = np.asarray(cc) - np.outer(C, C)  # noqa: N803
+    CS = np.asarray(cs) - np.outer(C, S)  # noqa: N803
+    SS = np.asarray(ss) - np.outer(S, S)  # noqa: N803
 
     return C, S, CC, CS, SS, np.asarray(YC), np.asarray(YS)
 
@@ -309,24 +309,24 @@ def add_regularization(sums, amplitude_priors=None, cn0=None, sn0=None):
     --------
     :func:`mhdirect_sums`
     """
-    C, S, CC, CS, SS, YC, YS = sums
+    C, S, CC, CS, SS, YC, YS = sums  # noqa: N803
 
-    D = np.zeros_like(C)
+    D = np.zeros_like(C)  # noqa: N803
     if amplitude_priors is not None:
-        D = np.ones_like(C) * np.power(amplitude_priors, -2)
+        D = np.ones_like(C) * np.power(amplitude_priors, -2)  # noqa: N803
 
     cn0 = np.zeros(len(C)) if cn0 is None else cn0
     sn0 = np.zeros(len(S)) if sn0 is None else sn0
 
-    CCreg = CC + np.diag(D)
-    SSreg = SS + np.diag(D)
-    YCreg = YC + D * cn0
-    YSreg = YS + D * sn0
+    CCreg = CC + np.diag(D)  # noqa: N803
+    SSreg = SS + np.diag(D)  # noqa: N803
+    YCreg = YC + D * cn0  # noqa: N803
+    YSreg = YS + D * sn0  # noqa: N803
 
     return C, S, CCreg, CS, SSreg, YCreg, YSreg
 
 
-def mhgls_params_from_sums(sums, YY, ybar):
+def mhgls_params_from_sums(sums, YY, ybar):  # noqa: N803
     """
     Compute optimal amplitudes and offset from
     set of sums. See Zechmeister & Kuerster 2009
@@ -357,11 +357,11 @@ def mhgls_params_from_sums(sums, YY, ybar):
     --------
     :func:`mhdirect_sums`
     """
-    C, S, CC, CS, SS, YC, YS = sums
+    C, S, CC, CS, SS, YC, YS = sums  # noqa: N803
 
     nharms = len(C)
 
-    A = np.block([[CC, CS], [CS.T, SS]])
+    A = np.block([[CC, CS], [CS.T, SS]])  # noqa: N803
     b = np.concatenate((YC, YS))
 
     theta = np.linalg.solve(A, b)
@@ -373,7 +373,7 @@ def mhgls_params_from_sums(sums, YY, ybar):
     return cn, sn, offset
 
 
-def mhgls_from_sums(sums, YY, ybar):
+def mhgls_from_sums(sums, YY, ybar):  # noqa: N803
     """
     Compute multiharmonic periodogram power from
     set of sums. See Zechmeister & Kuerster 2009
@@ -401,21 +401,21 @@ def mhgls_from_sums(sums, YY, ybar):
     --------
     :func:`mhdirect_sums`
     """
-    C, S, CC, CS, SS, YC, YS = sums
+    C, S, CC, CS, SS, YC, YS = sums  # noqa: N803
 
     cn, sn, offset = mhgls_params_from_sums(sums, YY, ybar)
 
-    XX = np.outer(cn, cn) * CC
+    XX = np.outer(cn, cn) * CC  # noqa: N803
     XX += 2 * np.outer(cn, sn) * CS
     XX += np.outer(sn, sn) * SS
 
-    YX = 2 * (np.dot(cn, YC) + np.dot(sn, YS))
-    P = (YX - np.sum(XX)) / YY
+    YX = 2 * (np.dot(cn, YC) + np.dot(sn, YS))  # noqa: N803
+    P = (YX - np.sum(XX)) / YY  # noqa: N803
 
     return P
 
 
-def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
+def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):  # noqa: N803
     """Multiharmonic GLS power from the GPU NFFT spectra.
 
     ``sw`` is the adjoint NFFT of the weights ``w`` and ``syw`` of
@@ -438,7 +438,7 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
     ``mhgls_from_sums(add_regularization(_mh_assemble_from_centered(...)))``
     and agrees with it to ~1e-16 relative.
     """
-    H = int(nharms)
+    H = int(nharms)  # noqa: N803
     i = np.arange(nf)
 
     # weight moments c[m], s[m] for m = 1..2H from the w-spectrum
@@ -453,8 +453,8 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
         sm[m] = vals.imag
 
     # mean-subtracted YC[h], YS[h] for h = 1..H from the w*(y-ybar) spectrum
-    YC = np.empty((H, nf), dtype=np.float64)
-    YS = np.empty((H, nf), dtype=np.float64)
+    YC = np.empty((H, nf), dtype=np.float64)  # noqa: N803
+    YS = np.empty((H, nf), dtype=np.float64)  # noqa: N803
     for h in range(1, H + 1):
         idx = (h - 1) * k0 + h * i
         vals = syw[idx]
@@ -477,11 +477,11 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
 
     # regularization: a ridge 1/prior**2 on the diagonal of CC and SS
     # and a shift of YC/YS toward the prior centroid (add_regularization)
-    D = cn0 = sn0 = None
+    D = cn0 = sn0 = None  # noqa: N803
     if reg_kwargs:
         priors = reg_kwargs.get('amplitude_priors', None)
         if priors is not None:
-            D = np.ones(H, dtype=np.float64) * np.power(priors, -2)
+            D = np.ones(H, dtype=np.float64) * np.power(priors, -2)  # noqa: N803
             c0 = reg_kwargs.get('cn0', None)
             s0 = reg_kwargs.get('sn0', None)
             cn0 = np.zeros(H) if c0 is None else np.asarray(c0, np.float64)
@@ -495,27 +495,27 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
         s = sm[:, sl]
         nc = c.shape[1]
 
-        C = c[1:H + 1]
-        S = s[1:H + 1]
+        C = c[1:H + 1]  # noqa: N803
+        S = s[1:H + 1]  # noqa: N803
 
         cc = 0.5 * (c[isum] + c[idiff])
         cs = 0.5 * (s[isum] - sgn[:, :, np.newaxis] * s[idiff])
         ss = 0.5 * (c[idiff] - c[isum])
 
-        CC = cc - C[:, np.newaxis, :] * C[np.newaxis, :, :]
-        CS = cs - C[:, np.newaxis, :] * S[np.newaxis, :, :]
-        SS = ss - S[:, np.newaxis, :] * S[np.newaxis, :, :]
+        CC = cc - C[:, np.newaxis, :] * C[np.newaxis, :, :]  # noqa: N803
+        CS = cs - C[:, np.newaxis, :] * S[np.newaxis, :, :]  # noqa: N803
+        SS = ss - S[:, np.newaxis, :] * S[np.newaxis, :, :]  # noqa: N803
 
-        YCc = YC[:, sl]
-        YSc = YS[:, sl]
+        YCc = YC[:, sl]  # noqa: N803
+        YSc = YS[:, sl]  # noqa: N803
         if D is not None:
             dg = np.diag(D)[:, :, np.newaxis]
-            CC = CC + dg
-            SS = SS + dg
-            YCc = YCc + (D * cn0)[:, np.newaxis]
-            YSc = YSc + (D * sn0)[:, np.newaxis]
+            CC = CC + dg  # noqa: N803
+            SS = SS + dg  # noqa: N803
+            YCc = YCc + (D * cn0)[:, np.newaxis]  # noqa: N803
+            YSc = YSc + (D * sn0)[:, np.newaxis]  # noqa: N803
 
-        A = np.empty((nc, 2 * H, 2 * H), dtype=np.float64)
+        A = np.empty((nc, 2 * H, 2 * H), dtype=np.float64)  # noqa: N803
         A[:, :H, :H] = CC.transpose(2, 0, 1)
         A[:, :H, H:] = CS.transpose(2, 0, 1)
         A[:, H:, :H] = CS.transpose(2, 1, 0)
@@ -529,12 +529,12 @@ def _mh_power_from_spectra(sw, syw, k0, nharms, nf, YY, reg_kwargs=None):
         cn = theta[:, :H]
         sn = theta[:, H:]
 
-        XX = (cn[:, :, np.newaxis] * cn[:, np.newaxis, :]) * A[:, :H, :H]
+        XX = (cn[:, :, np.newaxis] * cn[:, np.newaxis, :]) * A[:, :H, :H]  # noqa: N803
         XX += 2 * (cn[:, :, np.newaxis] * sn[:, np.newaxis, :]) \
             * A[:, :H, H:]
         XX += (sn[:, :, np.newaxis] * sn[:, np.newaxis, :]) * A[:, H:, H:]
 
-        YX = 2 * ((cn * YCc.T).sum(axis=1) + (sn * YSc.T).sum(axis=1))
+        YX = 2 * ((cn * YCc.T).sum(axis=1) + (sn * YSc.T).sum(axis=1))  # noqa: N803
         power[sl] = (YX - XX.sum(axis=(1, 2))) / YY
     return power
 
@@ -566,7 +566,7 @@ def _amplitude_prior_key(prior):
     if prior is None:
         return None
     arr = np.asarray(prior, dtype=np.float64)
-    return (arr.shape, arr.tobytes())
+    return arr.shape, arr.tobytes()
 
 
 def _ls_memory_settings(nf, k0, m, sigma, use_double, nharmonics, use_fft,
@@ -646,7 +646,7 @@ def _check_nfft_grids(memory, nf, k0, nharms):
     (``sigma * (k0 + count) <= n``, see
     :func:`~cuvarbase.memory.lombscargle_memory.nfft_grid_sizes`).
     """
-    H = int(nharms)
+    H = int(nharms)  # noqa: N803
     top_yw = (H - 1) * k0 + H * (nf - 1)
     top_w = (2 * H - 1) * k0 + 2 * H * (nf - 1)
     for name, nm, top in (('yw', memory.nfft_mem_yw, top_yw),
@@ -670,7 +670,7 @@ def _check_nfft_grids(memory, nf, k0, nharms):
                  int(np.ceil(nm.sigma * (k0 + nm.nf)))))
 
 
-def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):
+def lomb_scargle_direct_sums(t, yw, w, freqs, YY, nharms=1, **kwargs):  # noqa: N803
     """
     Compute Lomb-Scargle periodogram using direct summations. This
     is usually only useful for debugging and/or small numbers of
@@ -738,6 +738,13 @@ def lomb_scargle_async(memory, functions, freqs,
         Number of CUDA threads per block
     use_fft: bool, optional (default: True)
         If False, uses direct sums.
+    use_cufinufft: bool, optional (default: False)
+        Use the cuFINUFFT library for the NFFT instead of the custom
+        Gaussian-spreading kernel. Requires ``pip install
+        cufinufft>=2.2`` (raises ImportError otherwise). Provided as a
+        numerical cross-check backend: in cuvarbase's benchmarks the
+        custom kernel was faster end-to-end (see
+        ``cuvarbase.cufinufft_backend``).
     python_dir_sums: bool, optional (default: False)
         If True, performs direct sums with Python on the CPU
         (``lomb_scargle_direct_sums``, computed in float64, all
@@ -1005,7 +1012,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         and ignored: it used to emulate that sizing when the
         allocation itself did not do it.
         """
-        H = self.nharmonics
+        H = self.nharmonics  # noqa: N806
         sigma = self.nfft_proc.sigma
         m = self.nfft_proc.get_m(nf)
 
@@ -1220,7 +1227,6 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         allocated_memory = []
 
         nfrqs = nfreqs
-        k0 = k0s
         if nfrqs is None:
             nfrqs = [self._nfreqs(t, **kwargs) for (t, y, dy) in data]
         elif isinstance(nfreqs, int):
@@ -1401,7 +1407,7 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
         if len(frqs) != len(data):
             raise ValueError(
                 "number of frequency grids (%d) does not match number of "
-            "lightcurves (%d)" % (len(frqs), len(data)))
+                "lightcurves (%d)" % (len(frqs), len(data)))
 
         # the kernels evaluate df * (k0 + arange(nf)) and the user's
         # array only labels the output: validate every grid (uniform
@@ -1503,6 +1509,10 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             LCs/call, while 8 was net slower. Only increase this if you
             benchmark it on your own workload; see
             `archived numerical diagnosis <https://github.com/johnh2o2/cuvarbase/blob/f0dc98136ae34b34465b152be1af84faf063eb44/analysis/v1.0-gpu-batch3-jul2026/E1_E2_DIAGNOSIS.md>`_.
+        use_fft: optional, bool (default: True)
+            Uses the NFFT, otherwise direct summations (O(N nf); slow).
+            ``nharmonics > 1`` is supported on both paths -- with
+            ``use_fft=False`` the multiharmonic sums run on the host.
 
         Notes
         -----
@@ -1697,19 +1707,19 @@ class LombScargleAsyncProcess(GPUAsyncProcess):
             return [(freqs, lsp) for lsp in lsps]
 
 
-def _baluev_d_K(nharmonics):
+def _baluev_d_K(nharmonics):  # noqa: N802
     """Baluev (2008) ``d_K`` for an ``nharmonics``-harmonic floating-mean
     model: ``2 * nharmonics + 1`` (a sine/cosine pair per harmonic plus
     the mean). ``nharmonics`` must be the harmonic count the periodogram
     was actually computed with -- see
     :meth:`LombScargleAsyncProcess.batched_run_const_nfreq`."""
-    H = int(nharmonics)
+    H = int(nharmonics)  # noqa: N806
     if H < 1:
         raise ValueError("nharmonics must be >= 1, got %r" % (nharmonics,))
     return 2 * H + 1
 
 
-def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
+def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):  # noqa: N806
     """
     False alarm probability for periodogram peak
     based on Baluev (2008) [2008MNRAS.385.1279B]
@@ -1753,11 +1763,11 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     >>> fap_baluev(t, dy, powers, max(freqs))
     """
 
-    N = len(t)
+    N = len(t)  # noqa: N806
     d = d_K - d_H
 
-    N_K = N - d_K
-    N_H = N - d_H
+    N_K = N - d_K  # noqa: N806
+    N_H = N - d_H  # noqa: N806
     g = (0.5 * N_H) ** (0.5 * (d - 1))
 
     if use_gamma:
@@ -1769,12 +1779,12 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     # Python (6 ms per call at N = 65,000)
     wsum = np.sum(w)
     tbar = np.dot(w, t) / wsum
-    Dt = np.dot(w, np.power(t - tbar, 2)) / wsum
+    Dt = np.dot(w, np.power(t - tbar, 2)) / wsum  # noqa: N806
 
-    Teff = np.sqrt(4 * np.pi * Dt)
+    Teff = np.sqrt(4 * np.pi * Dt)  # noqa: N806
 
-    W = fmax * Teff
-    A = (2 * np.pi ** 1.5) * W
+    W = fmax * Teff  # noqa: N806
+    A = (2 * np.pi ** 1.5) * W  # noqa: N806
 
     # Evaluate in log space (issue #14): for z near 1 the naive
     #     FAP = 1 - (1 - (1-z)**(0.5*N_K)) * exp(-tau)
@@ -1784,12 +1794,12 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     # keeps the result positive down to the float64 limit (~1e-308).
     z = np.asarray(z, dtype=np.float64)
 
-    eZ1 = (z / np.pi) ** 0.5 * (d - 1)
+    eZ1 = (z / np.pi) ** 0.5 * (d - 1)  # noqa: N806
 
     with np.errstate(divide='ignore'):
         # log(1 - z); -inf at z == 1 (exp() of it is 0, as intended)
         log1mz = np.log1p(-np.minimum(z, 1.0))
-        log_eZ1 = np.log(eZ1)
+        log_eZ1 = np.log(eZ1)  # noqa: N806
 
     log_tau = (np.log(g * A / (2 * np.pi))
                + log_eZ1
@@ -1797,7 +1807,7 @@ def fap_baluev(t, dy, z, fmax, d_K=3, d_H=1, use_gamma=True):
     tau = np.exp(log_tau)
 
     # log(1 - Psing) = log((1 - z)**(0.5 * N_K))
-    log_Psing_c = 0.5 * N_K * log1mz
+    log_Psing_c = 0.5 * N_K * log1mz  # noqa: N806
 
     return -np.expm1(-tau) + np.exp(log_Psing_c - tau)
 

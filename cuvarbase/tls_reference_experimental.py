@@ -361,7 +361,7 @@ def _select_durations(selection, indices):
 
 
 def search_fast(t, y, dy, periods, *, group_size=None, work_chunk=256,
-                T0_fit_margin=.125, duration_grid_step=1.1,
+                T0_fit_margin=.125, duration_grid_step=1.1,  # noqa: N803
                 oversampling_factor=3, u=None, limb_dark='quadratic',
                 transit_template='default', template_parameters=None,
                 qmin=None, qmax=None, n_durations=None,
@@ -398,7 +398,7 @@ def search_fast(t, y, dy, periods, *, group_size=None, work_chunk=256,
 
 
 def search_full(t, y, dy, periods, *, group_size=None, work_chunk=256,
-                T0_fit_margin=.125, duration_grid_step=1.1,
+                T0_fit_margin=.125, duration_grid_step=1.1,  # noqa: N803
                 oversampling_factor=3, u=None, limb_dark='quadratic',
                 transit_template='default', template_parameters=None,
                 qmin=None, qmax=None, n_durations=None,

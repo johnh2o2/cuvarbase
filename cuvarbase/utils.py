@@ -371,9 +371,9 @@ def autofrequency(t, nyquist_factor=5, samples_per_peak=5,
         nf0 = max([nf0, int(minimum_frequency / df)])
 
     if maximum_frequency is not None:
-        Nf = int(maximum_frequency / df) - nf0
+        Nf = int(maximum_frequency / df) - nf0  # noqa: N803
     else:
-        Nf = int(0.5 * samples_per_peak * nyquist_factor * n_samples)
+        Nf = int(0.5 * samples_per_peak * nyquist_factor * n_samples)  # noqa: N803
 
     return df * (nf0 + np.arange(Nf))
 
@@ -384,9 +384,10 @@ def dphase(dt, freq):
     return dph_final
 
 
-def normalize_light_curves(data: list[tuple[np.array, ...]]):
+def normalize_light_curves(data: list[tuple[np.ndarray, ...]]):
     """
-    Normalize light curves by subtracting the mean from the magnitudes and the observation times.
+    Normalize light curves by subtracting the mean from the magnitudes
+    and the observation times.
 
     Parameters
     ----------

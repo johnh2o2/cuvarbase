@@ -181,7 +181,7 @@ def conditional_entropy(memory, functions, block_size=256,
                         **kwargs):
     block = (block_size, 1, 1)
     grid = (int(np.ceil((memory.n0 * memory.nf) / float(block_size))), 1)
-    fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight,\
+    fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight, \
         ce_logp, ce_std, ce_wt = functions
 
     if transfer_to_device:
@@ -265,7 +265,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
                              force_nblocks=None,
                              stream=None,
                              **kwargs):
-    fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight,\
+    fast_ce, faster_ce, ce_dpdm, hist_count, hist_weight, \
         ce_logp, ce_std, ce_wt = functions
 
     if shmem_lim is None:
@@ -329,7 +329,7 @@ def conditional_entropy_fast(memory, functions, block_size=256,
                max(1, int((shmem_lim - u * memory.phase_bins) // (r + u)))))
 
     i_freq = 0
-    while (i_freq < memory.nf):
+    while i_freq < memory.nf:
         j_freq = min([i_freq + freq_batch_size, memory.nf])
 
         # One block per trial frequency, grid-stride: size the grid from
@@ -954,7 +954,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         if len(frqs) != len(data):
             raise ValueError(
                 "number of frequency grids (%d) does not match number of "
-            "lightcurves (%d)" % (len(frqs), len(data)))
+                "lightcurves (%d)" % (len(frqs), len(data)))
 
         if freqs is None:
             # grids that did not come through the check above: the
@@ -1058,7 +1058,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         if len(frqs) != len(data):
             raise ValueError(
                 "number of frequency grids (%d) does not match number of "
-            "lightcurves (%d)" % (len(frqs), len(data)))
+                "lightcurves (%d)" % (len(frqs), len(data)))
 
         if freqs is None:
             for frq in frqs:
@@ -1114,7 +1114,7 @@ class ConditionalEntropyAsyncProcess(GPUAsyncProcess):
         return results
 
     def batched_run_const_nfreq(self, data, batch_size=10,
-                                freqs=None,only_return_best_freqs=False,
+                                freqs=None, only_return_best_freqs=False,
                                 **kwargs):
         """
         Same as ``batched_run`` but is more efficient when the frequencies are

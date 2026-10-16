@@ -42,7 +42,7 @@ class NativePrefixPlan:
         """Key for a cache belonging to one thread and CUDA context."""
         if device_id is None:
             device_id = cp.cuda.runtime.getDevice()
-        return (int(device_id), _shape(shape), np.dtype(np.float32).str)
+        return int(device_id), _shape(shape), np.dtype(np.float32).str
 
     @staticmethod
     def buffer_bytes_for(shape):

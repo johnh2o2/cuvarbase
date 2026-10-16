@@ -38,8 +38,8 @@ def data(ndata=100, baseline=1, freq=10, sigma=1.,
 def plot_ce_bins(ax, t, y, dy, freq, ce_proc):
     ax.set_xlim(0, 1)
 
-    y0 = min(y)
-    yrange = max(y) - y0
+    y0 = np.min(y)
+    yrange = np.max(y) - y0
 
     # Phase-fold the data at the trial frequency
     phi = phase(t, freq)
@@ -74,7 +74,7 @@ def plot_ce_bins(ax, t, y, dy, freq, ce_proc):
 
     dH = np.array(dH)
 
-    extent = [0, 1, min(y), max(y)]
+    extent = [0, 1, np.min(y), np.max(y)]
 
     # Mask out the unoccupied bins
     dH = np.ma.masked_where(dH == 0, dH)
@@ -88,7 +88,7 @@ def plot_ce_bins(ax, t, y, dy, freq, ce_proc):
                    alpha=0.5, zorder=95)
 
     for i in range(ce_proc.mag_bins + 1):
-        ax.axhline(min(y) + i * dY, ls=':', color='k',
+        ax.axhline(np.min(y) + i * dY, ls=':', color='k',
                    alpha=0.5, zorder=95)
 
     # Plot the conditional entropy

@@ -1,7 +1,10 @@
-"""Experimental allocation/ranking helpers; unchanged math stays in the baseline module."""
+"""Experimental allocation/ranking helpers;
+unchanged math stays in the baseline module."""
 import numpy as np
 from .tls_reference_math import (augment_duration_grid, build_cache,
-    harmonic_candidate_indices, native_spectra, preprocess_inputs)
+                                 harmonic_candidate_indices, native_spectra,
+                                 preprocess_inputs)
+
 
 def chunk_width_masks(widths, minima, maxima, chunk_size):
     """Native union of admissible integer widths over each period chunk."""
@@ -17,6 +20,7 @@ def chunk_width_masks(widths, minima, maxima, chunk_size):
         (widths[None, :] >= minima[start:start + chunk_size, None]) &
         (widths[None, :] <= maxima[start:start + chunk_size, None]), axis=0)
         for start in range(0, len(minima), chunk_size)], dtype=bool)
+
 
 def refinement_candidate_indices(periods, power):
     """Rank valid candidates: top100, then next100 at P>1d.
@@ -39,4 +43,3 @@ def refinement_candidate_indices(periods, power):
     remaining = ranked[100:]
     next_best = remaining[periods.data[remaining] > 1][:100]
     return np.concatenate((ranked[:100], next_best)).astype(np.int64, copy=False)
-

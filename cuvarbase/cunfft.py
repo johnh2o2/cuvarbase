@@ -390,17 +390,17 @@ class NFFTAsyncProcess(GPUAsyncProcess):
 
         self.allocated_memory = []
 
-    def m_from_C(self, C, sigma):
-        """ 
+    def m_from_C(self, C, sigma):  # noqa: N802
+        """
         Returns an estimate for what ``m`` value to use from ``C``,
         where ``C`` is something like ``err_tolerance/N_freq``.
 
         Pulled from <https://github.com/jakevdp/nfft>_
         """
-        D = (np.pi * (1. - 1. / (2. * sigma - 1.)))
+        D = (np.pi * (1. - 1. / (2. * sigma - 1.)))  # noqa: N803
         return int(np.ceil(-np.log(0.25 * C) / D))
 
-    def estimate_m(self, N=None, y=None):
+    def estimate_m(self, N=None, y=None):  # noqa: N803
         """
         Choose the filter radius ``m`` to meet the error tolerance
         ``self.m_tol``.
@@ -479,7 +479,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
         # shape parameter b and garbage gridding.
         return max(1, self.m_from_C(self.m_tol / N, self.sigma))
 
-    def get_m(self, N=None, y=None):
+    def get_m(self, N=None, y=None):  # noqa: N803
         """
         Returns the ``m`` value for ``N`` frequencies.
 
@@ -655,7 +655,7 @@ class NFFTAsyncProcess(GPUAsyncProcess):
                                  name='NFFTAsyncProcess.run dataset %d' % i)
                 nf = d[2]
                 if not (np.isscalar(nf) and np.isfinite(nf)
-                        and nf > 0 and int(nf) == nf):
+                        and 0 < nf == int(nf)):
                     raise ValueError(
                         "NFFTAsyncProcess.run: dataset %d: nf must be a "
                         "positive integer; got %r" % (i, nf))

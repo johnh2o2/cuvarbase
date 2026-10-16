@@ -188,7 +188,7 @@ def _recursion_transit_grid(fmin, fmax, num_fac, denom, rho=1.0,
 
 
 def keplerian_freq_grid(period_min, period_max, baseline, *,
-                        R_star=1.0, M_star=1.0, oversampling=2,
+                        R_star=1.0, M_star=1.0, oversampling=2,  # noqa: N803
                         return_qvals=False, method='vectorized'):
     """
     Generate a non-uniform frequency grid optimized for transit detection.
@@ -247,7 +247,7 @@ def keplerian_freq_grid(period_min, period_max, baseline, *,
     f_min = 1.0 / period_max
     f_max = 1.0 / period_min
 
-    T = baseline
+    T = baseline  # noqa: N803
 
     _validate_grid_method(method)
     # ``q`` is floored at 1e-6 to avoid a zero step at f -> 0.
@@ -274,7 +274,7 @@ def keplerian_freq_grid(period_min, period_max, baseline, *,
 
 
 def uniform_freq_grid(period_min, period_max, baseline, *, oversampling=2,
-                      R_star=1.0, M_star=1.0):
+                      R_star=1.0, M_star=1.0):  # noqa: N803
     """
     Generate a uniform frequency grid matched to Keplerian sensitivity.
 
