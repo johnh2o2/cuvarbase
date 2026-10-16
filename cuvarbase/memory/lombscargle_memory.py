@@ -39,7 +39,7 @@ def nfft_grid_sizes(nf, k0, nharmonics=1, sigma=4):
     (nf_yw, n_yw, nf_w, n_w) : ints
         Mode count and grid length of the yw and w transforms.
     """
-    H = int(nharmonics)
+    H = int(nharmonics)  # noqa: N806
     fft_size = H * (int(nf) + int(k0))
     nf_yw = fft_size - int(k0)
     nf_w = 2 * fft_size - int(k0)

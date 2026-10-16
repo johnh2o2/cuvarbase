@@ -70,11 +70,11 @@ class ConditionalEntropyMemory:
 
         if self.weighted and self.balanced_magbins:
             raise ValueError("simultaneous balanced_magbins and weighted"
-                            " options is not currently supported")
+                             " options is not currently supported")
 
         if self.weighted and self.compute_log_prob:
             raise ValueError("simultaneous compute_log_prob and weighted"
-                            " options is not currently supported")
+                             " options is not currently supported")
 
         if self.use_fast and self.compute_log_prob:
             # the fast kernels compute only the conditional entropy; a
@@ -296,7 +296,7 @@ class ConditionalEntropyMemory:
 
         ``y`` holds integer magnitude-bin indices; the fractions sum to 1.
         """
-        N = float(len(y))
+        N = float(len(y))  # noqa: N806
         yb = np.minimum(np.asarray(y).astype(np.int64), self.mag_bins - 1)
         mbf = np.bincount(yb, minlength=self.mag_bins)[:self.mag_bins] / N
 

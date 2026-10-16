@@ -138,7 +138,7 @@ class NFFTMemory:
         self.q3 = kwargs.get('q3', None)
         self.cu_plan = kwargs.get('cu_plan', None)
 
-        D = (2 * self.sigma - 1) * np.pi
+        D = (2 * self.sigma - 1) * np.pi  # noqa: N806
         self.b = float(2 * self.sigma * self.m) / D
 
     def allocate_data(self, **kwargs):
