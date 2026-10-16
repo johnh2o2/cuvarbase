@@ -10,6 +10,13 @@ class does not import the others' modules: ``nfft_memory`` and
 which BLS/CE users never need to load.
 """
 
+from .nfft_memory import NFFTMemory
+from .ce_memory import ConditionalEntropyMemory
+from .lombscargle_memory import LombScargleMemory
+from ..utils import weights
+from .bls_memory import BLSBatchMemory
+
+
 _LAZY_ATTRS = {
     'NFFTMemory': '.nfft_memory',
     'ConditionalEntropyMemory': '.ce_memory',
