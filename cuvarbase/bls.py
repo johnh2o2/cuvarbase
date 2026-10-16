@@ -1554,6 +1554,42 @@ def eebls_gpu_fast_adaptive(t, y, dy, freqs, qmin=1e-2, qmax=0.5,
         Whether or not to ignore solutions with a negative delta
     use_optimized: bool, optional (default: True)
         Use optimized kernel with bank conflict fixes and warp shuffles
+    dphi: float, optional (default: 0.)
+        Base phase-bin offset in units of the finest grid spacing;
+        pass ``i_pass`` adds ``i_pass / noverlap`` to it.
+    dlogq: float
+        The logarithmic spacing of the q values to use. If negative,
+        the q values increase by ``dq = qmin``.
+    noverlap: int, optional (default: 2)
+        Phase-offset oversampling: the periodogram is the elementwise
+        maximum over ``noverlap`` passes, with the phase-bin grid
+        shifted by ``1/noverlap`` of the finest bin width between
+        passes. This recovers box solutions whose phase offset falls
+        between bin boundaries (important when the best ``q`` is close
+        to ``qmin``); runtime scales linearly with ``noverlap``.
+        ``noverlap=1`` is a single unshifted pass.
+    functions: dict
+        Dictionary of compiled functions (see :func:`compile_bls`)
+    freq_batch_size: int, optional (default: None)
+        Number of frequencies to compute in a single batch; if
+        ``None`` this will run a single batch for all frequencies
+        simultaneously
+    shmem_lim: int, optional (default: None)
+        Maximum amount of shared memory to use per block in bytes.
+        This is GPU-dependent but usually around 48KB. If ``None``,
+        uses device information provided by PyCUDA (recommended).
+    max_nblocks: int, optional (default: 5000)
+        Maximum grid size to use
+    force_nblocks: int, optional (default: None)
+        If this is set the gridsize is forced to be this value
+    memory: :class:`BLSMemory` instance, optional (default: None)
+        See :class:`BLSMemory`.
+    transfer_to_host: bool, optional (default: True)
+        Transfer BLS back to CPU.
+    transfer_to_device: bool, optional (default: True)
+        Transfer data to GPU
+    stream: pycuda.driver.Stream, optional (default: None)
+        CUDA stream for async execution
     **kwargs:
         All other parameters passed to underlying implementation
 
@@ -1665,6 +1701,11 @@ def eebls_gpu_custom(t, y, dy, freqs, q_values, phi_values,
         the free memory reported by ``pycuda.driver.mem_get_info()``.
     functions: tuple of CUDA functions
         Dictionary of prepared functions from :func:`compile_bls`.
+    convention: str, optional (default: 'chi2ratio')
+        Power-spectrum convention for the returned periodogram
+        ('chi2ratio', 'snr' or 'loglik'); see
+        :func:`convert_bls_power`. Requires ``transfer_to_host=True``
+        for non-default values.
     **kwargs:
         passed to :func:`compile_bls`
 
@@ -3482,6 +3523,15 @@ def eebls_gpu_batch(lightcurves, freqs, *, qmin=1e-2, qmax=0.5,
         whole grid at once unless shared memory would limit occupancy
         (large bin counts from small Keplerian ``qmin``), in which
         case an occupancy-aware chunk size is used automatically.
+    convention: str, optional (default: 'chi2ratio')
+        Power-spectrum convention for the returned periodogram
+        ('chi2ratio', 'snr' or 'loglik'); see
+        :func:`convert_bls_power`. Requires ``transfer_to_host=True``
+        for non-default values.
+    shmem_lim: int, optional (default: None)
+        Maximum amount of shared memory to use per block in bytes.
+        This is GPU-dependent but usually around 48KB. If ``None``,
+        uses device information provided by PyCUDA (recommended).
 
     Returns
     -------
@@ -3845,8 +3895,6 @@ def eebls_transit_gpu(t, y, dy, fmax_frac=1.0, fmin_frac=1.0,
         Overrides the auto-generated frequency grid
     qvals: array_like, optional (default: None)
         Overrides the keplerian q values
-    functions: tuple, optional (default=None)
-        result of ``compile_bls(**kwargs)``.
     use_fast: bool, optional (default: False)
         Use fast GPU implementation.
     use_optimized: bool, optional (default: False)
