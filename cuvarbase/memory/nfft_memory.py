@@ -72,6 +72,14 @@ class NFFTMemory:
         Use double precision floating point
     precomp_psi : bool, optional (default: True)
         Precompute psi values for faster gridding
+    epoch : float, optional (default: 0.0)
+        Time origin / phase convention
+    pinned : bool, optional (default: True)
+        Pinned (or page-aligned fallback) host arrays.
+    n0 : int, optional (default: None)
+        Overwrites default length of data.
+    nf : int, optional (default: None)
+        Frequency grid size.
     **kwargs : dict
         Additional parameters
 
@@ -312,7 +320,7 @@ class NFFTMemory:
     def fromdata(self, t, y, allocate=True, **kwargs):
         """
         Initialize memory from data arrays.
-        
+
         Parameters
         ----------
         t : array-like
@@ -323,7 +331,7 @@ class NFFTMemory:
             Whether to allocate GPU memory
         **kwargs : dict
             Additional parameters
-            
+
         Returns
         -------
         self : NFFTMemory

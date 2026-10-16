@@ -56,7 +56,7 @@ class LombScargleMemory:
     """
     Container class for allocating memory and transferring
     data between the GPU and CPU for Lomb-Scargle computations.
-    
+
     Parameters
     ----------
     sigma : float
@@ -65,6 +65,34 @@ class LombScargleMemory:
         The CUDA stream used for calculations/data transfer
     m : int
         The m parameter for the NFFT
+    nf, k0 : int, optional (default: None)
+        Grid size and first mode; alternatively give ``freqs``.
+    freqs : array_like, optional
+        The uniform grid (validated with :func:`check_k0`).
+    precomp_psi : bool, optional (default: True)
+        Precompute psi values for faster gridding
+    amplitude_prior: optional, float or array_like (default: None)
+        If not None, the *standard deviation* of a zero-centred
+        Gaussian prior on the amplitude of every harmonic (or one
+        per harmonic); a ridge term ``1 / amplitude_prior**2`` is
+        added to the amplitude normal equations (see
+        :func:`add_regularization`; sometimes useful for suppressing
+        aliases). Honoured on every path, including
+        ``nharmonics > 1`` (silently ignored there before 1.0).
+    window: bool, optional (default: False)
+        If True, computes the window function for the data
+    nharmonics : int, optional (default: 1)
+        Number of harmonics.
+    use_fft: optional, bool (default: True)
+        Uses the NFFT, otherwise direct summations (O(N nf); slow).
+        ``nharmonics > 1`` is supported on both paths -- with
+        ``use_fft=False`` the multiharmonic sums run on the host.
+    pinned : bool, optional (default: True)
+        Pinned (or page-aligned fallback) host arrays.
+    floating_mean: optional, bool (default: True)
+        Add a floating mean to the model (see Zechmeister & Kurster 2009)
+     use_double : bool, optional (default: False)
+        Use double precision.
     **kwargs : dict
         Additional parameters
     """

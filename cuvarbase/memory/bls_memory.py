@@ -38,6 +38,8 @@ class BLSBatchMemory:
         Number of trial frequencies.
     stream : pycuda.driver.Stream, optional
         CUDA stream for async transfers.
+    pinned : bool, optional (default: True)
+        Pinned (or page-aligned fallback) host arrays.
     """
 
     def __init__(self, max_ndata, n_lcs, nfreqs, stream=None, pinned=True):

@@ -11,10 +11,10 @@ from ._host import host_array
 
 
 class ConditionalEntropyMemory:
-    """
+    r"""
     Container class for managing memory allocation and data transfer
     for Conditional Entropy computations on GPU.
-    
+
     Parameters
     ----------
     phase_bins : int, optional (default: 10)
@@ -39,10 +39,37 @@ class ConditionalEntropyMemory:
         for a 100k-frequency 10 x 5 search, and it was allocated -- and
         zero-filled on every ``run`` -- for nothing.  The standard
         kernels need it, so they refuse a memory allocated this way.
+    widen_mag_range : bool, optional (default: False)
+        Pads the normalized range by ``max_phi`` median uncertainties on each side.
+    n0 : int, optional (default: None)
+        Overwrites default length of data.
+    nf : int, optional (default: None)
+        Frequency grid size.
+    compute_log_prob : bool, optional (default: False)
+        With ``compute_log_prob=True`` the returned quantity is instead the
+        Poisson log-likelihood of the phase-folded histogram under the
+        phase-independent null model,
+        :math:`\sum_{\phi, m} [N_{\phi m} \log N^{\rm exp}_{\phi m} -
+        N^{\rm exp}_{\phi m} - \log\Gamma(N_{\phi m} + 1)]` with
+        :math:`N^{\rm exp}_{\phi m} = N_\phi\, p(m)`. It is likewise
+        **minimized** at the true frequency.
+    balanced_magbins : bool, optional (default: False)
+        With ``balanced_magbins=True`` each bin uses its own width.
+    pinned : bool, optional (default: True)
+        Pinned (or page-aligned fallback) host arrays.
+    buffered_transfer : bool, optional (default: False)
+        Buffered data transfer.
+    n0_buffer : , optional (default: None)
+        If ``buffered_transfer=True``, overwrites `n0`,
+        the length of the input arrays.
+    use_double : bool, optional (default: False)
+        Use double precision.
+    freqs : array-like, optional (default: None)
+        A single 1-D frequency grid.
     **kwargs : dict
         Additional parameters
     """
-    
+
     def __init__(self, **kwargs):
         # Constructing GPU memory is a "first GPU use" -- retain the CUDA
         # primary context now (no longer created eagerly at import).
@@ -375,7 +402,7 @@ class ConditionalEntropyMemory:
     def setdata(self, t, y, **kwargs):
         """
         Set data for conditional entropy computation.
-        
+
         Parameters
         ----------
         t : array-like
@@ -384,6 +411,8 @@ class ConditionalEntropyMemory:
             Observation values
         dy : array-like, optional
             Observation uncertainties (required if weighted=True)
+        n0 : int, optional
+            Overwrites the length of the input arrays.
         **kwargs : dict
             Additional parameters
         """
@@ -460,7 +489,7 @@ class ConditionalEntropyMemory:
     def fromdata(self, t, y, **kwargs):
         """
         Initialize memory from data arrays.
-        
+
         Parameters
         ----------
         t : array-like
@@ -471,7 +500,7 @@ class ConditionalEntropyMemory:
             Whether to allocate GPU memory
         **kwargs : dict
             Additional parameters
-            
+
         Returns
         -------
         self : ConditionalEntropyMemory
