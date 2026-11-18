@@ -9,6 +9,8 @@ from ..lombscargle import LombScargleAsyncProcess
 # the primary context itself, lazily (cuvarbase.base.ensure_context).
 spp = 3
 nfac = 3
+# Use Astropy's direct Cython method for reference powers because its
+# automatic method selection can choose an approximation on regular grids.
 # Tolerances vs astropy / between GPU paths. Before the Sep-2026 NFFT
 # fixes (psi tables shared between differently-sized grids, grids sized
 # without k0) these had to be 1e-2 -- the default path carried a
@@ -64,7 +66,7 @@ class TestLombScargle(object):
 
         fgpu, pgpu = results[0]
 
-        power = LombScargle(t, y, err).power(fgpu)
+        power = LombScargle(t, y, err).power(fgpu, method='cython')
 
         assert_similar(power, pgpu)
 
@@ -78,7 +80,7 @@ class TestLombScargle(object):
         ls_proc.finish()
         fgpu, pgpu = results[0]
 
-        power = LombScargle(t, y, err).power(fgpu)
+        power = LombScargle(t, y, err).power(fgpu, method='cython')
 
         assert_similar(power, pgpu)
 
@@ -93,7 +95,7 @@ class TestLombScargle(object):
         fgpu, pgpu = results[0]
 
         ls = LombScargle(t, y, err, fit_mean=True, center_data=False)
-        power = ls.power(fgpu)
+        power = ls.power(fgpu, method='cython')
 
         assert_similar(power, pgpu)
 
@@ -108,7 +110,7 @@ class TestLombScargle(object):
         fgpu, pgpu = results[0]
 
         ls = LombScargle(t, y, err, fit_mean=True, center_data=True)
-        power = ls.power(fgpu)
+        power = ls.power(fgpu, method='cython')
 
         assert_similar(power, pgpu)
 
@@ -360,7 +362,7 @@ class TestLombScargleAccuracy(object):
     def test_default_grid_vs_astropy(self, use_double, tol):
         t, y, dy = _realistic_lc()
         freqs = _uniform_grid(1.0 / (5 * 365.0), 20.0, 365.0)
-        ref = LombScargle(t, y, dy).power(freqs)
+        ref = LombScargle(t, y, dy).power(freqs, method='cython')
 
         proc = LombScargleAsyncProcess(use_double=use_double, sigma=4,
                                        m=8, autoset_m=False)
@@ -449,7 +451,7 @@ class TestLombScargleNarrowBands(object):
         f0 = fmin + 0.9 * (fmax - fmin)     # signal near the top of the band
         t, y, dy = _realistic_lc(N=300, T=self.T, f0=f0, seed=3)
         freqs = _uniform_grid(fmin, fmax, self.T)
-        ref = LombScargle(t, y, dy).power(freqs)
+        ref = LombScargle(t, y, dy).power(freqs, method='cython')
         return t, y, dy, freqs, ref
 
     @pytest.mark.parametrize("band", bands)
@@ -476,7 +478,7 @@ class TestLombScargleNarrowBands(object):
         proc.finish()
         freqs, p = r[0]
         p = np.asarray(p[:len(freqs)], dtype=np.float64)
-        ref = LombScargle(t, y, dy).power(freqs)
+        ref = LombScargle(t, y, dy).power(freqs, method='cython')
         assert np.max(np.abs(p - ref)) < 2e-3
         assert np.argmax(p) == np.argmax(ref)
 
@@ -500,7 +502,7 @@ class TestLombScargleNarrowBands(object):
         t, y, dy, _, _ = self._case(20.0, 30.0)
         df = 1.0 / (5 * self.T)
         freqs = df * (50 + np.arange(8))
-        ref = LombScargle(t, y, dy).power(freqs)
+        ref = LombScargle(t, y, dy).power(freqs, method='cython')
         proc = LombScargleAsyncProcess()
         p = _run_gpu(proc, t, y, dy, freqs)
         assert np.all(p >= 0)
@@ -1184,7 +1186,7 @@ class TestRunGridValidation(object):
         p_none = _run_gpu(proc, t, y, None, freqs)
         p_ones = _run_gpu(proc, t, y, np.ones_like(t), freqs)
         p_const = _run_gpu(proc, t, y, 0.3 * np.ones_like(t), freqs)
-        ref = LombScargle(t, y).power(freqs)
+        ref = LombScargle(t, y).power(freqs, method='cython')
         assert_allclose(p_none, p_ones, rtol=1e-6, atol=1e-6)
         assert_allclose(p_none, p_const, rtol=1e-6, atol=1e-6)
         assert np.max(np.abs(p_none - ref)) < 1e-4
@@ -1295,7 +1297,7 @@ class TestBatchedBestFreqs(object):
         t, y, dy = self._lc()
         freqs = 0.002 * (50 + np.arange(1500))
         proc = LombScargleAsyncProcess()
-        ref = LombScargle(t, y).power(freqs)
+        ref = LombScargle(t, y).power(freqs, method='cython')
         bf, faps = proc.batched_run_const_nfreq(
             [(t, y, None)], freqs=freqs, only_return_best_freqs=True)
         assert bf[0] == freqs[np.argmax(ref)]
@@ -1345,7 +1347,7 @@ class TestCufinufftBackend(object):
     def test_matches_astropy(self, use_double, tol):
         t, y, dy = _realistic_lc()
         freqs = _uniform_grid(1.0 / (5 * 365.0), 20.0, 365.0)
-        ref = LombScargle(t, y, dy).power(freqs)
+        ref = LombScargle(t, y, dy).power(freqs, method='cython')
         proc = self._proc(use_double)
         p = _run_gpu(proc, t, y, dy, freqs)
         assert np.max(np.abs(p - ref)) < tol
@@ -1354,7 +1356,7 @@ class TestCufinufftBackend(object):
     def test_narrow_band_double(self):
         t, y, dy = _realistic_lc(N=300, T=365.0, f0=29.0, seed=3)
         freqs = _uniform_grid(20.0, 30.0, 365.0)
-        ref = LombScargle(t, y, dy).power(freqs)
+        ref = LombScargle(t, y, dy).power(freqs, method='cython')
         proc = self._proc(True)
         p = _run_gpu(proc, t, y, dy, freqs)
         assert np.max(np.abs(p - ref)) < 1e-6
